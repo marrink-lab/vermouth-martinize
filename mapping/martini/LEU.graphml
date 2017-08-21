@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"  
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+     http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <graph name="BB" edgedefault="undirected">
+    <node id="N"/>
+    <node id="C"/>
+    <node id="O"/>
+    <node id="CA"/>
+    <edge source="N" target="CA"/>
+    <edge source="C" target="O"/>
+    <edge source="C" target="CA"/>
+  </graph>
+  <graph id="SC1" edgedefault="undirected">
+    <node id="CB"/>
+    <node id="CG"/>
+    <node id="CD1"/>
+    <node id="CD2"/>
+    <edge source="CB" target="CG"/>
+    <edge source="CG" target="CD1"/>
+    <edge source="CG" target="CD2"/>
+  </graph>
+</graphml>
