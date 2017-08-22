@@ -6,14 +6,16 @@ Created on Thu Jul 20 13:21:43 2017
 @author: peterkroon
 """
 
-from collections import namedtuple
+from .gmx import *
+from .pdb import *
+from .utils import *
+
 import functools
 import itertools
-from pprint import pprint
+import os.path
 
 import networkx as nx
 import numpy as np
-import scipy.spatial.distance as ssd
 
 
 try:
@@ -74,17 +76,20 @@ except (RuntimeError, ImportError):
             for idx, label in enumerate(node_labels):
                 ax.text(*poss[idx], label)
     
-
-
+try:
+    import pkg_resources
+    DATA_PATH = pkg_resources.resource_filename('martinize2', 'mapping')
+except ImportError:
+    DATA_PATH = os.path.join(os.path.dirname(__file__), 'mapping')
 #pdb_filename = '../molecules/cycliclipopeptide_2.pdb'
 #pdb_filename = '../molecules/6-macro-16.pdb'
-pdb_filename = '../molecules/6-macro-16.gro'
+#pdb_filename = '../molecules/6-macro-16.gro'
 #pdb_filename = '../molecules/6-macro-8_cartwheel.gro'
 #pdb_filename = '../molecules/6-macro-32.gro'
 #pdb_filename = '../molecules/6-macro-32.pdb'
 #pdb_filename = '../molecules/glkfk.pdb'
 
-IGNH = True
+#IGNH = True
 
 #Atom = namedtuple('Atom', ('atomid', 'atomname', 'altloc', 'resname', 'chain',
 #                           'resid', 'insertion_code', 'coord', 'occupancy',
@@ -153,64 +158,6 @@ def categorical_maximum_common_subgraph(G, H, attributes=tuple()):
     return matches
 
 
-def maxes(iterable, key=lambda x: x):
-    """
-    Analogous to ``max``, but returns a list of all maxima.
-    
-    >>> all(key(elem) == max(iterable, key=key) for elem in iterable)
-    True
-    
-    Parameters
-    ----------
-    iterable
-        The iterable for which to find all maxima.
-    key: callable
-        This callable will be called on each element of ``iterable`` to evaluate
-        it to a value. Return values must support ``>`` and ``==``.
-    
-    Returns
-    -------
-    list
-        A list of all maximal values.
-        
-    """
-    max_key = None
-    out = []
-    for item in iterable:
-        key_val = key(item)
-        if max_key is None or key_val > max_key:
-            out = [item]
-            max_key = key_val
-        elif key_val == max_key:
-            out.append(item)
-    return out
-
-
-def first_alpha(string):
-    """
-    Returns the first character in ``string`` for which ``str.isalpha`` returns
-    ``True``. If this is ``False`` for all characters in ``string``, returns the last
-    character.
-
-    Parameters
-    ----------
-    string: str
-        The string in which to look for the first alpha character.
-
-    Returns
-    -------
-    str
-        The first element of ``string`` for which ``str.isalpha`` returns ``True``.
-    """
-    idx = 0
-    while True:
-        elem = string[idx]
-        if elem.isalpha():
-            break
-        idx += 1
-    return elem
-
-
 def add_element_attr(molecule):
     for node_idx in molecule:
         node = molecule.node[node_idx]
@@ -247,202 +194,6 @@ class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
         return bead['resname'] == link['resname'] and\
                bead['atomname'] == link['beadname'] and\
                any(atomname in bead_atoms for atomname in link['atomnames'])
-
-
-def write_pdb(graph, file_name, conect=True):
-    def keyfunc(node_idx):
-        return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
-
-    format_string = 'ATOM  {: >5d} {:4s}{:1s}{:3s} {:1s}{:4d}{:1s}   {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:2s}{:2s}'
-    node_order = sorted(graph, key=keyfunc)
-    nodeidx2atomid = {}
-    with open(file_name, 'w') as out:
-        for atomid, node_idx in enumerate(node_order, 1):
-            nodeidx2atomid[node_idx] = atomid
-            node = graph.node[node_idx]
-            atomname = node['atomname']
-            altloc = node.get('altloc', '')
-            resname = node['resname']
-            chain = node['chain']
-            resid = node['resid']
-            insertion_code = node.get('insertioncode', '')
-            x, y, z = node['position']
-            occupancy = node.get('occupancy', 1)
-            temp_factor = node.get('temp_factor', 0)
-            element = node.get('element', first_alpha(atomname))
-            charge = '{:+2d}'.format(node.get('charge', 0))[::-1]
-            line = format_string.format(atomid, atomname, altloc, resname,
-                                        chain, resid, insertion_code, x, y, z,
-                                        occupancy, temp_factor, element, charge)
-            out.write(line + '\n')
-        if conect:
-            number_fmt = '{:4d}'
-            format_string = 'CONECT '
-            
-            for node_idx in node_order:
-                todo = [nodeidx2atomid[n_idx] for n_idx in graph[node_idx]]
-                while todo:
-                    current, todo = todo[:4], todo[4:]
-                    fmt = ['CONECT'] + [number_fmt]*(len(current) + 1)
-                    fmt = ' '.join(fmt)
-                    line = fmt.format(nodeidx2atomid[node_idx], *current)
-                    out.write(line + '\n')
-
-
-def read_pdb(file_name, exclude=('SOL',)):
-    molecule = nx.Graph()
-    idx = 0
-    
-    field_widths = (-6, 5, -1, 4, 1, 3, -1, 1, 4, 1, -4, 8, 8, 8, 6, 6, -11, 2, 2)
-    field_types = (int, str, str, str, str, int, str, float, float, float, float, float, str, str)
-    field_names = ('atomid', 'atomname', 'altloc', 'resname', 'chain', 'resid',
-                   'insertion_code', 'x', 'y', 'z', 'occupancy', 'temp_factor',
-                   'element', 'charge')
-
-    start = 0
-    slices = []
-    for width in field_widths:
-        if width > 0:
-            slices.append(slice(start, start + width))
-        start = start + abs(width)
-    
-    with open(file_name) as pdb:
-        for line in pdb:
-            record = line[:6]
-            if record == 'ATOM  ' or record == 'HETATM':
-#                parts = (line[6:11], line[12:16], line[16], line[17:20], line[21],
-#                         line[22:26], line[26], line[30:38], line[38:46],
-#                         line[46:54], line[54:60], line[60:66], line[72:76],
-#                         line[76:78], line[78:])
-#                parts = map(str.strip, parts)
-#                col_names = ('atomid', 'atomname', 'altloc', 'resname', 'chain',
-#                             'resid', 'insertion_code', 'x', 'y', 'z', 'occupancy',
-#                             'temp_factor', 'segmentid', 'element', 'charge')
-#                types = (int, str, str, str, str, int, str, float, float, float,
-#                         float, float, str, str, str)
-#                properties = {name: t(item) for name, t, item in zip(col_names, types, parts)}
-
-                properties = {}
-                for name, type_, slice_ in zip(field_names, field_types, slices):
-                    properties[name] = type_(line[slice_].strip())
-
-                properties['position'] = np.array((properties['x'], properties['y'], properties['z']), dtype=float)
-                del properties['x']
-                del properties['y']
-                del properties['z']
-                if not properties['element']:
-                    atomname = properties['atomname']
-                    properties['element'] = first_alpha(atomname)
-                if properties['resname'] in exclude or (IGNH and properties['element'] == 'H'):
-                    continue
-                molecule.add_node(idx, **properties)
-                idx += 1
-            elif record == 'CONECT':
-                start = 6
-                width = 5
-                ats = []
-                for num in range(5):
-                    try:
-                        at = int(line[start + num*width:start + (num + 1)*width])
-                        ats.append(at)
-                    except (IndexError, ValueError):
-                        # We ran out of line or read a bit of whitespace
-                        pass
-                atidx2nodeidx = {node_data['atomid']: node_idx
-                                 for node_idx, node_data in molecule.node.items()}
-
-                try:
-                    at0 = atidx2nodeidx[ats[0]]
-                    for at in ats[1:]:
-                        at = atidx2nodeidx[at]
-                        w = 1/ssd.euclidean(molecule.node[at0]['position'], molecule.node[at]['position'])
-                        molecule.add_edge(at0, at, weight=w)
-                except KeyError:
-                    pass
-
-    if molecule.number_of_edges() == 0:
-        edges_from_distance(molecule)
-#        # Make all edges based on threshold distance
-#        positions = np.array([molecule.node[n]['position'] for n in molecule])
-#        # This does the same as scipy.spatial.distance.squareform(pdist(positions))
-#        distances = np.linalg.norm(positions[:, np.newaxis] - positions[np.newaxis, :], ord=2, axis=2)
-##            distances = ssd.squareform(ssd.pdist([molecule.node[n]['position'] for n in molecule]))
-#        idxs = np.where((distances < threshold) & (distances != 0))
-#        weights = 1/distances[idxs]
-#        molecule.add_weighted_edges_from(zip(idxs[0], idxs[1], weights))
-    return molecule
-
-
-def read_gro(file_name, exclude=('SOL',)):
-    molecule = nx.Graph()
-    idx = 0
-    field_widths = (5, 5, 5, 5, 8, 8, 8, 8, 8, 8)
-    field_types = (int, str, str, int, float, float, float, float, float, float)
-    field_names = ('resid', 'resname', 'atomname', 'atomid', 'x', 'y', 'z', 'vx', 'vy', 'vz')
-
-    start = 0
-    slices = []
-    for width in field_widths:
-        if width > 0:
-            slices.append(slice(start, start + width))
-        start = start + abs(width)
-
-    with open(file_name) as gro:
-        next(gro)  # useless header line
-        num_atoms = int(next(gro))  # Not sure we'll use this
-        for line_idx, line in enumerate(gro):
-            properties = {}
-            try:
-                for name, type_, slice_ in zip(field_names, field_types, slices):
-                    properties[name] = type_(line[slice_].strip())
-            except ValueError:
-                if line_idx != num_atoms:
-                    print(len(molecule), num_atoms)
-                    print(line)
-                    raise
-                continue  # box specifications.
-            properties['position'] = np.array((properties['x'], properties['y'], properties['z']), dtype=float)
-            properties['position'] *= 10  # Convert nm to A
-            del properties['x']
-            del properties['y']
-            del properties['z']
-            del properties['vx']
-            del properties['vy']
-            del properties['vz']
-            properties['element'] = first_alpha(properties['atomname'])
-            properties['chain'] = ''
-            if properties['resname'] in exclude or (IGNH and properties['element'] == 'H'):
-                continue
-
-            molecule.add_node(idx, **properties)
-            idx += 1
-    assert line_idx == num_atoms
-    edges_from_distance(molecule)
-#    positions = np.array([molecule.node[n]['position'] for n in molecule])
-#    # This does the same as scipy.spatial.distance.squareform(pdist(positions))
-#    distances = np.linalg.norm(positions[:, np.newaxis] - positions[np.newaxis, :], ord=2, axis=2)
-#    idxs = np.where((distances < threshold) & (distances != 0))
-#    weights = 1/distances[idxs]
-#    molecule.add_weighted_edges_from(zip(idxs[0], idxs[1], weights))
-
-    return molecule
-            
-
-def edges_from_distance(molecule):
-    # Note that this will blow up, eat your memory, and leave a sizable and
-    # smoking crater if you have too many atoms in your molecule.
-#    vdw_radii_per_element = {'H': 1.20, 'C': 1.70, 'N': 1.55, 'O': 1.52, 'S': 1.8}
-    vdw_radii_per_element = {'H': 0.31, 'C': 0.76, 'N': 0.71, 'O': 0.66, 'S': 1.05}
-    positions = np.array([molecule.node[n]['position'] for n in molecule])
-    elements = [molecule.node[n]['element'] for n in molecule]
-    vdw_radii = np.array([vdw_radii_per_element[element] for element in elements])
-    thresholds = (vdw_radii[:, np.newaxis] + vdw_radii[np.newaxis, :]) * 1.1
-    vecs = positions[:, np.newaxis] - positions[np.newaxis, :]
-    distances = np.sqrt(np.sum(vecs**2, axis=2))
-#    distances = np.linalg.norm(vecs, ord=2, axis=2)
-    idxs = np.where((distances < thresholds) & (distances > 0.01))
-    weights = 1/distances[idxs]
-    molecule.add_weighted_edges_from(zip(idxs[0], idxs[1], weights))
 
 
 def blockmodel(G, partitions, **attrs):
@@ -494,7 +245,7 @@ def blockmodel(G, partitions, **attrs):
         nodes_in_block = CG_mol.node[n]['graph'].nodes()
         block_mapping.update(dict.fromkeys(nodes_in_block, n))
 
-    for u, v, d in mol.edges(data=True):
+    for u, v, d in G.edges(data=True):
         try:
             bmu = block_mapping[u]
             bmv = block_mapping[v]
@@ -521,14 +272,14 @@ def list_atoms(recursive_graph):
             yield node_idx
 
 
-def make_residue_graph(molecule):
+def make_residue_graph(mol):
     """
     Creates a graph with one node per residue; as identified by the tuple
     (chain identifier, residue index, residue name).
 
     Parameters
     ----------
-    molecule: networkx.Graph
+    mol: networkx.Graph
         The atomistic graph. Required node attributes:
 
             :chain: The chain identifier.
@@ -679,7 +430,8 @@ def read_reference_graph(resname):
     networkx.Graph
         Reference graph of the residue.
     """
-    return nx.read_gml('mapping/universal/{}.gml'.format(resname), label='id')
+    return nx.read_gml(os.path.join(DATA_PATH, 'universal', '{}.gml'.format(resname)), label='id')
+#    return nx.read_gml('/universal/{}.gml'.format(resname), label='id')
 
 
 def make_reference(mol):
@@ -995,184 +747,188 @@ link.add_edges_from([(0, 1), (1, 2), (2, 3)])
 #############################################
 
 
-filename, ext = pdb_filename.rsplit('.', 1)
-if ext == 'pdb':
-    mol = read_pdb(pdb_filename, exclude=('SOL', 'CL', 'NA'))
-elif ext == 'gro':
-    mol = read_gro(pdb_filename, exclude=('SOL', 'CL', 'NA'))
-else:
-    print('Euh?')
+def martinize(path, ignh=False):
+    filename, ext = os.path.splitext(path)
+    if ext == '.pdb':
+        mol = read_pdb(path, exclude=('SOL', 'CL', 'NA'), ignh=ignh)
+    elif ext == '.gro':
+        mol = read_gro(path, exclude=('SOL', 'CL', 'NA'), ignh=ignh)
+    else:
+        print('Euh?')
+    
+    # For testing we can remove some atoms to see if we can rebuild them.
+    #options = []
+    #for idx in mol:
+    #    # If you break the backbone connection you're f*cked.
+    #    if mol.node[idx]['atomname'] not in 'C N'.split():
+    #        options.append(idx)
+    #
+    ## STOP BLOWING HOLES IN MY GRAPH!!
+    #remove = sorted(np.random.choice(options, size=0, replace=False))
+    #print('Removing {}'.format(remove))
+    #print("Removing "+'; '.join(["{}{}:{}".format(mol.node[n]['resname'], mol.node[n]['resid'], mol.node[n]['atomname']) for n in remove]))
+    #draw(nx.subgraph(mol, remove), node_color=(1, 0.5, 0.5), node_size=30)
+    #mol.remove_nodes_from(remove)
 
+    reference_graph = make_reference(mol)
+    mol = repair_graph(mol, reference_graph)
+    
+    residues = make_residue_graph(mol)
+    
+    
+    draw(mol, node_size=30)
+    draw(residues, node_size=100, node_color=(0, 1, 0), width=5)
+    
+    # Do some sanity checking. Sort the residue indices by chain id. We already
+    # know that the residues graph should be sorted by resid
+    # TODO: Check this!
+    cur_chain = None
+    residxs = []
+    residxs_chain = []
+    for res in residues:
+        node = residues.node[res]
+        if cur_chain is None:
+            cur_chain = node['chain']
+        if node['chain'] != cur_chain:
+            residxs.append((cur_chain, residxs_chain))
+            residxs_chain = []
+            cur_chain = node['chain']
+        residxs_chain.append(node['resid'])
+    residxs.append((cur_chain, residxs_chain))
 
+    # And now, for every chain, make sure the residue ids are consecutive
+    for chain_id, idxs in residxs:
+        cur_idx = idxs[0]
+        for idx in idxs:
+            if cur_idx != idx:
+                print("Missing residue {} in chain {}".format(cur_idx, chain_id))
+            else:
+                cur_idx += 1
+        # And while we're here, make sure every resid has only one residue type
+        counts = np.bincount(idxs)
+        wrong_idxs = np.where(counts > 1)[0]
+        if wrong_idxs:
+            print('Residue(s) {} in chain {} have multiple residue types.'.format(
+                    ','.join(map(str, wrong_idxs)), chain_id))
 
-# if ignh:
-#remove = []
-#
-#for idx in mol:
-#    if mol.node[idx]['element'] == 'H':
-#        remove.append(idx)
-#mol.remove_nodes_from(remove)
-#
-#options = []
-#for idx in mol:
-#    # If you break the backbone connection you're f*cked.
-#    if mol.node[idx]['atomname'] not in 'C N'.split():
-#        options.append(idx)
-#
-## STOP BLOWING HOLES IN MY GRAPH!!
-#remove = sorted(np.random.choice(options, size=0, replace=False))
-##remove = [16, 38  ,8, 13, 28,  9, 39,  5, 18, 30,  1, 25, 10, 27, 33]
-#print('Removing {}'.format(remove))
-#print("Removing "+'; '.join(["{}{}:{}".format(mol.node[n]['resname'], mol.node[n]['resid'], mol.node[n]['atomname']) for n in remove]))
-##draw(nx.subgraph(mol, remove), node_color=(1, 0.5, 0.5), node_size=30)
-#mol.remove_nodes_from(remove)
+    # Lastly, make sure every connected component has one chain ID, and vice
+    # versa
+    known_chain_ids = set()
+    for connected_component in nx.connected_components(residues):
+        chain_ids = set(residues.node[idx]['chain'] for idx in connected_component)
+        if any(c_id in known_chain_ids for c_id in chain_ids) or len(chain_ids) > 1:
+            print('Your chain IDs are messed up. Seek help.')
+        known_chain_ids.update(chain_ids)
 
-reference_graph = make_reference(mol)
-mol = repair_graph(mol, reference_graph)
-
-residues = make_residue_graph(mol)
-
-
-draw(mol, node_size=30)
-draw(residues, node_size=100, node_color=(0, 1, 0), width=5)
-
-cur_chain = None
-residxs = []
-residxs_chain = []
-for res in residues:
-    node = residues.node[res]
-    if cur_chain is None:
-        cur_chain = node['chain']
-    if node['chain'] != cur_chain:
-        residxs.append((cur_chain, residxs_chain))
-        residxs_chain = []
-        cur_chain = node['chain']
-    residxs_chain.append(node['resid'])
-residxs.append((cur_chain, residxs_chain))
-
-for chain_id, idxs in residxs:
-    cur_idx = idxs[0]
-    for idx in idxs:
-        if cur_idx != idx:
-            print("Missing residue {} in chain {}".format(cur_idx, chain_id))
-        else:
-            cur_idx += 1
-    counts = np.bincount(idxs)
-    wrong_idxs = np.where(counts > 1)[0]
-    if wrong_idxs:
-        print('Residue(s) {} in chain {} have multiple residue types.'.format(
-                ','.join(map(str, wrong_idxs)), chain_id))
-
-known_chain_ids = set()
-for connected_component in nx.connected_components(residues):
-    chain_ids = set(residues.node[idx]['chain'] for idx in connected_component)
-    if any(c_id in known_chain_ids for c_id in chain_ids) or len(chain_ids) > 1:
-        print('Your chain IDs are messed up. Seek help.')
-    known_chain_ids.update(chain_ids)
-
-atidx2beadid = {}
-atidx2resid = {}
-CG_graph = nx.Graph()
-bead_idx = 0
-for residx in residues:
-    resname = residues.node[residx]['resname']
-    resid = residues.node[residx]['resid']
-    try:
-        mapping = graph_mapping[resname]
-    except KeyError:
-        print('Can\'t find mapping for residue {}'.format(resname))
-        continue
-    residue = residues.node[residx]['graph']
-
-    # Build the CG nodes/beads
-    for bead in mapping:
-        name = bead.name
-        GM = NamedGraphMatcher(residue, bead)
-        matches = list(GM.subgraph_isomorphisms_iter())
-        if len(matches) == 0:
-            print('Relaxing criterion for {}{}:{}'.format(resname, resid, name))
-            matches = isomorphism(residue, bead)
-        match = matches[0]
-        for idx, jdx in match.items():
-            name1, name2 = residue.node[idx]['atomname'], bead.node[jdx]['atomname']
-            if name1 != name2:
-                # Rectify found name
-                residue.node[idx]['atomname'] = name2
-                print('In {}{}:{}: matching {} to {}'.format(resname, resid, name, name1, name2))
-        at_idxs = match.keys()
-        # TODO: Make sure we find all the atoms we're looking for and vice
-        # versa
-
-        # Bookkeeping
-        atidx2beadid.update(dict.fromkeys(at_idxs, bead_idx))
-        atidx2resid.update(dict.fromkeys(at_idxs, residx))
-
-        # Create CG node; analogous to blockmodel, but slightly different/more
-        # flexible
-        bd = residue.subgraph(at_idxs)
-        CG_graph.add_node(bead_idx)
-        CG_graph.node[bead_idx]['graph'] = bd
-        # TODO: CoM instead of CoG
-        CG_graph.node[bead_idx]['position'] = np.mean([bd.node[idx]['position'] for idx in bd], axis=0)
-        CG_graph.node[bead_idx]['atomname'] = name
-        CG_graph.node[bead_idx]['resid'] = resid
-        CG_graph.node[bead_idx]['resname'] = resname
-        CG_graph.node[bead_idx]['chain'] = bd.node[list(bd.node.keys())[0]]['chain']
-        CG_graph.node[bead_idx]['nnodes'] = bd.number_of_nodes()
-        CG_graph.node[bead_idx]['nedges'] = bd.number_of_edges()
-        CG_graph.node[bead_idx]['density'] = nx.density(bd)
-        bead_idx += 1
-
-    # Build the edges within the CG residue
-    # Should be read from the partial topology; and maybe give warning if
-    # there's edges missing/superfluous?
-    for idx, jdx, data in residue.edges_iter(data=True):
+    # Start to do mapping
+    # TODO: This needs serious refactoring. Part of it can be done by
+    # leveraging the function blockmodel. Maybe. It should be a function anyway
+    atidx2beadid = {}
+    atidx2resid = {}
+    CG_graph = nx.Graph()
+    bead_idx = 0
+    for residx in residues:
+        resname = residues.node[residx]['resname']
+        resid = residues.node[residx]['resid']
         try:
-            cg_idx = atidx2beadid[idx]
-            cg_jdx = atidx2beadid[jdx]
+            mapping = graph_mapping[resname]
         except KeyError:
-            # Atom not represented
+            print('Can\'t find mapping for residue {}'.format(resname))
             continue
-        if cg_idx == cg_jdx:
-            # No self loops; just to make sure
-            continue
-        weight = data.get('weight', 1.0)
-        if CG_graph.has_edge(cg_idx, cg_jdx):
-            CG_graph[cg_idx][cg_jdx]['weight'] += weight
-        else:
-            CG_graph.add_edge(cg_idx, cg_jdx, weight=weight)
-
-# Build the edges between residues. We need to do this to help the link
-# matching
-for residx, resjdx, data in residues.edges_iter(data=True):
-    res1 = residues.node[residx]['graph']
-    res2 = residues.node[resjdx]['graph']
-#    print(residues.node[residx]['resname'], residues.node[resjdx]['resname'])
-    for at_idx, at_jdx in itertools.product(res1, res2):
-        if mol.has_edge(at_idx, at_jdx):
+        residue = residues.node[residx]['graph']
+    
+        # Build the CG nodes/beads
+        for bead in mapping:
+            name = bead.name
+            GM = NamedGraphMatcher(residue, bead)
+            matches = list(GM.subgraph_isomorphisms_iter())
+            if len(matches) == 0:
+                print('Relaxing criterion for {}{}:{}'.format(resname, resid, name))
+                matches = isomorphism(residue, bead)
+            match = matches[0]
+            for idx, jdx in match.items():
+                name1, name2 = residue.node[idx]['atomname'], bead.node[jdx]['atomname']
+                if name1 != name2:
+                    # Rectify found name
+                    residue.node[idx]['atomname'] = name2
+                    print('In {}{}:{}: matching {} to {}'.format(resname, resid, name, name1, name2))
+            at_idxs = match.keys()
+            # TODO: Make sure we find all the atoms we're looking for and vice
+            # versa
+    
+            # Bookkeeping
+            atidx2beadid.update(dict.fromkeys(at_idxs, bead_idx))
+            atidx2resid.update(dict.fromkeys(at_idxs, residx))
+    
+            # Create CG node; analogous to blockmodel, but slightly different/more
+            # flexible
+            bd = residue.subgraph(at_idxs)
+            CG_graph.add_node(bead_idx)
+            CG_graph.node[bead_idx]['graph'] = bd
+            # TODO: CoM instead of CoG
+            CG_graph.node[bead_idx]['position'] = np.mean([bd.node[idx]['position'] for idx in bd], axis=0)
+            CG_graph.node[bead_idx]['atomname'] = name
+            CG_graph.node[bead_idx]['resid'] = resid
+            CG_graph.node[bead_idx]['resname'] = resname
+            CG_graph.node[bead_idx]['chain'] = bd.node[list(bd.node.keys())[0]]['chain']
+            CG_graph.node[bead_idx]['nnodes'] = bd.number_of_nodes()
+            CG_graph.node[bead_idx]['nedges'] = bd.number_of_edges()
+            CG_graph.node[bead_idx]['density'] = nx.density(bd)
+#            CG_graph.node[bead_idx]['charge'] = sum(float(bd.node[idx]['charge']) for idx in bd)
+            bead_idx += 1
+    
+        # Build the edges within the CG residue
+        # Should be read from the partial topology; and maybe give warning if
+        # there's edges missing/superfluous?
+        for idx, jdx, data in residue.edges_iter(data=True):
             try:
-                cg_idx = atidx2beadid[at_idx]
-                cg_jdx = atidx2beadid[at_jdx]
+                cg_idx = atidx2beadid[idx]
+                cg_jdx = atidx2beadid[jdx]
             except KeyError:
-                print("You're going to have a problem! You're missing a bond between two residues.")
+                # Atom not represented
                 continue
-            weight = mol[at_idx][at_jdx].get('weight', 1.0)
+            if cg_idx == cg_jdx:
+                # No self loops; just to make sure
+                continue
+            weight = data.get('weight', 1.0)
             if CG_graph.has_edge(cg_idx, cg_jdx):
                 CG_graph[cg_idx][cg_jdx]['weight'] += weight
             else:
                 CG_graph.add_edge(cg_idx, cg_jdx, weight=weight)
-            n1 = CG_graph.node[cg_idx]
-            n2 = CG_graph.node[cg_jdx]
+
+    # Build the edges between residues. We need to do this to help the link
+    # matching
+    for residx, resjdx, data in residues.edges_iter(data=True):
+        res1 = residues.node[residx]['graph']
+        res2 = residues.node[resjdx]['graph']
+    #    print(residues.node[residx]['resname'], residues.node[resjdx]['resname'])
+        for at_idx, at_jdx in itertools.product(res1, res2):
+            if mol.has_edge(at_idx, at_jdx):
+                try:
+                    cg_idx = atidx2beadid[at_idx]
+                    cg_jdx = atidx2beadid[at_jdx]
+                except KeyError:
+                    print("You're going to have a problem! You're missing a bond between two residues.")
+                    continue
+                weight = mol[at_idx][at_jdx].get('weight', 1.0)
+                if CG_graph.has_edge(cg_idx, cg_jdx):
+                    CG_graph[cg_idx][cg_jdx]['weight'] += weight
+                else:
+                    CG_graph.add_edge(cg_idx, cg_jdx, weight=weight)
+                n1 = CG_graph.node[cg_idx]
+                n2 = CG_graph.node[cg_jdx]
 
 
-draw(CG_graph, node_size=70, node_color=(0, 0, 1), width=3)
+    draw(CG_graph, node_size=70, node_color=(0, 0, 1), width=3)
+    try:
+        mlab.show()
+    except:
+        pass
+    return CG_graph
+#
+#print('---')
+#GM = LinkGraphMatcher(CG_graph, link)
+#ms = list(GM.subgraph_isomorphisms_iter())
+##print(ms)
+#write_pdb(CG_graph, '{}_CG.pdb'.format(filename), conect=True)
 
-print('---')
-GM = LinkGraphMatcher(CG_graph, link)
-ms = list(GM.subgraph_isomorphisms_iter())
-#print(ms)
-write_pdb(CG_graph, '{}_CG.pdb'.format(filename), conect=True)
-try:
-    mlab.show()
-except:
-    pass
