@@ -9,6 +9,8 @@ Created on Thu Jul 20 13:21:43 2017
 from .gmx import *
 from .pdb import *
 from .utils import *
+from .processors import *
+from .system import *
 
 import functools
 import itertools
@@ -32,7 +34,7 @@ try:
         mlab.gcf().scene.disable_render = True
     
         edges = []
-        for idx, jdx in graph.edges_iter():
+        for idx, jdx in graph.edges:
             edges.append((node_indices.index(idx), node_indices.index(jdx)))
     
         points = mlab.points3d(*poss.T, [node_size for _ in graph], color=node_color, scale_factor=0.025)
@@ -45,13 +47,14 @@ try:
                 mlab.text3d(*poss[idx], label)
     
         mlab.gcf().scene.disable_render = False
+    show = mlab.show
 
 except (RuntimeError, ImportError):
     import matplotlib.collections
     from mpl_toolkits.mplot3d.art3d import Line3DCollection
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
-
+    plt.close('all')
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -66,7 +69,7 @@ except (RuntimeError, ImportError):
         poss = np.array(list(positions.values()))
         ax.scatter(poss[:, 0], poss[:, 1], poss[:, 2], c=node_color, s=node_size, **kwargs)
         lines = []
-        for idx, jdx in graph.edges_iter():
+        for idx, jdx in graph.edges:
             lines.append((positions[idx], positions[jdx]))
         if lines:
             lines = np.array(lines)
@@ -75,7 +78,8 @@ except (RuntimeError, ImportError):
         if with_label:
             for idx, label in enumerate(node_labels):
                 ax.text(*poss[idx], label)
-    
+    show = plt.show
+
 try:
     import pkg_resources
     DATA_PATH = pkg_resources.resource_filename('martinize2', 'mapping')

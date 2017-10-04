@@ -4,6 +4,11 @@ Created on Tue Aug 22 11:34:12 2017
 
 @author: Peter Kroon
 """
+from ..utils import first_alpha
+
+import networkx as nx
+import numpy as np
+
 
 def read_gro(file_name, exclude=('SOL',), ignh=False):
     molecule = nx.Graph()
@@ -46,7 +51,7 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
             molecule.add_node(idx, **properties)
             idx += 1
     assert line_idx == num_atoms
-    edges_from_distance(molecule)
+#    edges_from_distance(molecule)
 #    positions = np.array([molecule.node[n]['position'] for n in molecule])
 #    # This does the same as scipy.spatial.distance.squareform(pdist(positions))
 #    distances = np.linalg.norm(positions[:, np.newaxis] - positions[np.newaxis, :], ord=2, axis=2)

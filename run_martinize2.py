@@ -4,11 +4,28 @@ Created on Tue Aug 22 11:48:46 2017
 
 @author: Peter Kroon
 """
-
+#import matplotlib.pyplot as plt
+#plt.close('all')
 from martinize2 import *
 
+import numpy as np
 
-PATH = '../molecules/cycliclipopeptide_2.pdb'
-CG_graph = martinize(PATH, False)
+#
+#PATH = '../molecules/glkfk.gro'
+PATH = '../molecules/6-macro-16.gro'
+#PATH = '../molecules/6-macro-16-rtc-eq-nodisre.pdb'
+#CG_graph = martinize(PATH, True)
+#
+#write_pdb(CG_graph, "6-macro-16-rtc-eq-nodisre-CG.pdb", conect=True)
 
-write_pdb(CG_graph, "test.pdb", conect=True)
+system = System()
+
+GROInput().run_system(system, PATH)
+MakeBonds().run_system(system)
+print(system)
+
+
+for mol in system.molecules:
+    draw(mol, node_size=30, node_color=tuple(np.random.rand(3)))
+
+show()

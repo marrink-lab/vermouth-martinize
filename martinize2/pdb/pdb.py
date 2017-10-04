@@ -111,8 +111,8 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False):
                 except KeyError:
                     pass
 
-    if molecule.number_of_edges() == 0:
-        edges_from_distance(molecule)
+#    if molecule.number_of_edges() == 0:
+#        edges_from_distance(molecule)
 #        # Make all edges based on threshold distance
 #        positions = np.array([molecule.node[n]['position'] for n in molecule])
 #        distances = ssd.squareform(ssd.pdist([molecule.node[n]['position'] for n in molecule]))
