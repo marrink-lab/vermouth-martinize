@@ -1,0 +1,3 @@
+# Do somethings...
+
+#intall_requirements = [numpy, networkx ~= 2.0]
