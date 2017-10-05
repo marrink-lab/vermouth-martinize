@@ -8,5 +8,7 @@ Created on Wed Oct  4 13:03:50 2017
 
 class Processor:
     def run_system(self, system):
+        mols = []
         for molecule in system.molecules:
-            self.run_molecule(molecule)
+            mols.append(self.run_molecule(molecule))
+        system.molecules = mols

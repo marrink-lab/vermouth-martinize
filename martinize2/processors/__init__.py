@@ -8,3 +8,4 @@ Created on Wed Oct  4 10:45:54 2017
 
 from .gro_reader import GROInput
 from .make_bonds import *
+from .repair_graph import RepairGraph

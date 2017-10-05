@@ -22,10 +22,11 @@ system = System()
 
 GROInput().run_system(system, PATH)
 MakeBonds().run_system(system)
+RepairGraph().run_system(system)
 print(system)
 
 
-for mol in system.molecules:
-    draw(mol, node_size=30, node_color=tuple(np.random.rand(3)))
-
-show()
+#for mol in system.molecules:
+#    draw(mol, node_size=30, node_color=tuple(np.random.rand(3)))
+#
+#show()
