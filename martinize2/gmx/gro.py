@@ -4,6 +4,7 @@ Created on Tue Aug 22 11:34:12 2017
 
 @author: Peter Kroon
 """
+from ..molecule import Molecule
 from ..utils import first_alpha
 
 import networkx as nx
@@ -11,7 +12,7 @@ import numpy as np
 
 
 def read_gro(file_name, exclude=('SOL',), ignh=False):
-    molecule = nx.Graph()
+    molecule = Molecule()
     idx = 0
     field_widths = (5, 5, 5, 5, 8, 8, 8, 8, 8, 8)
     field_types = (int, str, str, int, float, float, float, float, float, float)

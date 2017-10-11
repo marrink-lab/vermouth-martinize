@@ -7,5 +7,7 @@ Created on Wed Oct  4 10:45:54 2017
 """
 
 from .gro_reader import GROInput
-from .make_bonds import *
+from .make_bonds import MakeBonds
+from .pdb_reader import PDBInput
 from .repair_graph import RepairGraph
+from .do_mapping import DoMapping
