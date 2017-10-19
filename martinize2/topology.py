@@ -1,5 +1,11 @@
 import collections
 
+# Name of the subsections in RTP files.
+# Names starting with a '_' are for internal use.
+RTP_SUBSECTIONS = ('atoms', 'bonds', 'angles', 'dihedrals',
+                   'impropers', 'cmap', 'exclusions',
+                   '_bondedtypes')
+
 
 class Block(object):
     """
@@ -44,6 +50,9 @@ class Link(object):
 
 
 class _IterRTPSubsectionLines(object):
+    """
+    Iterate over the lines of an RTP file within a subsection.
+    """
     def __init__(self, parent):
         self.parent = parent
         self.lines = parent.lines
@@ -68,6 +77,11 @@ class _IterRTPSubsectionLines(object):
 
 
 class _IterRTPSubsections(object):
+    """
+    Iterate over the subsection of a RTP file within a section.
+
+    For each subsections, yields its name and  an iterator over its lines.
+    """
     def __init__(self, parent):
         self.parent = parent
         self.lines = parent.lines
@@ -84,16 +98,18 @@ class _IterRTPSubsections(object):
             line = self.buffer.popleft()
         else:
             line = next(self.lines)
-        if line[0] == '[':
-            self.parent.buffer.append(line)
-            self.running = False
-            raise StopIteration
         stripped = line.strip()
         if stripped[0] == '[':
             name = stripped[1:-1].strip()
-            subsection = _IterRTPSubsectionLines(self)
-            self.current_subsection = subsection
-            return name, subsection
+            if name in RTP_SUBSECTIONS:
+                subsection = _IterRTPSubsectionLines(self)
+                self.current_subsection = subsection
+                return name, subsection
+            self.parent.buffer.append(line)
+            self.running = False
+            raise StopIteration
+        print(self, line)
+        raise RuntimeError('I am almost sure I should not be here...')
 
     def __iter__(self):
         return self
@@ -104,6 +120,12 @@ class _IterRTPSubsections(object):
 
 
 class _IterRTPSections(object):
+    """
+    Iterate over the sections of a RTP file.
+
+    For each section, yields the name of the sections and an iterator over its
+    subsections.
+    """
     def __init__(self, lines):
         self.lines = lines
         self.buffer = collections.deque()
@@ -116,8 +138,9 @@ class _IterRTPSections(object):
             line = self.buffer.popleft()
         else:
             line = next(self.lines)
-        if line[0] == '[':
-            name = line.strip()[1:-1].strip()
+        stripped = line.strip()
+        if stripped[0] == '[':
+            name = stripped[1:-1].strip()
             section = _IterRTPSubsections(self)
             self.current_section = section
             # The "[ bondedtypes ]" is special in the sense that it does
@@ -127,13 +150,13 @@ class _IterRTPSections(object):
             # contains:
             #
             #    [ bondedtypes ]
-            #     [ bondedtypes ]
+            #     [ _bondedtypes ]
             #
             # For now, I do that on the basis of the section name. If other
             # sections are special that way, I'll detect them with a look
             # ahead.
             if name == 'bondedtypes':
-                section.buffer.append(' [ bondedtypes ]')
+                section.buffer.append(' [ _bondedtypes ]')
             return name, section
         print(self, line)
         raise RuntimeError('Hum... There is a bug in the RTP reader.')
