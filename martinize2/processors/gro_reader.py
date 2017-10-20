@@ -11,5 +11,5 @@ from .processor import Processor
 
 class GROInput(Processor):
     def run_system(self, system, filename):
-        molecule = gro.read_gro(filename)
+        molecule = gro.read_gro(filename, exclude=('SOL', 'CL', 'NA'), ignh=False)
         system.add_molecule(molecule)

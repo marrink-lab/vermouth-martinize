@@ -7,57 +7,75 @@ Created on Tue Aug 22 11:34:12 2017
 from ..molecule import Molecule
 from ..utils import first_alpha
 
-import networkx as nx
+from itertools import chain
+
 import numpy as np
 
 
 def read_gro(file_name, exclude=('SOL',), ignh=False):
     molecule = Molecule()
     idx = 0
-    field_widths = (5, 5, 5, 5, 8, 8, 8, 8, 8, 8)
-    field_types = (int, str, str, int, float, float, float, float, float, float)
-    field_names = ('resid', 'resname', 'atomname', 'atomid', 'x', 'y', 'z', 'vx', 'vy', 'vz')
-
-    start = 0
-    slices = []
-    for width in field_widths:
-        if width > 0:
-            slices.append(slice(start, start + width))
-        start = start + abs(width)
+    field_types = [int, str, str, int, float, float, float]
+    field_names = ['resid', 'resname', 'atomname', 'atomid', 'x', 'y', 'z']
+    field_widths = [5, 5, 5, 5]
 
     with open(file_name) as gro:
-        next(gro)  # useless header line
-        num_atoms = int(next(gro))  # Not sure we'll use this
-        for line_idx, line in enumerate(gro):
+        next(gro)  # skip title
+        num_atoms = int(next(gro))
+
+        # We need the first line to figure out the exact format. In particular,
+        # the precision and whether it has velocities.
+        first_line = next(gro)
+        has_vel = first_line.count('.') == 6
+        first_dot = first_line.find('.', 25)
+        second_dot = first_line.find('.', first_dot+1)
+        precision = second_dot - first_dot
+
+        field_widths.extend([precision]*3)
+        if has_vel:
+            field_widths.extend([precision]*3)
+            field_types.extend([float]*3)
+            field_names.extend(['vx', 'vy', 'vz'])
+
+        start = 0
+        slices = []
+        for width in field_widths:
+            if width > 0:
+                slices.append(slice(start, start + width))
+            start = start + abs(width)
+
+        # Start parsing the file in earnest. And let's not forget the first
+        # line.
+        for line_idx, line in enumerate(chain([first_line], gro)):
             properties = {}
+            # This (apart maybe from adhering to the number of lines specified
+            # by the file) is the fastest method of checking whether we are at
+            # the last line (box) of the file. Other things tested: regexp
+            # matching, looking ahead, and testing whether the line looks like
+            # a box-line. I think the reason this is faster is because the try
+            # block will almost never raise an exception.
             try:
                 for name, type_, slice_ in zip(field_names, field_types, slices):
                     properties[name] = type_(line[slice_].strip())
-            except ValueError:  # box specifications.
+            except ValueError:
                 if line_idx != num_atoms:
-                    print(len(molecule), num_atoms)
-                    print(line)
                     raise
-                continue
-            properties['position'] = np.array((properties['x'], properties['y'], properties['z']), dtype=float)
-            properties['position'] *= 10  # Convert nm to A
-            del properties['x']
-            del properties['y']
-            del properties['z']
+                break
+
             properties['element'] = first_alpha(properties['atomname'])
             properties['chain'] = ''
             if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):
                 continue
 
+            pos = (properties.pop('x'), properties.pop('y'), properties.pop('z'))
+            properties['position'] = np.array(pos, dtype=float)
+            properties['position'] *= 10  # Convert nm to A
+
+            if has_vel:
+                vel = (properties.pop('vx'), properties.pop('vy'), properties.pop('vz'))
+                properties['velocity'] = np.array(vel, dtype=float)
+                properties['velocity'] *= 10  # Convert nm to A
+
             molecule.add_node(idx, **properties)
             idx += 1
-    assert line_idx == num_atoms
-#    edges_from_distance(molecule)
-#    positions = np.array([molecule.node[n]['position'] for n in molecule])
-#    # This does the same as scipy.spatial.distance.squareform(pdist(positions))
-#    distances = np.linalg.norm(positions[:, np.newaxis] - positions[np.newaxis, :], ord=2, axis=2)
-#    idxs = np.where((distances < threshold) & (distances != 0))
-#    weights = 1/distances[idxs]
-#    molecule.add_weighted_edges_from(zip(idxs[0], idxs[1], weights))
-
     return molecule

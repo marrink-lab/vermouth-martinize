@@ -92,6 +92,11 @@ def do_mapping(molecule):
             bead['atomname'] = bdname
             bead['graph'] = graph.subgraph(at_idxs)
             bead_idx += 1
+        # This makes edges within the residue. This probably should not be
+        # done, but read from the interactions provided. We'll leave it in for
+        # now.
+        # Also, we should read any and all interactions and add them to the
+        # molecule.
         for atidx, atjdx, data in graph.edges(data=True):
             if not (atidx in atidx_to_bdidx and atjdx in atidx_to_bdidx):
                 continue
@@ -99,6 +104,8 @@ def do_mapping(molecule):
             bdjdx = atidx_to_bdidx[atjdx]
             if bdidx != bdjdx and not graph_out.has_edge(bdidx, bdjdx):
                 graph_out.add_edge(bdidx, bdjdx)
+    # This makes edges between residues. We need to do this, since they can't
+    # come from the mapping files and we need them to find the links locations.
     for res_idx, res_jdx in residue_graph.edges:
         for bd_idx, bd_jdx in product(residx_to_beads[res_idx], residx_to_beads[res_jdx]):
             for at_idx, at_jdx in product(graph_out.nodes[bd_idx]['graph'], graph_out.nodes[bd_jdx]['graph']):

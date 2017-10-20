@@ -6,17 +6,18 @@ Created on Tue Aug 22 11:33:07 2017
 """
 from ..molecule import Molecule
 from ..utils import first_alpha, distance
+from ..truncating_formatter import TruncFormatter
 
-import networkx as nx
 import numpy as np
-
 
 
 def write_pdb(graph, file_name, conect=True):
     def keyfunc(node_idx):
         return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
 
-    format_string = 'ATOM  {: >5d} {:4s}{:1s}{:3s} {:1s}{:4d}{:1s}   {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:2s}{:2s}'
+    formatter = TruncFormatter()
+#    format_string = 'ATOM  {: >5.5d} {:4.4s}{:1.1s}{:3.3s} {:1.1s}{:4.4d}{:1.1s}   {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:2.2s}{:2.2s}'
+    format_string = 'ATOM  {: >5dt} {:4st}{:1st}{:3st} {:1st}{:>4dt}{:1st}   {:8.3ft}{:8.3ft}{:8.3ft}{:6.2ft}{:6.2ft}          {:2st}{:2st}'
     node_order = sorted(graph, key=keyfunc)
     nodeidx2atomid = {}
     with open(file_name, 'w') as out:
@@ -34,12 +35,13 @@ def write_pdb(graph, file_name, conect=True):
             temp_factor = node.get('temp_factor', 0)
             element = node.get('element', first_alpha(atomname))
             charge = '{:+2d}'.format(node.get('charge', 0))[::-1]
-            line = format_string.format(atomid, atomname, altloc, resname,
-                                        chain, resid, insertion_code, x, y, z,
-                                        occupancy, temp_factor, element, charge)
+            line = formatter.format(format_string, atomid, atomname, altloc,
+                                    resname, chain, resid, insertion_code, x,
+                                    y, z, occupancy, temp_factor, element,
+                                    charge)
             out.write(line + '\n')
         if conect:
-            number_fmt = '{:4d}'
+            number_fmt = '{:>4dt}'
             format_string = 'CONECT '
             
             for node_idx in node_order:
@@ -48,7 +50,7 @@ def write_pdb(graph, file_name, conect=True):
                     current, todo = todo[:4], todo[4:]
                     fmt = ['CONECT'] + [number_fmt]*(len(current) + 1)
                     fmt = ' '.join(fmt)
-                    line = fmt.format(nodeidx2atomid[node_idx], *current)
+                    line = formatter.format(fmt, nodeidx2atomid[node_idx], *current)
                     out.write(line + '\n')
 
 
