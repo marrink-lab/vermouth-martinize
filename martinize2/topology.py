@@ -1,4 +1,5 @@
 import collections
+import networkx as nx
 
 # Name of the subsections in RTP files.
 # Names starting with a '_' are for internal use.
@@ -45,8 +46,13 @@ class Block(object):
                                           name, id(self))
 
 
-class Link(object):
-    pass
+class Link(nx.Graph):
+    """
+    Template link between two residues.
+    """
+    def __init__(self):
+        super(Link, self).__init__(self)
+        self.interactions = {}
 
 
 class _IterRTPSubsectionLines(object):
@@ -171,13 +177,15 @@ class RTPReader(object):
             'atoms': self._atoms,
             'bonds': self._base_rtp_parser('bonds', natoms=2),
             'angles': self._base_rtp_parser('angles', natoms=3),
-            'improper': self._base_rtp_parser('impropers', natoms=4),
-            # cmap?
+            'impropers': self._base_rtp_parser('impropers', natoms=4),
+            'cmap': self._base_rtp_parser('cmap', natoms=5),
         }
 
     def read_rtp(self, lines):
-        blocks = {}
-        links = []
+        # An RTP file contains both the blocks and the links.
+        # We first read everything in "pre-blocks"; then we separate the
+        # blocks from the links.
+        pre_blocks = {}
         cleaned = _clean_lines(lines)
         for section_name, section in _IterRTPSections(cleaned):
             if section_name == 'bondedtypes':
@@ -185,12 +193,17 @@ class RTPReader(object):
                 # section latter.
                 continue
             block = Block()
-            blocks[section_name] = block
+            pre_blocks[section_name] = block
             block.name = section_name
 
             for subsection_name, subsection in section:
                 if subsection_name in self._subsection_parsers:
                     self._subsection_parsers[subsection_name](subsection, block)
+
+        # At this point, the pre-blocks contain both the intra- and
+        # inter-residues information. We need to split the pre-blocks into
+        # blocks and links.
+        blocks, links = self._split_blocks_and_links(pre_blocks)
         return blocks, links
 
     @staticmethod
@@ -212,17 +225,123 @@ class RTPReader(object):
             for line in subsection:
                 splitted = line.strip().split()
                 atoms = splitted[:natoms]
-                # For now we ignore the links
-                skip = False
-                for atom in atoms:
-                    if atom[0] in '+-':
-                        skip=True
-                if skip:
-                    continue
                 parameters = splitted[natoms:]
                 interactions.append({'atoms': atoms, 'parameters': parameters})
             block.interactions[interaction_name] = interactions
         return wrapped
+
+    def _split_blocks_and_links(self, pre_blocks):
+        """
+        Split all the pre-blocks from `pre_block` into blocks and links.
+
+        Parameters
+        ----------
+
+        pre_blocks: dict
+            A dict with residue names as keys and instances of :class:`Block`
+            as values.
+
+        Returns
+        -------
+
+        blocks: dict
+            A dict like `pre_block` with all inter-residues information
+            stripped out.
+        links: list
+            A list of instances of :class:`Link` containing the inter-residues
+            information from `pre_blocks`.
+
+        See Also
+        --------
+
+        _split_block_and_link
+            Split an individual pre-block into a block and a link.
+        """
+        blocks = {}
+        links = []
+        for name, pre_block in pre_blocks.items():
+            block, link = self._split_block_and_link(pre_block)
+            blocks[name] = block
+            links.append(link)
+        return blocks, links
+
+    @staticmethod
+    def _split_block_and_link(pre_block):
+        """
+        Split `pre_block` into a block and a link.
+
+        A pre-block is a block as read from an RTP file. It contains both
+        intra-residue and inter-residues information. This method split this
+        information so that the intra-residue interactions are put in a block
+        and the inter-residues ones are put in a link.
+
+        Parameters
+        ----------
+
+        pre_block: Block
+            The block to split.
+
+        Returns
+        -------
+
+        block: Block
+            All the intra-residue information.
+        link: Link
+            All the inter-residues information.
+        """
+        block = Block()
+        link = Link()
+
+        # It is easier to fill the interactions using a defaultdict,
+        # yet defaultdicts are more annoying when reading as querying them
+        # creates the keys. So the interactions are revert back to regular
+        # dict at the end.
+        block.interactions = collections.defaultdict(list)
+        link.interactions = collections.defaultdict(list)
+
+        block.name = pre_block.name
+        
+        # Filter the particles from neighboring residues out of the block.
+        for atom in pre_block.atoms:
+            if not atom['name'][0] in '+-':
+                block.atoms.append(atom)
+        
+        # Create the edges of the link based on the bonds in the pre-block.
+        # This will create too many edges, but the useless ones will be pruned
+        # latter.
+        for bond in pre_block.interactions.get('bonds', []):
+            link.add_edge(*bond['atoms'])
+
+        # Split the interactions from the pre-block between the block (for
+        # intra-residue interactions) and the link (for inter-residues ones).
+        # The "relevant_atoms" set keeps track of what particles are
+        # involved in the link. This will allow to prune the link without
+        # iterating again through its interactions.
+        relevant_atoms = set()
+        for name, interactions in pre_block.interactions.items():
+            for interaction in interactions:
+                for_link = False
+                for atom in interaction['atoms']:
+                    if atom[0] in '+-':
+                        for_link = True
+                        break
+                if for_link:
+                    link.interactions[name].append(interaction)
+                    relevant_atoms.update(interaction['atoms'])
+                else:
+                    block.interactions[name].append(interaction)
+
+        # Prune the link to keep only the edges and particles that are
+        # relevant.
+        nodes = set(link.nodes())
+        link.remove_nodes_from(nodes - relevant_atoms)
+
+        # Revert the interactions back to regular dicts to avoid creating
+        # keys when querying them.
+        block.interactions = dict(block.interactions)
+        link.interactions = dict(link.interactions)
+
+        return block, link
 
 
 def _clean_lines(lines):
