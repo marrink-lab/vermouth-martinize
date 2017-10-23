@@ -6,3 +6,4 @@ Created on Tue Aug 22 11:42:17 2017
 """
 
 from .gro import read_gro
+from .itp import write_itp
