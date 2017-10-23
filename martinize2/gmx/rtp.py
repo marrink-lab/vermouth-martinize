@@ -3,6 +3,7 @@ import itertools
 import networkx as nx
 
 from ..molecule import Block, Link
+from .. import utils
 
 __all__ = ['read_rtp']
 
@@ -32,7 +33,7 @@ class _IterRTPSubsectionLines(object):
         if not self.running:
             raise StopIteration
         line = next(self.lines)
-        if line.strip()[0] == '[':
+        if line.strip().startswith('['):
             self.parent.buffer.append(line)
             self.running = False
             raise StopIteration
@@ -69,7 +70,13 @@ class _IterRTPSubsections(object):
         else:
             line = next(self.lines)
         stripped = line.strip()
-        if stripped[0] == '[':
+        if stripped.startswith('['):
+            # A section header looks like "[ name ]". It matches the following
+            # regexp: r"^\s*\[\s*(?P<name>)\s*\]\s*$". Once stripped, the
+            # trailing spaces at the beginning and at the end are removed so
+            # the string starts with '[' and ends with ']'. The slicing remove
+            # these brackets. The final call to strip remove the potential
+            # white characters between the brackets and the section name.
             name = stripped[1:-1].strip()
             if name in RTP_SUBSECTIONS:
                 subsection = _IterRTPSubsectionLines(self)
@@ -78,7 +85,6 @@ class _IterRTPSubsections(object):
             self.parent.buffer.append(line)
             self.running = False
             raise StopIteration
-        print(self, line)
         raise IOError('I am almost sure I should not be here...')
 
     def __iter__(self):
@@ -109,7 +115,7 @@ class _IterRTPSections(object):
         else:
             line = next(self.lines)
         stripped = line.strip()
-        if stripped[0] == '[':
+        if stripped.startswith('['):
             name = stripped[1:-1].strip()
             section = _IterRTPSubsections(self)
             self.current_section = section
@@ -128,7 +134,6 @@ class _IterRTPSections(object):
             if name == 'bondedtypes':
                 section.buffer.append(' [ _bondedtypes ]')
             return name, section
-        print(self, line)
         raise IOError('Hum... There is a bug in the RTP reader.')
 
     def __iter__(self):
@@ -197,7 +202,7 @@ def _parse_bondedtypes(section):
 
 
 def _count_hydrogens(names):
-    return len([name for name in names if name[0] == 'H'])
+    return len([name for name in names if utils.first_alpha(name) == 'H'])
 
 
 def _keep_dihedral(center, block, bondedtypes):
@@ -243,10 +248,10 @@ def _complete_block(block, bondedtypes):
     # post processing step to cluster as much interaction specific code
     # into this method.
     # I am not sure the function type can be set explicitly in the RTP
-    # file except through the bondedtypes section. This way of handling 
-    # the function types would result in the function type being written
-    # twice in that case. Yet, none of the RTP files distributed with
-    # Gromacs 2016.3 case issue.
+    # file except through the bondedtypes section. If it is possible, then the
+    # following code can break and atoms can have the function type written
+    # twice. Yet, none of the RTP files distributed with Gromacs 2016.3 causes
+    # issue.
     functypes = {
         'bonds': bondedtypes.bonds,
         'angles': bondedtypes.angles,
@@ -348,11 +353,7 @@ def _split_block_and_link(pre_block):
     relevant_atoms = set()
     for name, interactions in pre_block.interactions.items():
         for interaction in interactions:
-            for_link = False
-            for atom in interaction['atoms']:
-                if atom[0] in '+-':
-                    for_link = True
-                    break
+            for_link = any(atom[0] in '+-' for atom in interaction['atoms'])
             if for_link:
                 link.interactions[name].append(interaction)
                 relevant_atoms.update(interaction['atoms'])
@@ -414,11 +415,8 @@ def read_rtp(lines):
     # Pre-blocks only contain the interactions that are explicitly
     # written in the file. Some are incomplete (missing implicit defaults)
     # or must be built from the "bondedtypes" rules.
-    # If the "bondedtypes" rules are not defines (which should probably
-    # not happen), then we only use what is explicitly written in the file.
-    if bondedtypes is not None:
-        for pre_block in pre_blocks.values():
-            _complete_block(pre_block, bondedtypes)
+    for pre_block in pre_blocks.values():
+        _complete_block(pre_block, bondedtypes)
 
     # At this point, the pre-blocks contain both the intra- and
     # inter-residues information. We need to split the pre-blocks into
