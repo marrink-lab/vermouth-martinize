@@ -13,6 +13,10 @@ import networkx as nx
 
 
 class Molecule(nx.Graph):
+    # As the particles are stored as nodes, we want the nodes to stay
+    # ordered.
+    node_dict_factory = OrderedDict
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
@@ -54,6 +58,33 @@ class Molecule(nx.Graph):
             return partial(self.remove_interaction, type_)
         else:
             raise AttributeError
+
+    def merge_molecule(self, molecule):
+        """
+        Add the atoms and the interactions of a molecule at the end of this one.
+
+        Atom and residue index of the new atoms are offset to follow the last
+        atom of this molecule.
+        """
+        if len(self.nodes()):
+            last_node_idx = list(self.nodes())[-1]
+            offset = last_node_idx + 1
+            residue_offset = self.node[last_node_idx]['resid'] + 1
+        else:
+            offset = 0
+            residue_offset = 0
+
+        correspondence = {}
+        for idx, node in enumerate(molecule.nodes(), start=offset):
+            correspondence[node] = idx
+            new_atom = copy.copy(molecule.node[node])
+            new_atom['resid'] += residue_offset
+            self.add_node(idx, **new_atom)
+
+        for name, interactions in molecule.interactions.items():
+            for interaction in interactions:
+                atoms = tuple(correspondence[atom] for atom in interaction[0])
+                self.add_interaction(name, atoms, interaction[1])
 
 
 class Block(nx.Graph):
