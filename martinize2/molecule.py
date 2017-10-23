@@ -5,7 +5,7 @@ Created on Thu Sep 14 10:58:04 2017
 @author: Peter Kroon
 """
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from functools import partial
 
 import networkx as nx
@@ -53,6 +53,128 @@ class Molecule(nx.Graph):
             return partial(self.remove_interaction, type_)
         else:
             raise AttributeError
+
+
+class Block(nx.Graph):
+    """
+    Residue topology template
+
+    Attributes
+    ----------
+    name: str or None
+        The name of the residue. Set to `None` if undefined.
+    atoms: iterator of dict
+        The atoms in the residue. Each atom is a dict with *a minima* a key
+        'name' for the name of the atom, and a key 'atype' for the atom type.
+        An atom can also have a key 'charge', 'charge_group', 'comment', or any
+        arbitrary key. 
+    interactions: dict
+        All the known interactions. Each item of the dictionary is a type of
+        interaction, with the key being the name of the kind of interaction
+        using Gromacs itp/rtp conventions ('bonds', 'angles', ...) and the
+        value being a list of all the interactions of that type in the residue.
+        An interaction is a dict with a key 'atoms' under which is stored the
+        list of the atoms involved (referred by their name), a key 'parameters'
+        under which is stored an arbitrary list of non-atom parameters as
+        written in a RTP file, and arbitrary keys to store custom metadata. A
+        given interaction can have a comment under the key 'comment'.
+    """
+    # As the particles are stored as nodes, we want the nodes to stay
+    # ordered.
+    node_dict_factory = OrderedDict
+
+    def __init__(self):
+        super(Block, self).__init__(self)
+        self.name = None
+        self.interactions = {}
+
+    def __repr__(self):
+        name = self.name
+        if name is None:
+            name = 'Unnamed'
+        return '<{} "{}" at 0x{:x}>'.format(self.__class__.__name__,
+                                          name, id(self))
+
+    def add_atom(self, atom):
+        try:
+            name = atom['name']
+        except KeyError:
+            raise ValueError('Atom has no name: "{}".'.format(atom))
+        self.add_node(name, **atom)
+
+    @property
+    def atoms(self):
+        for node in self.nodes():
+            node_attr = self.node[node]
+            # In pre-blocks, some nodes correspond to particles in neighboring
+            # residues. These node do not carry particle information and should
+            # not appear as particles.
+            if node_attr:
+                yield node_attr
+
+    def _make_edges(self):
+        for bond in self.interactions.get('bonds', []):
+            self.add_edge(*bond['atoms'])
+
+    def guess_angles(self):
+        for a in self.nodes():
+            for b in self.neighbors(a):
+                for c in self.neighbors(b):
+                    if c == a:
+                        continue
+                    yield (a, b, c)
+
+    def guess_dihedrals(self, angles=None):
+        angles = angles if angles is not None else self.guess_angles()
+        for a, b, c in angles:
+            for d in self.neighbors(c):
+                if d not in (a, b):
+                    yield (a, b, c, d)
+
+    def has_dihedral_around(self, center):
+        """
+        Returns True if the block has a dihedral centered around the given bond.
+
+        Parameters
+        ----------
+        center: tuple
+            The name of the two central atoms of the dihedral angle. The
+            method is sensitive to the order.
+
+        Returns
+        -------
+        bool
+        """
+        all_centers = [tuple(dih['atoms'][1:-1])
+                       for dih in self.interactions.get('dihedrals', [])]
+        return tuple(center) in all_centers
+
+    def has_improper_around(self, center):
+        """
+        Returns True if the block has an improper centered around the given bond.
+
+        Parameters
+        ----------
+        center: tuple
+            The name of the two central atoms of the improper torsion. The
+            method is sensitive to the order.
+
+        Returns
+        -------
+        bool
+        """
+        all_centers = [tuple(dih['atoms'][1:-1])
+                       for dih in self.interactions.get('impropers', [])]
+        return tuple(center) in all_centers
+
+
+class Link(nx.Graph):
+    """
+    Template link between two residues.
+    """
+    def __init__(self):
+        super(Link, self).__init__(self)
+        self.interactions = {}
 
 
 if __name__ == '__main__':
