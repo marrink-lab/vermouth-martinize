@@ -6,6 +6,7 @@ Created on Thu Sep 14 10:58:04 2017
 """
 
 from collections import defaultdict, OrderedDict
+import copy
 from functools import partial
 
 import networkx as nx
@@ -97,9 +98,9 @@ class Block(nx.Graph):
 
     def add_atom(self, atom):
         try:
-            name = atom['name']
+            name = atom['atomname']
         except KeyError:
-            raise ValueError('Atom has no name: "{}".'.format(atom))
+            raise ValueError('Atom has no atomname: "{}".'.format(atom))
         self.add_node(name, **atom)
 
     @property
@@ -166,6 +167,26 @@ class Block(nx.Graph):
         all_centers = [tuple(dih['atoms'][1:-1])
                        for dih in self.interactions.get('impropers', [])]
         return tuple(center) in all_centers
+
+    def to_molecule(self, atom_offset, resid):
+        name_to_idx = {}
+        mol = Molecule()
+        for idx, atom in enumerate(self.atoms, start=atom_offset):
+            name_to_idx[atom['atomname']] = idx
+            new_atom = copy.copy(atom)
+            new_atom['resid'] = resid
+            new_atom['resname'] = self.name
+            mol.add_node(idx, **new_atom)
+        for name, interactions in self.interactions.items():
+            for interaction in interactions:
+                atoms = tuple(
+                    name_to_idx[atom] for atom in interaction['atoms']
+                )
+                mol.add_interaction(
+                    name, atoms,
+                    interaction.get('parameters', [])
+                )
+        return mol
 
 
 class Link(nx.Graph):

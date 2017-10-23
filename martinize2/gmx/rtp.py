@@ -145,7 +145,7 @@ def _atoms(subsection, block):
     for line in subsection:
         name, atype, charge, charge_group = line.split()
         atom = {
-            'name': name,
+            'atomname': name,
             'atype': atype,
             'charge': float(charge),
             'charge_group': int(charge_group),
@@ -336,7 +336,7 @@ def _split_block_and_link(pre_block):
     
     # Filter the particles from neighboring residues out of the block.
     for atom in pre_block.atoms:
-        if not atom['name'][0] in '+-':
+        if not atom['atomname'].startswith('+-'):
             block.add_atom(atom)
     
     # Create the edges of the link based on the bonds in the pre-block.
