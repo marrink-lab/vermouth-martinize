@@ -365,6 +365,28 @@ def _split_block_and_link(pre_block):
     nodes = set(link.nodes())
     link.remove_nodes_from(nodes - relevant_atoms)
 
+    # Atoms from a links are matched against a molecule based on its node
+    # attributes. The name is a primary criterion, but other criteria can be
+    # the residue name (`resname` key) or the residue order in the chain
+    # (`order` key). The residue order is 0 when refering to the current
+    # residue, +int to refer to residues after the current one in the sequence,
+    # -int to refer to a previous residue in the sequence, and '*' for any
+    # residue but the current one.
+    # RTP files convey the order by prefixing the names with + or -. We need to
+    # get rid of these prefixes.
+    relabel_mapping = {}
+    for node in link.nodes():
+        if node.startswith('+'):
+            link.node[node]['order'] = +1
+            relabel_mapping[node] = node[1:]
+        elif node.startswith('-'):
+            link.node[node]['order'] = -1
+            relabel_mapping[node] = node[1:]
+        else:
+            link.node[node]['order'] = 0
+            link.node[node]['resname'] = block.name
+    nx.relabel_nodes(link, relabel_mapping, copy=False)
+
     # Revert the interactions back to regular dicts to avoid creating
     # keys when querying them.
     block.interactions = dict(block.interactions)
