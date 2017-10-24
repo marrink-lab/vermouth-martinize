@@ -76,15 +76,19 @@ class Molecule(nx.Graph):
             last_node_idx = list(self.nodes())[-1]
             offset = last_node_idx + 1
             residue_offset = self.node[last_node_idx]['resid'] + 1
+            offset_charge_group = self.node[last_node_idx].get('charge_group', -1) + 1
         else:
             offset = 0
             residue_offset = 0
+            offset_charge_group = 0
 
         correspondence = {}
         for idx, node in enumerate(molecule.nodes(), start=offset):
             correspondence[node] = idx
             new_atom = copy.copy(molecule.node[node])
             new_atom['resid'] += residue_offset
+            new_atom['charge_group'] = (new_atom.get('charge_group', 0)
+                                        + offset_charge_group)
             self.add_node(idx, **new_atom)
 
         for name, interactions in molecule.interactions.items():
@@ -205,7 +209,7 @@ class Block(nx.Graph):
                        for dih in self.interactions.get('impropers', [])]
         return tuple(center) in all_centers
 
-    def to_molecule(self, atom_offset, resid):
+    def to_molecule(self, atom_offset, resid, offset_charge_group):
         name_to_idx = {}
         mol = Molecule()
         for idx, atom in enumerate(self.atoms, start=atom_offset):
@@ -213,6 +217,8 @@ class Block(nx.Graph):
             new_atom = copy.copy(atom)
             new_atom['resid'] = resid
             new_atom['resname'] = self.name
+            new_atom['charge_group'] = (new_atom.get('charge_group', 0)
+                                        + offset_charge_group)
             mol.add_node(idx, **new_atom)
         for name, interactions in self.interactions.items():
             for interaction in interactions:
