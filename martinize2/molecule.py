@@ -5,11 +5,14 @@ Created on Thu Sep 14 10:58:04 2017
 @author: Peter Kroon
 """
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, namedtuple
 import copy
 from functools import partial
 
 import networkx as nx
+
+
+Interaction = namedtuple('Interaction', 'atoms parameters meta')
 
 
 class Molecule(nx.Graph):
@@ -20,7 +23,7 @@ class Molecule(nx.Graph):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
-    
+
     @property
     def atoms(self):
         for node in self.nodes():
@@ -33,19 +36,23 @@ class Molecule(nx.Graph):
             return self.__class__(copy)
         return copy
 
-    def add_interaction(self, type_, atoms, parameters):
+    def add_interaction(self, type_, atoms, parameters, meta=None):
+        if meta is None:
+            meta = {}
         for atom in atoms:
             if atom not in self:
                 # KeyError?
                 raise ValueError('Unknown atom {}'.format(atom))
-        self.interactions[type_].append((tuple(atoms), parameters))
+        self.interactions[type_].append(
+            Interaction(atoms=tuple(atoms), parameters=parameters, meta=meta)
+        )
 
     def get_interaction(self, type_):
         return self.interactions[type_]
 
     def remove_interaction(self, type_, atoms):
         for idx, interaction in enumerate(self.interactions[type_]):
-            if interaction[0] == atoms:
+            if interaction.atoms == atoms:
                 break
         else:  # no break
             raise KeyError("Can't find interaction of type {} between atoms {}".format(type_, atoms))
@@ -94,8 +101,8 @@ class Molecule(nx.Graph):
 
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
-                atoms = tuple(correspondence[atom] for atom in interaction[0])
-                self.add_interaction(name, atoms, interaction[1])
+                atoms = tuple(correspondence[atom] for atom in interaction.atoms)
+                self.add_interaction(name, atoms, interaction.parameters)
 
 
 class Block(nx.Graph):

@@ -105,7 +105,10 @@ def write_molecule_itp(molecule, outfile):
             atoms = ' '.join('{atom_idx:>{max_length[idx]}}'
                              .format(atom_idx=correspondence[x],
                                      max_length=max_length)
-                             for x in interaction[0])
-            parameters = ' '.join(str(x) for x in interaction[1])
-            print(atoms, parameters, file=outfile)
+                             for x in interaction.atoms)
+            parameters = ' '.join(str(x) for x in interaction.parameters)
+            comment = ''
+            if 'comment' in interaction.meta:
+                comment = '; ' + interaction.meta['comment']
+            print(atoms, parameters, comment, file=outfile)
         print('', file=outfile)

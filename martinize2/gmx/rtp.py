@@ -150,7 +150,6 @@ class _IterRTPSections(object):
         return self
 
 
-
 def _atoms(subsection, block):
     for line in subsection:
         name, atype, charge, charge_group = line.split()
@@ -176,6 +175,7 @@ def _base_rtp_parser(interaction_name, natoms):
             interactions.append({'atoms': atoms, 'parameters': parameters})
         block.interactions[interaction_name] = interactions
     return wrapped
+
 
 def _parse_bondedtypes(section):
     # Default taken from
