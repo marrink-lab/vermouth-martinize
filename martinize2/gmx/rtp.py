@@ -1,3 +1,7 @@
+"""
+Handle the RTP format from Gromacs.
+"""
+
 import collections
 import itertools
 import networkx as nx
@@ -15,7 +19,7 @@ RTP_SUBSECTIONS = ('atoms', 'bonds', 'angles', 'dihedrals',
 
 
 _BondedTypes = collections.namedtuple(
-    '_BondedTypes', 
+    '_BondedTypes',
     'bonds angles dihedrals impropers all_dihedrals nrexcl HH14 remove_dih'
 )
 
@@ -43,6 +47,9 @@ class _IterRTPSubsectionLines(object):
         return self
 
     def flush(self):
+        """
+        Move the iterator after the last line of the subsection.
+        """
         for line in self:
             pass
 
@@ -91,6 +98,9 @@ class _IterRTPSubsections(object):
         return self
 
     def flush(self):
+        """
+        Move the iterator after the last subsection of the section.
+        """
         for line in self:
             pass
 
@@ -155,6 +165,9 @@ def _atoms(subsection, block):
 
 def _base_rtp_parser(interaction_name, natoms):
     def wrapped(subsection, block):
+        """
+        Parse the lines from a RTP subsection and populate the block.
+        """
         interactions = []
         for line in subsection:
             splitted = line.strip().split()
@@ -183,7 +196,7 @@ def _parse_bondedtypes(section):
     # Fill with the defaults. The file gives the values in order so we
     # need to append the missing values from the default at the end.
     bondedtypes = _BondedTypes(*(read + list(defaults[len(read):])))
-    
+
     # Make sure there is no unexpected lines in the section.
     # Come on Jonathan! There must be a more compact way of doing it.
     try:
@@ -220,7 +233,7 @@ def _complete_block(block, bondedtypes):
     Generate implicit dihedral angles, and add function types to the
     interactions.
     """
-    block._make_edges()
+    block.make_edges_from_bonds()
 
     # Generate missing dihedrals
     # As pdb2gmx generates all the possible dihedral angles by default,
@@ -333,12 +346,12 @@ def _split_block_and_link(pre_block):
     link.interactions = collections.defaultdict(list)
 
     block.name = pre_block.name
-    
+
     # Filter the particles from neighboring residues out of the block.
     for atom in pre_block.atoms:
         if not atom['atomname'].startswith('+-'):
             block.add_atom(atom)
-    
+
     # Create the edges of the link based on the bonds in the pre-block.
     # This will create too many edges, but the useless ones will be pruned
     # latter.
@@ -409,6 +422,28 @@ def _dihedral_sorted_center(atoms):
 
 
 def read_rtp(lines):
+    """
+    Read blocks and links from a Gromacs RTP file.
+
+    Parameters
+    ----------
+    lines
+        An iterator over the lines of a RTP file (e.g. a file handle, or a
+        list of string).
+
+    Returns
+    -------
+    blocks: dict
+        A dict the keys of which are residue names and the values are instances
+        of :class:`Block`.
+    links: list
+        A list of instances of :class:`Link`.
+
+    Raises
+    ------
+    IOError
+        Something in the file could not be parsed.
+    """
     _subsection_parsers = {
         'atoms': _atoms,
         'bonds': _base_rtp_parser('bonds', natoms=2),

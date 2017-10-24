@@ -155,7 +155,10 @@ class Block(nx.Graph):
             if node_attr:
                 yield node_attr
 
-    def _make_edges(self):
+    def make_edges_from_bonds(self):
+        """
+        Create an edge for each bond in ``self.interactions['bonds']``.
+        """
         for bond in self.interactions.get('bonds', []):
             self.add_edge(*bond['atoms'])
 
