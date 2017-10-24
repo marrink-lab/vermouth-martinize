@@ -1,3 +1,5 @@
+import copy
+
 def write_itp(molecule, outfile):
     try:
         moltype = molecule.moltype
@@ -16,10 +18,10 @@ def write_itp(molecule, outfile):
     max_length = {}
     for attribute in ('atype', 'resid', 'resname', 'atomname',
                       'charge_group', 'charge', 'mass'):
-        if not all([attribute in atom for atom in molecule.atoms]):
+        if not all([attribute in atom for _, atom in molecule.atoms]):
             raise ValueError('Not all atom have a {}.'.format(attribute))
         max_length[attribute] = max(len(str(atom[attribute]))
-                                    for atom in molecule.atoms)
+                                    for _, atom in molecule.atoms)
     max_length['idx'] = len(str(max(molecule.nodes())))
 
 
@@ -30,8 +32,13 @@ def write_itp(molecule, outfile):
 
     print(max_length)
     print('[ atoms ]', file=outfile)
-    for idx in molecule.nodes():
-        atom = molecule.node[idx]
+    for idx, atom in molecule.atoms:
+        # We use 0-based indexes, but the ITP format is 1-based.
+        idx += 1
+        new_atom = copy.copy(atom)
+        new_atom['resid'] += 1
+        new_atom['charge_group'] += 1
+
         print('{idx:>{max_length[idx]}} '
               '{atype:<{max_length[atype]}} '
               '{resid:>{max_length[resid]}} '
@@ -40,14 +47,14 @@ def write_itp(molecule, outfile):
               '{charge_group:>{max_length[charge_group]}} '
               '{charge:>{max_length[charge]}} '
               '{mass:>{max_length[mass]}}'
-              .format(idx=idx, max_length=max_length, **atom), file=outfile)
+              .format(idx=idx, max_length=max_length, **new_atom), file=outfile)
     print('', file=outfile)
 
     for name, interactions in molecule.interactions.items():
         print('[ {} ]'.format(name), file=outfile)
         for interaction in interactions:
             print(' '.join('{x:>{max_length[idx]}}'
-                           .format(x=x, max_length=max_length)
+                           .format(x=(x + 1), max_length=max_length)
                            for x in interaction[0]),
                   ' '.join(str(x) for x in interaction[1]),
                   file=outfile)

@@ -25,7 +25,7 @@ class Molecule(nx.Graph):
     def atoms(self):
         for node in self.nodes():
             node_attr = self.node[node]
-            yield node_attr
+            yield node, node_attr
 
     def copy(self, as_view=False):
         copy = super().copy(as_view)
