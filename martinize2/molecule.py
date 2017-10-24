@@ -73,7 +73,8 @@ class Molecule(nx.Graph):
         atom of this molecule.
         """
         if len(self.nodes()):
-            last_node_idx = list(self.nodes())[-1]
+            # We assume that the last id is always the largest.
+            last_node_idx = max(self) 
             offset = last_node_idx + 1
             residue_offset = self.node[last_node_idx]['resid'] + 1
             offset_charge_group = self.node[last_node_idx].get('charge_group', -1) + 1
@@ -209,7 +210,7 @@ class Block(nx.Graph):
                        for dih in self.interactions.get('impropers', [])]
         return tuple(center) in all_centers
 
-    def to_molecule(self, atom_offset, resid, offset_charge_group):
+    def to_molecule(self, atom_offset=0, resid=1, offset_charge_group=1):
         name_to_idx = {}
         mol = Molecule()
         for idx, atom in enumerate(self.atoms, start=atom_offset):
