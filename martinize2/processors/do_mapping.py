@@ -19,6 +19,7 @@ import numpy as np
 
 
 def get_mapping(resname):
+    # TODO: Move this to files
     BB = ('BB', set('C CA O N  HA HA1 HA2 H H1 H2 H3 OC1 OC2'.split()))
     MAPPING = {
            'GLY': [BB],
