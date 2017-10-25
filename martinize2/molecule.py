@@ -7,6 +7,7 @@ Created on Thu Sep 14 10:58:04 2017
 
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
+import itertools
 from functools import partial
 
 import networkx as nx
@@ -167,7 +168,20 @@ class Block(nx.Graph):
         Create an edge for each bond in ``self.interactions['bonds']``.
         """
         for bond in self.interactions.get('bonds', []):
-            self.add_edge(*bond['atoms'])
+            self.add_edge(*bond.atoms)
+
+    def make_edges_from_cmap(self):
+        """
+        Create edges from cmap interactions.
+
+        Cmap are described as two consecutive proper dihedral angles. The
+        atoms for the interaction are the 4 atoms of the first dihedral angle
+        followed by the next atom forming the second dihedral angle with the
+        3 previous ones. Each pair of consecutive atoms generate an edge.
+        """
+        for cmap in self.interactions.get('cmap', []):
+            atoms = cmap.atoms
+            self.add_edges_from(zip(atoms[:-1], atoms[1:]))
 
     def guess_angles(self):
         for a in self.nodes():
@@ -216,7 +230,7 @@ class Block(nx.Graph):
         -------
         bool
         """
-        all_centers = [tuple(dih['atoms'][1:-1])
+        all_centers = [tuple(dih.atoms[1:-1])
                        for dih in self.interactions.get('impropers', [])]
         return tuple(center) in all_centers
 
@@ -234,11 +248,11 @@ class Block(nx.Graph):
         for name, interactions in self.interactions.items():
             for interaction in interactions:
                 atoms = tuple(
-                    name_to_idx[atom] for atom in interaction['atoms']
+                    name_to_idx[atom] for atom in interaction.atoms
                 )
                 mol.add_interaction(
                     name, atoms,
-                    interaction.get('parameters', [])
+                    interaction.parameters
                 )
         return mol
 
@@ -247,6 +261,8 @@ class Link(nx.Graph):
     """
     Template link between two residues.
     """
+    node_dict_factory = OrderedDict
+
     def __init__(self):
         super(Link, self).__init__(self)
         self.interactions = {}

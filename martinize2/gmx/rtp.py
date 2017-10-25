@@ -6,7 +6,7 @@ import collections
 import itertools
 import networkx as nx
 
-from ..molecule import Block, Link
+from ..molecule import Block, Link, Interaction
 from .. import utils
 
 __all__ = ['read_rtp']
@@ -172,7 +172,9 @@ def _base_rtp_parser(interaction_name, natoms):
             splitted = line.strip().split()
             atoms = splitted[:natoms]
             parameters = splitted[natoms:]
-            interactions.append({'atoms': atoms, 'parameters': parameters})
+            interactions.append(Interaction(atoms=atoms,
+                                            parameters=parameters,
+                                            meta={}))
         block.interactions[interaction_name] = interactions
     return wrapped
 
@@ -234,6 +236,7 @@ def _complete_block(block, bondedtypes):
     interactions.
     """
     block.make_edges_from_bonds()
+    block.make_edges_from_cmap()
 
     # Generate missing dihedrals
     # As pdb2gmx generates all the possible dihedral angles by default,
@@ -249,7 +252,7 @@ def _complete_block(block, bondedtypes):
             # See src/gromacs/gmxpreprocess/gen_add.cpp::dcomp in the
             # Gromacs source code (see version 2016.3 for instance).
             atoms = sorted(dihedrals, key=_count_hydrogens)[0]
-            all_dihedrals.append({'atoms': atoms})
+            all_dihedrals.append(Interaction(atoms=atoms, parameters=[], meta={}))
     # TODO: Sort the dihedrals by index
     block.interactions['dihedrals'] = (
         block.interactions.get('dihedrals', []) + all_dihedrals
@@ -275,10 +278,7 @@ def _complete_block(block, bondedtypes):
     }
     for name, interactions in block.interactions.items():
         for interaction in interactions:
-            if 'parameters' in interaction:
-                interaction['parameters'].insert(0, functypes[name])
-            else:
-                interaction['parameters'] = [functypes[name], ]
+            interaction.parameters.insert(0, functypes[name])
 
 
 def _split_blocks_and_links(pre_blocks):
@@ -352,11 +352,10 @@ def _split_block_and_link(pre_block):
         if not atom['atomname'].startswith('+-'):
             block.add_atom(atom)
 
-    # Create the edges of the link based on the bonds in the pre-block.
+    # Create the edges of the link based on the edges in the pre-block.
     # This will create too many edges, but the useless ones will be pruned
     # latter.
-    for bond in pre_block.interactions.get('bonds', []):
-        link.add_edge(*bond['atoms'])
+    link.add_edges_from(pre_block.edges)
 
     # Split the interactions from the pre-block between the block (for
     # intra-residue interactions) and the link (for inter-residues ones).
@@ -366,10 +365,10 @@ def _split_block_and_link(pre_block):
     relevant_atoms = set()
     for name, interactions in pre_block.interactions.items():
         for interaction in interactions:
-            for_link = any(atom[0] in '+-' for atom in interaction['atoms'])
+            for_link = any(atom[0] in '+-' for atom in interaction.atoms)
             if for_link:
                 link.interactions[name].append(interaction)
-                relevant_atoms.update(interaction['atoms'])
+                relevant_atoms.update(interaction.atoms)
             else:
                 block.interactions[name].append(interaction)
 
@@ -387,17 +386,18 @@ def _split_block_and_link(pre_block):
     # residue but the current one.
     # RTP files convey the order by prefixing the names with + or -. We need to
     # get rid of these prefixes.
+    order = {'+': +1, '-': -1}
     relabel_mapping = {}
-    for node in link.nodes():
-        if node.startswith('+'):
-            link.node[node]['order'] = +1
-            relabel_mapping[node] = node[1:]
-        elif node.startswith('-'):
-            link.node[node]['order'] = -1
-            relabel_mapping[node] = node[1:]
+    for idx, node in enumerate(link.nodes()):
+        atomname = node
+        if node[0] in '+-':
+            link.node[node]['order'] = order[node[0]]
+            atomname = atomname[1:]
         else:
             link.node[node]['order'] = 0
             link.node[node]['resname'] = block.name
+        link.node[node]['atomname'] = atomname
+        relabel_mapping[node] = idx
     nx.relabel_nodes(link, relabel_mapping, copy=False)
 
     # Revert the interactions back to regular dicts to avoid creating
