@@ -11,3 +11,4 @@ from .make_bonds import MakeBonds
 from .pdb_reader import PDBInput
 from .repair_graph import RepairGraph
 from .do_mapping import DoMapping
+from .do_links import DoLinks
