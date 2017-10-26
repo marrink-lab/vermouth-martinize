@@ -73,6 +73,14 @@ class Molecule(nx.Graph):
         else:
             raise AttributeError
 
+    def find_atoms(self, atomname, resname='', resid=-1):
+        for node_idx in self:
+            node = self.nodes[node_idx]
+            if node['atomname'] == atomname and\
+                    (not resname or node['resname'] == resname) and\
+                    (resid == -1 or node['resid'] == resid):
+                yield node_idx
+
     def merge_molecule(self, molecule):
         """
         Add the atoms and the interactions of a molecule at the end of this one.
