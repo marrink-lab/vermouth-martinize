@@ -56,7 +56,7 @@ graph [
     edge [source 9 target 10]
     node [
         id 11
-        atomname "H"
+        atomname "HN"
     ]
     edge [source 0 target 11]
     node [

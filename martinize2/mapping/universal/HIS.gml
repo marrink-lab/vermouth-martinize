@@ -41,7 +41,7 @@ graph [
   ]
   node [
     id 10
-    atomname "H"
+    atomname "HN"
   ]
   node [
     id 11
