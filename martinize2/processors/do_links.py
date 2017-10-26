@@ -19,15 +19,13 @@ class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
         # Node2 is the link
         node1 = self.G1.nodes[node1]
         node2 = self.G2.nodes[node2]
-        test = True
         for attr in node2:
             if attr == 'order':
                 continue
-            print(attr, end=': ')
-            print(node1.get(attr, None), node2[attr], end='; ')
-            test = test and node1.get(attr, None) == node2[attr]
-        print(test)
-        return test
+            if node1.get(attr, None) != node2[attr]:
+                return False
+        else:
+            return True
 
 
 def match_link(molecule, link):
@@ -50,12 +48,14 @@ def match_link(molecule, link):
                     break
         else:  # No break
             for ((order1, resid1), (order2, resid2)) in combinations(order_match.items(), 2):
-                # Assert the differences between orders correspond to 
+                # Assert the differences between orders correspond to
                 # differences in resid
-                if not order2 - order1 == resid2 - order2:
+                if order2 - order1 != resid2 - resid1:
                     break
             else:  # No break
-                yield raw_match
+                # raw_match is molecule -> link. The other way around is more
+                # usefull
+                yield {v: k for k, v in raw_match.items()}
 
 
 RTP_PATH = '/usr/local/gromacs-2016.3/share/gromacs/top/charmm27.ff/aminoacids.rtp'
@@ -66,8 +66,9 @@ class DoLinks(Processor):
         with open(RTP_PATH) as rtp:
             blocks, links = read_rtp(rtp)
         for link in links:
-            for atomname in link:
-                link.nodes[atomname]['atomname'] = atomname
             matches = match_link(molecule, link)
-
-            print(list(matches))
+            for match in matches:
+                for inter_type, params in link.interactions:
+                    params = params._replace(atoms=tuple(match[idx] for idx in params.atoms))
+                    molecule.add_interaction(inter_type, *params)
+        return molecule

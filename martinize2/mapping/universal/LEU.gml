@@ -74,7 +74,7 @@ graph [
     ]
     node [
         id 18
-        atomname "H"
+        atomname "HN"
     ]
 edge [ source 0 target 3]
 edge [ source 0 target 2]
