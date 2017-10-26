@@ -14,7 +14,6 @@ except ImportError:
         return np.sqrt(np.sum((p1 - p2)**2))
 
 
-
 def maxes(iterable, key=lambda x: x):
     """
     Analogous to ``max``, but returns a list of all maxima.

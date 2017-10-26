@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 
-
+# TODO: replace with pathlib.replace, and add pathlib2 to requirements for py2.7.
 # from https://stupidpythonideas.blogspot.nl/2014/07/getting-atomic-writes-right.html
 try:
     replace = os.replace
