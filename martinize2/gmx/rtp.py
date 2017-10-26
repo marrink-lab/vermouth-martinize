@@ -235,8 +235,7 @@ def _complete_block(block, bondedtypes):
     Generate implicit dihedral angles, and add function types to the
     interactions.
     """
-    block.make_edges_from_bonds()
-    block.make_edges_from_cmap()
+    block.make_edges_from_interactions()
 
     # Generate missing dihedrals
     # As pdb2gmx generates all the possible dihedral angles by default,
@@ -351,11 +350,14 @@ def _split_block_and_link(pre_block):
     for atom in pre_block.atoms:
         if not atom['atomname'].startswith('+-'):
             block.add_atom(atom)
+        link.add_node(atom['atomname'])
 
-    # Create the edges of the link based on the edges in the pre-block.
-    # This will create too many edges, but the useless ones will be pruned
-    # latter.
+    # Create the edges of the link and block based on the edges in the pre-block.
+    # This will create too many edges in the link, but the useless ones will be
+    # pruned latter.
     link.add_edges_from(pre_block.edges)
+    block.add_edges_from(edge for edge in pre_block.edges
+                         if not any(node[0] in '+-' for node in edge))
 
     # Split the interactions from the pre-block between the block (for
     # intra-residue interactions) and the link (for inter-residues ones).
@@ -376,6 +378,11 @@ def _split_block_and_link(pre_block):
     # relevant.
     nodes = set(link.nodes())
     link.remove_nodes_from(nodes - relevant_atoms)
+    # Some interactions do not generate nodes (impropers for instance). If a
+    # node is only described in one of such interactions, then the node never
+    # appears in the link. Here we make sure these nodes exists even if they
+    # are note connected.
+    link.add_nodes_from(relevant_atoms)
 
     # Atoms from a links are matched against a molecule based on its node
     # attributes. The name is a primary criterion, but other criteria can be
@@ -399,6 +406,20 @@ def _split_block_and_link(pre_block):
         link.node[node]['atomname'] = atomname
         relabel_mapping[node] = idx
     nx.relabel_nodes(link, relabel_mapping, copy=False)
+
+    # By relabelling the nodes, we lost the relations between interactions and
+    # nodes, so we need to relabel the atoms in the interactions
+    new_interactions = collections.defaultdict(list)
+    for name, interactions in link.interactions.items():
+        for interaction in interactions:
+            atoms = tuple(relabel_mapping[atom] for atom in interaction.atoms)
+            new_interactions[name].append(Interaction(
+                atoms=atoms,
+                parameters=interaction.parameters,
+                meta=interaction.meta
+            ))
+    link.interactions = new_interactions
+
 
     # Revert the interactions back to regular dicts to avoid creating
     # keys when querying them.

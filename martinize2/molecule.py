@@ -105,6 +105,9 @@ class Molecule(nx.Graph):
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
                 self.add_interaction(name, atoms, interaction.parameters)
 
+        for edge in molecule.edges:
+            self.add_edge(*(correspondence[node] for node in edge))
+
 
 class Block(nx.Graph):
     """
@@ -163,25 +166,44 @@ class Block(nx.Graph):
             if node_attr:
                 yield node_attr
 
-    def make_edges_from_bonds(self):
+    def make_edges_from_interaction_type(self, type_):
         """
-        Create an edge for each bond in ``self.interactions['bonds']``.
-        """
-        for bond in self.interactions.get('bonds', []):
-            self.add_edge(*bond.atoms)
+        Create edges from the interactions of a given type.
 
-    def make_edges_from_cmap(self):
-        """
-        Create edges from cmap interactions.
+        The interactions must be described so that two consecutive atoms in an
+        interaction should be linked by an edge. This is the case for bonds,
+        angles, proper dihedral angles, and cmap torsions. It is not always
+        true for improper torsions.
 
         Cmap are described as two consecutive proper dihedral angles. The
         atoms for the interaction are the 4 atoms of the first dihedral angle
         followed by the next atom forming the second dihedral angle with the
         3 previous ones. Each pair of consecutive atoms generate an edge.
+
+        .. warning::
+
+            If there is no interaction of the required type, it will be
+            silently ignored.
+
+        Parameters
+        ----------
+        type_: str
+            The name of the interaction type the edges should be built from.
         """
-        for cmap in self.interactions.get('cmap', []):
-            atoms = cmap.atoms
+        for interaction in self.interactions.get(type_, []):
+            atoms = interaction.atoms
             self.add_edges_from(zip(atoms[:-1], atoms[1:]))
+
+    def make_edges_from_interactions(self):
+        """
+        Create edges from the interactions we know how to convert to edges.
+
+        The known interactions are bonds, angles, proper dihedral angles, and
+        cmap torsions.
+        """
+        known_types = ('bonds', 'angles', 'dihedrals', 'cmap')
+        for type_ in known_types:
+            self.make_edges_from_interaction_type(type_)
 
     def guess_angles(self):
         for a in self.nodes():
@@ -254,6 +276,9 @@ class Block(nx.Graph):
                     name, atoms,
                     interaction.parameters
                 )
+        for edge in self.edges:
+            mol.add_edge(*(name_to_idx[node] for node in edge))
+
         return mol
 
 
