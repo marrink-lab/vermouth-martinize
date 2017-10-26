@@ -68,7 +68,8 @@ class DoLinks(Processor):
         for link in links:
             matches = match_link(molecule, link)
             for match in matches:
-                for inter_type, params in link.interactions:
-                    params = params._replace(atoms=tuple(match[idx] for idx in params.atoms))
-                    molecule.add_interaction(inter_type, *params)
+                for inter_type, params in link.interactions.items():
+                    for param in params:
+                        param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))
+                        molecule.add_interaction(inter_type, *param)
         return molecule
