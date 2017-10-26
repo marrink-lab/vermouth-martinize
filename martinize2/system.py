@@ -13,3 +13,7 @@ class System:
 
     def add_molecule(self, molecule):
         self.molecules.append(molecule)
+
+    @property
+    def num_particles(self):
+        return sum(len(mol) for mol in self.molecules)

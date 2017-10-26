@@ -2,7 +2,6 @@
 Handle the ITP file format from Gromacs.
 """
 
-from __future__ import print_function
 import copy
 
 __all__ = ['write_molecule_itp', ]
@@ -65,9 +64,8 @@ def write_molecule_itp(molecule, outfile):
         max_length[attribute] = max(len(str(atom.get(attribute, '')))
                                     for _, atom in molecule.atoms)
 
-    print('[ moleculetype ]', file=outfile)
-    print(molecule.moltype, molecule.nrexcl, file=outfile)
-    print('', file=outfile)
+    outfile.write('[ moleculetype ]\n')
+    outfile.write('{} {}\n\n'.format(molecule.moltype, molecule.nrexcl))
 
     # The atoms in the [atoms] section must be consecutively numbered, yet
     # there is no guarantee that the molecule fulfill that constrain.
@@ -78,7 +76,7 @@ def write_molecule_itp(molecule, outfile):
     # left as the user responsibility. Make sure residues and charge groups are
     # correctly numbered.
     correspondence = {}
-    print('[ atoms ]', file=outfile)
+    outfile.write('[ atoms ]\n')
     for idx, (original_idx, atom) in enumerate(molecule.atoms, start=1):
         correspondence[original_idx] = idx
         new_atom = copy.copy(atom)
@@ -87,20 +85,20 @@ def write_molecule_itp(molecule, outfile):
         new_atom['charge'] = new_atom.get('charge', '')
         new_atom['mass'] = new_atom.get('mass', '')
 
-        print('{idx:>{max_length[idx]}} '
-              '{atype:<{max_length[atype]}} '
-              '{resid:>{max_length[resid]}} '
-              '{resname:<{max_length[resname]}} '
-              '{atomname:<{max_length[atomname]}} '
-              '{charge_group:>{max_length[charge_group]}} '
-              '{charge:>{max_length[charge]}} '
-              '{mass:>{max_length[mass]}}'
-              .format(idx=idx, max_length=max_length, **new_atom),
-              file=outfile)
-    print('', file=outfile)
+        outfile.write('{idx:>{max_length[idx]}} '
+                      '{atype:<{max_length[atype]}} '
+                      '{resid:>{max_length[resid]}} '
+                      '{resname:<{max_length[resname]}} '
+                      '{atomname:<{max_length[atomname]}} '
+                      '{charge_group:>{max_length[charge_group]}} '
+                      '{charge:>{max_length[charge]}} '
+                      '{mass:>{max_length[mass]}}\n'
+                      .format(idx=idx, max_length=max_length, **new_atom))
+    outfile.write('\n')
 
+    # Write the interactions
     for name, interactions in molecule.interactions.items():
-        print('[ {} ]'.format(name), file=outfile)
+        outfile.write('[ {} ]\n'.format(name))
         for interaction in interactions:
             atoms = ' '.join('{atom_idx:>{max_length[idx]}}'
                              .format(atom_idx=correspondence[x],
@@ -110,5 +108,5 @@ def write_molecule_itp(molecule, outfile):
             comment = ''
             if 'comment' in interaction.meta:
                 comment = '; ' + interaction.meta['comment']
-            print(atoms, parameters, comment, file=outfile)
-        print('', file=outfile)
+            outfile.write(' '.join((atoms, parameters, comment)) + '\n')
+        outfile.write('\n')
