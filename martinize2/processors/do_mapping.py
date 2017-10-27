@@ -145,5 +145,4 @@ class DoMapping(Processor):
     def run_molecule(self, molecule):
         with open(RTP_PATH) as rtp:
             blocks, links = read_rtp(rtp)
-        
         return do_mapping(molecule, blocks)

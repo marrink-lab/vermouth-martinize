@@ -26,11 +26,7 @@ graph [
     ]
     node [
         id 6
-        atomname "H1"
-    ]
-    node [
-        id 7
-        atomname "H2"
+        atomname "HN"
     ]
 edge [ source 0 target 3]
 edge [ source 0 target 2]
@@ -38,6 +34,5 @@ edge [ source 1 target 3]
 edge [ source 3 target 4]
 edge [ source 3 target 5]
 edge [ source 1 target 6]
-edge [ source 1 target 7]
 
 ]

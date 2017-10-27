@@ -55,55 +55,55 @@ graph [
     edge [source 1 target 10]
     node [
         id 11
-        atomname "1HB"
+        atomname "HB1"
     ]
     node [
         id 12
-        atomname "2HB"
+        atomname "HB2"
     ]
     edge [source 4 target 11]
     edge [source 4 target 12]
     node [
         id 13
-        atomname "1HG"
+        atomname "HG1"
     ]
     node [
         id 14
-        atomname "2HG"
+        atomname "HG2"
     ]
     edge [source 5 target 13]
     edge [source 5 target 14]
     node [
         id 15
-        atomname "1HD"
+        atomname "HD1"
     ]
     node [
         id 16
-        atomname "2HD"
+        atomname "HD2"
     ]
     edge [source 6 target 15]
     edge [source 6 target 16]
     node [
         id 17
-        atomname "1HE"
+        atomname "HE1"
     ]
     node [
         id 18
-        atomname "2HE"
+        atomname "HE2"
     ]
     edge [source 7 target 17]
     edge [source 7 target 18]
     node [
         id 19
-        atomname "1HZ"
+        atomname "HZ1"
     ]
     node [
         id 20
-        atomname "2HZ"
+        atomname "HZ2"
     ]
     node [
         id 21
-        atomname "3HZ"
+        atomname "HZ3"
     ]
     edge [source 8 target 19]
     edge [source 8 target 20]

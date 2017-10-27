@@ -7,7 +7,6 @@ Created on Thu Sep 14 10:58:04 2017
 
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
-import itertools
 from functools import partial
 
 import networkx as nx
@@ -36,6 +35,9 @@ class Molecule(nx.Graph):
         if not as_view:
             return self.__class__(copy)
         return copy
+
+    def subgraph(self, *args, **kwargs):
+        return self.__class__(super().subgraph(*args, **kwargs))
 
     def add_interaction(self, type_, atoms, parameters, meta=None):
         if meta is None:
@@ -80,14 +82,6 @@ class Molecule(nx.Graph):
             return partial(self.remove_interaction, type_)
         else:
             raise AttributeError
-
-    def find_atoms(self, atomname, resname='', resid=-1):
-        for node_idx in self:
-            node = self.nodes[node_idx]
-            if node['atomname'] == atomname and\
-                    (not resname or node['resname'] == resname) and\
-                    (resid == -1 or node['resid'] == resid):
-                yield node_idx
 
     def merge_molecule(self, molecule):
         """

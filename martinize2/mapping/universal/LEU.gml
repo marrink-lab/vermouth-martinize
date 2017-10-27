@@ -38,11 +38,11 @@ graph [
     ]
     node [
         id 9
-        atomname "1HB"
+        atomname "HB1"
     ]
     node [
         id 10
-        atomname "2HB"
+        atomname "HB2"
     ]
     node [
         id 11
@@ -50,27 +50,27 @@ graph [
     ]
     node [
         id 12
-        atomname "1HD1"
+        atomname "HD11"
     ]
     node [
         id 13
-        atomname "2HD1"
+        atomname "HD12"
     ]
     node [
         id 14
-        atomname "3HD1"
+        atomname "HD13"
     ]
     node [
         id 15
-        atomname "1HD2"
+        atomname "HD21"
     ]
     node [
         id 16
-        atomname "2HD2"
+        atomname "HD22"
     ]
     node [
         id 17
-        atomname "3HD2"
+        atomname "HD23"
     ]
     node [
         id 18
