@@ -25,6 +25,8 @@ except ImportError:
     DATA_PATH = os.path.join(os.path.dirname(__file__), 'mapping')
 
 
+# TODO: Get the reference graph for a given force field rather than having it
+# hardcoded.
 @functools.lru_cache(None)
 def read_reference_graph(resname):
     """
@@ -52,7 +54,7 @@ def add_element_attr(molecule):
 
 def make_reference(mol):
     """
-    Takes an atomistic reference graph as read from a PDB file, and finds and
+    Takes an molecule graph (e.g. as read from a PDB file), and finds and
     returns the graph how it should look like, including all matching nodes
     between the input graph and the references.
     Requires residuenames to be correct.
@@ -144,6 +146,9 @@ def make_reference(mol):
 
 
 def repair_residue(molecule, ref_residue):
+    """
+    Rebuild missing atoms and canonicalize atomnames
+    """
     # if ref_residue['found'].graph.get('canonized', False):
     #    return
     # Rebuild missing atoms and canonicalize atomnames
@@ -215,13 +220,13 @@ def repair_residue(molecule, ref_residue):
 
 def repair_graph(molecule, reference_graph):
     """
-    Repairs a graph ``aa_graph`` produced from a PDB file based on the
+    Repairs a molecule graph produced based on the
     information in ``reference_graph``. Missing atoms will be reconstructed and
     atom- and residue names will be canonicalized.
 
     Parameters
     ----------
-    aa_graph : networkx.Graph
+    molecule : molecule.Molecule
         The graph read from e.g. a PDB file. Required node attributes:
 
         :resname: The residue name.
@@ -244,7 +249,7 @@ def repair_graph(molecule, reference_graph):
     Returns
     -------
     networkx.Graph
-        A new graph like ``aa_graph``, but with missing atoms (as per
+        A new graph like ``molecule``, but with missing atoms (as per
         ``reference_graph``) added, and canonicalized atom and residue names.
     """
     molecule = molecule.copy()
@@ -258,6 +263,10 @@ def repair_graph(molecule, reference_graph):
         resid = reference_graph.nodes[residx]['resid']
         
         # Find the PTMs (or termini, or other additions) for *this* residue
+        # `extra` is a set of the indices of the nodes from  `found` that have
+        # no match in the reference graph.
+        # `atachments` is a set of the nodes from `found` that have a match in
+        # the reference and are connected to a node from `extra`.
         extra = set(found.nodes) - set(match.values())
         if extra:
             # match: reference -> found
