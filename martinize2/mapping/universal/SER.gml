@@ -25,7 +25,7 @@ graph [
   ]
   node [
     id 6
-    atomname "H"
+    atomname "HN"
   ]
   node [
     id 7

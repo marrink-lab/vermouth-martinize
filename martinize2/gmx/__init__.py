@@ -6,3 +6,5 @@ Created on Tue Aug 22 11:42:17 2017
 """
 
 from .gro import read_gro, write_gro
+from .itp import write_molecule_itp
+from .rtp import read_rtp
