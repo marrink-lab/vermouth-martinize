@@ -44,12 +44,6 @@ def read_reference_graph(resname):
 #    return nx.read_gml('/universal/{}.gml'.format(resname), label='id')
 
 
-def add_element_attr(molecule):
-    for node_idx in molecule:
-        node = molecule.nodes[node_idx]
-        node['element'] = node.get('element', first_alpha(node['atomname']))
-
-
 def make_reference(mol):
     """
     Takes an atomistic reference graph as read from a PDB file, and finds and
@@ -122,7 +116,7 @@ def make_reference(mol):
             # subgraph, and do the subgraph isomorphism/alignment on those. MCS is
             # *ridiculously* expensive, so we only do it when we have to.
             try:
-                mcs_match = max(categorical_maximum_common_subgraph(reference, residue, ['element']),
+                mcs_match = max(maximum_common_subgraph(reference, residue, ['element']),
                                 key=lambda m: rate_match(reference, residue, m))
             except ValueError:
                 raise ValueError('No common subgraph found between {} and reference {}'.format(resname, resname))
@@ -274,7 +268,7 @@ def repair_graph(molecule, reference_graph):
     # the affected residues, and call repair_residue on them again.
     # For now, just print them...
     for resid, counts, n_idxs in PTMs:
-        print('Extra atoms for residue {}{}'.format(reference_graph.nodes[resid]['resname'], resid), end=':')
+        print('Extra atoms for residue {}{}'.format(reference_graph.nodes[resid]['resname'], resid+1), end=':')
         print(counts, end='; ')
         for n_idx in n_idxs:
             resname = molecule.nodes[n_idx]['resname']
