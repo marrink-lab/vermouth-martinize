@@ -13,11 +13,11 @@ import os.path as osp
 import numpy as np
 
 #PATH = '../molecules/cycliclipopeptide_2.pdb'
-#PATH = '../molecules/glkfk.pdb'
+PATH = '../molecules/glkfk.pdb'
 #PATH = '../molecules/6-macro-8_cartwheel.gro'
 #PATH = '../molecules/6-macro-16.gro'
 #PATH = '../molecules/6-macro-16-rtc-eq-nodisre.pdb'
-PATH = '../molecules/3-macro-1.gro'
+#PATH = '../molecules/3-macro-1.gro'
 #CG_graph = martinize(PATH, True)
 #
 #write_pdb(CG_graph, "6-macro-16-rtc-eq-nodisre-CG.pdb", conect=True)
@@ -34,7 +34,7 @@ else:
     raise RuntimeError
 MakeBonds().run_system(system)
 RepairGraph().run_system(system)
-#DoMapping().run_system(system)
+DoMapping().run_system(system)
 ApplyBlocks().run_system(system)
 DoLinks().run_system(system)
 
