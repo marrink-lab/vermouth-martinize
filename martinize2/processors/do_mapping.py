@@ -14,6 +14,7 @@ from ..graph_utils import make_residue_graph
 from collections import defaultdict
 from itertools import product
 
+import networkx.algorithms.isomorphism as iso
 import numpy as np
 
 
@@ -28,32 +29,21 @@ class GraphMapping:
         blocks_from and blocks_to are sequences of Blocks.
         Mapping is a dictionary of {atomname: [atomnames]}. 
         """
-        self.block_from = blocks_from[0].to_molecule()
-        for block in blocks_from[1:]:
-            self.block_from.merge_molecule(block)
-        for n_idx in self.block_from:
-            for attr in self.forbidden:
-                node = self.block_from.nodes[n_idx]
-                if attr in node:
-                    del node[attr]
-
-        self.block_to = blocks_to[0].to_molecule()
-        for block in blocks_to[1:]:
-            self.block_to.merge_molecule(block)
-        for n_idx in self.block_to:
-            for attr in self.forbidden:
-                node = self.block_to.nodes[n_idx]
-                if attr in node:
-                    del node[attr]
+        self.block_from = self._merge(blocks_from)
+        self.block_to = self._merge(blocks_to)
 
         self.mapping = defaultdict(list)
         self._reverse_mapping = None
+        
+        # Translate atomnames in mapping to node keys.
         for name_from, names_to in mapping.items():
             for name_to in names_to:
                 for to_idx in self.block_find_attr(self.block_to, name_to, 'atomname'):
                     self.mapping[to_idx].extend(self.block_find_attr(self.block_from, name_from, 'atomname'))
         self.mapping = dict(self.mapping)
 
+        # Since we merged blocks, there may be edges missing in both ends. Add
+        # from eachother.
         for to_idx, to_jdx in self.block_to.edges():
             self.block_from.add_edges_from(product(self.mapping[to_idx], self.mapping[to_jdx]))
 #            for from_idx, from_jdx in product(self.mapping[to_idx], self.mapping[to_jdx]):
@@ -61,6 +51,18 @@ class GraphMapping:
         for from_idx, from_jdx in self.block_from.edges():
             self.block_to.add_edges_from(product(self.reverse_mapping[from_idx],
                                                  self.reverse_mapping[from_jdx]))
+
+    @classmethod
+    def _merge(cls, blocks):
+        out = blocks[0].to_molecule()
+        for block in blocks[1:]:
+            out.merge_molecule(block)
+        for n_idx in out:
+            for attr in cls.forbidden:
+                node = out.nodes[n_idx]
+                if attr in node:
+                    del node[attr]
+        return out
 
     # TODO: Move to Block
     @staticmethod
@@ -84,7 +86,7 @@ class GraphMapping:
                 self._reverse_mapping[from_idx].append(to_idx)
         self._reverse_mapping = dict(self._reverse_mapping)
 
-RTP_PATH = '/usr/local/gromacs-2016.3/share/gromacs/top/charmm27.ff/aminoacids.rtp'
+RTP_PATH = 'aminoacids.rtp'
 with open(RTP_PATH) as rtp:
     blocks, links = read_rtp(rtp)
 
@@ -147,20 +149,36 @@ def do_mapping(molecule):
         atname_to_idx = {graph.nodes[idx]['atomname']: idx for idx in graph}
 
         mapping = get_mapping(residue['resname'])
+        
+        node_match = iso.categorical_node_match('atomname', '')
+        
+        # TODO: Reverse graph and block_from, and remove match inversion below.
+        #       Can't do that right now, since we need to do 
+        #       subgraph_isomorphism, which is wrong (should be isomorphism).
+        #       However, at time of writing we're still stuck with extraneous
+        #       atoms such as termini, and no appropriate resnames and mappings.
+        graphmatcher = iso.GraphMatcher(graph, mapping.block_from, node_match=node_match)
+        
+        matches = list(graphmatcher.subgraph_isomorphisms_iter())
+        assert len(matches) == 1
+        match = matches[0]
+        
+        match = {v: k for k, v in match.items()}  # remove me. See above.
+        
+        mapped_match = {}
+        for to_idx, from_idxs in mapping.mapping.items():
+            mapped_match[to_idx] = [match[idx] for idx in from_idxs]
+        # What we have now is a dict of {block_to_idx: [constructing_node_idxs]}
+        
         block_to_bead_idx = {}
-        for block_to_idx, block_from_idxs in mapping.mapping.items():
+        for block_to_idx, from_idxs in mapped_match.items():
 
             block_to_bead_idx[block_to_idx] = bead_idx
             residx_to_beads[res_node_idx].add(bead_idx)
             bead = {}
 
-            from_idxs = []
-            for block_from_idx in block_from_idxs:
-                # Maybe better: find the node where most attributes match?
-                name = mapping.block_from.nodes[block_from_idx]['atomname']
-                n_idx = atname_to_idx[name]
+            for n_idx in from_idxs:
                 bead.update(graph.nodes[n_idx])
-                from_idxs.append(n_idx)
             # Bead properties are take from the last (!) atom, overwritten by
             # the block, and given a 'graph'
             bead.update(mapping.block_to.nodes[block_to_idx])

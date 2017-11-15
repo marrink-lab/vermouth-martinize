@@ -55,15 +55,19 @@ except (RuntimeError, ImportError):
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     plt.close('all')
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    fig = None
+    ax = None
 
     def draw(graph, pos_key='position', name_key='atomname',
              node_color='r', edge_color=None, node_size=300, width=1,
              with_label=False, **kwargs):
+        global fig, ax
+        if fig is None or ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+        
         if edge_color is None:
             edge_color = node_color
-        print(kwargs, node_size)
         positions = {n: graph.node[n][pos_key] for n in graph}
         node_labels = [graph.node[n][name_key] for n in graph]
         poss = np.array(list(positions.values()))
