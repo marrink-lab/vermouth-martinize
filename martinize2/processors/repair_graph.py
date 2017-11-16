@@ -254,23 +254,38 @@ def repair_graph(molecule, reference_graph):
         # `atachments` is a set of the nodes from `found` that have a match in
         # the reference and are connected to a node from `extra`.
         extra = set(found.nodes) - set(match.values())
-        if extra:
-            # match: reference -> found
-            elem_counts = Counter(molecule.nodes[idx]['element'] for idx in extra)
+        while extra:
+            # First PTM atom we'll look at
+            first = next(iter(extra))
             attachments = set()
-            for idx in extra:
-                for n_idx in molecule.neighbors(idx):
-                    if n_idx not in extra:
-                        # Note that we are storing the indices in the molecule
-                        attachments.add(n_idx)
-            PTMs.append((residx, elem_counts, attachments))
+            # PTM atoms we've found
+            atoms = set()
+            # Atoms we still need to see this traversal
+            to_see = set([first])
+            for orig, succ in nx.bfs_successors(found, first):
+                # We've seen orig, so remove it
+                to_see.remove(orig)
+                if orig in extra:
+                    # If this is a PTM atom, we want to see it's neighbours as
+                    # well.
+                    to_see.update(succ)
+                    atoms.add(orig)
+                else:
+                    # Else, it's an attachment point for the this PTM
+                    attachments.add(orig)
+                if not to_see:
+                    # We've traversed the interesting bit of the tree
+                    break
+            extra -= atoms
+            PTMs.append((residx, atoms, attachments))
+            
     # All residues have been canonicalized. Now we can go and find our PTMs.
     # What we should do is find which PTM this is, get/make a new reference for
     # the affected residues, and call repair_residue on them again.
     # For now, just print them...
-    for resid, counts, n_idxs in PTMs:
+    for resid, atoms, n_idxs in PTMs:
         print('Extra atoms for residue {}{}'.format(reference_graph.nodes[resid]['resname'], resid), end=':')
-        print(counts, end='; ')
+        print([molecule.nodes[idx]['atomname'] for idx in atoms], end='; ')
         for n_idx in n_idxs:
             resname = molecule.nodes[n_idx]['resname']
             resid = molecule.nodes[n_idx]['resid']
