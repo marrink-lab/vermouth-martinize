@@ -5,11 +5,17 @@ Created on Tue Oct 10 10:51:03 2017
 
 @author: peterkroon
 """
+import itertools
+import networkx as nx
+from networkx.algorithms.approximation import max_clique
 
 from .utils import maxes, first_alpha
 
-import itertools
-import networkx as nx
+
+def add_element_attr(molecule):
+    for node_idx in molecule:
+        node = molecule.nodes[node_idx]
+        node['element'] = node.get('element', first_alpha(node['atomname']))
 
 
 def categorical_cartesian_product(G, H, attributes=tuple()):
@@ -45,6 +51,56 @@ def categorical_maximum_common_subgraph(G, H, attributes=tuple()):
     # we never turn it into a full list.
     largest = maxes(cliques, key=len)
     matches = [dict(clique) for clique in largest]
+    return matches
+
+
+def maximum_common_subgraph(reference, found, attributes=tuple()):
+    G = reference
+    H = found
+    P = nx.Graph()
+    # First, find the MCS between all nodes of degree != 1, such as the carbons
+    # Nothing new or exciting here.
+    for u, v in itertools.product(G, H):
+        if all(G.node[u][attr] == H.node[v][attr] for attr in attributes):
+            if G.degree(u) != 1 and H.degree(v) != 1:
+                P.add_node((u, v))
+    for (u1, v1), (u2, v2) in itertools.combinations(P.nodes(), 2):
+        both_edge = G.has_edge(u1, u2) and H.has_edge(v1, v2)
+        neither_edge = not G.has_edge(u1, u2) and not H.has_edge(v1, v2)
+        # Effectively: not (G.has_edge(u1, u2) xor H.has_edge(v1, v2))
+        if u1 != u2 and v1 != v2 and (both_edge or neither_edge):
+            P.add_edge((u1, v1), (u2, v2))
+    cliques = nx.find_cliques(P)
+    largest = maxes(cliques, key=len)
+
+    # Now, for every MCS we found, look at the nodes of degree 1. The
+    # attributes still need to match. In addition, they need to have the same
+    # (mapped) neighbour, or the neighbour must be missing from the found graph
+    all_cliques = []
+    for clique in largest:
+        match = dict(clique)
+        P = nx.Graph()
+        P.add_nodes_from(clique)
+        for u, v in itertools.product(G, H):
+            # We can't do this above, because we need the match to translate
+            # nodes from graph G to graph H to see whether their neighbours
+            # correspond.
+            if (G.degree(u) == 1 or H.degree(v) == 1) and\
+                    all(G.node[u][attr] == H.node[v][attr] for attr in attributes):
+                G_neighbors = [match.get(n, None) for n in G.neighbors(u)]
+                if None in G_neighbors or any(n in G_neighbors for n in H.neighbors(v)):
+                    P.add_node((u, v))
+        for (u1, v1), (u2, v2) in itertools.combinations(P.nodes(), 2):
+            both_edge = G.has_edge(u1, u2) and H.has_edge(v1, v2)
+            neither_edge = not G.has_edge(u1, u2) and not H.has_edge(v1, v2)
+            # Effectively: not (G.has_edge(u1, u2) xor H.has_edge(v1, v2))
+            if u1 != u2 and v1 != v2 and (both_edge or neither_edge):
+                P.add_edge((u1, v1), (u2, v2))
+        all_cliques.append(nx.find_cliques(P))
+    # And finally, find the largest MCS in all cliques found.
+    largest = maxes(itertools.chain(*all_cliques), key=len)
+    matches = [dict(clique) for clique in largest]
+
     return matches
 
 
@@ -162,6 +218,7 @@ def blockmodel(G, partitions, **attrs):
             :density: Density of ``graph``.
             :attrs.keys(): As specified by ``**attrs``.
     """
+    # TODO: Change this to use nx.quotient_graph.
     attrs = {key: list(val) for key, val in attrs.items()}
     CG_mol = nx.Graph()
     for bead_idx, idxs in enumerate(partitions):
