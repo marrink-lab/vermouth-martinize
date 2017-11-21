@@ -29,7 +29,7 @@ def apply_blocks(molecule, blocks):
 
         for block_idx in block:
             atname = block.nodes[block_idx]['atomname']
-            atom = list(res_graph.find_atoms(atname))
+            atom = list(res_graph.find_atoms(atomname=atname))
             assert len(atom) == 1
             old_to_new_idxs[atom[0]] = at_idx
             atname_to_idx[atname] = at_idx
@@ -45,7 +45,7 @@ def apply_blocks(molecule, blocks):
             for interaction in interactions:
                 atom_idxs = []
                 for atom_name in interaction.atoms:
-                    atom_idxs.extend(graph_out.find_atoms(atom_name,
+                    atom_idxs.extend(graph_out.find_atoms(atomname=atom_name,
                                                           resname=residue['resname'],
                                                           resid=residue['resid']))
                 interactions = interaction._replace(atoms=atom_idxs)

@@ -19,72 +19,84 @@ import numpy as np
 
 
 class GraphMapping:
+    # Attributes to be removed from the blocks.
     forbidden = ['resid']
 
     # TODO: Add __getitem__, __iter__, __len__, __contains__, keys, values and
     #       items methods to emulate a Mapping?
 
-    # FIXME
+    # TODO: Different methods of initializing the mapping? It might be nice to
+    #       also provide the option to provide two molecules (instead) of lists
+    #       of blocks and a mapping of {node_idx: [node_idx, ...], ...}
+
+    # TODO: renumber output residues. Needs information about the entire system
+    #       or we need to at least garantue we run it all in order. Which we
+    #       can't unless we do run_system instead of run_molecule. We should
+    #       maybe also move this class to a different file, but we'll see.
     def __init__(self, blocks_from, blocks_to, mapping):
         """
         blocks_from and blocks_to are sequences of Blocks.
-        Mapping is a dictionary of {atomname: [atomnames]}. Since we can map
-        n to m blocks, this is probably not good enough, and should also 
-        contain an idx of which block it is.
+        Mapping is a dictionary of {(residx, atomname): [(residx, atomname), ...], ...}.
+        residx in these cases is the index of the residue in blocks_from and
+        blocks_to respectively.
         """
         self.block_from = self._merge(blocks_from)
         self.block_to = self._merge(blocks_to)
 
         self.mapping = defaultdict(set)
         # Translate atomnames in mapping to node keys.
-        for name_from, names_to in mapping.items():
-            for name_to in names_to:
-                for to_idx in self.block_find_attr(self.block_to, name_to, 'atomname'):
-                    from_idxs = self.block_find_attr(self.block_from, name_from, 'atomname')
+        for from_, to in mapping.items():
+            res_from, name_from = from_
+            for res_to, name_to in to:
+                from_idxs = self.block_from.find_atoms(atomname=name_from, resid=res_from)
+                to_idxs = self.block_to.find_atoms(atomname=name_to, resid=res_to)
+                for to_idx in to_idxs:
                     self.mapping[to_idx].update(from_idxs)
+
         self.mapping = dict(self.mapping)
-        self._make_reverse_map()
+
+        # We can't do this in _merge, since we need the resids to translate the
+        # mapping from (ambiguous) atomnames to (unique) graph keys. We do have
+        # to get rid of them, otherwise they overwrite the resids of the graph
+        # we're mapping (in do_mapping).
+        self._purge_forbidden(self.block_from)
+        self._purge_forbidden(self.block_to)
 
         # Since we merged blocks, there may be edges missing in both (between
         # the provided blocks). Add from eachother.
         for to_idx, to_jdx in self.block_to.edges():
             self.block_from.add_edges_from(product(self.mapping[to_idx],
                                                    self.mapping[to_jdx]))
+        # Cache the reverse map for a while. Maybe that means it shouldn't be
+        # a property...
+        reverse_map = self.reverse_mapping
         for from_idx, from_jdx in self.block_from.edges():
-            self.block_to.add_edges_from(product(self.reverse_mapping[from_idx],
-                                                 self.reverse_mapping[from_jdx]))
+            self.block_to.add_edges_from(product(reverse_map[from_idx],
+                                                 reverse_map[from_jdx]))
 
     @classmethod
     def _merge(cls, blocks):
-        out = blocks[0].to_molecule()
+        out = blocks[0].to_molecule(resid=0)
         for block in blocks[1:]:
             out.merge_molecule(block)
-        for n_idx in out:
-            for attr in cls.forbidden:
-                node = out.nodes[n_idx]
-                if attr in node:
-                    del node[attr]
         return out
 
-    # TODO: Move to Block
-    @staticmethod
-    def block_find_attr(block, key, attr):
-        for n_idx, attrs in block.nodes.items():
-            if attrs[attr] == key:
-                yield n_idx
+    @classmethod
+    def _purge_forbidden(cls, block):
+        for n_idx in block:
+            for attr in cls.forbidden:
+                node = block.nodes[n_idx]
+                if attr in node:
+                    del node[attr]
 
     @property
     def reverse_mapping(self):
-        if not hasattr(self, '_reverse_mapping'):
-            self._make_reverse_map()
-        return self._reverse_mapping
-
-    def _make_reverse_map(self):
-        self._reverse_mapping = defaultdict(set)
+        reverse_mapping = defaultdict(set)
         for to_idx, from_idxs in self.mapping.items():
             for from_idx in from_idxs:
-                self._reverse_mapping[from_idx].add(to_idx)
-        self._reverse_mapping = dict(self._reverse_mapping)
+                reverse_mapping[from_idx].add(to_idx)
+        reverse_mapping = dict(reverse_mapping)
+        return reverse_mapping
 
 
 def get_mapping(resname):
@@ -115,7 +127,7 @@ def do_mapping(molecule):
         assert len(matches) == 1
         match = matches[0]
 
-        match = {v: k for k, v in match.items()}  # remove me. See above.
+        match = {v: k for k, v in match.items()}  # TODO remove me. See above.
 
         mapped_match = {}
         for to_idx, from_idxs in mapping.mapping.items():
@@ -132,6 +144,7 @@ def do_mapping(molecule):
 
             # Bead properties are take from the last (!) atom, overwritten by
             # the block, and given a 'graph'
+            # TODO: nx.quotient_graph?
             for n_idx in from_idxs:
                 bead.update(graph.nodes[n_idx])
             bead.update(mapping.block_to.nodes[block_to_idx])
@@ -141,7 +154,8 @@ def do_mapping(molecule):
 
             bead_idx += 1
         # Make bonds within residue. We're not going to add interactions, we'll
-        # leave that to the do_blocks processor?
+        # leave that to the do_blocks processor since we might need to do
+        # several mapping steps before we arive at the resolution we want.
         for block_idx, block_jdx in mapping.block_to.edges():
             bead_jdx = block_to_bead_idx[block_idx]
             bead_kdx = block_to_bead_idx[block_jdx]
@@ -161,7 +175,7 @@ def do_mapping(molecule):
                                           graph_out.nodes[bd_jdx]['graph']):
                 if molecule.has_edge(at_idx, at_jdx):
                     graph_out.add_edge(bd_idx, bd_jdx)
-                    break  # On to the next bead
+                    break  # On to the combination of beads
 
     return graph_out
 
@@ -172,7 +186,7 @@ with open(RTP_PATH) as rtp:
 
 MAPPING = {}
 for resname, block in blocks.items():
-    mapping = {attrs['atomname']: [attrs['atomname'],] for attrs in block.atoms}
+    mapping = {(0, attrs['atomname']): [(0, attrs['atomname']),] for attrs in block.atoms}
     MAPPING[resname] = GraphMapping([block], [block], mapping)
 
 

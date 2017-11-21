@@ -61,12 +61,10 @@ class Molecule(nx.Graph):
             raise KeyError("Can't find interaction of type {} between atoms {}".format(type_, atoms))
         del self.interactions[type_][idx]
 
-    def find_atoms(self, atomname, resname='', resid=-1):
+    def find_atoms(self, **attrs):
         for node_idx in self:
             node = self.nodes[node_idx]
-            if node['atomname'] == atomname and\
-                    (not resname or node['resname'] == resname) and\
-                    (resid == -1 or node['resid'] == resid):
+            if all(node.get(attr, None) == val for attr, val in attrs.items()):
                 yield node_idx
 
     def __getattr__(self, name):
