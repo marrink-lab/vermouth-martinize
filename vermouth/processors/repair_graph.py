@@ -273,11 +273,25 @@ def repair_graph(molecule, reference_graph):
                     break
             extra -= atoms
             PTMs.append((residx, atoms, attachments))
-            
+
     # All residues have been canonicalized. Now we can go and find our PTMs.
     # What we should do is find which PTM this is, get/make a new reference for
     # the affected residues, and call repair_residue on them again.
     # For now, just print and remove them...
+
+    # How we're going to do this:
+    # 1) Find correct PTM, which should be a (small) Graph where atoms are
+    #    marked as either part of the "original" residue, or the PTM
+    # 1.5) Repopulate `extra`.
+    # 2) Do a graph isomorphism (note: atoms might be missing?), making sure
+    #    atoms marked as part of the PTM are in `extra` and vice versa.
+    # 3) Canonicalize the atoms of the PTM.
+    # 4) We need to keep track of which PTM lives where. Some might make
+    #    separate residues (open problem). Either way, give *every* atom of the
+    #    residue a 'PTM' attribute identifying the PTM. This
+    #    can/will/should/needs to be used in the later processors (e.g. mapping
+    #    and blocks).
+
     for resid, atoms, n_idxs in PTMs:
         # INFO
         print('Extra atoms for residue {}{}'.format(reference_graph.nodes[resid]['resname'], resid), end=':')
