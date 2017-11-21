@@ -67,6 +67,7 @@ def apply_blocks(molecule, blocks):
     return graph_out
 
 
+# FIXME: static path
 RTP_PATH = '/usr/local/gromacs-2016.3/share/gromacs/top/charmm27.ff/aminoacids.rtp'
 
 
@@ -74,6 +75,6 @@ class ApplyBlocks(Processor):
     def run_molecule(self, molecule):
         with open(RTP_PATH) as rtp:
             blocks, links = read_rtp(rtp)
-#        print(blocks)
+        # FIXME: This is a problem of blocks, not ours.
         blocks['HIS'] = blocks['HSD']
         return apply_blocks(molecule, blocks)

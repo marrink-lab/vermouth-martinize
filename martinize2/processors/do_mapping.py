@@ -64,12 +64,25 @@ class GraphMapping:
 
         # Since we merged blocks, there may be edges missing in both (between
         # the provided blocks). Add from eachother.
+        # Example: 
+        #   from_blocks: a0-b0-c0 a1-b1-c1
+        #   to_blocks:   A0-B0 C1-A1 B2-C2
+        #   Mapping: {(0, A): [(0, a)], (0, B): [(0, b)], (1, C): [(0, c)],
+        #             (1, A): [(1, a)], (2, B): [(1, b)], (2, C): [(1, c)]}
+        # There are edges missing in both from_blocks and to_blocks (c0-A1, and
+        # B0-C1 and A1-B2; respectively). There's enough information in the
+        # "other" block to create those, so that's what we do.        
+
         for to_idx, to_jdx in self.block_to.edges():
             self.block_from.add_edges_from(product(self.mapping[to_idx],
                                                    self.mapping[to_jdx]))
+            # e.g. for edge B0-C1 this is:
+            # add_edges_from(product([(0, b)], [(0, c)])); which is the same as
+            # add_edges_from(((0, b), (0, c)))
         # Cache the reverse map for a while. Maybe that means it shouldn't be
         # a property...
         reverse_map = self.reverse_mapping
+        # This loop does the same as the one above, but in the other direction.
         for from_idx, from_jdx in self.block_from.edges():
             self.block_to.add_edges_from(product(reverse_map[from_idx],
                                                  reverse_map[from_jdx]))
@@ -84,8 +97,8 @@ class GraphMapping:
     @classmethod
     def _purge_forbidden(cls, block):
         for n_idx in block:
+            node = block.nodes[n_idx]
             for attr in cls.forbidden:
-                node = block.nodes[n_idx]
                 if attr in node:
                     del node[attr]
 
@@ -142,9 +155,11 @@ def do_mapping(molecule):
             residx_to_beads[res_node_idx].add(bead_idx)
             bead = {}
 
-            # Bead properties are take from the last (!) atom, overwritten by
+            # Bead properties are taken from the last (!) atom, overwritten by
             # the block, and given a 'graph'
             # TODO: nx.quotient_graph?
+            # FIXME: properties take from last bead instead of chosen 
+            #        intellegently
             for n_idx in from_idxs:
                 bead.update(graph.nodes[n_idx])
             bead.update(mapping.block_to.nodes[block_to_idx])
@@ -180,6 +195,7 @@ def do_mapping(molecule):
     return graph_out
 
 
+# FIXME: fixed path
 RTP_PATH = 'aminoacids.rtp'
 with open(RTP_PATH) as rtp:
     blocks, links = read_rtp(rtp)
