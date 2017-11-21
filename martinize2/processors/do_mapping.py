@@ -6,116 +6,204 @@ Created on Tue Oct 10 11:11:54 2017
 @author: peterkroon
 """
 
+from ..gmx import read_rtp
 from ..molecule import Molecule
 from .processor import Processor
-from ..graph_utils import make_residue_graph, blockmodel
+from ..graph_utils import make_residue_graph
 
 from collections import defaultdict
-from functools import partial
 from itertools import product
-from operator import itemgetter
 
+import networkx.algorithms.isomorphism as iso
 import numpy as np
 
 
+class GraphMapping:
+    # Attributes to be removed from the blocks.
+    forbidden = ['resid']
+
+    # TODO: Add __getitem__, __iter__, __len__, __contains__, keys, values and
+    #       items methods to emulate a Mapping?
+
+    # TODO: Different methods of initializing the mapping? It might be nice to
+    #       also provide the option to provide two molecules (instead) of lists
+    #       of blocks and a mapping of {node_idx: [node_idx, ...], ...}
+
+    # TODO: renumber output residues. Needs information about the entire system
+    #       or we need to at least garantue we run it all in order. Which we
+    #       can't unless we do run_system instead of run_molecule. We should
+    #       maybe also move this class to a different file, but we'll see.
+    def __init__(self, blocks_from, blocks_to, mapping):
+        """
+        blocks_from and blocks_to are sequences of Blocks.
+        Mapping is a dictionary of {(residx, atomname): [(residx, atomname), ...], ...}.
+        residx in these cases is the index of the residue in blocks_from and
+        blocks_to respectively.
+        """
+        self.block_from = self._merge(blocks_from)
+        self.block_to = self._merge(blocks_to)
+
+        self.mapping = defaultdict(set)
+        # Translate atomnames in mapping to node keys.
+        for from_, to in mapping.items():
+            res_from, name_from = from_
+            for res_to, name_to in to:
+                from_idxs = self.block_from.find_atoms(atomname=name_from, resid=res_from)
+                to_idxs = self.block_to.find_atoms(atomname=name_to, resid=res_to)
+                for to_idx in to_idxs:
+                    self.mapping[to_idx].update(from_idxs)
+
+        self.mapping = dict(self.mapping)
+
+        # We can't do this in _merge, since we need the resids to translate the
+        # mapping from (ambiguous) atomnames to (unique) graph keys. We do have
+        # to get rid of them, otherwise they overwrite the resids of the graph
+        # we're mapping (in do_mapping).
+        self._purge_forbidden(self.block_from)
+        self._purge_forbidden(self.block_to)
+
+        # Since we merged blocks, there may be edges missing in both (between
+        # the provided blocks). Add from eachother.
+        # Example: 
+        #   from_blocks: a0-b0-c0 a1-b1-c1
+        #   to_blocks:   A0-B0 C1-A1 B2-C2
+        #   Mapping: {(0, A): [(0, a)], (0, B): [(0, b)], (1, C): [(0, c)],
+        #             (1, A): [(1, a)], (2, B): [(1, b)], (2, C): [(1, c)]}
+        # There are edges missing in both from_blocks and to_blocks (c0-A1, and
+        # B0-C1 and A1-B2; respectively). There's enough information in the
+        # "other" block to create those, so that's what we do.        
+
+        for to_idx, to_jdx in self.block_to.edges():
+            self.block_from.add_edges_from(product(self.mapping[to_idx],
+                                                   self.mapping[to_jdx]))
+            # e.g. for edge B0-C1 this is:
+            # add_edges_from(product([(0, b)], [(0, c)])); which is the same as
+            # add_edges_from(((0, b), (0, c)))
+        # Cache the reverse map for a while. Maybe that means it shouldn't be
+        # a property...
+        reverse_map = self.reverse_mapping
+        # This loop does the same as the one above, but in the other direction.
+        for from_idx, from_jdx in self.block_from.edges():
+            self.block_to.add_edges_from(product(reverse_map[from_idx],
+                                                 reverse_map[from_jdx]))
+
+    @classmethod
+    def _merge(cls, blocks):
+        out = blocks[0].to_molecule(resid=0)
+        for block in blocks[1:]:
+            out.merge_molecule(block)
+        return out
+
+    @classmethod
+    def _purge_forbidden(cls, block):
+        for n_idx in block:
+            node = block.nodes[n_idx]
+            for attr in cls.forbidden:
+                if attr in node:
+                    del node[attr]
+
+    @property
+    def reverse_mapping(self):
+        reverse_mapping = defaultdict(set)
+        for to_idx, from_idxs in self.mapping.items():
+            for from_idx in from_idxs:
+                reverse_mapping[from_idx].add(to_idx)
+        reverse_mapping = dict(reverse_mapping)
+        return reverse_mapping
+
+
 def get_mapping(resname):
-    # TODO: Move this to files
-    BB = ('BB', set('C CA O N  HA HA1 HA2 H H1 H2 H3 OC1 OC2'.split()))
-    MAPPING = {
-           'GLY': [BB],
-           'LEU': [BB, ('SC1', set('CB CG CD1 CD2 1HB 2HB HG 1HD1 2HD1 3HD1 1HD2 2HD2 3HD2'.split()))],
-           'LYS': [BB, ('SC1', set('CB CG 1HB 2HB 1HG 2HG'.split())), ('SC2', set('CD CE NZ 1HD 2HD 1HE 2HE 1HZ 2HZ 3HZ'.split()))],
-           'PHE': [BB, ('SC1', set('CB CG 1HB 2HB '.split())), ('SC2', set('CD1 CE1 1HD 1HE'.split())), ('SC3', set('CZ CD2 CE2 2HE 2HD HZ'.split()))],
-           'CYS': [BB, ('SC1', set('CB SG'.split()))],
-           'HIS': [BB, ('SC1', set('CB CG'.split())), ('SC2', set('CD2 NE2'.split())), ('SC3', set('ND1 CE1'.split()))],
-           'SER': [BB, ('SC1', set('CB OG'.split()))],
-           'DPP': [('NC3', set('N C11 C12 C13 C14 C15'.split())),
-                   ('PO4', set('P O11 O12 O13 O14'.split())),
-                   ('GL1', set('C1 C2 O21 C21 O22'.split())),
-                   ('GL2', set('C3 O31 C31 O32'.split())),
-                   ('C1A', set('C22 C23 C24'.split())),
-                   ('C2A', set('C25 C26 C27 C28'.split())),
-                   ('C3A', set('C29 C210 C211 C212'.split())),
-                   ('C4A', set('C213 C214 C215 C216'.split())),
-                   ('C1B', set('C32 C33 C34'.split())),
-                   ('C2B', set('C35 C36 C37 C38'.split())),
-                   ('C3B', set('C39 C310 C311 C312'.split())),
-                   ('C4B', set('C313 C314 C315 C316'.split())),],
-           'DSB': [('BB', set('C O CA CB1 CB2'.split())),
-                   ('SC1', set('CZ SG1 CG1 CB1'.split())),
-                   ('SC2', set('CZ SG2 CG2 CB2'.split()))]
-           }
-    MAPPING['DTB'] = MAPPING['DSB']
     return MAPPING[resname]
 
 
-def mean(graph, idxs, prop):
-    return np.nanmean([graph.nodes[idx].get(prop, [np.nan]*3) for idx in idxs], axis=0)
-
-
-def combine_with(graph, idxs, prop, func):
-    return func([graph.nodes[idx][prop] for idx in idxs if prop in graph.nodes[idx]])
-
-
 def do_mapping(molecule):
-    funcs = {'position': mean, 
-             'charge': partial(combine_with, func=lambda l: sum(int(i) if i else 0 for i in l)), 
-             'chain': partial(combine_with, func=itemgetter(0)),
-             'resid': partial(combine_with, func=itemgetter(0)),
-             'resname': partial(combine_with, func=itemgetter(0))}
     residue_graph = make_residue_graph(molecule)
     graph_out = Molecule()
     bead_idx = 0
     residx_to_beads = defaultdict(set)
+
     for res_node_idx in residue_graph:
         residue = residue_graph.nodes[res_node_idx]
         graph = residue['graph']
-        atoms = [graph.nodes[idx] for idx in graph]
-        atname_to_idx = {graph.nodes[idx]['atomname']: idx for idx in graph}
         mapping = get_mapping(residue['resname'])
-        bdnames, atnames = list(zip(*mapping))
-        idxs = []
-        for atnames_per_bead in atnames:
-            # TODO: handle missing (and extra?) atoms
-            idxs.append([atname_to_idx[atname] for atname in atnames_per_bead if atname in atname_to_idx])
-#        atidx_to_bdidx = {atidx: bead_idx+offset for offset, atidxs in enumerate(idxs) for atidx in atidxs}
-        atidx_to_bdidx = {}
-        for bdname, at_idxs in zip(bdnames, idxs):
-            graph_out.add_node(bead_idx)
-            bead = graph_out.nodes[bead_idx]
-            atidx_to_bdidx.update({at_idx: bead_idx for at_idx in at_idxs})
+
+        node_match = iso.categorical_node_match('atomname', '')
+
+        # TODO: Reverse graph and block_from, and remove match inversion below.
+        #       Can't do that right now, since we need to do
+        #       subgraph_isomorphism, which is wrong (should be isomorphism).
+        #       However, at time of writing we're still stuck with extraneous
+        #       atoms such as termini, and no appropriate resnames and mappings.
+        graphmatcher = iso.GraphMatcher(graph, mapping.block_from, node_match=node_match)
+
+        matches = list(graphmatcher.subgraph_isomorphisms_iter())
+        assert len(matches) == 1
+        match = matches[0]
+
+        match = {v: k for k, v in match.items()}  # TODO remove me. See above.
+
+        mapped_match = {}
+        for to_idx, from_idxs in mapping.mapping.items():
+            mapped_match[to_idx] = [match[idx] for idx in from_idxs]
+        # What we have now is a dict of {block_to_idx: [constructing_node_idxs]}
+
+        block_to_bead_idx = {}
+        for block_to_idx, from_idxs in mapped_match.items():
+            # Needed for intra residue bonds
+            block_to_bead_idx[block_to_idx] = bead_idx
+            # Needed for inter residue bonds
             residx_to_beads[res_node_idx].add(bead_idx)
-            for prop in set(k for dk in map(dict.keys, atoms) for k in dk):
-                if prop not in funcs:
-                    continue
-                func = funcs[prop]
-                bead[prop] = func(graph, at_idxs, prop)
-            bead['atomname'] = bdname
-            bead['graph'] = graph.subgraph(at_idxs)
+            bead = {}
+
+            # Bead properties are taken from the last (!) atom, overwritten by
+            # the block, and given a 'graph'
+            # TODO: nx.quotient_graph?
+            # FIXME: properties take from last bead instead of chosen 
+            #        intellegently
+            for n_idx in from_idxs:
+                bead.update(graph.nodes[n_idx])
+            bead.update(mapping.block_to.nodes[block_to_idx])
+            bead['graph'] = graph.subgraph(from_idxs)
+            assert bead_idx not in graph_out
+            graph_out.add_node(bead_idx, **bead)
+
             bead_idx += 1
-        # This makes edges within the residue. This probably should not be
-        # done, but read from the interactions provided. We'll leave it in for
-        # now.
-        # Also, we should read any and all interactions and add them to the
-        # molecule.
-        for atidx, atjdx, data in graph.edges(data=True):
-            if not (atidx in atidx_to_bdidx and atjdx in atidx_to_bdidx):
-                continue
-            bdidx = atidx_to_bdidx[atidx]
-            bdjdx = atidx_to_bdidx[atjdx]
-            if bdidx != bdjdx and not graph_out.has_edge(bdidx, bdjdx):
-                graph_out.add_edge(bdidx, bdjdx)
+        # Make bonds within residue. We're not going to add interactions, we'll
+        # leave that to the do_blocks processor since we might need to do
+        # several mapping steps before we arive at the resolution we want.
+        for block_idx, block_jdx in mapping.block_to.edges():
+            bead_jdx = block_to_bead_idx[block_idx]
+            bead_kdx = block_to_bead_idx[block_jdx]
+            graph_out.add_edge(bead_jdx, bead_kdx)
+    residx_to_beads = dict(residx_to_beads)
+
     # This makes edges between residues. We need to do this, since they can't
     # come from the mapping files and we need them to find the links locations.
     for res_idx, res_jdx in residue_graph.edges:
-        for bd_idx, bd_jdx in product(residx_to_beads[res_idx], residx_to_beads[res_jdx]):
-            for at_idx, at_jdx in product(graph_out.nodes[bd_idx]['graph'], graph_out.nodes[bd_jdx]['graph']):
-                if graph_out.has_edge(bd_idx, bd_jdx):
-                    break
+        for bd_idx, bd_jdx in product(residx_to_beads[res_idx],
+                                      residx_to_beads[res_jdx]):
+            if graph_out.has_edge(bd_idx, bd_jdx):
+                # Continue, since their might be more bonds between these
+                # residues
+                continue
+            for at_idx, at_jdx in product(graph_out.nodes[bd_idx]['graph'],
+                                          graph_out.nodes[bd_jdx]['graph']):
                 if molecule.has_edge(at_idx, at_jdx):
                     graph_out.add_edge(bd_idx, bd_jdx)
-        
+                    break  # On to the combination of beads
+
     return graph_out
+
+
+# FIXME: fixed path
+RTP_PATH = 'aminoacids.rtp'
+with open(RTP_PATH) as rtp:
+    blocks, links = read_rtp(rtp)
+
+MAPPING = {}
+for resname, block in blocks.items():
+    mapping = {(0, attrs['atomname']): [(0, attrs['atomname']),] for attrs in block.atoms}
+    MAPPING[resname] = GraphMapping([block], [block], mapping)
 
 
 class DoMapping(Processor):
