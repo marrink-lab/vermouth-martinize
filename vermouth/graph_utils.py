@@ -21,7 +21,6 @@ Created on Tue Oct 10 10:51:03 2017
 """
 import itertools
 import networkx as nx
-from networkx.algorithms.approximation import max_clique
 
 from .utils import maxes, first_alpha
 

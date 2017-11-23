@@ -166,8 +166,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
         graph = residue['graph']
         mapping = pair_mapping[residue['resname']]
 
+        # Atomnames must match
         node_match = iso.categorical_node_match('atomname', '')
-
         graphmatcher = iso.GraphMatcher(mapping.block_from, graph, node_match=node_match)
 
         matches = list(graphmatcher.isomorphisms_iter())

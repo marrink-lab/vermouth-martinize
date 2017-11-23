@@ -108,12 +108,14 @@ def make_reference(mol):
             except ValueError:
                 raise ValueError('No common subgraph found between {} and'
                                  'reference {}.'.format(resname, resname))
-#            print('Did MCS matching for residue {}{}'.format(resname, resid))
             # We could seed the isomorphism calculation with the knowledge from the
             # mcs_match, but thats to much effort for now.
             # TODO: see above
             res = residue.subgraph(mcs_match.values())
             matches = isomorphism(reference, res)
+        # TODO: matches is sorted by isomorphism. So we should probably use
+        #       that with e.g. itertools.takewhile.
+        matches = maxes(matches, key=lambda m: rate_match(reference, residue, m))
         if not matches:
             raise ValueError("Can't find isomorphism between {}{} and it's "
                              "reference.".format(resname, resid))
@@ -123,7 +125,9 @@ def make_reference(mol):
                   "picking one arbitrarily. You might want to fix at least "
                   "some atomnames.".format(resname, resid))
         match = matches[0]
-        reference_graph.add_node(residx, chain=chain, reference=reference, found=residue, resname=resname, resid=resid, match=match)
+        reference_graph.add_node(residx, chain=chain, reference=reference,
+                                 found=residue, resname=resname, resid=resid,
+                                 match=match)
     reference_graph.add_edges_from(residues.edges())
     return reference_graph
 
@@ -272,8 +276,7 @@ def repair_graph(molecule, reference_graph):
                     # We've traversed the interesting bit of the tree
                     break
             extra -= atoms
-            PTMs.append((residx, atoms, attachments))
-
+            PTMs.append((found, atoms, attachments))
     # All residues have been canonicalized. Now we can go and find our PTMs.
     # What we should do is find which PTM this is, get/make a new reference for
     # the affected residues, and call repair_residue on them again.
@@ -286,17 +289,21 @@ def repair_graph(molecule, reference_graph):
     # 2) Do a graph isomorphism (note: atoms might be missing?), making sure
     #    atoms marked as part of the PTM are in `extra` and vice versa.
     # 3) Canonicalize the atoms of the PTM.
-    # 4) We need to keep track of which PTM lives where. Some might make
+    # 4) We need to keep track of which PTM lives where. Some PTMs might make
     #    separate residues (open problem). Either way, give *every* atom of the
     #    residue a 'PTM' attribute identifying the PTM. This
     #    can/will/should/needs to be used in the later processors (e.g. mapping
     #    and blocks).
 
-    for resid, atoms, n_idxs in PTMs:
+    for found, atom_idxs, attachment_idxs in PTMs:
         # INFO
-        print('Extra atoms for residue {}{}'.format(reference_graph.nodes[resid]['resname'], resid), end=':')
-        print([molecule.nodes[idx]['atomname'] for idx in atoms], end='; ')
-        for n_idx in n_idxs:
+        PTM = find_ptm(found, atom_idxs, attachment_idxs)
+        idx = next(iter(found))  # Pick an arbitrary atom
+        resname = found.nodes[idx]['resname']
+        resid = found.nodes[idx]['resid']
+        print('Extra atoms for residue {}{}'.format(resname, resid), end=':')
+        print([molecule.nodes[idx]['atomname'] for idx in atom_idxs], end='; ')
+        for n_idx in attachment_idxs:
             resname = molecule.nodes[n_idx]['resname']
             resid = molecule.nodes[n_idx]['resid']
             atomname = molecule.nodes[n_idx]['atomname']
@@ -304,7 +311,7 @@ def repair_graph(molecule, reference_graph):
         print()
         # WARNING
         print("Couldn't recognize this PTM, removing atoms involved.")
-        molecule.remove_nodes_from(atoms)
+        molecule.remove_nodes_from(atom_idxs)
     return molecule
 
 
