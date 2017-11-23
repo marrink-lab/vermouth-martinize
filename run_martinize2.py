@@ -13,8 +13,8 @@ import os.path as osp
 import numpy as np
 
 #PATH = '../molecules/cycliclipopeptide_2.pdb'
-PATH = '../molecules/cyclicpeptide_2.pdb'
-#PATH = '../molecules/glkfk.pdb'
+#PATH = '../molecules/cyclicpeptide_2.pdb'
+PATH = '../molecules/glkfk.pdb'
 #PATH = '../molecules/6-macro-8_cartwheel.gro'
 #PATH = '../molecules/6-macro-16.gro'
 #PATH = '../molecules/6-macro-16-rtc-eq-nodisre.pdb'
@@ -42,14 +42,12 @@ print(system)
 
 
 for mol in system.molecules:
-    to_remove = set()
-    for idx in mol:
+    for idx in list(mol):
         if 'position' not in mol.nodes[idx]:
             node = mol.nodes[idx]
             print(node['resname'], node['resid'], node['atomname'])
-            to_remove.add(idx)
 #            mol.nodes[idx]['position'] = np.array([np.nan, np.nan, np.nan])
-    mol.remove_nodes_from(to_remove)
+            mol.remove_node(idx)
             
     draw(mol, node_size=30, node_color=tuple(np.random.rand(3)), with_label=True)
 

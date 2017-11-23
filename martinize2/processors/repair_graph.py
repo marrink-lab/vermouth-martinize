@@ -12,6 +12,7 @@ from ..utils import first_alpha, maxes
 from ..graph_utils import *
 from ..gmx import read_rtp
 
+from collections import defaultdict
 import functools
 import os.path
 
@@ -24,7 +25,21 @@ try:
 except ImportError:
     DATA_PATH = os.path.join(os.path.dirname(__file__), 'mapping')
 
-
+# FIXME: read PTMs from files
+KNOWN_PTMS = []
+n_term = nx.Graph()  # Molecule? Block?
+n_term.add_edges_from([(0, 1), (0, 2), (0, 3)])
+n_term.nodes[0].update(atomname='N', element='N', PTM_atom=False)
+n_term.nodes[1].update(atomname='HN', element='H', PTM_atom=False, rename='HN1')
+n_term.nodes[2].update(atomname='HN2', element='H', PTM_atom=True)
+n_term.nodes[3].update(atomname='HN3', element='H', PTM_atom=True)
+KNOWN_PTMS.append(n_term)
+c_term = nx.Graph()
+c_term.add_edges_from([(0, 1), (0, 2)])
+c_term.nodes[0].update(atomname='C', element='C', PTM_atom=False)
+c_term.nodes[1].update(atomname='O', element='O', PTM_atom=False, rename='OC1')
+c_term.nodes[2].update(atomname='OC2', element='O', PTM_atom=True)
+KNOWN_PTMS.append(c_term)
 # TODO: Get the reference graph for a given force field rather than having it
 # hardcoded.
 RTP_PATH = 'aminoacids.rtp'
@@ -48,8 +63,43 @@ def read_reference_graph(resname):
     blocks['HIS'] = blocks['HSD']
     return blocks[resname]
     
-    return nx.read_gml(os.path.join(DATA_PATH, 'universal', '{}.gml'.format(resname)), label='id')
+#    return nx.read_gml(os.path.join(DATA_PATH, 'universal', '{}.gml'.format(resname)), label='id')
 #    return nx.read_gml('/universal/{}.gml'.format(resname), label='id')
+class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
+    # G1 >= G2; G1 is the found residue; G2 the PTM reference
+    def semantic_feasibility(self, node1, node2):
+        node1 = self.G1.nodes[node1]
+        node2 = self.G2.nodes[node2]
+        print(node1, node2)
+        if node1.get('PTM_atom', False) == node2['PTM_atom']:
+            if node2['PTM_atom']:
+                # elements must match
+                print(node1['element'] == node2['element'])
+                return node1['element'] == node2['element']
+            else:
+                # atomnames must match
+                print(node1['atomname'] == node2['atomname'])
+                return node1['atomname'] == node2['atomname']
+        else:
+            print(False)
+            return False
+
+
+def find_ptm(found, residue_ptms):
+    # residue_ptms = ((atom_idxs, attachment_idxs), ...)
+    idx = next(iter(found))
+    resname = found.nodes[idx]['resname']
+    resid = found.nodes[idx]['resid']
+    print(resname)
+    for PTM_template in KNOWN_PTMS:
+        gm = PTMGraphMatcher(found, PTM_template)
+        print(list(gm.subgraph_isomorphisms_iter()))
+    # PTMs _must_ be smaller or equal to their references.
+    # For now, find the biggest matching subgraph.
+    # TODO: filter possible PTMs based on e.g. element count. This does require
+    #      a few brain-cycles.
+
+    return None
 
 
 def make_reference(mol):
@@ -173,6 +223,7 @@ def repair_residue(molecule, ref_residue):
             # Copy, because it's references everywhere.
             node['graph'] = molecule.subgraph([res_idx]).copy()
             node.update(reference.nodes[ref_idx])
+#            found.nodes[res_idx].update(reference.nodes[ref_idx])
         else:
 #            if reference.nodes[ref_idx]['element'] != 'H':
             # INFO
@@ -258,7 +309,7 @@ def repair_graph(molecule, reference_graph):
         A new graph like ``molecule``, but with missing atoms (as per
         ``reference_graph``) added, and canonicalized atom and residue names.
     """
-    molecule = molecule.copy()
+    PTMs = []
     for residx in reference_graph:
         residue = reference_graph.nodes[residx]
         repair_residue(molecule, residue)
@@ -273,6 +324,9 @@ def repair_graph(molecule, reference_graph):
         # `atachments` is a set of the nodes from `found` that have a match in
         # the reference and are connected to a node from `extra`.
         extra = set(found.nodes) - set(match.values())
+        for idx in extra:
+            found.nodes[idx]['PTM_atom'] = True
+        residue_ptms = []
         while extra:
             # First PTM atom we'll look at
             first = next(iter(extra))
@@ -281,7 +335,7 @@ def repair_graph(molecule, reference_graph):
             atoms = set()
             # Atoms we still need to see this traversal
             to_see = set([first])
-            for orig, succ in nx.bfs_successors(found, first):
+            for orig, succ in nx.bfs_successors(molecule, first):
                 # We've seen orig, so remove it
                 to_see.remove(orig)
                 if orig in extra:
@@ -296,7 +350,11 @@ def repair_graph(molecule, reference_graph):
                     # We've traversed the interesting bit of the tree
                     break
             extra -= atoms
-            PTMs.append((found, atoms, attachments))
+            # TODO: If the attachments/anchors are in different residues, we
+            #       should treat them as one.
+            residue_ptms.append((atoms, attachments))
+        if residue_ptms:
+            PTMs.append((found, tuple(residue_ptms)))
     # All residues have been canonicalized. Now we can go and find our PTMs.
     # What we should do is find which PTM this is, get/make a new reference for
     # the affected residues, and call repair_residue on them again.
@@ -315,28 +373,33 @@ def repair_graph(molecule, reference_graph):
     #    can/will/should/needs to be used in the later processors (e.g. mapping
     #    and blocks).
 
-    for found, atom_idxs, attachment_idxs in PTMs:
-        # INFO
-        PTM = find_ptm(found, atom_idxs, attachment_idxs)
+    for found, residue_ptms in PTMs:
+        
         idx = next(iter(found))  # Pick an arbitrary atom
         resname = found.nodes[idx]['resname']
         resid = found.nodes[idx]['resid']
-        print('Extra atoms for residue {}{}'.format(resname, resid), end=':')
-        print([molecule.nodes[idx]['atomname'] for idx in atom_idxs], end='; ')
-        for n_idx in attachment_idxs:
-            resname = molecule.nodes[n_idx]['resname']
-            resid = molecule.nodes[n_idx]['resid']
-            atomname = molecule.nodes[n_idx]['atomname']
-            print('Attached to: {}{}:{}'.format(resname, resid, atomname), end=', ')
-        print()
-        # WARNING
-        print("Couldn't recognize this PTM, removing atoms involved.")
-        molecule.remove_nodes_from(atom_idxs)
-    return molecule
+        # Because multiple ptms could actually be one we group them per residue
+        # E.g. protonated N terminus
+        PTM_templates = find_ptm(found, residue_ptms)
+        # INFO
+        print('Extra atoms for residue {}{}:'.format(resname, resid))
+        for atom_idxs, attachment_idxs in residue_ptms:
+
+            print('\t', [molecule.nodes[idx]['atomname'] for idx in atom_idxs], end='; ')
+            for n_idx in attachment_idxs:
+                resname = molecule.nodes[n_idx]['resname']
+                resid = molecule.nodes[n_idx]['resid']
+                atomname = molecule.nodes[n_idx]['atomname']
+                print('Attached to: {}{}:{}'.format(resname, resid, atomname), end=', ')
+            print()
+            # WARNING
+            print("Couldn't recognize this PTM, removing atoms involved.")
+            molecule.remove_nodes_from(atom_idxs)
 
 
 class RepairGraph(Processor):
     def run_molecule(self, molecule):
+        molecule = molecule.copy()
         reference_graph = make_reference(molecule)
-        mol = repair_graph(molecule, reference_graph)
-        return mol
+        repair_graph(molecule, reference_graph)
+        return molecule
