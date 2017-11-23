@@ -40,8 +40,9 @@ c_term.nodes[0].update(atomname='C', element='C', PTM_atom=False)
 c_term.nodes[1].update(atomname='O', element='O', PTM_atom=False, rename='OC1')
 c_term.nodes[2].update(atomname='OC2', element='O', PTM_atom=True)
 KNOWN_PTMS.append(c_term)
+
 # TODO: Get the reference graph for a given force field rather than having it
-# hardcoded.
+#       hardcoded.
 RTP_PATH = 'aminoacids.rtp'
 @functools.lru_cache(None)
 def read_reference_graph(resname):
@@ -62,44 +63,121 @@ def read_reference_graph(resname):
         blocks, links = read_rtp(rtp)
     blocks['HIS'] = blocks['HSD']
     return blocks[resname]
-    
+
 #    return nx.read_gml(os.path.join(DATA_PATH, 'universal', '{}.gml'.format(resname)), label='id')
 #    return nx.read_gml('/universal/{}.gml'.format(resname), label='id')
+
 class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
     # G1 >= G2; G1 is the found residue; G2 the PTM reference
     def semantic_feasibility(self, node1, node2):
         node1 = self.G1.nodes[node1]
         node2 = self.G2.nodes[node2]
-        print(node1, node2)
         if node1.get('PTM_atom', False) == node2['PTM_atom']:
             if node2['PTM_atom']:
                 # elements must match
-                print(node1['element'] == node2['element'])
                 return node1['element'] == node2['element']
             else:
                 # atomnames must match
-                print(node1['atomname'] == node2['atomname'])
                 return node1['atomname'] == node2['atomname']
         else:
-            print(False)
             return False
 
 
-def find_ptm(found, residue_ptms):
+def update_reference(reference, found, residue_ptms):
+    global KNOWN_PTMS
+    print(reference['match'])
     # residue_ptms = ((atom_idxs, attachment_idxs), ...)
+    extra_atom_idxs = set()
+    for atom_idxs, attachment_idxs in residue_ptms:
+        extra_atom_idxs |= atom_idxs
     idx = next(iter(found))
     resname = found.nodes[idx]['resname']
-    resid = found.nodes[idx]['resid']
+    found_to_ref = {v: k for k, v in reference['match'].items()}
+    # resid = found.nodes[idx]['resid']
     print(resname)
-    for PTM_template in KNOWN_PTMS:
-        gm = PTMGraphMatcher(found, PTM_template)
-        print(list(gm.subgraph_isomorphisms_iter()))
-    # PTMs _must_ be smaller or equal to their references.
-    # For now, find the biggest matching subgraph.
-    # TODO: filter possible PTMs based on e.g. element count. This does require
-    #      a few brain-cycles.
+    # We have here a graph covering problem: How can we (best) cover all ptm
+    # atoms found with known PTMs? 
+    # For now we solve it by greedily trying the largest known PTMs and 
+    # removing atoms recognized. That way there can't be overlapping PTMs. If
+    # there's still PTM atoms left at the end of the ride we raise an error.
+    KNOWN_PTMS = sorted(KNOWN_PTMS, key=len)
+    available = found.copy()
+    while extra_atom_idxs:
+        found_ptm = False
+        for PTM_template in KNOWN_PTMS:
+            # PTMs _must_ be smaller or equal to their references. A PTM can't have
+            # another PTM.
+            # TODO: filter possible PTMs based on e.g. element count. This does
+            #       require a few brain-cycles.
+            gm = PTMGraphMatcher(available, PTM_template)
+            matches = gm.subgraph_isomorphisms_iter()
+            matches = maxes(matches, key=lambda m: rate_match(found, PTM_template, m))
+            print(matches)
+            if len(matches) > 1:
+                # WARNING?
+                print('More than one way to apply my PTM. Fix some of your atom '
+                      'names if I guess wrong.')
+            elif not matches:
+                # This PTM did not match.
+                continue
+            found_ptm = True
+            match = matches[0]
+            ptm_ref_to_found = {v: k for k, v in match.items()}
+            available.remove_nodes_from(ptm_ref_to_found.values())
+            extra_atom_idxs -= set(ptm_ref_to_found.values())
 
-    return None
+            # Start updating the reference
+            ptm_to_reference = {}
+            for ptm_idx in PTM_template:
+                ptm_node = PTM_template.nodes[ptm_idx].copy()
+                if 'rename' in ptm_node:
+                    ptm_node['atomname'] = ptm_node.pop('rename')
+
+                if ptm_idx not in ptm_ref_to_found:
+                    print('blurgh')
+                    assert ptm_node['atomname'] not in reference['reference']
+                    reference['reference'].add_node(ptm_node['atomname'], **ptm_node)
+                    ptm_to_reference[ptm_idx] = ptm_node['atomname']
+                    
+                    # TODO: Add node to reference['reference']; with the
+                    #       correct neighbours. Nontrivial.
+                    continue
+
+                # PTM atom found
+                mol_idx = ptm_ref_to_found[ptm_idx]
+                if not ptm_node['PTM_atom']:
+                    # Atom should be in the reference. Might be renamed though.
+                    ref_idx = found_to_ref[mol_idx]
+                    ref_node = reference['reference'].nodes[ref_idx]
+                    ref_node.update(**ptm_node)
+                    print('Renaming reference node {} to {}'.format(ref_idx, ptm_node['atomname']))
+                    assert ptm_node['atomname'] not in reference['reference'] or ref_idx == ptm_node['atomname']
+                    # Relabel reference node
+                    nx.relabel_nodes(reference['reference'], {ref_idx: ptm_node['atomname']}, copy=False)
+                    # And rename reference['match']
+                    reference['match'][ptm_node['atomname']] = reference['match'].pop(ref_idx)
+                    # ref_idx is already renamed to ptm_node['atomname']
+                    ptm_to_reference[ptm_idx] = ptm_node['atomname']
+                else:
+                    # Atom is not known to reference, so add a node to
+                    # reference.
+                    print('Adding reference node {}'.format(ptm_node['atomname']))
+                    assert ptm_node['atomname'] not in reference['reference']
+                    reference['reference'].add_node(ptm_node['atomname'], **ptm_node)
+                    ptm_to_reference[ptm_idx] = ptm_node['atomname']
+            # All PTM nodes should now be present in the reference. Time to add
+            # the edges.
+            for ptm_idx, ptm_jdx, data in PTM_template.edges(data=True):
+                ref_idx = ptm_to_reference[ptm_idx]
+                ref_jdx = ptm_to_reference[ptm_jdx]
+                print('Adding edge between {} and {}'.format(ref_idx, ref_jdx))
+                reference['reference'].add_edge(ref_idx, ref_jdx, **data)
+        if not found_ptm:
+            break
+    if extra_atom_idxs:
+        raise ValueError('Could not cover all PTMs found.')
+
+    return None  # TODO: return changes to be made to molecule.
 
 
 def make_reference(mol):
@@ -223,7 +301,9 @@ def repair_residue(molecule, ref_residue):
             # Copy, because it's references everywhere.
             node['graph'] = molecule.subgraph([res_idx]).copy()
             node.update(reference.nodes[ref_idx])
-#            found.nodes[res_idx].update(reference.nodes[ref_idx])
+            # Update found as well to keep found and molecule in line. It would
+            # be better to try and figure why found is not a reference, but meh
+            found.nodes[res_idx].update(reference.nodes[ref_idx])
         else:
 #            if reference.nodes[ref_idx]['element'] != 'H':
             # INFO
@@ -245,9 +325,7 @@ def repair_residue(molecule, ref_residue):
             res_idx = max(molecule) + 1  # Alternative: find the first unused number
 
             # Create the new node
-            match[ref_idx] = res_idx
-            molecule.add_node(res_idx)
-            node = molecule.nodes[res_idx]
+            node = {}
             for key, val in ref_residue.items():
                 # Some attributes are only relevant on a residue level, not on
                 # an atom level.
@@ -255,6 +333,8 @@ def repair_residue(molecule, ref_residue):
                     node[key] = val
             node.update(reference.nodes[ref_idx])
 
+            match[ref_idx] = res_idx
+            molecule.add_node(res_idx, **node)
             found.add_node(res_idx, **node)
             # print("Adding {}{}:{}".format(resname, resid, node['atomname']))
 
@@ -325,6 +405,7 @@ def repair_graph(molecule, reference_graph):
         # the reference and are connected to a node from `extra`.
         extra = set(found.nodes) - set(match.values())
         for idx in extra:
+            molecule.nodes[idx]['PTM_atom'] = True
             found.nodes[idx]['PTM_atom'] = True
         residue_ptms = []
         while extra:
@@ -335,6 +416,8 @@ def repair_graph(molecule, reference_graph):
             atoms = set()
             # Atoms we still need to see this traversal
             to_see = set([first])
+            # Traverse in molecule. Since extra is limited to this residue
+            # we'll at most see anchors in other residues.
             for orig, succ in nx.bfs_successors(molecule, first):
                 # We've seen orig, so remove it
                 to_see.remove(orig)
@@ -378,23 +461,30 @@ def repair_graph(molecule, reference_graph):
         idx = next(iter(found))  # Pick an arbitrary atom
         resname = found.nodes[idx]['resname']
         resid = found.nodes[idx]['resid']
+        ref_idx = [idx for idx in reference_graph if reference_graph.nodes[idx]['resid'] == resid][0]
+        reference = reference_graph.nodes[ref_idx]
         # Because multiple ptms could actually be one we group them per residue
         # E.g. protonated N terminus
-        PTM_templates = find_ptm(found, residue_ptms)
+        update_reference(reference, found, residue_ptms)
+        repair_residue(molecule, reference)
+        print(reference['reference'].nodes)
+        print(reference['reference'].nodes['N'])
+        print(reference['match'])
+#        repair_ptm(molecule, found, residue_ptms)
         # INFO
-        print('Extra atoms for residue {}{}:'.format(resname, resid))
-        for atom_idxs, attachment_idxs in residue_ptms:
-
-            print('\t', [molecule.nodes[idx]['atomname'] for idx in atom_idxs], end='; ')
-            for n_idx in attachment_idxs:
-                resname = molecule.nodes[n_idx]['resname']
-                resid = molecule.nodes[n_idx]['resid']
-                atomname = molecule.nodes[n_idx]['atomname']
-                print('Attached to: {}{}:{}'.format(resname, resid, atomname), end=', ')
-            print()
-            # WARNING
-            print("Couldn't recognize this PTM, removing atoms involved.")
-            molecule.remove_nodes_from(atom_idxs)
+#        print('Extra atoms for residue {}{}:'.format(resname, resid))
+#        for atom_idxs, attachment_idxs in residue_ptms:
+#
+#            print('\t', [molecule.nodes[idx]['atomname'] for idx in atom_idxs], end='; ')
+#            for n_idx in attachment_idxs:
+#                resname = molecule.nodes[n_idx]['resname']
+#                resid = molecule.nodes[n_idx]['resid']
+#                atomname = molecule.nodes[n_idx]['atomname']
+#                print('Attached to: {}{}:{}'.format(resname, resid, atomname), end=', ')
+#            print()
+#            # WARNING
+#            print("Couldn't recognize this PTM, removing atoms involved.")
+#            molecule.remove_nodes_from(atom_idxs)
 
 
 class RepairGraph(Processor):
