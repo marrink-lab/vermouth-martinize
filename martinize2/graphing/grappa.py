@@ -203,7 +203,7 @@ def process(graphstring, graphs={}):
     Parse a graph string construct the corresponding graph.
     """
 
-    tokens = list(tokenize(graphstring))
+    tokens = tokenize(graphstring)
     #print(graphstring)
     #print(tokens)
 
@@ -211,61 +211,20 @@ def process(graphstring, graphs={}):
     active = None
     parent = []
     while tokens:
-        token = tokens.pop(0)
+        try:
+            token = next(tokens)
+        except StopIteration:
+            break
 
-        # print("->", token, G.nodes)
+        if token == "!":
+            token = next(tokens)
+            if token not in G:
+                print(G.nodes)
+                raise IndexError("Token missing in graph: !{}".format(token))
 
-        if token == '(':
-            # Start branching
-            parent.append(active)
-            active = None
+        if token[0] not in '(),@-=<>{}':
+            # Then it's a node
 
-        elif token == ')':
-            # End branch(es) - switch to active parent
-            active = parent.pop()
-#            print("End of branching: active:", active[-1])
-
-        elif token == ',':
-            # Switch to next branch
-            active = None
-
-        elif token == '@':
-            # Set node as active
-            active = tokens.pop(0)
-#            print("Setting active:", active)
-
-        elif token == '-':
-            # Remove node
-            token = tokens.pop(0)
-#            print("Removing", token)
-            G.remove_node(token)
-
-        elif token == '=':
-            # Rename active node
-            token = tokens.pop(0)
-#            print("Renaming", active, "to", token)
-            G = nx.relabel_nodes(G, {active: token})
-
-        elif token == "!" and tokens[0] not in G:
-            raise IndexError("Token missing in graph: !", tokens[0], sep="")
-
-        elif token[:1] == '<':
-            # Include graph from graphs and relabel nodes according to tag
-            # <tag:graphname@node>
-            B, at = include_graph(graphs, token[1:-1])
-#            print("Including graph from", token, ":", *B.nodes)
-            G.add_nodes_from(B.nodes)
-            G.add_edges_from(B.edges)
-            if active is not None:
-                G.add_edge(active, at)
-            elif parent and parent[-1] is not None:
-                G.add_edge(parent[-1], at)
-
-        elif token[:1] == '{':
-            # Set attributes to active node
-            print("Setting attributes at active atom:", token)
-
-        else:
             if active is not None:
                 node = active
             elif parent:
@@ -286,6 +245,52 @@ def process(graphstring, graphs={}):
                     G.add_edges_from([(node, n) for n in nodes])
 #                        print("Edge:", node, "to", n)
                 active = nodes[-1]
+            continue
+
+        # Directives:
+        
+        if token == '(':
+            # Start branching
+            parent.append(active)
+            active = None
+
+        elif token == ')':
+            # End branch(es) - switch to active parent
+            active = parent.pop()
+#            print("End of branching: active:", active[-1])
+
+        elif token == ',':
+            # Switch to next branch
+            active = None
+
+        elif token == '@':
+            # Set node as active
+            active = next(tokens)
+#            print("Setting active:", active)
+
+        elif token == '-':
+            # Remove node
+            G.remove_node(next(tokens))
+
+        elif token == '=':
+            # Rename active node
+            G = nx.relabel_nodes(G, {active: next(tokens)})
+
+        elif token[0] == '<':
+            # Include graph from graphs and relabel nodes according to tag
+            # <tag:graphname@node>
+            B, at = include_graph(graphs, token[1:-1])
+#            print("Including graph from", token, ":", *B.nodes)
+            G.add_nodes_from(B.nodes)
+            G.add_edges_from(B.edges)
+            if active is not None:
+                G.add_edge(active, at)
+            elif parent and parent[-1] is not None:
+                G.add_edge(parent[-1], at)
+
+        elif token[0] == '{':
+            # Set attributes to active node
+            print("Setting attributes at active atom:", token)
 
     #print(G.nodes)
     #print(G.edges)
