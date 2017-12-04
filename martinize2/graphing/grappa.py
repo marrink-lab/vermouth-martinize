@@ -47,29 +47,40 @@ complete description of the grappa minilanguage is given below:
                   node and node 'X' of brick
 """
 
+
 import sys
+import string
 import networkx as nx
 
 
+class GrappaSyntaxError(BaseException):
+    """Syntax of grappa string was invalid"""
+    def __init__(self, msg):
+        self.msg = msg
+    
+    def __str__(self):
+        return self.msg
+    
+    
 def find_matching(symbols, string):
     """Find matching symbol in a series with possible nesting."""
     nesting = 0
-    j = 0
-    while j < len(string):
-        if string[j] == symbols[0]:
+    pos = 0
+    while pos < len(string):
+        if string[pos] == symbols[0]:
             nesting += 1
-        elif string[j] == symbols[1]:
+        elif string[pos] == symbols[1]:
             nesting -= 1
-        j += 1
+        pos += 1
         if not nesting:
             break
     else:
-        raise GraphstringTokenizeError("Matching '}' not found")
+        raise GrappaSyntaxError("Matching '}' not found")
 
-    return string[:j]
+    return string[:pos]
 
 
-def parse_nodestring(nodestr):
+def expand_nodestring(nodestr):
     """Parse a string like X[1-3,6,8] to list [X1,X2,X3,X6,X8]"""
 
     if not '[' in nodestr:
@@ -79,7 +90,7 @@ def parse_nodestring(nodestr):
     closebra = nodestr.rfind(']')
     if closebra == -1:
         err = 'Matching square bracket not found in node list definition ({})'
-        raise GraphstringSyntaxError(err.format(nodestr))
+        raise GrappaSyntaxError(err.format(nodestr))
 
     base = nodestr[:openbra]
     nodes = []
@@ -92,7 +103,7 @@ def parse_nodestring(nodestr):
                 nodes.append(base + chr(val))
         else:
             err = 'Malformed range in node string ({}-{})'
-            raise GraphstringSyntaxError(err.format(*thing))
+            raise GrappaSyntaxError(err.format(*thing))
 
     return nodes
 
@@ -114,7 +125,7 @@ def include_graph(graphs, tag):
     G = graphs.get(tag)
     if G is None:
         raise KeyError("Include graph {} not found in graphs.".format(tag))
-    mapping = {k:k+lbl for k in G.nodes}
+    mapping = {k: k+lbl for k in G.nodes}
     G = nx.relabel_nodes(G, mapping)
     return G, atpos + lbl
 
@@ -142,7 +153,6 @@ def tokenize(graphstring):
     Parse a graph string and tokenize it, return tokenlist
     """
 
-    space = ' \r\n\t'
     special = '@(),-=!'
 
     # This is a simplified tokenizer..
@@ -151,7 +161,7 @@ def tokenize(graphstring):
         i += 1
         here = graphstring[i]
 
-        if here in space:
+        if here in string.whitespace:
             continue
 
         if here in special:
@@ -173,13 +183,14 @@ def tokenize(graphstring):
         j = i + 1
         squarebracket = False
         while j < len(graphstring):
-            gj = graphstring[j]
-            if gj == '[':
+            char = graphstring[j]
+            if char == '[':
                 squarebracket = True
-            elif not squarebracket and (gj in space or gj in special):
+            elif (not squarebracket and 
+                  (char in string.whitespace or char in special)):
                 break
             j += 1
-            if gj == ']':
+            if char == ']':
                 break
 
         yield graphstring[i:j]
@@ -193,8 +204,8 @@ def process(graphstring, graphs={}):
     """
 
     tokens = list(tokenize(graphstring))
-    print(graphstring)
-    print(tokens)
+    #print(graphstring)
+    #print(tokens)
 
     G = nx.Graph()
     active = None
@@ -236,10 +247,10 @@ def process(graphstring, graphs={}):
             G = nx.relabel_nodes(G, {active: token})
 
         elif token == "!" and tokens[0] not in G:
-            raise SomeError
+            raise IndexError("Token missing in graph: !", tokens[0], sep="")
 
         elif token[:1] == '<':
-            # Include graph from graphs
+            # Include graph from graphs and relabel nodes according to tag
             # <tag:graphname@node>
             B, at = include_graph(graphs, token[1:-1])
 #            print("Including graph from", token, ":", *B.nodes)
@@ -267,22 +278,22 @@ def process(graphstring, graphs={}):
 #                print("Adding stub to", node, ":", G.nodes[node]['stub'])
             else:
                 # Token is node or nodes
-                nodes = parse_nodestring(token)
+                nodes = expand_nodestring(token)
                 if node is None:
 #                    print('Unrooted nodes:', *nodes)
-                    for n in nodes:
-                        G.add_node(token)
+                    G.add_nodes_from(nodes)
                 else:
-                    for n in nodes:
-                        G.add_edge(node, n)
+                    G.add_edges_from([(node, n) for n in nodes])
 #                        print("Edge:", node, "to", n)
                 active = nodes[-1]
 
-    print(G.nodes)
-    print(G.edges)
+    #print(G.nodes)
+    #print(G.edges)
     return G
 
 
+# TODO: Move amino acid graph strings to data folder
+# TODO: Replace this function with a proper test
 def amino_acid_test():
     """Test amino acid grappa set"""
 
@@ -318,16 +329,16 @@ def amino_acid_test():
             print("\n", name, '-->', graphstring)
             graphs[name] = process(graphstring, graphs)
 
-    return 0
+    return graphs
 
 
 def main(args):
 
-    amino_acid_test()
+    graphs = amino_acid_test()
 
     if len(args) > 1:
         print("\n####\n")
-        process(" ".join(args[1:]))
+        process(" ".join(args[1:]), graphs)
 
     return 0
 
