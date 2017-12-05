@@ -45,12 +45,22 @@ complete description of the grappa minilanguage is given below:
 
     <NAME@X>    : include brick with given name and add edge between active
                   node and node 'X' of brick
+                  
+    /#=1-20/C#(H#[1-2])/ : Expand by repetion and substitution according to
+                           range specified
+                           
+    (/#=A-D/C#(H#[1-3]),/) : Expand to multiple branches
 """
 
 
 import sys
 import string
 import networkx as nx
+
+
+DIRECTIVES = '@(),-=!'
+GROUPS = ('{}', '<>')
+TGROUP = '[]'
 
 
 class GrappaSyntaxError(Exception):
@@ -78,7 +88,8 @@ def find_matching(symbols, string):
 def parse_attribute_token(attr):
     """Read attribute token and return corresponding node dictionary"""
     out = {}
-    tok = tokenize(attr[1:-1], special=':,', groups=('[]','{}','()'), tgroup=None)
+    tok = tokenize(attr[1:-1], special=':,', 
+                   groups=('[]','{}','()'), tgroup=None)
     for token in tok:
         assert next(tok) == ':'
         out[token] = next(tok)
@@ -182,9 +193,9 @@ def preprocess(graphstring):
 
 
 def tokenize(tokenstring, skip=string.whitespace,
-             special='@(),-=!', groups=('{}', '<>'), tgroup='[]'):
+             special=DIRECTIVES, groups=GROUPS, tgroup=TGROUP):
     """
-    Parse a token string and tokenize it, return tokenlist
+    Parse a token string and tokenize it, yielding tokens
     """
 
     # This is a simplified tokenizer..
@@ -322,7 +333,8 @@ def process(graphstring, graphs={}):
 
         elif token[0] == '{':
             # Set attributes to active node
-            print("Setting attributes at active atom:", parse_attribute_token(token))
+            print("Setting attributes at active atom:", 
+                  parse_attribute_token(token))
             G.nodes[active].update(parse_attribute_token(token))
 
     #print(G.nodes)
