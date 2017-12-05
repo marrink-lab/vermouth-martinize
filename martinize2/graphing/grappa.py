@@ -53,15 +53,10 @@ import string
 import networkx as nx
 
 
-class GrappaSyntaxError(BaseException):
+class GrappaSyntaxError(Exception):
     """Syntax of grappa string was invalid"""
-    def __init__(self, msg):
-        self.msg = msg
-    
-    def __str__(self):
-        return self.msg
-    
-    
+
+
 def find_matching(symbols, string):
     """Find matching symbol in a series with possible nesting."""
     nesting = 0
@@ -78,6 +73,16 @@ def find_matching(symbols, string):
         raise GrappaSyntaxError("Matching '}' not found")
 
     return string[:pos]
+
+
+def parse_attribute_token(attr):
+    """Read attribute token and return corresponding node dictionary"""
+    out = {}
+    tok = tokenize(attr[1:-1], special=':,', groups=('[]','{}','()'), tgroup=None)
+    for token in tok:
+        assert next(tok) == ':'
+        out[token] = next(tok)
+    return out
 
 
 def expand_nodestring(nodestr):
@@ -130,72 +135,97 @@ def include_graph(graphs, tag):
     return G, atpos + lbl
 
 
-#def preprocess(graphstring):
-#    """
-#    Expand graphstring 'macros'.
-#
-#    EXAMPLES:
-#
-#        (X[a-b])
-#          --> (Xa, Xb, Xc)
-#
-#        /#=1-3/C#(H#[1-2])/
-#          --> C1(H11,H12) C2(H21,H22) C3(H31,H32)
-#
-#        H1 C1(/#=2-4/C#(H#[1-3]),/)
-#          --> H1 C1(C2(H21,H22,H23),C3(H31,H32,H33),C4(H41,H42,H43))
-#    """
-#    raise NotImplementedError
-
-
-def tokenize(graphstring):
+def preprocess(graphstring):
     """
-    Parse a graph string and tokenize it, return tokenlist
-    """
+    Expand graphstring 'macros'.
 
-    special = '@(),-=!'
+    EXAMPLES:
+
+        /#=1-3/(C#(H#[1-2]))
+          --> C1(H11,H12) C2(H21,H22) C3(H31,H32)
+
+        H1 C1(/#=2-4/(C#(H#[1-3]),))
+          --> H1 C1(C2(H21,H22,H23),C3(H31,H32,H33),C4(H41,H42,H43))
+    """
+    tokkie = tokenize(graphstring, special="/", groups=(), tgroup=None)
+    out = []
+    for token in tokkie:
+        if token == '/':
+            rng = next(tokkie)
+
+            if next(tokkie) != '/':
+                err = 'Matching "/" not found during preprocessing'
+                raise GrappaSyntaxError(err)
+
+            subst, values = rng.split('=')
+            values = [val.split('-') for val in values.split(',')]
+
+            form = next(tokkie)
+
+            if next(tokkie) != '/':
+                err = 'Matching "/" not found during preprocessing'
+                raise GrappaSyntaxError(err)
+
+            for val in values:
+                if len(val) == 1:
+                    out.append(form.replace(subst, val[0]))
+                elif len(val[0]) == 1 and len(val[1]) == 1:
+                    for ordi in range(ord(val[0]), ord(val[1]) + 1):
+                        out.append(form.replace(subst, chr(ordi)))
+                else:
+                    for num in range(int(val[0]), int(val[1])+1):
+                        out.append(form.replace(subst, str(num)))
+        else:
+            out.append(token)
+
+    return " ".join(out)
+
+
+def tokenize(tokenstring, skip=string.whitespace,
+             special='@(),-=!', groups=('{}', '<>'), tgroup='[]'):
+    """
+    Parse a token string and tokenize it, return tokenlist
+    """
 
     # This is a simplified tokenizer..
     i = -1
-    while i + 1 < len(graphstring):
+    while i + 1 < len(tokenstring):
         i += 1
-        here = graphstring[i]
+        here = tokenstring[i]
 
-        if here in string.whitespace:
+        if here in skip:
             continue
 
         if here in special:
             yield here
             continue
 
-        if here == '{':
-            here = find_matching('{}', graphstring[i:])
-            yield here
-            i += len(here)
-            continue
-
-        if here == '<':
-            here = find_matching('<>', graphstring[i:])
-            yield here
-            i += len(here)
+        broken = False
+        for grp in groups:
+            if here == grp[0]:
+                here = find_matching(grp, tokenstring[i:])
+                yield here
+                i += len(here)
+                broken = True
+                break
+        if broken:
             continue
 
         j = i + 1
-        squarebracket = False
-        while j < len(graphstring):
-            char = graphstring[j]
-            if char == '[':
-                squarebracket = True
-            elif (not squarebracket and 
-                  (char in string.whitespace or char in special)):
+        bracket = False
+        while j < len(tokenstring):
+            char = tokenstring[j]
+            if tgroup and char == tgroup[0]:
+                bracket = True
+            elif (not bracket and 
+                  (char in skip or char in special)):
                 break
             j += 1
-            if char == ']':
+            if tgroup and char == tgroup[1]:
                 break
 
-        yield graphstring[i:j]
+        yield tokenstring[i:j]
         i = j-1
-
 
 
 def process(graphstring, graphs={}):
@@ -204,35 +234,37 @@ def process(graphstring, graphs={}):
     """
 
     tokens = tokenize(graphstring)
+    directives = '(),@-=<>{}'
     #print(graphstring)
     #print(tokens)
 
     G = nx.Graph()
     active = None
     parent = []
-    while tokens:
-        try:
-            token = next(tokens)
-        except StopIteration:
-            break
+    for token in tokens:
 
         if token == "!":
+            # Make connection to already available node (next token)
             token = next(tokens)
             if token not in G:
                 print(G.nodes)
                 raise IndexError("Token missing in graph: !{}".format(token))
 
-        if token[0] not in '(),@-=<>{}':
-            # Then it's a node
+        if token[0] not in directives:
+            # Then it's a node (or group of nodes)
 
             if active is not None:
+                # Extending at active node
                 node = active
             elif parent:
+                # Branching from parent node
                 node = parent[-1]
             else:
+                # Unrooted: Starting new (unconnected) graph
                 node = None
 
             if token == '.' and node is not None:
+                # Adding stub (or stub branch) to active node
                 G.nodes[node]['stub'] = G.nodes[node].get('stub', 0) + 1
 #                print("Adding stub to", node, ":", G.nodes[node]['stub'])
             else:
@@ -242,13 +274,13 @@ def process(graphstring, graphs={}):
 #                    print('Unrooted nodes:', *nodes)
                     G.add_nodes_from(nodes)
                 else:
-                    G.add_edges_from([(node, n) for n in nodes])
+                    G.add_edges_from((node, n) for n in nodes)
 #                        print("Edge:", node, "to", n)
                 active = nodes[-1]
             continue
 
         # Directives:
-        
+
         if token == '(':
             # Start branching
             parent.append(active)
@@ -290,7 +322,8 @@ def process(graphstring, graphs={}):
 
         elif token[0] == '{':
             # Set attributes to active node
-            print("Setting attributes at active atom:", token)
+            print("Setting attributes at active atom:", parse_attribute_token(token))
+            G.nodes[active].update(parse_attribute_token(token))
 
     #print(G.nodes)
     #print(G.edges)
@@ -333,7 +366,7 @@ def amino_acid_test():
             name = label[1:].split()[0]
             print("\n", name, '-->', graphstring)
             graphs[name] = process(graphstring, graphs)
-
+            print(graphs[name].nodes)
     return graphs
 
 
@@ -342,8 +375,9 @@ def main(args):
     graphs = amino_acid_test()
 
     if len(args) > 1:
-        print("\n####\n")
-        process(" ".join(args[1:]), graphs)
+        P = process( preprocess(" ".join(args[1:])), graphs)
+        print(P.nodes)
+        print(P.edges)
 
     return 0
 
