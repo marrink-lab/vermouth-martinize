@@ -36,8 +36,9 @@ complete description of the grappa minilanguage is given below:
                   attribute chiral has tuple of three nodes,
                   which define chirality according to right-hand rule
 
-    !X          : connect active node to node X, which _must_ be present already
-                  otherwise, using a name that is already there is an error
+    !X          : connect active node to node X, which _must_ be present
+                  already. Otherwise, using a name that is already there is an
+                  error
 
     <NAME>      : include brick with given name
 
@@ -45,10 +46,10 @@ complete description of the grappa minilanguage is given below:
 
     <NAME@X>    : include brick with given name and add edge between active
                   node and node 'X' of brick
-                  
+
     /#=1-20/C#(H#[1-2])/ : Expand by repetion and substitution according to
                            range specified
-                           
+
     (/#=A-D/C#(H#[1-3]),/) : Expand to multiple branches
 """
 
@@ -70,26 +71,23 @@ class GrappaSyntaxError(Exception):
 def find_matching(symbols, string):
     """Find matching symbol in a series with possible nesting."""
     nesting = 0
-    pos = 0
-    while pos < len(string):
-        if string[pos] == symbols[0]:
+    for pos, char in enumerate(string):
+        if char == symbols[0]:
             nesting += 1
-        elif string[pos] == symbols[1]:
+        elif char == symbols[1]:
             nesting -= 1
-        pos += 1
         if not nesting:
             break
     else:
-        raise GrappaSyntaxError("Matching '}' not found")
-
+        raise GrappaSyntaxError("Matching '{}' not found".format(symbols[1]))
     return string[:pos]
 
 
 def parse_attribute_token(attr):
     """Read attribute token and return corresponding node dictionary"""
     out = {}
-    tok = tokenize(attr[1:-1], special=':,', 
-                   groups=('[]','{}','()'), tgroup=None)
+    tok = tokenize(attr[1:-1], special=':,',
+                   groups=('[]', '{}', '()'), tgroup=None)
     for token in tok:
         assert next(tok) == ':'
         out[token] = next(tok)
@@ -97,9 +95,12 @@ def parse_attribute_token(attr):
 
 
 def expand_nodestring(nodestr):
-    """Parse a string like X[1-3,6,8] to list [X1,X2,X3,X6,X8]"""
+    """
+    Parse a string like X[1-3,6,8] to list [X1,X2,X3,X6,X8].
+    X[20-25] is invalid, but X[w-z] is valid.
+    """
 
-    if not '[' in nodestr:
+    if '[' not in nodestr:
         return [nodestr]
 
     openbra = nodestr.find('[')
@@ -114,6 +115,7 @@ def expand_nodestring(nodestr):
     for thing in what:
         if len(thing) == 1:
             nodes.append(thing[0].strip())
+        # And here is why X[20-25] is invalid
         elif len(thing[0]) == 1 and len(thing[1]) == 1:
             for val in range(ord(thing[0]), ord(thing[1]) + 1):
                 nodes.append(base + chr(val))
@@ -138,9 +140,10 @@ def include_graph(graphs, tag):
         lbl, tag = tag[:lbl], tag[lbl+1:]
     else:
         lbl = ""
-    G = graphs.get(tag)
-    if G is None:
-        raise KeyError("Include graph {} not found in graphs.".format(tag))
+    try:
+        G = graphs[tag]
+    except KeyError:
+        raise KeyError('Include graph {} not found in graphs.'.format(tag))
     mapping = {k: k+lbl for k in G.nodes}
     G = nx.relabel_nodes(G, mapping)
     return G, atpos + lbl
@@ -222,16 +225,13 @@ def tokenize(tokenstring, skip=string.whitespace,
         if broken:
             continue
 
-        j = i + 1
         bracket = False
-        while j < len(tokenstring):
-            char = tokenstring[j]
+        for j, char in enumerate(tokenstring[i+1:], i+1):
             if tgroup and char == tgroup[0]:
                 bracket = True
-            elif (not bracket and 
+            elif (not bracket and
                   (char in skip or char in special)):
                 break
-            j += 1
             if tgroup and char == tgroup[1]:
                 break
 
@@ -246,8 +246,6 @@ def process(graphstring, graphs={}):
 
     tokens = tokenize(graphstring)
     directives = '(),@-=<>{}'
-    #print(graphstring)
-    #print(tokens)
 
     G = nx.Graph()
     active = None
@@ -258,7 +256,6 @@ def process(graphstring, graphs={}):
             # Make connection to already available node (next token)
             token = next(tokens)
             if token not in G:
-                print(G.nodes)
                 raise IndexError("Token missing in graph: !{}".format(token))
 
         if token[0] not in directives:
@@ -277,21 +274,23 @@ def process(graphstring, graphs={}):
             if token == '.' and node is not None:
                 # Adding stub (or stub branch) to active node
                 G.nodes[node]['stub'] = G.nodes[node].get('stub', 0) + 1
-#                print("Adding stub to", node, ":", G.nodes[node]['stub'])
+                # DEBUG
+                # print("Adding stub to", node, ":", G.nodes[node]['stub'])
             else:
                 # Token is node or nodes
                 nodes = expand_nodestring(token)
                 if node is None:
-#                    print('Unrooted nodes:', *nodes)
+                    # DEBUG
+                    # print('Unrooted nodes:', *nodes)
                     G.add_nodes_from(nodes)
                 else:
                     G.add_edges_from((node, n) for n in nodes)
-#                        print("Edge:", node, "to", n)
+                    # DEBUG
+                    # print("Edge:", node, "to", n)
                 active = nodes[-1]
             continue
 
         # Directives:
-
         if token == '(':
             # Start branching
             parent.append(active)
@@ -300,7 +299,8 @@ def process(graphstring, graphs={}):
         elif token == ')':
             # End branch(es) - switch to active parent
             active = parent.pop()
-#            print("End of branching: active:", active[-1])
+            # DEBUG
+            # print("End of branching: active:", active[-1])
 
         elif token == ',':
             # Switch to next branch
@@ -309,7 +309,8 @@ def process(graphstring, graphs={}):
         elif token == '@':
             # Set node as active
             active = next(tokens)
-#            print("Setting active:", active)
+            # DEBUG
+            # print("Setting active:", active)
 
         elif token == '-':
             # Remove node
@@ -321,9 +322,10 @@ def process(graphstring, graphs={}):
 
         elif token[0] == '<':
             # Include graph from graphs and relabel nodes according to tag
-            # <tag:graphname@node>
+            # <tag:graphname@node>. include_graph relabels its nodes.
             B, at = include_graph(graphs, token[1:-1])
-#            print("Including graph from", token, ":", *B.nodes)
+            # DEBUG
+            # print("Including graph from", token, ":", *B.nodes)
             G.add_nodes_from(B.nodes)
             G.add_edges_from(B.edges)
             if active is not None:
@@ -333,12 +335,11 @@ def process(graphstring, graphs={}):
 
         elif token[0] == '{':
             # Set attributes to active node
-            print("Setting attributes at active atom:", 
-                  parse_attribute_token(token))
+            # DEBUG
+            # print("Setting attributes at active atom:",
+            #       parse_attribute_token(token))
             G.nodes[active].update(parse_attribute_token(token))
 
-    #print(G.nodes)
-    #print(G.edges)
     return G
 
 
@@ -387,7 +388,7 @@ def main(args):
     graphs = amino_acid_test()
 
     if len(args) > 1:
-        P = process( preprocess(" ".join(args[1:])), graphs)
+        P = process(preprocess(" ".join(args[1:])), graphs)
         print(P.nodes)
         print(P.edges)
 
