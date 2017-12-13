@@ -37,7 +37,7 @@ complete description of the grappa minilanguage is given below:
                   which define chirality according to right-hand rule
 
     !X          : connect active node to node X, which _must_ be present
-                  already otherwise, using a name that is already there is an
+                  already. Otherwise, using a name that is already there is an
                   error
 
     <NAME>      : include brick with given name
@@ -274,15 +274,18 @@ def process(graphstring, graphs={}):
             if token == '.' and node is not None:
                 # Adding stub (or stub branch) to active node
                 G.nodes[node]['stub'] = G.nodes[node].get('stub', 0) + 1
+                # DEBUG
                 # print("Adding stub to", node, ":", G.nodes[node]['stub'])
             else:
                 # Token is node or nodes
                 nodes = expand_nodestring(token)
                 if node is None:
+                    # DEBUG
                     # print('Unrooted nodes:', *nodes)
                     G.add_nodes_from(nodes)
                 else:
                     G.add_edges_from((node, n) for n in nodes)
+                    # DEBUG
                     # print("Edge:", node, "to", n)
                 active = nodes[-1]
             continue
@@ -296,6 +299,7 @@ def process(graphstring, graphs={}):
         elif token == ')':
             # End branch(es) - switch to active parent
             active = parent.pop()
+            # DEBUG
             # print("End of branching: active:", active[-1])
 
         elif token == ',':
@@ -305,6 +309,7 @@ def process(graphstring, graphs={}):
         elif token == '@':
             # Set node as active
             active = next(tokens)
+            # DEBUG
             # print("Setting active:", active)
 
         elif token == '-':
@@ -319,6 +324,7 @@ def process(graphstring, graphs={}):
             # Include graph from graphs and relabel nodes according to tag
             # <tag:graphname@node>. include_graph relabels its nodes.
             B, at = include_graph(graphs, token[1:-1])
+            # DEBUG
             # print("Including graph from", token, ":", *B.nodes)
             G.add_nodes_from(B.nodes)
             G.add_edges_from(B.edges)
@@ -329,6 +335,7 @@ def process(graphstring, graphs={}):
 
         elif token[0] == '{':
             # Set attributes to active node
+            # DEBUG
             # print("Setting attributes at active atom:",
             #       parse_attribute_token(token))
             G.nodes[active].update(parse_attribute_token(token))
