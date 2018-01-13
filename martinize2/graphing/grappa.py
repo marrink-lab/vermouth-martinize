@@ -71,11 +71,13 @@ class GrappaSyntaxError(Exception):
 def find_matching(symbols, string):
     """Find matching symbol in a series with possible nesting."""
     nesting = 0
-    for pos, char in enumerate(string):
-        if char == symbols[0]:
+    pos = 0
+    while pos < len(string):
+        if string[pos] == symbols[0]:
             nesting += 1
-        elif char == symbols[1]:
+        elif string[pos] == symbols[1]:
             nesting -= 1
+        pos += 1
         if not nesting:
             break
     else:
@@ -225,13 +227,16 @@ def tokenize(tokenstring, skip=string.whitespace,
         if broken:
             continue
 
+        j = i + 1
         bracket = False
-        for j, char in enumerate(tokenstring[i+1:], i+1):
+        while j < len(tokenstring):
+            char = tokenstring[j]
             if tgroup and char == tgroup[0]:
                 bracket = True
-            elif (not bracket and
+            elif (not bracket and 
                   (char in skip or char in special)):
                 break
+            j += 1
             if tgroup and char == tgroup[1]:
                 break
 
@@ -380,6 +385,7 @@ def amino_acid_test():
             print("\n", name, '-->', graphstring)
             graphs[name] = process(graphstring, graphs)
             print(graphs[name].nodes)
+            print(graphs[name].edges)
     return graphs
 
 
