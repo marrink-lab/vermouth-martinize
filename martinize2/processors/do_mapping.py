@@ -13,6 +13,7 @@ from ..graph_utils import make_residue_graph
 
 from collections import defaultdict
 from itertools import product
+import os
 
 import networkx.algorithms.isomorphism as iso
 import numpy as np
@@ -196,7 +197,7 @@ def do_mapping(molecule):
 
 
 # FIXME: fixed path
-RTP_PATH = 'aminoacids.rtp'
+RTP_PATH = os.path.join(os.path.dirname(__file__), 'aminoacids.rtp')
 with open(RTP_PATH) as rtp:
     blocks, links = read_rtp(rtp)
 
