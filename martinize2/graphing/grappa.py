@@ -385,6 +385,7 @@ def amino_acid_test():
             print("\n", name, '-->', graphstring)
             graphs[name] = process(graphstring, graphs)
             print(graphs[name].nodes)
+            print(graphs[name].edges)
     return graphs
 
 
