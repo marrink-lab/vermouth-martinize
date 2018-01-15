@@ -255,7 +255,7 @@ def test_preprocess(grappa_string, ref_string):
 def test_process_graph(name, grappa_string, nodes, edges, graph_dict):
     residue = grappa.process(grappa_string, graphs=graph_dict)
 
-    # The residues as undirected graphs. When comparing their edges, neither
+    # The residues are undirected graphs. When comparing their edges, neither
     # the order of the edges themselves, nor the order of the nodes within an
     # edge should matter. We sort the edges inside and out.
     residue_edges = sorted([sorted(edge) for edge in residue.edges])
