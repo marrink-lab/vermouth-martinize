@@ -116,15 +116,9 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False):
                 start = 6
                 width = 5
                 ats = []
-                nums = (len(line) - start) // width
-                for num in range(nums):
-#                    try:
-                    at = int(line[start + num*width:start + (num + 1)*width])
+                for num in range(start, len(line.rstrip()), width):
+                    at = int(line[num:num + width])
                     ats.append(at)
-#                    except (IndexError, ValueError):
-                        # We ran out of line or read a bit of whitespace
-#                        pass
-
                 try:
                     at0 = atidx2nodeidx[ats[0]]
                 except KeyError:
