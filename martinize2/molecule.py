@@ -21,8 +21,18 @@ class Molecule(nx.Graph):
     node_dict_factory = OrderedDict
 
     def __init__(self, *args, **kwargs):
+        self._force_field = kwargs.pop('force_field', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
+
+    @property
+    def force_field(self):
+        # The force field is assumed to be consitent for all the molecules of
+        # a system. While it is possible to reassign Molecule._force_field, it
+        # is recommended to assign the force field at the system level as
+        # reassigning System.force_field will propagate the change to all the
+        # molecules. in that system.
+        return self._force_field
 
     @property
     def atoms(self):
@@ -88,6 +98,10 @@ class Molecule(nx.Graph):
         Atom and residue index of the new atoms are offset to follow the last
         atom of this molecule.
         """
+        if self.force_field != molecule.force_field:
+            raise ValueError(
+                'Cannot merge molecules with different force fields.'
+            )
         if len(self.nodes()):
             # We assume that the last id is always the largest.
             last_node_idx = max(self) 

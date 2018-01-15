@@ -19,41 +19,6 @@ import os.path
 import networkx as nx
 
 
-try:
-    import pkg_resources
-    DATA_PATH = pkg_resources.resource_filename('martinize2', 'mapping')
-except ImportError:
-    DATA_PATH = os.path.join(os.path.dirname(__file__), 'mapping')
-
-
-def read_all_reference_graph(path):
-    # Read the graphs from a RTP file
-    with open(path) as infile:
-        blocks, links = read_rtp(infile)
-    return blocks
-
-
-UNIVERSAL_GRAPPA = os.path.join(DATA_PATH, 'aminoacids.rtp')
-ALL_REFERENCE_GRAPH = read_all_reference_graph(UNIVERSAL_GRAPPA)
-
-
-def read_reference_graph(resname):
-    """
-    Return the reference graph.
-
-    Parameters
-    ----------
-    resname : str
-        The residuename as found in the PDB file.
-
-    Returns
-    -------
-    networkx.Graph
-        Reference graph of the residue.
-    """
-    return ALL_REFERENCE_GRAPH[resname]
-
-
 def make_reference(mol):
     """
     Takes an atomistic reference graph as read from a PDB file, and finds and
@@ -105,7 +70,7 @@ def make_reference(mol):
         chain = residues.node[residx]['chain']
         # print("{}{}".format(resname, resid), flush=True)
         residue = residues.node[residx]['graph']
-        reference = read_reference_graph(resname)
+        reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
         add_element_attr(residue)
         # Assume reference >= residue

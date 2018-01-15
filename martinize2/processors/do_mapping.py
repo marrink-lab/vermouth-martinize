@@ -199,7 +199,7 @@ def do_mapping(molecule):
 
 
 # FIXME: fixed path
-RTP_PATH = os.path.join(os.path.dirname(__file__), '../mapping/aminoacids.rtp')
+RTP_PATH = os.path.join(os.path.dirname(__file__), '../mapping/universal/aminoacids.rtp')
 with open(RTP_PATH) as rtp:
     blocks, links = read_rtp(rtp)
 

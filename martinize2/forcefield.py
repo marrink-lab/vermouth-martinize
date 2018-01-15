@@ -1,0 +1,35 @@
+from glob import glob
+import os
+from .gmx.rtp import read_rtp
+
+
+class ForceField(object):
+    def __init__(self, directory):
+        source_files = glob(os.path.join(directory, '*.rtp'))
+        blocks = {}
+        links = []
+        for source in source_files:
+            with open(source) as infile:
+                file_blocks, file_links = read_rtp(infile)
+            blocks.update(file_blocks)
+            links.extend(file_links)
+
+        self.name = os.path.basename(directory)
+        self.blocks = blocks
+        self.links = links
+        self.reference_graphs = blocks
+
+
+def find_force_fields(directory):
+    """
+    Find all the force fields in the given directory.
+
+    A force field is defined as a directory that contains at least one RTP
+    file. The name of the force field is the base name of the directory.
+    """
+    force_fields = {}
+    for name in os.listdir(directory):
+        path = os.path.join(directory, name)
+        if glob(os.path.join(path, '*.rtp')):
+                force_fields[name] = ForceField(path)
+    return force_fields

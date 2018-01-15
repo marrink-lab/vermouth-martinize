@@ -58,13 +58,9 @@ def match_link(molecule, link):
                 yield {v: k for k, v in raw_match.items()}
 
 
-RTP_PATH = '/usr/local/gromacs-2016.3/share/gromacs/top/charmm27.ff/aminoacids.rtp'
-
-
 class DoLinks(Processor):
     def run_molecule(self, molecule):
-        with open(RTP_PATH) as rtp:
-            blocks, links = read_rtp(rtp)
+        links = molecule.force_field.links
         for link in links:
             matches = match_link(molecule, link)
             for match in matches:
