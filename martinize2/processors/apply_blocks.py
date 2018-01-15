@@ -30,7 +30,7 @@ def apply_blocks(molecule, blocks):
         for block_idx in block:
             atname = block.nodes[block_idx]['atomname']
             atom = list(res_graph.find_atoms(atomname=atname))
-            assert len(atom) == 1
+            assert len(atom) == 1, (block.name, atname, atom)
             old_to_new_idxs[atom[0]] = at_idx
             atname_to_idx[atname] = at_idx
             attrs = molecule.nodes[atom[0]]
