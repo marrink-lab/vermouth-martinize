@@ -10,6 +10,7 @@ from ..molecule import Molecule
 from .processor import Processor
 from ..utils import first_alpha, maxes
 from ..graph_utils import *
+from ..graphing import grappa
 
 import functools
 import itertools
@@ -25,10 +26,35 @@ except ImportError:
     DATA_PATH = os.path.join(os.path.dirname(__file__), 'mapping')
 
 
-@functools.lru_cache(None)
+def read_all_reference_graph(path):
+    # Read the graphs from a grappa file
+    graphs = {}
+    with open(path) as infile:
+        for line in infile:
+            name, string = line.split(':', 1)
+            graphs[name] = grappa.process(grappa.preprocess(string), graphs=graphs)
+
+    # The nodes in a reference graph are indices rather than the names, the
+    # names are stored in the 'atomname' attribute instead. Also,
+    # by convention, the grappa templates that are not supposed to be used as
+    # molecules have their name prefixed with '_'; we can filter them out.
+    refgraphs = {}
+    for resname, graph in graphs.items():
+        if resname.startswith('_'):
+            continue
+        refgraphs[resname] = nx.convert_node_labels_to_integers(
+            graph, label_attribute='atomname'
+        )
+    return refgraphs
+
+
+UNIVERSAL_GRAPPA = os.path.join(DATA_PATH, 'universal', 'universal.grappa')
+ALL_REFERENCE_GRAPH = read_all_reference_graph(UNIVERSAL_GRAPPA)
+
+
 def read_reference_graph(resname):
     """
-    Reads the reference graph from ./mapping/universal/{resname},gml.
+    Return the reference graph.
 
     Parameters
     ----------
@@ -40,8 +66,7 @@ def read_reference_graph(resname):
     networkx.Graph
         Reference graph of the residue.
     """
-    return nx.read_gml(os.path.join(DATA_PATH, 'universal', '{}.gml'.format(resname)), label='id')
-#    return nx.read_gml('/universal/{}.gml'.format(resname), label='id')
+    return ALL_REFERENCE_GRAPH[resname]
 
 
 def make_reference(mol):
