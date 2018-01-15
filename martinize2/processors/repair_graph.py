@@ -10,7 +10,7 @@ from ..molecule import Molecule
 from .processor import Processor
 from ..utils import first_alpha, maxes
 from ..graph_utils import *
-from ..graphing import grappa
+from ..gmx import read_rtp
 
 import functools
 import itertools
@@ -27,28 +27,13 @@ except ImportError:
 
 
 def read_all_reference_graph(path):
-    # Read the graphs from a grappa file
-    graphs = {}
+    # Read the graphs from a RTP file
     with open(path) as infile:
-        for line in infile:
-            name, string = line.split(':', 1)
-            graphs[name] = grappa.process(grappa.preprocess(string), graphs=graphs)
-
-    # The nodes in a reference graph are indices rather than the names, the
-    # names are stored in the 'atomname' attribute instead. Also,
-    # by convention, the grappa templates that are not supposed to be used as
-    # molecules have their name prefixed with '_'; we can filter them out.
-    refgraphs = {}
-    for resname, graph in graphs.items():
-        if resname.startswith('_'):
-            continue
-        refgraphs[resname] = nx.convert_node_labels_to_integers(
-            graph, label_attribute='atomname'
-        )
-    return refgraphs
+        blocks, links = read_rtp(infile)
+    return blocks
 
 
-UNIVERSAL_GRAPPA = os.path.join(DATA_PATH, 'universal', 'universal.grappa')
+UNIVERSAL_GRAPPA = os.path.join(DATA_PATH, 'aminoacids.rtp')
 ALL_REFERENCE_GRAPH = read_all_reference_graph(UNIVERSAL_GRAPPA)
 
 
