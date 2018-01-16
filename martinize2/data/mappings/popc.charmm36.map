@@ -1,0 +1,207 @@
+; latest revision TAW 20160213
+[ molecule ]
+POPC
+
+[ martini ]
+NC3 PO4 GL1 GL2 C1A D2A C3A C4A C1B C2B C3B C4B 
+
+[ mapping ]
+charmm27 charmm36 slipids amber
+
+[ atoms ]
+    1     N   NC3
+    2   C12   NC3 NC3 NC3 PO4
+    3   C13   NC3
+    4   C14   NC3
+    5   C15   NC3
+    6  H12A   NC3 NC3 NC3 PO4
+    7  H12B   NC3 NC3 NC3 PO4
+    8  H13A   NC3
+    9  H13B   NC3
+   10  H13C   NC3
+   11  H14A   NC3
+   12  H14B   NC3
+   13  H14C   NC3
+   14  H15A   NC3
+   15  H15B   NC3
+   16  H15C   NC3
+   17   C11   NC3 PO4
+   18  H11A   NC3 PO4
+   19  H11B   NC3 PO4
+   20     P   PO4
+   21   O13   PO4
+   22   O14   PO4
+   23   O12   PO4 PO4 PO4 NC3
+   24   O11   PO4 PO4 GL1
+   25    C1   GL1 GL1 PO4
+   26    HA   GL1 GL1 PO4
+   27    HB   GL1 GL1 PO4
+   28    C2   GL1 GL1 GL2
+   29    HS   GL1 GL1 GL2
+   30   O21   GL1 GL1 GL2 C1A
+   31   C21   GL1 C1A
+   32   O22   GL1
+   33   C22   C1A C1A GL1 
+   34   H2R   C1A C1A GL1
+   35   H2S   C1A C1A GL1
+   36    C3   GL2 GL2 GL2 PO4
+   37    HX   GL2 GL2 GL2 PO4
+   38    HY   GL2 GL2 GL2 PO4
+   39   O31   GL2
+   40   C31   GL2 GL1 C1B
+   41   O32   GL2
+   42   C32   C1B C1B GL2
+   43   H2X   C1B C1B GL2
+   44   H2Y   C1B C1B GL2
+; First tail
+   45   C23   C1A
+   46   H3R   
+   47   H3S   
+   48   C24   C1A C1A C1A D2A
+   49   H4R   
+   50   H4S   
+   51   C25   C1A D2A
+   52   H5R   
+   53   H5S   
+   54   C26   D2A D2A D2A C1A
+   55   H6R   
+   56   H6S   
+   57   C27   D2A
+   58   H7R   
+   59   H7S   
+   60   C28   D2A D2A D2A C3A
+   61   H8R   
+   62   H8S   
+   63   C29   D2A D2A C3A
+   64   H91   D2A C3A
+   65  C210   C3A C3A D2A
+   66  H101   D2A C3A
+   67  C211   C3A C3A C3A D2A
+   68  H11R   
+   69  H11S   
+   70  C212   C3A
+   71  H12R   
+   72  H12S   
+   73  C213   C3A C3A C3A C4A
+   74  H13R   
+   75  H13S   
+   76  C214   C3A C4A
+   77  H14R   
+   78  H14S   
+   79  C215   C4A C4A C4A C3A
+   80  H15R   
+   81  H15S   
+   82  C216   C4A
+   83  H16R   
+   84  H16S   
+   85  C217   C4A
+   86  H17R   
+   87  H17S   
+   88  C218   C4A
+   89  H18R   
+   90  H18S   
+   91  H18T   
+; Other tail
+   92   C33   C1B
+   93   H3X   C1B
+   94   H3Y   C1B
+   95   C34   C1B C1B C2B
+   96   H4X   C1B C1B C2B
+   97   H4Y   C1B C1B C2B
+   98   C35   C1B C2B
+   99   H5X   C1B C2B
+  100   H5Y   C1B C2B
+  101   C36   C2B C2B C1B
+  102   H6X   C2B C2B C1B
+  103   H6Y   C2B C2B C1B
+  104   C37   C2B 
+  105   H7X   C2B
+  106   H7Y   C2B
+  107   C38   C2B C2B C2B C3B
+  108   H8X   C2B C2B C2B C3B
+  109   H8Y   C2B C2B C2B C3B
+  110   C39   C2B C2B C3B
+  111   H9X   C2B C2B C3B
+  112   H9Y   C2B C2B C3B
+  113  C310   C3B C2B 
+  114  H10X   C3B C2B
+  115  H10Y   C3B C2B
+  116  C311   C3B C3B C2B
+  117  H11X   C3B C3B C2B
+  118  H11Y   C3B C3B C2B
+  119  C312   C3B
+  120  H12X   C3B
+  121  H12Y   C3B
+  122  C313   C3B C3B C4B
+  123  H13X   C3B C3B C4B
+  124  H13Y   C3B C3B C4B
+  125  C314   C4B C3B
+  126  H14X   C4B C3B
+  127  H14Y   C4B C3B
+  128  C315   C4B C4B C3B
+  129  H15X   C4B C4B C3B
+  130  H15Y   C4B C4B C3B
+  131  C316   C4B
+  132  H16X   C4B
+  133  H16Y   C4B
+  134  H16Z   C4B
+
+;making R stereoisomer- placing HS
+[chiral]
+HS C2 O21 C1 C3
+
+; acyl esters
+[trans]
+C22 C21 O21 C2
+[ out ]
+O22 C21 O21 C22
+[trans]
+C32 C31 O31 C3
+[out]
+O32 C31 O31 C32
+
+;cis bonds in lipid chains
+;[ out ]
+;H91 C29 C28 C210
+;C210 C29 H91 C28
+;C28 C29 H91 C210
+;[ trans ]
+;C211 C210 C29 H91
+;H101 C210 C29 C28
+;H91 C29 C210 C211
+;C28 C29 C210 H101
+[ out ]
+H7R C27 C26 C28
+H7S C27 C26 C28
+C28 C27 C26 H7R
+[ trans ]
+C29 C28 C27 C26
+C210 C29 C28 C27
+H101 C210 C29 C28
+[ out ]
+C211 C210 H101 C29
+H91 C29 C210 C28
+
+;;;making a choline group
+[out]
+C14 N C13 C12
+H14A N C13 C12
+H14B N C13 C12
+H14C N C13 C12
+
+[ chiral ]
+C15 N C12 C13 C14
+H15A N C12 C13 C14
+H15B N C12 C13 C14
+H15C N C12 C13 C14
+
+; extend the tails
+[ trans ]
+C217 C216 C215 C214
+C17R C216 C215 C214
+C17S C216 C215 C214
+C218 C217 C216 C215
+C18R C217 C216 C215
+C18S C217 C216 C215
+C18T C217 C216 C215
+

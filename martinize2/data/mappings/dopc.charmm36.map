@@ -1,0 +1,199 @@
+; Mapping file created 15/03/2013 by Kri
+
+[ molecule ]
+DOPC
+;
+; NC3-PO4-GL1-C1A-C2A-D3A-C4A-C5A
+;         |
+;         GL2-C1B-C2B-D3B-C4B-C5B
+
+[ martini ]
+NC3 PO4 GL1 GL2 C1A C2A D3A C4A C5A C1B C2B D3B C4B C5B
+
+[ mapping ]
+charmm27 charmm36
+
+[ atoms ]
+; Terminal head group (choline)
+    1     N   NC3 
+    2   C12   NC3 NC3 NC3 PO4 
+    3   C13   NC3 
+    4   C14   NC3 
+    5   C15   NC3
+    6  H12A   NC3 NC3 NC3 PO4
+    7  H12B   NC3 NC3 NC3 PO4
+    8  H13A   NC3 
+    9  H13B   NC3 
+   10  H13C   NC3 
+   11  H14A   NC3 
+   12  H14B   NC3 
+   13  H14C   NC3 
+   14  H15A   NC3
+   15  H15B   NC3
+   16  H15C   NC3
+   17   C11   NC3 PO4  
+   18  H11A   NC3 PO4
+   19  H11B   NC3 PO4
+; Phosphate group 
+   20     P   PO4
+   21   O13   PO4 
+   22   O14   PO4
+   23   O12   PO4 PO4 PO4 NC3
+   24   O11   PO4 PO4 GL1
+; Diacylglycerol
+   25    C1   GL1 GL1 PO4
+   26    HA   GL1 GL1 PO4
+   27    HB   GL1 GL1 PO4
+   28    C2   GL1 GL1 GL2
+   29    HS   GL1 GL1 GL2
+   30   O21   GL1 GL1 GL2 C1A
+   31   C21   GL1 C1A
+   32   O22   GL1
+   33   C22   C1A C1A GL1
+   34   H2R   C1A C1A GL1
+   35   H2S   C1A C1A GL1
+   36    C3   GL2 GL2 GL2 PO4
+   37    HX   GL2 GL2 GL2 PO4
+   38    HY   GL2 GL2 GL2 PO4
+   39   O31   GL2
+   40   C31   GL2 GL2 C1B
+   41   O32   GL2
+   42   C32   C1B C1B GL2
+   43   H2X   C1B C1B GL2
+   44   H2Y   C1B C1B GL2
+   45   C23   C1A
+   46   H3R   C1A
+   47   H3S   C1A
+   48   C24   C1A C1A C2A
+   49   H4R   C1A C1A C2A
+   50   H4S   C1A C1A C2A
+   51   C25   C1A C2A
+   52   H5R   C1A C2A
+   53   H5S   C1A C2A
+   54   C26   C2A C2A C1A
+   55   H6R   C2A C2A C1A
+   56   H6S   C2A C2A C1A
+   57   C27   C2A
+   58   H7R   C2A
+   59   H7S   C2A
+   60   C28   C2A D3A
+   61   H8R   C2A D3A
+   62   H8S   C2A D3A
+   63   C29   D3A D3A C2A
+   64   H9R   D3A
+   65  C210   D3A D3A C4A
+   66  H10R   D3A
+   67  C211   D3A
+   68  H11R   D3A C4A
+   69  H11S   D3A C4A
+   70  C212   C4A
+   71  H12R   C4A
+   72  H12S   C4A
+   73  C213   C4A C4A C4A C5A
+   74  H13R   C4A C4A C4A C5A
+   75  H13S   C4A C4A C4A C5A
+   76  C214   C4A C4A C5A
+   77  H14R   C4A C4A C5A
+   78  H14S   C4A C4A C5A
+   79  C215   C5A C4A
+   80  H15R   C5A C4A
+   81  H15S   C5A C4A
+   82  C216   C5A C5A C4A
+   83  H16R   C5A C5A C4A
+   84  H16S   C5A C5A C4A
+   85  C217   C5A C5A C5A C4A
+   86  H17R   C5A C5A C5A C4A
+   87  H17S   C5A C5A C5A C4A
+   88  C218   C5A
+   89  H18R   C5A
+   90  H18S   C5A
+   91  H18T   C5A
+   92   C33   C1B
+   93   H3X   C1B
+   94   H3Y   C1B
+   95   C34   C1B C1B C2B
+   96   H4X   C1B C1B C2B
+   97   H4Y   C1B C1B C2B
+   98   C35   C1B C2B
+   99   H5X   C1B C2B
+  100   H5Y   C1B C2B
+  101   C36   C2B C2B C1B
+  102   H6X   C2B C2B C1B
+  103   H6Y   C2B C2B C1B
+  104   C37   C2B
+  105   H7X   C2B
+  106   H7Y   C2B
+  107   C38   C2B D3B
+  108   H8X   C2B D3B
+  109   H8Y   C2B D3B
+  110   C39   D3B D3B C2B
+  111   H9X   D3B D3B C2B
+  112  C310   D3B D3B C4B
+  113  H10X   D3B D3B C4B
+  114  C311   D3B C4B
+  115  H11X   D3B C4B
+  116  H11Y   D3B C4B
+  117  C312   C4B
+  118  H12X   C4B
+  119  H12Y   C4B
+  120  C313   C4B C4B C4B C5B
+  121  H13X   C4B C4B C4B C5B
+  122  H13Y   C4B C4B C4B C5B
+  123  C314   C4B C4B C5B
+  124  H14X   C4B C4B C5B
+  125  H14Y   C4B C4B C5B
+  126  C315   C5B C4B
+  127  H15X   C5B C4B
+  128  H15Y   C5B C4B
+  129  C316   C5B C5B C4B
+  130  H16X   C5B C5B C4B
+  131  H16Y   C5B C5B C4B
+  132  C317   C5B C5B C5B C4B
+  133  H17X   C5B C5B C5B C4B
+  134  H17Y   C5B C5B C5B C4B
+  135  C318   C5B
+  136  H18X   C5B
+  137  H18Y   C5B
+  138  H18Z   C5B
+
+;making R stereoisomer- placing HS
+[chiral]
+HS C2 O21 C1 C3
+
+; acyl esters
+[trans]
+C22 C21 O21 C2
+[ out ]
+O22 C21 O21 C22
+[trans]
+C32 C31 O31 C3
+[out] 
+O32 C31 O31 C32
+
+;cis bonds in lipind chains
+[ out ]
+H9R C29 C28 C210
+[ trans ] 
+H10R C210 C29 C28
+[ out ]
+C211 C210 C29 H10R
+
+[ out ]
+H9X C39 C38 C310
+[ trans ]
+H10X C310 C39 C38
+[ out ]
+C311 C310 C39 H10X
+
+;;;making a choline group
+[out]
+C14 N C13 C12
+H14A N C13 C12
+H14B N C13 C12
+H14C N C13 C12
+
+[ chiral ]
+C15 N C12 C13 C14
+H15A N C12 C13 C14
+H15B N C12 C13 C14
+H15C N C12 C13 C14
