@@ -77,9 +77,10 @@ def martinize(system, mappings, to_ff):
     m2.RepairGraph().run_system(system)
 
     # At that point, we have a clean structure, so we can do the mapping.
-    # The only available mapping now is the 1:1 mapping. We'll roll with this.
     m2.DoMapping(mappings=mappings, to_ff=to_ff).run_system(system)
     system.force_field = to_ff
+
+    m2.DoAverageBead().run_system(system)
 
     m2.ApplyBlocks().run_system(system)
     m2.DoLinks().run_system(system)
