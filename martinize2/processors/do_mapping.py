@@ -138,9 +138,10 @@ def do_mapping(molecule):
         graphmatcher = iso.GraphMatcher(graph, mapping.block_from, node_match=node_match)
 
         matches = list(graphmatcher.subgraph_isomorphisms_iter())
-        msg = ('Not one match ({}) for residue {}:{}.'
-               .format(len(matches), residue['resname'], res_node_idx))
-        assert len(matches) == 1, msg
+        if len(matches) != 1:
+            msg = ('Not one match ({}) for residue {}:{}.'
+                   .format(len(matches), residue['resname'], res_node_idx))
+            raise KeyError(msg)
         match = matches[0]
 
         match = {v: k for k, v in match.items()}  # TODO remove me. See above.

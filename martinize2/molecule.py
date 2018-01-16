@@ -27,11 +27,11 @@ class Molecule(nx.Graph):
 
     @property
     def force_field(self):
-        # The force field is assumed to be consitent for all the molecules of
+        # The force field is assumed to be consistent for all the molecules of
         # a system. While it is possible to reassign Molecule._force_field, it
         # is recommended to assign the force field at the system level as
         # reassigning System.force_field will propagate the change to all the
-        # molecules. in that system.
+        # molecules in that system.
         return self._force_field
 
     @property
