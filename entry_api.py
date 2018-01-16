@@ -117,6 +117,12 @@ def entry():
     # Write a PDB file.
     m2.pdb.write_pdb(system, args.outpath)
 
+    for idx, molecule in enumerate(system.molecules):
+        with open('molecule_{}.itp'.format(idx), 'w') as outfile:
+            molecule.moltype = 'molecule_{}'.format(idx)
+            molecule.nrexcl = 2
+            m2.gmx.itp.write_molecule_itp(molecule, outfile)
+
 
 if __name__ == '__main__':
     entry()
