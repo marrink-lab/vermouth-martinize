@@ -43,7 +43,8 @@ class Molecule(nx.Graph):
     def copy(self, as_view=False):
         copy = super().copy(as_view)
         if not as_view:
-            return self.__class__(copy)
+            copy = self.__class__(copy)
+        copy._force_field = self.force_field
         return copy
 
     def subgraph(self, *args, **kwargs):
