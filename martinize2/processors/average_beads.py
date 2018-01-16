@@ -23,10 +23,6 @@ def do_average_bead(molecule):
                          .format(len(missing)))
 
     for node in molecule.nodes.values():
-        print([
-            subnode
-            for subnode in node['graph'].nodes().values()
-        ])
         positions = np.stack([
             subnode['position']
             for subnode in node['graph'].nodes().values()
