@@ -57,6 +57,16 @@ def read_system(path):
     return system
 
 
+def select_all(node):
+    return True
+
+
+def select_backbone(node):
+    if node.get('atomname') == 'BB':
+        return True
+    return False
+
+
 def pdb_to_universal(system):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
@@ -80,6 +90,9 @@ def entry():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', dest='inpath', required=True, type=Path)
     parser.add_argument('-x', dest='outpath', required=True, type=Path)
+    parser.add_argument('-p', dest='posres',
+                        choices=('None', 'All', 'Backbone'), default='None')
+    parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
     args = parser.parse_args()
 
     known_force_fields = m2.forcefield.find_force_fields(Path(DATA_PATH) / 'force_fields')
@@ -97,6 +110,11 @@ def entry():
         mappings=known_mappings,
         to_ff=known_force_fields['martini22'],
     )
+
+    # Apply position restraints if required.
+    if args.posres != 'None':
+        selector = {'All': select_all, 'Backbone': select_backbone}[args.posres]
+        m2.ApplyPosres(selector, args.posres_fc).run_system(system)
 
     # Write a PDB file.
     m2.pdb.write_pdb(system, str(args.outpath))
