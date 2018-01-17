@@ -11,17 +11,6 @@ from martinize2.forcefield import find_force_fields, FORCE_FIELDS
 from martinize2 import DATA_PATH
 
 
-class NullPositions(m2.processor.Processor):
-    def run_molecule(self, molecule):
-        '''
-        Place atoms without position to the origin
-        '''
-        for node in molecule.nodes.values():
-            if 'position' not in node:
-                node['position'] = np.zeros((3,))
-        return molecule
-
-
 def read_mapping(path):
     from_ff = ['universal', ]
     to_ff = ['martini22', ]
