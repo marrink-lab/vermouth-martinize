@@ -7,10 +7,8 @@ from pathlib import Path
 import os
 import numpy as np
 import martinize2 as m2
-from martinize2.forcefield import find_force_fields
-
-
-DATA_DIR = Path(m2.__file__).parent / 'data'
+from martinize2.forcefield import find_force_fields, FORCE_FIELDS
+from martinize2 import DATA_PATH
 
 
 class NullPositions(m2.processor.Processor):
@@ -70,6 +68,17 @@ def read_system(path):
     return system
 
 
+def pdb_to_universal(system):
+    """
+    Convert a system read from the PDB to a clean canonical atomistic system.
+    """
+    canonicalized = system.copy()
+    canonicalized.force_field = FORCE_FIELDS['universal']
+    m2.MakeBonds().run_system(canonicalized)
+    m2.RepairGraph().run_system(canonicalized)
+    return canonicalized
+
+
 def martinize(system, mappings, to_ff):
     m2.DoMapping(mappings=mappings, to_ff=to_ff).run_system(system)
     m2.DoAverageBead().run_system(system)
@@ -84,16 +93,14 @@ def entry():
     parser.add_argument('-x', dest='outpath', required=True, type=Path)
     args = parser.parse_args()
 
-    known_force_fields = m2.forcefield.find_force_fields(DATA_DIR / 'force_field')
-    known_mappings = read_mapping_directory(DATA_DIR / 'mappings')
+    known_force_fields = m2.forcefield.find_force_fields(Path(DATA_PATH) / 'force_fields')
+    known_mappings = read_mapping_directory(Path(DATA_PATH) / 'mappings')
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
     system = read_system(args.inpath)
-    m2.MakeBonds().run_system(system)
-    m2.RepairGraph().run_system(system)
-    system.force_field = known_force_fields['universal']
+    system = pdb_to_universal(system)
 
     # Run martinize on the system.
     system = martinize(

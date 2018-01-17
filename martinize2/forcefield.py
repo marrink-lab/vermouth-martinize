@@ -1,6 +1,7 @@
 from glob import glob
 import os
 from .gmx.rtp import read_rtp
+from . import DATA_PATH
 
 
 class ForceField(object):
@@ -33,3 +34,6 @@ def find_force_fields(directory):
         if glob(os.path.join(path, '*.rtp')):
                 force_fields[name] = ForceField(path)
     return force_fields
+
+
+FORCE_FIELDS = find_force_fields(os.path.join(DATA_PATH, 'force_fields'))
