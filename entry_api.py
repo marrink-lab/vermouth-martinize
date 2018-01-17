@@ -78,7 +78,6 @@ def martinize(system, mappings, to_ff):
 
     # At that point, we have a clean structure, so we can do the mapping.
     m2.DoMapping(mappings=mappings, to_ff=to_ff).run_system(system)
-    system.force_field = to_ff
 
     m2.DoAverageBead().run_system(system)
 

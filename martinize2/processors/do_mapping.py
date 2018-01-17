@@ -206,6 +206,7 @@ def do_mapping(molecule, mappings, to_ff):
                     graph_out.add_edge(bd_idx, bd_jdx)
                     break  # On to the combination of beads
 
+    graph_out._force_field = to_ff
     return graph_out
 
 
@@ -217,3 +218,8 @@ class DoMapping(Processor):
 
     def run_molecule(self, molecule):
         return do_mapping(molecule, mappings=self.mappings, to_ff=self.to_ff)
+
+    def run_system(self, system):
+        super().run_system(system)
+        system.force_field = self.to_ff
+
