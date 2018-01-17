@@ -93,10 +93,18 @@ def entry():
     parser.add_argument('-p', dest='posres',
                         choices=('None', 'All', 'Backbone'), default='None')
     parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
+    parser.add_argument('-ff', dest='to_ff', default='martini22')
     args = parser.parse_args()
 
     known_force_fields = m2.forcefield.find_force_fields(Path(DATA_PATH) / 'force_fields')
     known_mappings = read_mapping_directory(Path(DATA_PATH) / 'mappings')
+
+    from_ff = 'universal'
+    if args.to_ff not in known_force_fields:
+        raise ValueError('Unknown force field "{}".'.format(args.to_ff))
+    if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
+        raise ValueError('No mapping known to go from "{}" to "{}".'
+                         .format(from_ff, args.to_ff))
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
@@ -108,7 +116,7 @@ def entry():
     system = martinize(
         system,
         mappings=known_mappings,
-        to_ff=known_force_fields['martini22'],
+        to_ff=known_force_fields[args.to_ff],
     )
 
     # Apply position restraints if required.
