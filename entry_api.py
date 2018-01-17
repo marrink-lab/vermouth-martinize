@@ -58,50 +58,41 @@ def read_mapping_directory(directory):
     return mappings
 
 
-def read_system(infile):
-    raise NotImplementedError()
+def read_system(path):
+    system = m2.System()
+    file_extension = path.suffix.upper()[1:]  # We do not keep the dot
+    if file_extension in ['PDB', 'ENT']:
+        m2.PDBInput().run_system(system, str(path))
+    elif file_extension in ['GRO']:
+        m2.GROInput().run_system(system, str(path))
+    else:
+        raise ValueError('Unknown file extension "{}".'.format(file_extension))
+    return system
 
 
 def martinize(system, mappings, to_ff):
-    # We start by only supporting the base usecase: going from an atomistic
-    # system to a martini one. The input system is read from a PDB file or
-    # from a GRO file, it is assumed not to have bonds; it is also assumed not
-    # to have holes for the moment.
-
-    # Since we do not have bonds, we need to guess them.
-    m2.MakeBonds().run_system(system)
-
-    # While we assume there is no major wholes in the structure, we can still
-    # fix a few small things. Especially, we need to canonicalize the names and
-    # maybe add the hydrogens.
-    m2.RepairGraph().run_system(system)
-
-    # At that point, we have a clean structure, so we can do the mapping.
     m2.DoMapping(mappings=mappings, to_ff=to_ff).run_system(system)
-
     m2.DoAverageBead().run_system(system)
-
     m2.ApplyBlocks().run_system(system)
     m2.DoLinks().run_system(system)
-
     return system
 
 
 def entry():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', dest='inpath', required=True)
-    parser.add_argument('-x', dest='outpath', required=True)
+    parser.add_argument('-f', dest='inpath', required=True, type=Path)
+    parser.add_argument('-x', dest='outpath', required=True, type=Path)
     args = parser.parse_args()
 
     known_force_fields = m2.forcefield.find_force_fields(DATA_DIR / 'force_field')
     known_mappings = read_mapping_directory(DATA_DIR / 'mappings')
 
-    system = m2.System()
-
-    # Right now I only handle reading PDB files.
-    m2.PDBInput().run_system(system, args.inpath)
-
-    # I assume that I am reading an atomistic structure from the PDB.
+    # Reading the input structure.
+    # So far, we assume we only go from atomistic to martini. We want the
+    # input structure to be a clean universal system.
+    system = read_system(args.inpath)
+    m2.MakeBonds().run_system(system)
+    m2.RepairGraph().run_system(system)
     system.force_field = known_force_fields['universal']
 
     # Run martinize on the system.
@@ -111,10 +102,8 @@ def entry():
         to_ff=known_force_fields['martini22'],
     )
 
-    NullPositions().run_system(system)
-
     # Write a PDB file.
-    m2.pdb.write_pdb(system, args.outpath)
+    m2.pdb.write_pdb(system, str(args.outpath))
 
     for idx, molecule in enumerate(system.molecules):
         with open('molecule_{}.itp'.format(idx), 'w') as outfile:
