@@ -37,11 +37,16 @@ def bonds_from_distance(system, fudge=1.1):
         node_idx2 = idx_to_nodenum[idx2]
         atom1 = system.node[node_idx1]
         atom2 = system.node[node_idx2]
-        dist = distance(atom1['position'], atom2['position'])
-        bond_distace = COVALENT_RADII[atom1['element']] + COVALENT_RADII[atom2['element']]
-        if dist <= bond_distace * fudge:
-            system.add_edge(node_idx1, node_idx2, distance=dist)
+        element1 = atom1['element']
+        element2 = atom2['element']
+        if element1 in COVALENT_RADII and element2 in COVALENT_RADII:
+            # Elements we do not know never make bonds.
+            dist = distance(atom1['position'], atom2['position'])
+            bond_distace = COVALENT_RADII[element1] + COVALENT_RADII[element2]
+            if dist <= bond_distace * fudge:
+                system.add_edge(node_idx1, node_idx2, distance=dist)
     return system
+
 
 class MakeBonds(Processor):
     def run_system(self, system):
