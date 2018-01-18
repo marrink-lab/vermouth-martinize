@@ -12,6 +12,41 @@ from martinize2 import DATA_PATH
 
 
 def read_mapping(path):
+    """
+    Partial reader for Backward mapping files.
+
+    ..warning::
+
+        This parser is a limited proof of concept. It must be replaced! See
+        [issue #5](https://github.com/jbarnoud/martinize2/issues/5).
+
+    Read mapping from a Backward mapping file. Not all fields are supported,
+    only the "molecule" and the "atoms" fields are read. The origin force field
+    is assumed to be "universal", and the destination force field is assumed to
+    be "martini22".
+
+    There are no weight computed in case of shared atoms.
+
+    The reader assumes only one molecule per file.
+
+    Parameters
+    ----------
+    path: str or Path
+        Path to the mapping file to read.
+
+    Returns
+    -------
+    name: str
+        The name of the fragment as read in the "molecule" field.
+    from_ff: list of str
+        A list of force field origins. Each force field is referred by name.
+    to_ff: list of str
+        A list of force field destinations. Each force field is referred by name.
+    mapping: dict
+        The mapping. The keys of the dictionary are the atom names in
+        the origin force field; the values are lists of atom names in the
+        destination force field, the origin atom is assigned to.
+    """
     from_ff = ['universal', ]
     to_ff = ['martini22', ]
     mapping = {}
@@ -33,6 +68,29 @@ def read_mapping(path):
 
 
 def read_mapping_directory(directory):
+    """
+    Read all the mapping files in a directory.
+
+    The resulting mapping collection is a 3-level dict where the keys are:
+    * the name of the origin force field
+    * the name of the destination force field
+    * the name of the residue
+
+    The values after these 3 levels is a mapping dict where the keys are the
+    atom names in the origin force field and the values are lists of names in
+    the destination force field.
+
+    Parameters
+    ----------
+    directory: str or Path
+        The path to the directory to search. Files with a '.map' extension will
+        be read. There is no recursive search.
+
+    Returns
+    -------
+    dict
+        A collection of mappings.
+    """
     directory = Path(directory)
     mappings = {}
     for path in directory.glob('**/*.map'):
@@ -46,6 +104,13 @@ def read_mapping_directory(directory):
 
 
 def read_system(path):
+    """
+    Read a system from a PDB or GRO file.
+
+    This function guesses the file type based on the file extension.
+
+    The resulting system does not have a force field and may not have edges.
+    """
     system = m2.System()
     file_extension = path.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ['PDB', 'ENT']:
@@ -79,6 +144,9 @@ def pdb_to_universal(system):
 
 
 def martinize(system, mappings, to_ff):
+    """
+    Convert a system from one force field to an other at lower resolution.
+    """
     m2.DoMapping(mappings=mappings, to_ff=to_ff).run_system(system)
     m2.DoAverageBead().run_system(system)
     m2.ApplyBlocks().run_system(system)
