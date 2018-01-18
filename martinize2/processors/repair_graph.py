@@ -10,38 +10,13 @@ from ..molecule import Molecule
 from .processor import Processor
 from ..utils import first_alpha, maxes
 from ..graph_utils import *
+from ..gmx import read_rtp
 
 import functools
 import itertools
 import os.path
 
 import networkx as nx
-
-
-try:
-    import pkg_resources
-    DATA_PATH = pkg_resources.resource_filename('martinize2', 'mapping')
-except ImportError:
-    DATA_PATH = os.path.join(os.path.dirname(__file__), 'mapping')
-
-
-@functools.lru_cache(None)
-def read_reference_graph(resname):
-    """
-    Reads the reference graph from ./mapping/universal/{resname},gml.
-
-    Parameters
-    ----------
-    resname : str
-        The residuename as found in the PDB file.
-
-    Returns
-    -------
-    networkx.Graph
-        Reference graph of the residue.
-    """
-    return nx.read_gml(os.path.join(DATA_PATH, 'universal', '{}.gml'.format(resname)), label='id')
-#    return nx.read_gml('/universal/{}.gml'.format(resname), label='id')
 
 
 def make_reference(mol):
@@ -95,7 +70,7 @@ def make_reference(mol):
         chain = residues.node[residx]['chain']
         # print("{}{}".format(resname, resid), flush=True)
         residue = residues.node[residx]['graph']
-        reference = read_reference_graph(resname)
+        reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
         add_element_attr(residue)
         # Assume reference >= residue

@@ -582,6 +582,56 @@
  [ cmap ]
 	-C	N	CA	C	+N
 
+[ HIS ]
+ [ atoms ]
+	N	NH1	-0.47	0
+	HN	H	0.31	1
+	CA	CT1	0.07	2
+	HA	HB	0.09	3
+	CB	CT2	-0.08	4
+	HB1	HA	0.09	5
+	HB2	HA	0.09	6
+	ND1	NR2	-0.70	7
+	CG	CPH1	0.22	8
+	CE1	CPH2	0.25	9
+	HE1	HR1	0.13	10
+	NE2	NR1	-0.36	11
+	HE2	H	0.32	12
+	CD2	CPH1	-0.05	13
+	HD2	HR3	0.09	14
+	C	C	0.51	15
+	O	O	-0.51	16
+ [ bonds ]
+	CB	CA
+	CG	CB
+	ND1	CG
+	NE2	CD2
+	N	HN
+	N	CA
+	C	CA
+	C	+N
+	NE2	CE1
+	CA	HA
+	CB	HB1
+	CB	HB2
+	NE2	HE2
+	CD2	HD2
+	CE1	HE1
+	O	C
+	CD2	CG
+	CE1	ND1
+ [ impropers ]
+	NE2	CD2	CE1	HE2
+	CD2	CG	NE2	HD2
+	CE1	ND1	NE2	HE1
+	NE2	CE1	CD2	HE2
+	CD2	NE2	CG	HD2
+	CE1	NE2	ND1	HE1
+	N	-C	CA	HN
+	C	CA	+N	O
+ [ cmap ]
+	-C	N	CA	C	+N
+
 [ ILE ]
  [ atoms ]
 	N	NH1	-0.47	0
