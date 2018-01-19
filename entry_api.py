@@ -133,22 +133,22 @@ def select_backbone(node):
     return False
 
 
-def pdb_to_universal(system):
+def pdb_to_universal(system, delete_unknown):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
     canonicalized = system.copy()
     canonicalized.force_field = FORCE_FIELDS['universal']
     m2.MakeBonds().run_system(canonicalized)
-    m2.RepairGraph().run_system(canonicalized)
+    m2.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
     return canonicalized
 
 
-def martinize(system, mappings, to_ff):
+def martinize(system, mappings, to_ff, delete_unknown):
     """
     Convert a system from one force field to an other at lower resolution.
     """
-    m2.DoMapping(mappings=mappings, to_ff=to_ff).run_system(system)
+    m2.DoMapping(mappings=mappings, to_ff=to_ff, delete_unknown=delete_unknown).run_system(system)
     m2.DoAverageBead().run_system(system)
     m2.ApplyBlocks().run_system(system)
     m2.DoLinks().run_system(system)
@@ -178,14 +178,16 @@ def entry():
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
+    # For now at least, we silently delete molecules with unknown blocks.
     system = read_system(args.inpath)
-    system = pdb_to_universal(system)
+    system = pdb_to_universal(system, delete_unknown=True)
 
     # Run martinize on the system.
     system = martinize(
         system,
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
+        delete_unknown=True,
     )
 
     # Apply position restraints if required.

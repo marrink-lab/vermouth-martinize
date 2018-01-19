@@ -211,15 +211,28 @@ def do_mapping(molecule, mappings, to_ff):
 
 
 class DoMapping(Processor):
-    def __init__(self, mappings, to_ff):
+    def __init__(self, mappings, to_ff, delete_unknown=False):
         self.mappings = mappings
         self.to_ff = to_ff
+        self.delete_unknown = delete_unknown
         super().__init__()
 
     def run_molecule(self, molecule):
         return do_mapping(molecule, mappings=self.mappings, to_ff=self.to_ff)
 
     def run_system(self, system):
-        super().run_system(system)
+        mols = []
+        for molecule in system.molecules:
+            try:
+                new_molecule = self.run_molecule(molecule)
+            except KeyError as err:
+                if not self.delete_unknown:
+                    raise err
+                else:
+                    # TODO: raise a loud warning here
+                    pass
+            else:
+                mols.append(new_molecule)
+        system.molecules = mols
         system.force_field = self.to_ff
 
