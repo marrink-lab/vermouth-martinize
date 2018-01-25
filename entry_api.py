@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 High level API for Martinize2
 """

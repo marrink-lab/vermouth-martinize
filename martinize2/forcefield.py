@@ -29,6 +29,7 @@ def find_force_fields(directory):
     file. The name of the force field is the base name of the directory.
     """
     force_fields = {}
+    directory = str(directory)  # Py<3.6 compliance
     for name in os.listdir(directory):
         path = os.path.join(directory, name)
         if glob(os.path.join(path, '*.rtp')):
