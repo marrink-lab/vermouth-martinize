@@ -51,7 +51,9 @@ def bonds_from_distance(system, fudge=1.1):
 class MakeBonds(Processor):
     def run_system(self, system):
         mols = bonds_from_distance(system)
-        system.molecules = list(map(Molecule, nx.connected_component_subgraphs(mols, copy=True)))
+        # I *think* `.copy()` is needed, but I'm not 100% sure.
+        system.molecules = list(map(Molecule, (mols.subgraph(mol).copy()
+                                               for mol in nx.connected_components(mols))))
         # Restore the force field in each molecule. Setting the force field
         # at the system level propagates it to all the molecules.
         system.force_field = system.force_field
