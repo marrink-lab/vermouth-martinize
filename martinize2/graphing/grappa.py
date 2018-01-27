@@ -157,10 +157,10 @@ def preprocess(graphstring):
 
     EXAMPLES:
 
-        /#=1-3/(C#(H#[1-2]))
+        /#=1-3/(C#(H#[1-2]))/
           --> C1(H11,H12) C2(H21,H22) C3(H31,H32)
 
-        H1 C1(/#=2-4/(C#(H#[1-3]),))
+        H1 C1(/#=2-4/(C#(H#[1-3]),)/)
           --> H1 C1(C2(H21,H22,H23),C3(H31,H32,H33),C4(H41,H42,H43))
     """
     tokkie = tokenize(graphstring, special="/", groups=(), tgroup=None)
@@ -169,18 +169,27 @@ def preprocess(graphstring):
         if token == '/':
             rng = next(tokkie)
 
-            if next(tokkie) != '/':
-                err = 'Matching "/" not found during preprocessing'
+            # The range should be simple (single), so the next token must be '/'
+            nexttok = next(tokkie)
+            if nexttok != '/':
+                err = 'Matching "/" not found during preprocessing (found {})'.format(nexttok)
                 raise GrappaSyntaxError(err)
 
             subst, values = rng.split('=')
             values = [val.split('-') for val in values.split(',')]
 
-            form = next(tokkie)
+            form = [next(tokkie)]
 
-            if next(tokkie) != '/':
-                err = 'Matching "/" not found during preprocessing'
+            nexttok = next(tokkie)
+            try:
+                while nexttok != '/':
+                    form.append(nexttok)
+                    nexttok = next(tokkie)
+            except StopIteration:
+                err = 'Matching "/" not found during preprocessing (found {})'.format(nexttok)
                 raise GrappaSyntaxError(err)
+            
+            form = " ".join(form)
 
             for val in values:
                 if len(val) == 1:
@@ -249,7 +258,7 @@ def process(graphstring, graphs={}):
     Parse a graph string construct the corresponding graph.
     """
 
-    tokens = tokenize(graphstring)
+    tokens = tokenize(preprocess(graphstring))
     directives = '(),@-=<>{}'
 
     G = nx.Graph()
