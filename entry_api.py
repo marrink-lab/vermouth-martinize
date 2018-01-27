@@ -10,6 +10,9 @@ import numpy as np
 import martinize2 as m2
 from martinize2.forcefield import find_force_fields, FORCE_FIELDS
 from martinize2 import DATA_PATH
+import itertools
+import operator
+import textwrap
 
 
 def read_mapping(path):
@@ -155,6 +158,67 @@ def martinize(system, mappings, to_ff, delete_unknown):
     return system
 
 
+def write_gmx_topology(system, top_path):
+    # Deduplicate the moleculetypes in order to write each molecule ITP only
+    # once.
+    molecule_types = [[system.molecules[0], [system.molecules[0]]], ]
+    for molecule in system.molecules[1:]:
+        for molecule_type, share_moltype in molecule_types:
+            if molecule.share_moltype_with(molecule_type):
+                share_moltype.append(molecule)
+                break
+        else:  # no break
+            molecule_types.append([molecule, [molecule, ]])
+    # Write the ITP files for the moleculetypes.
+    for molidx, (molecule_type, _) in enumerate(molecule_types):
+        molecule_type.moltype = 'molecule_{}'.format(molidx)
+        molecule_type.nrexcl = 2
+        with open('molecule_{}.itp'.format(molidx), 'w') as outfile:
+            m2.gmx.itp.write_molecule_itp(molecule_type, outfile)
+    # Reorganize the molecule type assignment to write the top file.
+    # The top file "molecules" section lists the molecules in the same order
+    # as in the structure and group them. To do the grouping, we associate each
+    # molecule to the molecule type (its name actually) instead of associating
+    # the molecule types with the molecules as we did above.
+    molecule_to_type = {}
+    for molecule_type, share_moltype in molecule_types:
+        for molecule in share_moltype:
+            molecule_to_type[molecule] = molecule_type.moltype
+    # Write the top file
+    max_name_length = max(len(molecule_type.moltype)
+                          for molecule_type, _ in molecule_types)
+    template = """\
+        #include "martini.itp"
+        {includes}
+
+        [ system ]
+        Title of the system
+
+        [ molecules ]
+        {molecules}
+    """
+    include_string = ('\n' + ' ' * 8).join(
+        '#include "{}.itp"'.format(molecule_type.moltype)
+        for molecule_type, _ in molecule_types
+    )
+    molecule_string = ('\n' + ' ' * 8).join(
+        '{mtype:<{length}}    {num}'
+        .format(mtype=mtype, num=len(list(group)), length=max_name_length)
+        for mtype, group
+        in itertools.groupby(system.molecules,
+                             key=lambda x: molecule_to_type[x])
+    )
+    with open(top_path, 'w') as outfile:
+        print(
+            textwrap.dedent(
+                template.format(
+                    includes=include_string,
+                    molecules=molecule_string
+                )
+            ), file=outfile
+        )
+
+
 def entry():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', dest='inpath', required=True, type=Path)
@@ -198,11 +262,7 @@ def entry():
     # Write a PDB file.
     m2.pdb.write_pdb(system, str(args.outpath))
 
-    for idx, molecule in enumerate(system.molecules):
-        with open('molecule_{}.itp'.format(idx), 'w') as outfile:
-            molecule.moltype = 'molecule_{}'.format(idx)
-            molecule.nrexcl = 2
-            m2.gmx.itp.write_molecule_itp(molecule, outfile)
+    write_gmx_topology(system, Path('topol.top'))
 
 
 if __name__ == '__main__':

@@ -131,6 +131,16 @@ class Molecule(nx.Graph):
         for edge in molecule.edges:
             self.add_edge(*(correspondence[node] for node in edge))
 
+    def share_moltype_with(self, other):
+        if set(self.nodes) != set(other.nodes):
+            return False
+        self_edges = set(tuple(sorted(edge)) for edge in self.edges)
+        other_edges = set(tuple(sorted(edge)) for edge in other.edges)
+        if self_edges != other_edges:
+            return False
+        # TODO: Test the node attributes
+        return True
+
 
 class Block(nx.Graph):
     """
