@@ -340,8 +340,8 @@ def process(graphstring, graphs={}):
             B, at = include_graph(graphs, token[1:-1])
             # DEBUG
             # print("Including graph from", token, ":", *B.nodes)
-            G.add_nodes_from(B.nodes)
-            G.add_edges_from(B.edges)
+            G.add_nodes_from(B.nodes.items())
+            G.add_edges_from(B.edges())
             if active is not None:
                 G.add_edge(active, at)
             elif parent and parent[-1] is not None:
