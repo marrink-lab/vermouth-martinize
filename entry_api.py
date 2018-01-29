@@ -56,11 +56,13 @@ def read_mapping(path):
     mapping = {}
     
     with open(str(path)) as infile:
-        for line in infile:
+        for line_number, line in enumerate(infile, start=1):
             cleaned = line.split(';', 1)[0].strip()
             if not cleaned:
                 continue
             elif cleaned[0] == '[':
+                if cleaned[-1] != ']':
+                    raise IOError('Format error at line {}.'.format(line_number))
                 context = cleaned[1:-1].strip()
             elif context == 'molecule':
                 name = cleaned
@@ -131,9 +133,7 @@ def select_all(node):
 
 
 def select_backbone(node):
-    if node.get('atomname') == 'BB':
-        return True
-    return False
+    return node.get('atomname') == 'BB'
 
 
 def pdb_to_universal(system, delete_unknown):
@@ -159,6 +159,8 @@ def martinize(system, mappings, to_ff, delete_unknown):
 
 
 def write_gmx_topology(system, top_path):
+    if not system.molecules:
+        raise ValueError('No molecule in the system. Nothing to write.')
     # Deduplicate the moleculetypes in order to write each molecule ITP only
     # once.
     molecule_types = [[system.molecules[0], [system.molecules[0]]], ]
@@ -172,7 +174,6 @@ def write_gmx_topology(system, top_path):
     # Write the ITP files for the moleculetypes.
     for molidx, (molecule_type, _) in enumerate(molecule_types):
         molecule_type.moltype = 'molecule_{}'.format(molidx)
-        molecule_type.nrexcl = 2
         with open('molecule_{}.itp'.format(molidx), 'w') as outfile:
             m2.gmx.itp.write_molecule_itp(molecule_type, outfile)
     # Reorganize the molecule type assignment to write the top file.
@@ -209,13 +210,13 @@ def write_gmx_topology(system, top_path):
                              key=lambda x: molecule_to_type[x])
     )
     with open(top_path, 'w') as outfile:
-        print(
+        outfile.write(
             textwrap.dedent(
                 template.format(
                     includes=include_string,
                     molecules=molecule_string
                 )
-            ), file=outfile
+            )
         )
 
 
@@ -256,7 +257,8 @@ def entry():
 
     # Apply position restraints if required.
     if args.posres != 'None':
-        selector = {'All': select_all, 'Backbone': select_backbone}[args.posres]
+        selectors = {'All': select_all, 'Backbone': select_backbone}
+        selector = selectors[args.posres]
         m2.ApplyPosres(selector, args.posres_fc).run_system(system)
 
     # Write a PDB file.
