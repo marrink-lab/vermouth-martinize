@@ -202,12 +202,12 @@ def write_gmx_topology(system, top_path):
         '#include "{}.itp"'.format(molecule_type.moltype)
         for molecule_type, _ in molecule_types
     )
+    molecule_groups = itertools.groupby(system.molecules,
+                                        key=lambda x: molecule_to_type[x])
     molecule_string = ('\n' + ' ' * 8).join(
         '{mtype:<{length}}    {num}'
         .format(mtype=mtype, num=len(list(group)), length=max_name_length)
-        for mtype, group
-        in itertools.groupby(system.molecules,
-                             key=lambda x: molecule_to_type[x])
+        for mtype, group in molecule_groups
     )
     with open(top_path, 'w') as outfile:
         outfile.write(
