@@ -136,7 +136,7 @@ def select_backbone(node):
     return node.get('atomname') == 'BB'
 
 
-def pdb_to_universal(system, delete_unknown):
+def pdb_to_universal(system, delete_unknown=False):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
@@ -147,7 +147,7 @@ def pdb_to_universal(system, delete_unknown):
     return canonicalized
 
 
-def martinize(system, mappings, to_ff, delete_unknown):
+def martinize(system, mappings, to_ff, delete_unknown=False):
     """
     Convert a system from one force field to an other at lower resolution.
     """
