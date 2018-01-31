@@ -156,7 +156,7 @@ REFERENCE = {
          ('CG', 'CE1'), ('CG', 'CD2'), ('CE1', 'HE1'), ('CE1', 'ND1'),
          ('CE1', 'NE2'), ('NE2', 'HE2'), ('HE2', 'CD2'), ('CD2', 'HD2')],
         {'CA': {'chiral': '(N,C,HA)'}, 'C': {'stub': 1},
-         'N': {'stub': 1}, 'HE2': {'pKa': 6.04}},
+         'N': {'stub': 1}, 'HE2': {'pKa': '6.04'}},
     ),
     'PHE': RefEntry(
         '<BB> @CA CB(HB1,HB2) CG CD1(HD1) CE1(HE1) CZ(HZ) CE2(HE2) CD2(HD2) !CG',
@@ -179,7 +179,7 @@ REFERENCE = {
          ('CE1', 'CZ'), ('CZ', 'CE2'), ('CZ', 'OH'), ('CE2', 'HE2'),
          ('CE2', 'CD2'), ('CD2', 'HD2'), ('OH', 'HH'), ('CD2', 'CG')],
         {'CA': {'chiral': '(N,C,HA)'}, 'C': {'stub': 1},
-         'N': {'stub': 1}, 'HH': {'pKa': 10.10}},
+         'N': {'stub': 1}, 'HH': {'pKa': '10.10'}},
     ),
     'LYS': RefEntry(
         '<BB> @CA CB(HB1,HB2) CG(HG1,HG2) CD(HD1,HD2) CE(HE1,HE2) NZ(HZ1,HZ2,HZ3)',
@@ -205,7 +205,7 @@ REFERENCE = {
          ('CZ', 'NH1'), ('CZ', 'NH2'), ('NH1', 'HH11'), ('NH1', 'HH12'),
          ('NH2', 'HH21'), ('NH2', 'HH22')],
         {'CA': {'chiral': '(N,C,HA)'}, 'C': {'stub': 1},
-         'N': {'stub': 1}, 'HH22': {'pKa': 10.10}},
+         'N': {'stub': 1}, 'HH22': {'pKa': '12.10'}},
     ),
     'TRP': RefEntry(
         '<BB> @CA CB(HB1,HB2) CG CD1(HD1) NE1(HE1) CE2 CZ2(HZ2) CH2(HH2) CZ3(HZ3) CE3(HE3) CD2 !CG @CD2 !CE2',
@@ -226,11 +226,15 @@ REFERENCE = {
 @pytest.fixture()
 def graph_dict():
     names_to_use = ['BB', 'PHE']
-    graph_dict = {}
+    attributes = {'CA': {'chiral': '(N,C,HA)'}, 'C': {'stub': 1}, 'N': {'stub': 1}}
+    graphs = {}
     for name in names_to_use:
-        graph_dict[name] = nx.Graph()
-        graph_dict[name].add_edges_from(REFERENCE[name].edges)
-    return graph_dict
+        graphs[name] = nx.Graph()
+        graphs[name].add_edges_from(REFERENCE[name].edges)
+        for atom, attr in attributes.items():
+            graphs[name].nodes[atom].update(attr)
+    #graphs['BB'].nodes['CA']['stub'] = 1
+    return graphs
 
 
 @pytest.mark.parametrize('grappa_string, ref_string', (
@@ -238,10 +242,9 @@ def graph_dict():
         '/#=1-5/C#(O#,H#1,H#2)/ @C5 H53 @O4 -H41 !C1',
         'C1(O1,H11,H12) C2(O2,H21,H22) C3(O3,H31,H32) C4(O4,H41,H42) C5(O5,H51,H52) @C5 H53 @O4 -H41 !C1',
     ),
-    pytest.param(
-        '/#=1-5/C#(O# H#1, H#2)/ @C5 H53 @O4 -H41 !C1',
+    (
+        '/#=1-5/C#(O# H#1,H#2)/ @C5 H53 @O4 -H41 !C1',
         'C1(O1 H11,H12) C2(O2 H21,H22) C3(O3 H31,H32) C4(O4 H41,H42) C5(O5 H51,H52) @C5 H53 @O4 -H41 !C1',
-        marks=pytest.mark.xfail(reason='Issue #26'),
     ),
 ))
 def test_preprocess(grappa_string, ref_string):
@@ -264,7 +267,7 @@ def test_process_graph(name, grappa_string, nodes, edges, graph_dict):
     assert sorted(residue.nodes) == sorted(nodes)
 
 
-@pytest.mark.xfail(reason='Issue #27')
+#@pytest.mark.xfail(reason='Issue #27')
 @pytest.mark.parametrize('name, grappa_string, attributes', (
     (name, ref.string, ref.attributes)
     for name, ref in REFERENCE.items()
