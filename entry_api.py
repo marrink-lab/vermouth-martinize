@@ -188,7 +188,7 @@ def write_gmx_topology(system, top_path):
     # Write the top file
     max_name_length = max(len(molecule_type.moltype)
                           for molecule_type, _ in molecule_types)
-    template = """\
+    template = textwrap.dedent("""\
         #include "martini.itp"
         {includes}
 
@@ -197,14 +197,14 @@ def write_gmx_topology(system, top_path):
 
         [ molecules ]
         {molecules}
-    """
-    include_string = ('\n' + ' ' * 8).join(
+    """)
+    include_string = '\n'.join(
         '#include "{}.itp"'.format(molecule_type.moltype)
         for molecule_type, _ in molecule_types
     )
     molecule_groups = itertools.groupby(system.molecules,
                                         key=lambda x: molecule_to_type[x])
-    molecule_string = ('\n' + ' ' * 8).join(
+    molecule_string = '\n'.join(
         '{mtype:<{length}}    {num}'
         .format(mtype=mtype, num=len(list(group)), length=max_name_length)
         for mtype, group in molecule_groups
