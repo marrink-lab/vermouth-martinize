@@ -25,6 +25,7 @@ import numpy as np
 import vermouth
 from vermouth.forcefield import find_force_fields, FORCE_FIELDS
 from vermouth import DATA_PATH
+from vermouth.dssp.dssp import AnnotateDSSP
 import itertools
 import operator
 import textwrap
@@ -245,6 +246,7 @@ def entry():
                         choices=('None', 'All', 'Backbone'), default='None')
     parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
     parser.add_argument('-ff', dest='to_ff', default='martini22')
+    parser.add_argument('-dssp', nargs='?', const='dssp')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -266,6 +268,9 @@ def entry():
     system = read_system(args.inpath)
     system = pdb_to_universal(system, delete_unknown=True)
 
+    if args.dssp is not None:
+        AnnotateDSSP(executable=args.dssp).run_system(system)
+
     # Run martinize on the system.
     system = martinize(
         system,
@@ -279,6 +284,13 @@ def entry():
         selectors = {'All': select_all, 'Backbone': select_backbone}
         selector = selectors[args.posres]
         vermouth.ApplyPosres(selector, args.posres_fc).run_system(system)
+
+    # For demonstration purpose, write the secondary structure assignation
+    # instead of the element.
+    # TODO: remove this code for production
+    for molecule in system.molecules:
+        for atom in molecule.nodes.values():
+            atom['element'] = atom.get('secstruct', 'X')
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath))
