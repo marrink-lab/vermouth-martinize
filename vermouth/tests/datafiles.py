@@ -14,9 +14,15 @@
 
 from pathlib import Path
 
-# TODO: Make that cleaner with pkg_resources
-HERE = Path(__file__).parent
-TEST_DATA = HERE / 'data'
+try:
+    import pkg_resources
+except ImportError:
+    import os
+    TEST_DATA = os.path.join(os.path.dirname(__file__), 'data')
+    del os
+else:
+    TEST_DATA = Path(pkg_resources.resource_filename('vermouth.tests', 'data'))
+    del pkg_resources
 
 # PDB files with a single molecule
 PDB_PROTEIN = TEST_DATA / '1bta.pdb'
@@ -25,4 +31,8 @@ PDB_NOT_PROTEIN = TEST_DATA / 'heme.pdb'
 
 DSSP_OUTPUT = TEST_DATA / 'dssp_1bta.ssd'
 
-
+# Clean the namespace so only the data file variables can be imported.
+# An other option would be to define __all__, but it is easy to forget to add
+# a variable in that list.
+del os
+del Path
