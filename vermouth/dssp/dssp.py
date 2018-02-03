@@ -285,7 +285,7 @@ def run_dssp(system, executable='dssp', savefile=None):
 def _savefile_path(molecule, savedir=None):
     savefile = None
     if savedir is not None:
-        first_atom = molecule.nodes()[0]
+        first_atom = list(molecule.nodes.keys())[0]
         chain = molecule.nodes[first_atom].get('chain')
         if chain is None:
             msg = 'The "savedir" argument can only be used if chains are set.'
