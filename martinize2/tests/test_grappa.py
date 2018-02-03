@@ -230,9 +230,8 @@ def graph_dict():
     graphs = {}
     for name in names_to_use:
         graphs[name] = nx.Graph()
+        graphs[name].add_nodes_from(attributes.items())
         graphs[name].add_edges_from(REFERENCE[name].edges)
-        for atom, attr in attributes.items():
-            graphs[name].nodes[atom].update(attr)
     #graphs['BB'].nodes['CA']['stub'] = 1
     return graphs
 
@@ -267,7 +266,6 @@ def test_process_graph(name, grappa_string, nodes, edges, graph_dict):
     assert sorted(residue.nodes) == sorted(nodes)
 
 
-#@pytest.mark.xfail(reason='Issue #27')
 @pytest.mark.parametrize('name, grappa_string, attributes', (
     (name, ref.string, ref.attributes)
     for name, ref in REFERENCE.items()
