@@ -75,9 +75,16 @@ def apply_blocks(molecule, blocks):
             for interaction in interactions:
                 atom_idxs = []
                 for atom_name in interaction.atoms:
-                    atom_idxs.extend(graph_out.find_atoms(atomname=atom_name,
-                                                          resname=residue['resname'],
-                                                          resid=residue['resid']))
+                    atom_index = graph_out.find_atoms(atomname=atom_name,
+                                                      resname=residue['resname'],
+                                                      resid=residue['resid'])
+                    atom_index = list(atom_index)
+                    if not atom_index:
+                        msg = ('Could not find a atom named "{}" '
+                               'with resname being "{}" '
+                               'and resid being "{}".')
+                        raise ValueError(msg.format(atom_name, residue['resname'], residue['resid']))
+                    atom_idxs.extend(atom_index)
                 interactions = interaction._replace(atoms=atom_idxs)
                 graph_out.add_interaction(inter_type, *interactions)
 

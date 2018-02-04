@@ -333,15 +333,11 @@ class Block(nx.Graph):
         return mol
 
 
-class Link(nx.Graph):
+class Link(Block):
     """
     Template link between two residues.
     """
     node_dict_factory = OrderedDict
-
-    def __init__(self):
-        super(Link, self).__init__(self)
-        self.interactions = {}
 
 
 if __name__ == '__main__':

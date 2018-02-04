@@ -12,20 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 from glob import glob
 import os
 from .gmx.rtp import read_rtp
+from .ffinput import read_ff
 from . import DATA_PATH
 
 
 class ForceField(object):
     def __init__(self, directory):
-        source_files = glob(os.path.join(directory, '*.rtp'))
+        parsers = {'.rtp': read_rtp, '.ff': read_ff}
+        source_files = itertools.chain(
+            glob(os.path.join(directory, '*.ff')),
+            glob(os.path.join(directory, '*.rtp')),
+        )
         blocks = {}
         links = []
         for source in source_files:
+            extension = os.path.splitext(source)[-1]
             with open(source) as infile:
-                file_blocks, file_links = read_rtp(infile)
+                file_blocks, file_links = parsers[extension](infile)
             blocks.update(file_blocks)
             links.extend(file_links)
 
@@ -46,7 +53,7 @@ def find_force_fields(directory):
     directory = str(directory)  # Py<3.6 compliance
     for name in os.listdir(directory):
         path = os.path.join(directory, name)
-        if glob(os.path.join(path, '*.rtp')):
+        if glob(os.path.join(path, '*.rtp')) + glob(os.path.join(path, '*.ff')):
                 force_fields[name] = ForceField(path)
     return force_fields
 
