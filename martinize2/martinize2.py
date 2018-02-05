@@ -84,11 +84,6 @@ except (RuntimeError, ImportError):
                 ax.text(*poss[idx], label)
     show = plt.show
 
-try:
-    import pkg_resources
-    DATA_PATH = pkg_resources.resource_filename('martinize2', 'mapping')
-except ImportError:
-    DATA_PATH = os.path.join(os.path.dirname(__file__), 'mapping')
 #pdb_filename = '../molecules/cycliclipopeptide_2.pdb'
 #pdb_filename = '../molecules/6-macro-16.pdb'
 #pdb_filename = '../molecules/6-macro-16.gro'

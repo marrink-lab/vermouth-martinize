@@ -215,7 +215,26 @@ def repair_graph(aa_graph, reference_graph):
 
 
 class RepairGraph(Processor):
+    def __init__(self, delete_unknown=False):
+        super().__init__()
+        self.delete_unknown = delete_unknown
+
     def run_molecule(self, molecule):
         reference_graph = make_reference(molecule)
         mol = repair_graph(molecule, reference_graph)
         return mol
+
+    def run_system(self, system):
+        mols = []
+        for molecule in system.molecules:
+            try:
+                new_molecule = self.run_molecule(molecule)
+            except KeyError as err:
+                if not self.delete_unknown:
+                    raise err
+                else:
+                    # TODO: raise a loud warning here
+                    pass
+            else:
+                mols.append(new_molecule)
+        system.molecules = mols

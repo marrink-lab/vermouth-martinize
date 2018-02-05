@@ -13,3 +13,5 @@ from .repair_graph import RepairGraph
 from .do_mapping import DoMapping
 from .do_links import DoLinks
 from .apply_blocks import ApplyBlocks
+from .average_beads import DoAverageBead
+from .apply_posres import ApplyPosres

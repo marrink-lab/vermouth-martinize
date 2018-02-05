@@ -1,0 +1,32 @@
+[ molecule ]
+ASP
+
+[ martini ]
+BB SC1
+
+[ mapping ]
+charmm27 charmm36
+
+[ atoms ]
+    1     N    BB
+    2    HN    BB
+    3    CA    BB
+    4    HA    BB
+    5    CB   SC1 BB BB
+    6   HB1   SC1 BB BB
+    7   HB2   SC1 BB BB
+    8    CG   SC1 SC1 BB
+    9   OD1   SC1
+   10   OD2   SC1
+   11   HD2   SC1
+   12     C    BB
+   13     O    BB
+
+[ chiral ]
+  CB     CA    N    C
+  HB1    CA    N    C
+  HB2    CA    N    C
+
+[ chiral ]
+  HA     CA    N    CB    C ; L-Asp
+; HA     CA    N    C    CB ; D-Asp
