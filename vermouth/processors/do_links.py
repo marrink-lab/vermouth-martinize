@@ -19,6 +19,7 @@ Created on Wed Oct 25 16:00:02 2017
 
 @author: peterkroon
 """
+from ..molecule import Choice
 from .processor import Processor
 from ..gmx import read_rtp
 
@@ -36,7 +37,10 @@ class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
         for attr in node2:
             if attr == 'order':
                 continue
-            if node1.get(attr, None) != node2[attr]:
+            if isinstance(node2[attr], Choice):
+                if node1.get(attr, None) not in node2[attr]:
+                    return False
+            elif node1.get(attr, None) != node2[attr]:
                 return False
         else:
             return True

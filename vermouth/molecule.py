@@ -29,6 +29,10 @@ import networkx as nx
 Interaction = namedtuple('Interaction', 'atoms parameters meta')
 
 
+class Choice(list):
+    pass
+
+
 class Molecule(nx.Graph):
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.

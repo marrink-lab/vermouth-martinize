@@ -25,7 +25,7 @@ is done in the same way an ITP file describes a molecule.
 import collections
 import math
 import json
-from .molecule import Block, Link, Interaction
+from .molecule import Block, Link, Interaction, Choice
 
 
 def _tokenize(line):
@@ -81,13 +81,13 @@ def _tokenize(line):
     If the line is part of a link, then the atom selection may be limited in
     scope. Atom attributes is how to implement such scope limitation:
 
-        BB {'resname': ('ALA', 'GLY'), 'secstruc': 'H'} BB {'resname': ('LYS', 'ARG'), 'secstruc': 'H', 'order': +1} 1 0.2 1000
+        BB {'resname': 'ALA', 'secstruc': 'H'} BB {'resname': 'LYS', 'secstruc': 'H', 'order': +1} 1 0.2 1000
 
     Here, we add a bond to the current link. At one end of the bond is the atom
     named "BB" and annotated as part of an alpha helix ('secstruc': 'H') of a
-    residue called "ALA" or "GLY". On the other end of the link is an other
+    residue called "ALA". On the other end of the link is an other
     atom named "BB" that is part of an alpha helix, but that is part of the
-    next residue ('order': +1) if this next residue is named "LYS" or "ARG".
+    next residue ('order': +1) if this next residue is named "LYS".
 
     The order parameter has a shortcut in the form of a + or - prefix to the
     atom reference name. Then, "+ATOM" refers to "ATOM" in the next residue,
@@ -97,7 +97,7 @@ def _tokenize(line):
 
     When using attributes, the optional delimiter can increase the readability:
 
-        BB {'resname': ('ALA', 'GLY'), 'secstruc': 'H'} +BB {'resname': ('LYS', 'ARG'), 'secstruc': 'H'} -- 1 0.2 1000
+        BB {'resname': 'ALA', 'secstruc': 'H'} +BB {'resname': 'LYS', 'secstruc': 'H'} -- 1 0.2 1000
 
     Tokens on an interaction line are its different elements. These elements
     are considered as one token each: am atom reference, a set of atom
@@ -105,9 +105,9 @@ def _tokenize(line):
     parameter list. The line above splits into the following tokens:
 
     * ``BB``
-    * ``{'resname': ('ALA', 'GLY'), 'secstruc': 'H'}``
+    * ``{'resname': 'ALA', 'secstruc': 'H'}``
     * ``+BB``
-    * ``{'resname': ('LYS', 'ARG'), 'secstruc': 'H'}``
+    * ``{'resname': 'LYS', 'secstruc': 'H'}``
     * ``--``
     * ``1``
     * ``0.2``
@@ -190,6 +190,16 @@ def _some_atoms_left(tokens, atoms, natoms):
     return True
 
 
+def _parse_atom_attributes(token):
+    attributes = json.loads(token)
+    modifications = {}
+    for key, value in attributes.items():
+        if '|' in value:
+            modifications[key] = Choice(value.split('|'))
+    attributes.update(modifications)
+    return attributes
+
+
 def _get_atoms(tokens, natoms):
     atoms = []
     while tokens and _some_atoms_left(tokens, atoms, natoms):
@@ -202,7 +212,7 @@ def _get_atoms(tokens, natoms):
         else:
             next_token = ''
         if next_token.startswith('{'):
-            atoms.append([token, json.loads(next_token)])
+            atoms.append([token, _parse_atom_attributes(next_token)])
             tokens.popleft()
         else:
             atoms.append([token, {}])
