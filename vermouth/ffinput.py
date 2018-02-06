@@ -23,6 +23,8 @@ is done in the same way an ITP file describes a molecule.
 """
 
 import collections
+import math
+import json
 from .molecule import Block, Link, Interaction
 
 
@@ -200,14 +202,101 @@ def _get_atoms(tokens, natoms):
         else:
             next_token = ''
         if next_token.startswith('{'):
-            atoms.append([token, next_token])
+            atoms.append([token, json.loads(next_token)])
             tokens.popleft()
         else:
-            atoms.append([token, ])
+            atoms.append([token, {}])
     return atoms
 
 
-def _base_parser(line, context, section, natoms=None):
+def _treat_block_interaction_atoms(atoms, context, section):
+    atom_names = list(context.nodes)
+    for atom in atoms:
+        reference = atom[0]
+        if reference.isdigit():
+            # The indices in the file are 1-based
+            reference = int(reference) - 1
+            try:
+                reference = atom_names[reference]
+            except IndexError:
+                msg = ('There are {} atoms defined in the block "{}". '
+                       'Interaction in section "{}" cannot refer to '
+                       'atom index {}.')
+                raise IOError(msg.format(len(context), context.name,
+                                         section, reference + 1))
+            atom[0] = reference
+        else:
+            if reference not in context:
+                msg = ('There is no atom "{}" defined in the block "{}". '
+                       'Section "{}" cannot refer to it.')
+                raise IOError(msg.format(reference, context.name, section))
+            if reference[0] in '+-':
+                msg = ('Atom names in blocks cannot be prefixed with + or -. '
+                       'The name "{}", used in section "{}" of the block "{}" '
+                       'is not valid in a block.')
+                raise IOError(msg.format(reference, section, block.name))
+
+
+def _treat_link_interaction_atoms(atoms, context, section):
+    for reference, attributes in atoms:
+        # If the atom name is prefixed, we can get the order.
+        for prefix_end, char in enumerate(reference):
+            if char not in '+-':
+                break
+        prefix = reference[:prefix_end]
+        if len(set(prefix)) > 1:
+            msg = ('Atom name prefix cannot mix + and -. Atom name "{}" '
+                   'is not a valid name in section "{}" of a link.')
+            raise IOError(msg.format(reference, section))
+        
+        factors = {'+': +1, '-': -1}
+        # If there is no prefix, then `prefix[0]` does not exist. There
+        # should, however, always be a `reference[0]` that will be the
+        # same as `prefix[0]` is there is a prefix, and not an existing
+        # key in `factors` if there is none. So order is 0 * 0 if there
+        # is no prefix, which is what we expect.
+        order_prefix = factors.get(reference[0], 0) * len(prefix)
+
+        order_attribute = attributes.get('order', 0)
+        # If the order read from the prefix is 0, then it may just be that
+        # the order was not specified by prefix, but only by atom attribute.
+        # If the order is not defined in the attributes, it is assumed to
+        # be as set by the prefix.
+        # If the order is defined in both places, it has to match.
+        if (order_prefix and 'order' in attributes) and order_prefix != order_attribute:
+            msg = ('The sequence order for atom "{}" in section "{}" of a '
+                   'link is not consistent between the name prefix '
+                   '(order={}) and the atom attributes (order={}).')
+            raise IOError(msg.format(reference, section,
+                                     order_prefix, order_attribute))
+        if 'order' not in attributes:
+            order_attribute = order_prefix
+            attributes['order'] = order_attribute
+
+        # When possible, we favor the prefixed name for references to nodes
+        prefix_symbol = '+'
+        if order_attribute < 0:
+            prefix_symbol = '-'
+        atom_name = reference[prefix_end:]
+        prefixed_reference = prefix_symbol * int(math.fabs(order_attribute)) + atom_name
+
+        if prefixed_reference in context:
+            context_atom = context.nodes[prefixed_reference]
+            for key, value in attributes.items():
+                if key in context_atom and value != context_atom[key]:
+                    msg = ('Attribute {} of atom {} conflicts in a link '
+                           'between its definition in section "{}" '
+                           '(value is "{}") and its previous definition '
+                           '(value was "{}").')
+                    raise IOError(msg.format(key, reference, section,
+                                             value, context_atom[key]))
+            context_atom.update(attributes)
+        else:
+            attributes['atomname'] = atom_name
+            context.add_node(prefixed_reference, **attributes)
+
+
+def _base_parser(line, context, context_type, section, natoms=None):
     tokens = collections.deque(_tokenize(line))
 
     delimiter_count = tokens.count('--')
@@ -221,17 +310,21 @@ def _base_parser(line, context, section, natoms=None):
         raise IOError('Found {} atoms while {} were expected.'
                       .format(len(atoms), natoms))
 
-    # Normalize the atom references. We use names as references, so we need to
-    # convert indices to names. This normalization is only relevant for blocks.
-    # Links need to reference atoms by name.
-    atom_names = list(context.nodes)
-    for atom in atoms:
-        reference = atom[0]
-        if reference.isdigit():
-            # The indices in the file are 1-based
-            reference = int(reference) - 1
-            reference = atom_names[reference]
-            atom[0] = reference
+    # Normalize the atom references.
+    # Blocks and links treat these references differently.
+    # For blocks:
+    # * references can be written as indices or atom names
+    # * a reference cannot be prefixed by + or -
+    # * an interaction cannot create a new atom
+    # For links:
+    # * references must be atom names, but they can be prefixed with one or
+    #   more + or - to signify the order in the sequence
+    # * interactions create nodes
+    if context_type == 'block':
+        _treat_block_interaction_atoms(atoms, context, section)
+    elif context_type == 'link':
+        _treat_link_interaction_atoms(atoms, context, section)
+
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
     # are the interaction parameters.
@@ -270,6 +363,7 @@ def read_ff(lines):
 
     blocks = {}
     links = []
+    context_type = None
     context = None
     section = None
     for line_num, line in enumerate(lines, start=1):
@@ -283,9 +377,11 @@ def read_ff(lines):
                               .format(line_num))
             section = cleaned[1:-1].strip().lower()
             if section == 'link':
+                context_type = 'link'
                 context = Link()
                 links.append(context)
         elif section == 'moleculetype':
+            context_type = 'block'
             context = Block()
             name, nrexcl = cleaned.split()
             context.name = name
@@ -296,17 +392,23 @@ def read_ff(lines):
         else:
             natoms = interactions_natoms.get(section)
             try:
-                _base_parser(cleaned, context, section, natoms)
+                _base_parser(cleaned, context, context_type, section, natoms)
             except Exception:
                 raise IOError('Error while reading line {} in section {}.'
                               .format(line_num, section))
 
-        # Finish the blocks and the links. We have the nodes and The
-        # interactions, but the edges are missing.
-        for name, block in blocks.items():
-            block.make_edges_from_interactions()
-        for link in links:
-            link.make_edges_from_interactions()
+    # Finish the blocks and the links. We have the nodes and The
+    # interactions, but the edges are missing.
+    for name, block in blocks.items():
+        block.make_edges_from_interactions()
+    for link in links:
+        link.make_edges_from_interactions()
+
+    # For debug purpose, we add a comment to the link interactions so
+    # they can be easily identified in the output topology.
+    for link in links:
+        for interactions in link.interactions.values():
+            for interaction in interactions:
+                interaction.meta['comment'] = 'Link'
 
     return blocks, links
-
