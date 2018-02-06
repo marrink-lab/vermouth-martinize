@@ -520,9 +520,10 @@ TRP                1
 ;;; Links
 
 [ link ]
+resname $protein_resnames
 
 [ bonds ]
-BB {"resname": $protein_resnames} +BB {"resname": $protein_resnames} 1 0.350 1250
+BB +BB 1 0.350 1250
 
 [ angles ]
--BB{"resname": $protein_resnames}  BB{"resname": $protein_resnames}  SC1{"resname": $protein_resnames}  2 100 25
+-BB  BB  SC1  2 100 25

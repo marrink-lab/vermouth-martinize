@@ -267,6 +267,10 @@ def _treat_block_interaction_atoms(atoms, context, section):
 
 def _treat_link_interaction_atoms(atoms, context, section):
     for reference, attributes in atoms:
+        if hasattr(context, '_apply_to_all_nodes'):
+            intermediate = context._apply_to_all_nodes.copy()
+            intermediate.update(attributes)
+            attributes = intermediate
         # If the atom name is prefixed, we can get the order.
         for prefix_end, char in enumerate(reference):
             if char not in '+-':
@@ -387,6 +391,20 @@ def _parse_macro(tokens, macros):
     macros[macro_name] = macro_value
 
 
+def _parse_link_attribute(tokens, context):
+    if len(tokens) > 2:
+        raise IOError('Unexpected column in link attribute definition.')
+    elif len(tokens) < 2:
+        raise IOError('Missing column in link attribute definition.')
+    if not hasattr(context, '_apply_to_all_nodes'):
+        context._apply_to_all_nodes = {}
+    key, value = tokens
+    value = json.loads(value)
+    if '|' in value:
+        value = Choice(value.split('|'))
+    context._apply_to_all_nodes[key] = value
+
+
 def read_ff(lines):
     interactions_natoms = {
         'bonds': 2,
@@ -429,6 +447,8 @@ def read_ff(lines):
             context = None
             context_type = None
             _parse_macro(tokens, macros)
+        elif section == 'link':
+            _parse_link_attribute(tokens, context)
         elif section == 'atoms':
             _parse_atom(cleaned, context)
         else:
