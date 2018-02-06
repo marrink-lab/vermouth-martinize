@@ -180,6 +180,24 @@ def _tokenize(line):
             start += 1
     return tokens
 
+
+def _substitute_macros(line, macros):
+    start = None
+    while start is None or 0 <= start < len(line):
+        start = line.find('$', start)
+        if start < 0:
+            break
+        for end, char in enumerate(line[start + 1:], start=start + 1):
+            if char in ' \t\n{}':
+                break
+        else: # no break
+            end += 1
+        macro_name = line[start + 1:end]
+        macro_value = macros[macro_name]
+        line = line[:start] + macro_value + line[end:]
+        end = start + len(macro_value)
+    return line
+
         
 def _some_atoms_left(tokens, atoms, natoms):
     if tokens and tokens[0] == '--':
@@ -306,8 +324,7 @@ def _treat_link_interaction_atoms(atoms, context, section):
             context.add_node(prefixed_reference, **attributes)
 
 
-def _base_parser(line, context, context_type, section, natoms=None):
-    tokens = collections.deque(_tokenize(line))
+def _base_parser(tokens, context, context_type, section, natoms=None):
 
     delimiter_count = tokens.count('--')
     if delimiter_count > 1:
@@ -362,6 +379,14 @@ def _parse_atom(line, context):
     context.add_atom(atom)
 
 
+def _parse_macro(tokens, macros):
+    macro_name = tokens.popleft()
+    macro_value = tokens.popleft()
+    if tokens:
+        raise IOError('Unexpected column in macro definition.')
+    macros[macro_name] = macro_value
+
+
 def read_ff(lines):
     interactions_natoms = {
         'bonds': 2,
@@ -371,15 +396,18 @@ def read_ff(lines):
         'constraints': 2,
     }
 
+    macros = {}
     blocks = {}
     links = []
     context_type = None
     context = None
     section = None
     for line_num, line in enumerate(lines, start=1):
-        cleaned = line.split(';', 1)[0].strip()
+        cleaned = _substitute_macros(line.split(';', 1)[0].strip(), macros)
         if not cleaned:
             continue
+
+        tokens = collections.deque(_tokenize(cleaned))
 
         if cleaned.startswith('['):
             if not cleaned.endswith(']'):
@@ -397,12 +425,16 @@ def read_ff(lines):
             context.name = name
             context.nrexcl = int(nrexcl)
             blocks[name] = context
+        elif section == 'macros':
+            context = None
+            context_type = None
+            _parse_macro(tokens, macros)
         elif section == 'atoms':
             _parse_atom(cleaned, context)
         else:
             natoms = interactions_natoms.get(section)
             try:
-                _base_parser(cleaned, context, context_type, section, natoms)
+                _base_parser(tokens, context, context_type, section, natoms)
             except Exception:
                 raise IOError('Error while reading line {} in section {}.'
                               .format(line_num, section))

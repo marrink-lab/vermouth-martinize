@@ -12,47 +12,8 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
-;;;;;; AMINO ACIDS -- VERSION 2.2 
-;
-; S.J. Marrink, 16-06-2008.
-;
-; version 2.2, 05-12-2012, update by DdJ
-; version 22-9-2010 - fix in charge group numbers for TRP
-;
-; To generate a complete protein topology, use the martinizi.py script.
-;
-; please cite:
-;
-; D.H. de Jong, G. Singh, W.F.D. Bennet, C. Arnarez, T.A. Wassenaar, L.V. Schafer,
-; X. Periole, D.P. Tieleman, S.J. Marrink.
-; Improved Parameters for the Martini Coarse-Grained Protein Force Field
-; J. Chem. Theory Comput., DOI: 10.1021/ct300646g
-;
-; &
-;
-; L. Monticelli, S. Kandasamy, X. Periole, R. Larson, D.P. Tieleman, S.J. Marrink.
-; The MARTINI forcefield: Extension to peptides and proteins.
-; J. Chem. Th. Comp., 4:819-834, 2008.
-;
-;
-; BACKBONE
-; the backbone of the amino acids consist of one particle, which represents
-; the center-of-mass of the NH2-Calpha-C=O unit. 
-; For a single aminoacid, the backbone is very polar
-; and is represented by a "P5" particle.
-
-; However: as part of a secondary structure element inside a peptide or
-; protein a particle type of reduced polarity should be used. For details
-; see the original publications.
-
-; SC1ECHAIN GEOMETRY
-; most amino acids except GLY and ALA have at least one site representing
-; the side chain. The backbone-sidechain distance was estimated from 
-; the underlying atomistic structure and thus reflects the size of the 
-; amino acid quite accurately. Most side chains are attached to the
-; backbone with weak bonds to mimic flexibility of the underlying structure.
-; A few attachments are stiffer and are modeled by constraints.
-
+[ macros ]
+protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|ASN|GLN|ASP|ASP0|GLU|GLU0|THR|SER|LYS|LYS0|ARG|ARG0|HIS|HISH|PHE|TYR|TRP"
 
 ;;; GLYCINE
 
@@ -561,7 +522,7 @@ TRP                1
 [ link ]
 
 [ bonds ]
-BB +BB 1 0.350 1250
+BB {"resname": $protein_resnames} +BB {"resname": $protein_resnames} 1 0.350 1250
 
 [ angles ]
--BB BB SC1 2 100 25
+-BB{"resname": $protein_resnames}  BB{"resname": $protein_resnames}  SC1{"resname": $protein_resnames}  2 100 25
