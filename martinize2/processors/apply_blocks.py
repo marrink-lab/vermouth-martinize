@@ -18,6 +18,13 @@ from itertools import product
 def apply_blocks(molecule, blocks):
     residue_graph = make_residue_graph(molecule)
     graph_out = Molecule(force_field=molecule.force_field)
+
+    # nrexcl may not be defined, but if it is we probably want to keep it
+    try:
+        graph_out.nrexcl = molecule.nrexcl
+    except AttributeError:
+        graph_out.nrexcl = None
+
     old_to_new_idxs = {}
     at_idx = 0
     for res_idx in residue_graph:
@@ -26,6 +33,15 @@ def apply_blocks(molecule, blocks):
         resname = residue['resname']
         block = blocks[resname]
         atname_to_idx = {}
+
+        if graph_out.nrexcl is None:
+            if hasattr(block, 'nrexcl'):
+                graph_out.nrexcl = block.nrexcl
+        else:
+            if (hasattr(block, 'nrexcl')
+                    and block.nrexcl is not None
+                    and block.nrexcl != graph_out.nrexcl):
+                raise ValueError('Not all blocks share the same value for "nrexcl".')
 
         for block_idx in block:
             atname = block.nodes[block_idx]['atomname']

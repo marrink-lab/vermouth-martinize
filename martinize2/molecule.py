@@ -27,11 +27,15 @@ class Molecule(nx.Graph):
 
     @property
     def force_field(self):
-        # The force field is assumed to be consistent for all the molecules of
-        # a system. While it is possible to reassign Molecule._force_field, it
-        # is recommended to assign the force field at the system level as
-        # reassigning System.force_field will propagate the change to all the
-        # molecules in that system.
+        """
+        The force field the molecule is described for.
+
+        The force field is assumed to be consistent for all the molecules of
+        a system. While it is possible to reassign
+        :attr:`Molecule._force_field`, it is recommended to assign the force
+        field at the system level as reassigning :attr:`System.force_field`
+        will propagate the change to all the molecules in that system.
+        """
         return self._force_field
 
     @property
@@ -130,6 +134,11 @@ class Molecule(nx.Graph):
 
         for edge in molecule.edges:
             self.add_edge(*(correspondence[node] for node in edge))
+
+    def share_moltype_with(self, other):
+        # TODO: Test the node attributes, the molecule attributes, and
+        # the interactions.
+        return nx.is_isomorphic(self, other)
 
 
 class Block(nx.Graph):
@@ -301,6 +310,11 @@ class Block(nx.Graph):
                 )
         for edge in self.edges:
             mol.add_edge(*(name_to_idx[node] for node in edge))
+
+        try:
+            mol.nrexcl = self.nrexcl
+        except AttributeError:
+            pass
 
         return mol
 

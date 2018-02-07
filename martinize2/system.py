@@ -28,3 +28,9 @@ class System:
     @property
     def num_particles(self):
         return sum(len(mol) for mol in self.molecules)
+
+    def copy(self):
+        new_system = self.__class__()
+        new_system._force_field = self.force_field
+        new_system.molecules = [mol.copy() for mol in self.molecules]
+        return new_system

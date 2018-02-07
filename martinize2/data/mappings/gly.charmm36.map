@@ -1,0 +1,17 @@
+[ molecule ]
+GLY
+
+[ martini ]
+BB
+
+[ mapping ]
+charmm27 charmm36
+
+[ atoms ]
+    1     N    BB
+    2    HN    BB
+    3    CA    BB
+    4   HA1    BB
+    5   HA2    BB
+    9     C    BB
+   10     O    BB
