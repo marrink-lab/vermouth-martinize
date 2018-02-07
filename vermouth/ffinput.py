@@ -358,13 +358,18 @@ def _base_parser(tokens, context, context_type, section, natoms=None):
 
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
-    # are the interaction parameters.
+    # are the interaction parameters or the meta attributes.
+    if tokens[-1].startswith('{'):
+        token = tokens.pop()
+        meta = json.loads(token)
+    else:
+        meta = {}
     parameters = list(tokens)
 
     interaction = Interaction(
         atoms=[atom[0] for atom in atoms],
         parameters=parameters,
-        meta={},
+        meta=meta,
     )
     interaction_list = context.interactions.get(section, [])
     interaction_list.append(interaction)
