@@ -114,9 +114,14 @@ def write_molecule_itp(molecule, outfile):
     # Write the interactions
     for name, interactions in molecule.interactions.items():
         outfile.write('[ {} ]\n'.format(name))
-        interactions_sorted = sorted(interactions, key=lambda x: 1 if 'group' in x.meta else 0)
-        interaction_grouped = itertools.groupby(interactions_sorted,
-                                                key=lambda x: x.meta.get('group'))
+        interactions_group_sorted = sorted(
+            interactions,
+            key=lambda x: '' if x.meta.get('group') is None else x.meta['group']
+        )
+        interaction_grouped = itertools.groupby(
+            interactions_group_sorted,
+            key=lambda x: x.meta.get('group')
+        )
         for group, interactions_in_group in interaction_grouped:
             if group is not None:
                 outfile.write('; {}\n'.format(group))
