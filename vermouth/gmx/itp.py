@@ -17,6 +17,7 @@ Handle the ITP file format from Gromacs.
 """
 
 import copy
+import itertools
 
 __all__ = ['write_molecule_itp', ]
 
@@ -113,14 +114,20 @@ def write_molecule_itp(molecule, outfile):
     # Write the interactions
     for name, interactions in molecule.interactions.items():
         outfile.write('[ {} ]\n'.format(name))
-        for interaction in interactions:
-            atoms = ' '.join('{atom_idx:>{max_length[idx]}}'
-                             .format(atom_idx=correspondence[x],
-                                     max_length=max_length)
-                             for x in interaction.atoms)
-            parameters = ' '.join(str(x) for x in interaction.parameters)
-            comment = ''
-            if 'comment' in interaction.meta:
-                comment = '; ' + interaction.meta['comment']
-            outfile.write(' '.join((atoms, parameters, comment)) + '\n')
-        outfile.write('\n')
+        interactions_sorted = sorted(interactions, key=lambda x: 1 if 'group' in x.meta else 0)
+        interaction_grouped = itertools.groupby(interactions_sorted,
+                                                key=lambda x: x.meta.get('group'))
+        for group, interactions_in_group in interaction_grouped:
+            if group is not None:
+                outfile.write('; {}\n'.format(group))
+            for interaction in interactions_in_group:
+                atoms = ' '.join('{atom_idx:>{max_length[idx]}}'
+                                 .format(atom_idx=correspondence[x],
+                                         max_length=max_length)
+                                 for x in interaction.atoms)
+                parameters = ' '.join(str(x) for x in interaction.parameters)
+                comment = ''
+                if 'comment' in interaction.meta:
+                    comment = '; ' + interaction.meta['comment']
+                outfile.write(' '.join((atoms, parameters, comment)) + '\n')
+            outfile.write('\n')
