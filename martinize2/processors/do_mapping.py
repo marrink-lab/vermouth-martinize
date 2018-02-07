@@ -13,6 +13,7 @@ from ..graph_utils import make_residue_graph
 
 from collections import defaultdict
 from itertools import product
+import os
 
 import networkx.algorithms.isomorphism as iso
 import numpy as np
@@ -72,20 +73,19 @@ class GraphMapping:
         # There are edges missing in both from_blocks and to_blocks (c0-A1, and
         # B0-C1 and A1-B2; respectively). There's enough information in the
         # "other" block to create those, so that's what we do.        
-
-        for to_idx, to_jdx in self.block_to.edges():
-            self.block_from.add_edges_from(product(self.mapping[to_idx],
-                                                   self.mapping[to_jdx]))
+        #for to_idx, to_jdx in self.block_to.edges():
+        #    self.block_from.add_edges_from(product(self.mapping[to_idx],
+        #                                           self.mapping[to_jdx]))
             # e.g. for edge B0-C1 this is:
             # add_edges_from(product([(0, b)], [(0, c)])); which is the same as
             # add_edges_from(((0, b), (0, c)))
         # Cache the reverse map for a while. Maybe that means it shouldn't be
         # a property...
-        reverse_map = self.reverse_mapping
+        #reverse_map = self.reverse_mapping
         # This loop does the same as the one above, but in the other direction.
-        for from_idx, from_jdx in self.block_from.edges():
-            self.block_to.add_edges_from(product(reverse_map[from_idx],
-                                                 reverse_map[from_jdx]))
+        #for from_idx, from_jdx in self.block_from.edges():
+        #    self.block_to.add_edges_from(product(reverse_map[from_idx],
+        #                                         reverse_map[from_jdx]))
 
     @classmethod
     def _merge(cls, blocks):
@@ -112,11 +112,22 @@ class GraphMapping:
         return reverse_mapping
 
 
-def get_mapping(resname):
-    return MAPPING[resname]
+def build_graph_mapping_collection(from_ff, to_ff, mappings):
+    graph_mapping_collection = {}
+    pair_mapping = mappings[from_ff.name][to_ff.name]
+    for name in from_ff.blocks.keys():
+        if name in to_ff.blocks and name in pair_mapping:
+            graph_mapping_collection[name] = GraphMapping(
+                [from_ff.blocks[name], ],
+                [to_ff.blocks[name], ],
+                pair_mapping[name]
+            )
+    return graph_mapping_collection
 
 
-def do_mapping(molecule):
+def do_mapping(molecule, mappings, to_ff):
+    pair_mapping = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
+
     residue_graph = make_residue_graph(molecule)
     graph_out = Molecule()
     bead_idx = 0
@@ -125,14 +136,18 @@ def do_mapping(molecule):
     for res_node_idx in residue_graph:
         residue = residue_graph.nodes[res_node_idx]
         graph = residue['graph']
-        mapping = get_mapping(residue['resname'])
+        mapping = pair_mapping[residue['resname']]
 
         # Atomnames must match
         node_match = iso.categorical_node_match('atomname', '')
         graphmatcher = iso.GraphMatcher(mapping.block_from, graph, node_match=node_match)
 
         matches = list(graphmatcher.isomorphisms_iter())
-        assert len(matches) == 1
+        if len(matches) != 1:
+            msg = ('Not one match ({}) for residue {}:{}.'
+                   .format(len(matches), residue['resname'], res_node_idx))
+            raise KeyError(msg)
+
         match = matches[0]
 
         mapped_match = {}
@@ -185,21 +200,32 @@ def do_mapping(molecule):
                     graph_out.add_edge(bd_idx, bd_jdx)
                     break  # On to the combination of beads
 
+    graph_out._force_field = to_ff
     return graph_out
 
 
-# FIXME: fixed path
-RTP_PATH = 'aminoacids.rtp'
-with open(RTP_PATH) as rtp:
-    blocks, links = read_rtp(rtp)
-
-MAPPING = {}
-for resname, block in blocks.items():
-    mapping = {(0, attrs['atomname']): [(0, attrs['atomname']),] for attrs in block.atoms}
-    MAPPING[resname] = GraphMapping([block], [block], mapping)
-MAPPING['HIS'] = MAPPING['HSD']
-
-
 class DoMapping(Processor):
+    def __init__(self, mappings, to_ff, delete_unknown=False):
+        self.mappings = mappings
+        self.to_ff = to_ff
+        self.delete_unknown = delete_unknown
+        super().__init__()
+
     def run_molecule(self, molecule):
-        return do_mapping(molecule)
+        return do_mapping(molecule, mappings=self.mappings, to_ff=self.to_ff)
+
+    def run_system(self, system):
+        mols = []
+        for molecule in system.molecules:
+            try:
+                new_molecule = self.run_molecule(molecule)
+            except KeyError as err:
+                if not self.delete_unknown:
+                    raise err
+                else:
+                    # TODO: raise a loud warning here
+                    pass
+            else:
+                mols.append(new_molecule)
+        system.molecules = mols
+        system.force_field = self.to_ff

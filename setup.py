@@ -9,6 +9,6 @@ def package_files(directory):
             paths.append(os.path.join('..', path, filename))
     return paths
 
-setup(package_data={'': package_files('martinize2/mapping')},
+setup(package_data={'': package_files('martinize2/data'),},
       setup_requires=['setuptools>=30.3.0'])
 

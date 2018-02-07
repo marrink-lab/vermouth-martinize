@@ -279,6 +279,9 @@ def _complete_block(block, bondedtypes):
         for interaction in interactions:
             interaction.parameters.insert(0, functypes[name])
 
+    # Set the nrexcl to the block.
+    block.nrexcl = bondedtypes.nrexcl
+
 
 def _split_blocks_and_links(pre_blocks):
     """
@@ -345,6 +348,10 @@ def _split_block_and_link(pre_block):
     link.interactions = collections.defaultdict(list)
 
     block.name = pre_block.name
+    try:
+        block.nrexcl = pre_block.nrexcl
+    except AttributeError:
+        pass
 
     # Filter the particles from neighboring residues out of the block.
     for atom in pre_block.atoms:

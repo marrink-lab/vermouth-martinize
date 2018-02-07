@@ -190,7 +190,6 @@ def update_reference(reference, found, residue_ptms):
     # We modified reference, so return None.
     return None
 
-
 def make_reference(mol):
     """
     Takes an molecule graph (e.g. as read from a PDB file), and finds and
@@ -242,7 +241,7 @@ def make_reference(mol):
         chain = residues.node[residx]['chain']
         # print("{}{}".format(resname, resid), flush=True)
         residue = residues.node[residx]['graph']
-        reference = read_reference_graph(resname)
+        reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
         add_element_attr(residue)
         # Assume reference >= residue
@@ -496,8 +495,27 @@ def repair_graph(molecule, reference_graph):
 
 
 class RepairGraph(Processor):
+    def __init__(self, delete_unknown=False):
+        super().__init__()
+        self.delete_unknown = delete_unknown
+
     def run_molecule(self, molecule):
         molecule = molecule.copy()
         reference_graph = make_reference(molecule)
-        repair_graph(molecule, reference_graph)
-        return molecule
+        mol = repair_graph(molecule, reference_graph)
+        return mol
+
+    def run_system(self, system):
+        mols = []
+        for molecule in system.molecules:
+            try:
+                new_molecule = self.run_molecule(molecule)
+            except KeyError as err:
+                if not self.delete_unknown:
+                    raise err
+                else:
+                    # TODO: raise a loud warning here
+                    pass
+            else:
+                mols.append(new_molecule)
+        system.molecules = mols

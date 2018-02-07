@@ -17,7 +17,14 @@ from itertools import product
 
 def apply_blocks(molecule, blocks):
     residue_graph = make_residue_graph(molecule)
-    graph_out = Molecule()
+    graph_out = Molecule(force_field=molecule.force_field)
+
+    # nrexcl may not be defined, but if it is we probably want to keep it
+    try:
+        graph_out.nrexcl = molecule.nrexcl
+    except AttributeError:
+        graph_out.nrexcl = None
+
     old_to_new_idxs = {}
     at_idx = 0
     for res_idx in residue_graph:
@@ -27,10 +34,19 @@ def apply_blocks(molecule, blocks):
         block = blocks[resname]
         atname_to_idx = {}
 
+        if graph_out.nrexcl is None:
+            if hasattr(block, 'nrexcl'):
+                graph_out.nrexcl = block.nrexcl
+        else:
+            if (hasattr(block, 'nrexcl')
+                    and block.nrexcl is not None
+                    and block.nrexcl != graph_out.nrexcl):
+                raise ValueError('Not all blocks share the same value for "nrexcl".')
+
         for block_idx in block:
             atname = block.nodes[block_idx]['atomname']
             atom = list(res_graph.find_atoms(atomname=atname))
-            assert len(atom) == 1
+            assert len(atom) == 1, (block.name, atname, atom)
             old_to_new_idxs[atom[0]] = at_idx
             atname_to_idx[atname] = at_idx
             attrs = molecule.nodes[atom[0]]
@@ -67,14 +83,7 @@ def apply_blocks(molecule, blocks):
     return graph_out
 
 
-# FIXME: static path
-RTP_PATH = '/usr/local/gromacs-2016.3/share/gromacs/top/charmm27.ff/aminoacids.rtp'
-
 
 class ApplyBlocks(Processor):
     def run_molecule(self, molecule):
-        with open(RTP_PATH) as rtp:
-            blocks, links = read_rtp(rtp)
-        # FIXME: This is a problem of blocks, not ours.
-        blocks['HIS'] = blocks['HSD']
-        return apply_blocks(molecule, blocks)
+        return apply_blocks(molecule, molecule.force_field.blocks)

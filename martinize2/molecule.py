@@ -21,8 +21,22 @@ class Molecule(nx.Graph):
     node_dict_factory = OrderedDict
 
     def __init__(self, *args, **kwargs):
+        self._force_field = kwargs.pop('force_field', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
+
+    @property
+    def force_field(self):
+        """
+        The force field the molecule is described for.
+
+        The force field is assumed to be consistent for all the molecules of
+        a system. While it is possible to reassign
+        :attr:`Molecule._force_field`, it is recommended to assign the force
+        field at the system level as reassigning :attr:`System.force_field`
+        will propagate the change to all the molecules in that system.
+        """
+        return self._force_field
 
     @property
     def atoms(self):
@@ -33,7 +47,8 @@ class Molecule(nx.Graph):
     def copy(self, as_view=False):
         copy = super().copy(as_view)
         if not as_view:
-            return self.__class__(copy)
+            copy = self.__class__(copy)
+        copy._force_field = self.force_field
         return copy
 
     def subgraph(self, *args, **kwargs):
@@ -88,6 +103,10 @@ class Molecule(nx.Graph):
         Atom and residue index of the new atoms are offset to follow the last
         atom of this molecule.
         """
+        if self.force_field != molecule.force_field:
+            raise ValueError(
+                'Cannot merge molecules with different force fields.'
+            )
         if len(self.nodes()):
             # We assume that the last id is always the largest.
             last_node_idx = max(self) 
@@ -115,6 +134,11 @@ class Molecule(nx.Graph):
 
         for edge in molecule.edges:
             self.add_edge(*(correspondence[node] for node in edge))
+
+    def share_moltype_with(self, other):
+        # TODO: Test the node attributes, the molecule attributes, and
+        # the interactions.
+        return nx.is_isomorphic(self, other)
 
 
 class Block(nx.Graph):
@@ -286,6 +310,11 @@ class Block(nx.Graph):
                 )
         for edge in self.edges:
             mol.add_edge(*(name_to_idx[node] for node in edge))
+
+        try:
+            mol.nrexcl = self.nrexcl
+        except AttributeError:
+            pass
 
         return mol
 
