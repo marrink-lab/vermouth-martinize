@@ -366,6 +366,10 @@ def _base_parser(tokens, context, context_type, section, natoms=None):
         meta = {}
     parameters = list(tokens)
 
+    apply_to_all_interactions = {}
+    if hasattr(context, '_apply_to_all_interactions'):
+        apply_to_all_interactions = context._apply_to_all_interactions[section]
+    meta = dict(collections.ChainMap(meta, apply_to_all_interactions))
     interaction = Interaction(
         atoms=[atom[0] for atom in atoms],
         parameters=parameters,
@@ -408,6 +412,19 @@ def _parse_link_attribute(tokens, context):
     if '|' in value:
         value = Choice(value.split('|'))
     context._apply_to_all_nodes[key] = value
+
+
+def _parse_meta(tokens, context, context_type, section):
+    if len(tokens) > 2:
+        msg = 'Unexpected column when defining meta attributes for section "{}" of a {}.'
+        raise IOError(msg.format(section, context_type))
+    elif len(tokens) < 2:
+        msg = 'Missing column when defining meta attributes for section "{}" of a {}.'
+        raise IOError(msg.format(section, context_type))
+    if not hasattr(context, '_apply_to_all_interactions'):
+        context._apply_to_all_interactions = collections.defaultdict(dict)
+    attributes = json.loads(tokens[-1])
+    context._apply_to_all_interactions[section].update(attributes)
 
 
 def read_ff(lines):
@@ -456,6 +473,8 @@ def read_ff(lines):
             _parse_link_attribute(tokens, context)
         elif section == 'atoms':
             _parse_atom(cleaned, context)
+        elif tokens[0] == '#meta':
+            _parse_meta(tokens, context, context_type, section)
         else:
             natoms = interactions_natoms.get(section)
             try:

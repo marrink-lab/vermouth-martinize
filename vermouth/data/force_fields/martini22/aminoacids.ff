@@ -49,6 +49,7 @@ CYS                1
  2   C5     1   CYS    SC1    2      0     
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.31     7500        
 
@@ -81,6 +82,7 @@ LEU                1
  2   AC1  1     LEU     SC1    2      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.33     7500    
 
@@ -113,6 +115,7 @@ MET                1
  2   C5   1     MET     SC1    2      0     
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     2500
 
@@ -129,6 +132,7 @@ PRO                1
  2   C3   1     PRO     SC1    2      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
   1     2    1       0.30     7500
 
@@ -145,6 +149,7 @@ ASN                1
  2   P5    1     ASN     SC1    2      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     5000
 
@@ -161,6 +166,7 @@ GLN                1
  2   P4    1     GLN     SC1    2      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     5000     
 
@@ -177,6 +183,7 @@ ASP                1
  2   Qa     1     ASP     SC1    2   -1.0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     7500
 
@@ -193,6 +200,7 @@ ASP0               1
  2   P3     1     ASP0    SC1    2      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     7500
 
@@ -209,6 +217,7 @@ GLU                1
  2   Qa     1     GLU     SC1    2   -1.0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     5000     
 
@@ -225,6 +234,7 @@ GLU0               1
  2   P1     1     GLU0    SC1    2      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     5000    
 
@@ -257,6 +267,7 @@ SER                1
 2   P1     1    SER     SC1    2      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.25     7500
 
@@ -274,11 +285,13 @@ LYS                1
  3   Qd    1     LYS     SC2    3    1.0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.33     5000      
    2     3    1       0.28     5000  
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
 
@@ -296,11 +309,13 @@ LYS0               1
  3   P1    1     LYS     SC2    3      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.33     5000      
    2     3    1       0.28     5000  
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
 
@@ -318,11 +333,13 @@ ARG                1
 3   Qd     1     ARG     SC2    3    1.0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.33     5000   
    2     3    1       0.34     5000  
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
 
@@ -340,11 +357,13 @@ ARG0               1
 3   P4     1     ARG0    SC2    3      0    
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.33     5000       
    2     3    1       0.34     5000     
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
 
@@ -363,6 +382,7 @@ HIS                1
 4   SP1    1     HIS     SC3    4    0    ; ring structure
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     7500 
 
@@ -373,6 +393,7 @@ HIS                1
    3     4    1       0.27  
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   150.000   50.0  
     1     2    4       2   150.000   50.0 
@@ -395,6 +416,7 @@ HISH               1
 4   SQd    1     HIS     SC3    4   1.0   ; ring structure
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     7500 
 
@@ -405,6 +427,7 @@ HISH               1
    3     4    1       0.27  
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   150.000   50.0  
     1     2    4       2   150.000   50.0 
@@ -428,6 +451,7 @@ PHE                1
 4   SC5    1     PHE     SC3    4    0    ; ring structure
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.31     7500 	
 
@@ -438,6 +462,7 @@ PHE                1
    3     4    1       0.27   
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   150.000   50.0  
     1     2    4       2   150.000   50.0 
@@ -461,6 +486,7 @@ TYR                1
 4   SP1    1     TYR     SC3    4    0  
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     5000 	
 
@@ -471,6 +497,7 @@ TYR                1
    3     4    1       0.27   
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   150.000   50.0  
     1     2    4       2   150.000   50.0 
@@ -495,6 +522,7 @@ TRP                1
 5   SC5      1     TRP     SC4    5    0
 
 [bonds]
+#meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.30     5000 	
 
@@ -507,6 +535,7 @@ TRP                1
    4     5    1       0.27   
 
 [angles]
+#meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
    1     2    3       2   210.000   50.0 
    1     2    4       2   90.000    50.0  
@@ -523,7 +552,17 @@ TRP                1
 resname $protein_resnames
 
 [ bonds ]
-BB +BB 1 0.350 1250
+BB +BB 1 0.350 1250 {"group": "Backbone bonds"}
+
+[ link ]
+resname $protein_resnames
 
 [ angles ]
--BB  BB  SC1  2 100 25
+-BB BB +BB 2 119.2 150 {"group": "BBB angles"}
+-BB  BB  SC1  2 100 25 {"group": "BBS angles"}
+
+;[ link ]
+;resname $protein_resnames
+;
+;[ dihedrals ]
+;-BB BB +BB ++BB 1 90.7 100
