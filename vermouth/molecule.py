@@ -251,7 +251,7 @@ class Block(nx.Graph):
         The known interactions are bonds, angles, proper dihedral angles, and
         cmap torsions.
         """
-        known_types = ('bonds', 'angles', 'dihedrals', 'cmap')
+        known_types = ('bonds', 'angles', 'dihedrals', 'cmap', 'constraints')
         for type_ in known_types:
             self.make_edges_from_interaction_type(type_)
 
