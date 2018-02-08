@@ -15,3 +15,4 @@ from .do_links import DoLinks
 from .apply_blocks import ApplyBlocks
 from .average_beads import DoAverageBead
 from .apply_posres import ApplyPosres
+from .canonize_PTMs import CanonizePTMs
