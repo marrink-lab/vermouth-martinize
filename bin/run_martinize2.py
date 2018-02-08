@@ -48,6 +48,7 @@ else:
     raise RuntimeError
 MakeBonds().run_system(system)
 RepairGraph().run_system(system)
+CanonizePTMs().run_system(system)
 DoMapping().run_system(system)
 ApplyBlocks().run_system(system)
 DoLinks().run_system(system)
