@@ -39,7 +39,7 @@ class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
 
 def _atoms_match(node1, node2):
     for attr in node2:
-        if attr == 'order':
+        if attr in ['order', 'replace']:
             continue
         if isinstance(node2[attr], Choice):
             if node1.get(attr, None) not in node2[attr]:
@@ -108,6 +108,10 @@ class DoLinks(Processor):
         for link in links:
             matches = match_link(molecule, link)
             for match in matches:
+                for node, node_attrs in link.nodes.items():
+                    if 'replace' in node_attrs:
+                        node_mol = molecule.nodes[match[node]]
+                        node_mol.update(node_attrs['replace'])
                 for inter_type, params in link.interactions.items():
                     for param in params:
                         param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))
