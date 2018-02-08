@@ -29,29 +29,55 @@ import networkx as nx
 
 
 class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
-    def semantic_feasibility(self, node1, node2):
+    def semantic_feasibility(self, node1_name, node2_name):
         # TODO: implement (partial) wildcards
         # Node2 is the link
-        node1 = self.G1.nodes[node1]
-        node2 = self.G2.nodes[node2]
-        for attr in node2:
-            if attr == 'order':
-                continue
-            if isinstance(node2[attr], Choice):
-                if node1.get(attr, None) not in node2[attr]:
-                    return False
-            elif node1.get(attr, None) != node2[attr]:
+        node1 = self.G1.nodes[node1_name]
+        node2 = self.G2.nodes[node2_name]
+        return _atoms_match(node1, node2)
+
+
+def _atoms_match(node1, node2):
+    for attr in node2:
+        if attr == 'order':
+            continue
+        if isinstance(node2[attr], Choice):
+            if node1.get(attr, None) not in node2[attr]:
                 return False
-        else:
-            return True
+        elif node1.get(attr, None) != node2[attr]:
+            return False
+    else:
+        return True
 
 
+def _is_valid_non_edges(molecule, link, raw_match):
+    for from_node, to_node_attrs in link.non_edges:
+        if from_node not in link:
+            continue
+        rev_raw_match = {value: key for key, value in raw_match.items()}
+        from_mol_node_name = rev_raw_match[from_node]
+        from_mol = molecule.nodes[from_mol_node_name]
+        from_link = link.nodes[from_node]
+        from_resid = from_mol['resid']
+        from_order = from_link.get('order', 0)
+        for neighbor in molecule.neighbors(from_mol_node_name):
+            to_mol = molecule.nodes[neighbor]
+            to_link = to_node_attrs
+            to_resid = to_mol['resid']
+            to_order = to_link.get('order', 0)
+            if to_resid == from_resid + to_order and _atoms_match(to_mol, to_link):
+                return False
+    return True
+
+        
 def match_link(molecule, link):
     GM = LinkGraphMatcher(molecule, link)
 
     raw_matches = GM.subgraph_isomorphisms_iter()
     for raw_match in raw_matches:
         # mol -> link
+        if not _is_valid_non_edges(molecule, link, raw_match):
+            continue
         order_match = {}
         for mol_idx, link_idx in raw_match.items():
             mol_node = molecule.nodes[mol_idx]

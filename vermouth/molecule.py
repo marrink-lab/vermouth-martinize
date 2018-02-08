@@ -343,6 +343,10 @@ class Link(Block):
     """
     node_dict_factory = OrderedDict
 
+    def __init__(self):
+        super().__init__()
+        self.non_edges = []
+
 
 if __name__ == '__main__':
     mol = Molecule()
