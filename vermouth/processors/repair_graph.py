@@ -165,8 +165,8 @@ def repair_residue(molecule, ref_residue):
     while missing and added:
         added = False
         for ref_idx in missing:
-            # See if the atom we want to add has a neighbour for which we know
-            # the position. Otherwise, continue to the next.
+            # See if the atom we want to add has a known neighbour. Otherwise,
+            # continue to the next.
             if all(ref_neighbour in missing for ref_neighbour in reference[ref_idx]):
                 continue
             added = True
@@ -207,8 +207,8 @@ def repair_residue(molecule, ref_residue):
 def repair_graph(molecule, reference_graph):
     """
     Repairs a molecule graph produced based on the
-    information in ``reference_graph``. Missing atoms will be reconstructed and
-    atom- and residue names will be canonicalized.
+    information in ``reference_graph``. Missing atoms will be added and atom-
+    and residue names will be canonicalized.
 
     Parameters
     ----------
@@ -250,6 +250,8 @@ def repair_graph(molecule, reference_graph):
         # no match in the reference graph.
         # `atachments` is a set of the nodes from `found` that have a match in
         # the reference and are connected to a node from `extra`.
+        # We just stick a label on them for now, these are used by the PTM
+        # processor.
         extra = set(found.nodes) - set(match.values())
         for idx in extra:
             molecule.nodes[idx]['PTM_atom'] = True
