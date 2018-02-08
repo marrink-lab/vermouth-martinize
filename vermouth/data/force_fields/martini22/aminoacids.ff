@@ -559,7 +559,22 @@ resname $protein_resnames
 
 [ angles ]
 -BB BB +BB 2 119.2 150 {"group": "BBB angles"}
+
+[ link ]
+resname $protein_resnames
+
+[ angles ]
 -BB  BB  SC1  2 100 25 {"group": "BBS angles"}
+
+[ link ]
+resname $protein_resnames
+
+[ angles ]
+#meta {"group": "First SBB"}
+SC1 BB +BB 2 100 25
+
+[ non-edges ]
+BB -BB
 
 ;[ link ]
 ;resname $protein_resnames

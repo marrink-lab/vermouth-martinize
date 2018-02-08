@@ -265,52 +265,60 @@ def _treat_block_interaction_atoms(atoms, context, section):
                 raise IOError(msg.format(reference, section, block.name))
 
 
+def _treat_atom_prefix(reference, attributes):
+    # If the atom name is prefixed, we can get the order.
+    for prefix_end, char in enumerate(reference):
+        if char not in '+-':
+            break
+    prefix = reference[:prefix_end]
+    if len(set(prefix)) > 1:
+        msg = ('Atom name prefix cannot mix + and -. Atom name "{}" '
+               'is not a valid name in section "{}" of a link.')
+        raise IOError(msg.format(reference, section))
+    
+    factors = {'+': +1, '-': -1}
+    # If there is no prefix, then `prefix[0]` does not exist. There
+    # should, however, always be a `reference[0]` that will be the
+    # same as `prefix[0]` is there is a prefix, and not an existing
+    # key in `factors` if there is none. So order is 0 * 0 if there
+    # is no prefix, which is what we expect.
+    order_prefix = factors.get(reference[0], 0) * len(prefix)
+
+    order_attribute = attributes.get('order', 0)
+    # If the order read from the prefix is 0, then it may just be that
+    # the order was not specified by prefix, but only by atom attribute.
+    # If the order is not defined in the attributes, it is assumed to
+    # be as set by the prefix.
+    # If the order is defined in both places, it has to match.
+    if (order_prefix and 'order' in attributes) and order_prefix != order_attribute:
+        msg = ('The sequence order for atom "{}" in section "{}" of a '
+               'link is not consistent between the name prefix '
+               '(order={}) and the atom attributes (order={}).')
+        raise IOError(msg.format(reference, section,
+                                 order_prefix, order_attribute))
+    if 'order' not in attributes:
+        order_attribute = order_prefix
+        attributes['order'] = order_attribute
+
+    # When possible, we favor the prefixed name for references to nodes
+    prefix_symbol = '+'
+    if order_attribute < 0:
+        prefix_symbol = '-'
+    atom_name = reference[prefix_end:]
+    attributes['atomname'] = atom_name
+    prefixed_reference = prefix_symbol * int(math.fabs(order_attribute)) + atom_name
+
+    return prefixed_reference, atom_name, attributes
+
+
 def _treat_link_interaction_atoms(atoms, context, section):
     for reference, attributes in atoms:
         if hasattr(context, '_apply_to_all_nodes'):
             intermediate = context._apply_to_all_nodes.copy()
             intermediate.update(attributes)
             attributes = intermediate
-        # If the atom name is prefixed, we can get the order.
-        for prefix_end, char in enumerate(reference):
-            if char not in '+-':
-                break
-        prefix = reference[:prefix_end]
-        if len(set(prefix)) > 1:
-            msg = ('Atom name prefix cannot mix + and -. Atom name "{}" '
-                   'is not a valid name in section "{}" of a link.')
-            raise IOError(msg.format(reference, section))
-        
-        factors = {'+': +1, '-': -1}
-        # If there is no prefix, then `prefix[0]` does not exist. There
-        # should, however, always be a `reference[0]` that will be the
-        # same as `prefix[0]` is there is a prefix, and not an existing
-        # key in `factors` if there is none. So order is 0 * 0 if there
-        # is no prefix, which is what we expect.
-        order_prefix = factors.get(reference[0], 0) * len(prefix)
 
-        order_attribute = attributes.get('order', 0)
-        # If the order read from the prefix is 0, then it may just be that
-        # the order was not specified by prefix, but only by atom attribute.
-        # If the order is not defined in the attributes, it is assumed to
-        # be as set by the prefix.
-        # If the order is defined in both places, it has to match.
-        if (order_prefix and 'order' in attributes) and order_prefix != order_attribute:
-            msg = ('The sequence order for atom "{}" in section "{}" of a '
-                   'link is not consistent between the name prefix '
-                   '(order={}) and the atom attributes (order={}).')
-            raise IOError(msg.format(reference, section,
-                                     order_prefix, order_attribute))
-        if 'order' not in attributes:
-            order_attribute = order_prefix
-            attributes['order'] = order_attribute
-
-        # When possible, we favor the prefixed name for references to nodes
-        prefix_symbol = '+'
-        if order_attribute < 0:
-            prefix_symbol = '-'
-        atom_name = reference[prefix_end:]
-        prefixed_reference = prefix_symbol * int(math.fabs(order_attribute)) + atom_name
+        prefixed_reference, atom_name, attributes = _treat_atom_prefix(reference, attributes)
 
         if prefixed_reference in context:
             context_atom = context.nodes[prefixed_reference]
@@ -329,7 +337,6 @@ def _treat_link_interaction_atoms(atoms, context, section):
 
 
 def _base_parser(tokens, context, context_type, section, natoms=None):
-
     delimiter_count = tokens.count('--')
     if delimiter_count > 1:
         msg = 'There can be 0 or 1 "--" delimiter; {} found.'
@@ -427,6 +434,22 @@ def _parse_meta(tokens, context, context_type, section):
     context._apply_to_all_interactions[section].update(attributes)
 
 
+def _parse_non_edges(tokens, context, context_type):
+    if context_type != 'link':
+        raise IOError('The "non-edges" section is only valid in links.')
+    atoms = _get_atoms(tokens, natoms=2)
+    prefixed_atoms = []
+    for atom in atoms:
+        prefixed_reference, _, attributes = _treat_atom_prefix(*atom)
+        try:
+            apply_to_all_nodes = context._apply_to_all_nodes
+        except AttributeError:
+            apply_to_all_nodes = {}
+        full_attributes = dict(collections.ChainMap(attributes, apply_to_all_nodes))
+        prefixed_atoms.append([prefixed_reference, full_attributes])
+    context.non_edges.append([prefixed_atoms[0][0], prefixed_atoms[1][1]])
+
+
 def read_ff(lines):
     interactions_natoms = {
         'bonds': 2,
@@ -473,6 +496,8 @@ def read_ff(lines):
             _parse_link_attribute(tokens, context)
         elif section == 'atoms':
             _parse_atom(cleaned, context)
+        elif section == 'non-edges':
+            _parse_non_edges(tokens, context, context_type)
         elif tokens[0] == '#meta':
             _parse_meta(tokens, context, context_type, section)
         else:
