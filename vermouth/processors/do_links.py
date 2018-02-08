@@ -115,5 +115,5 @@ class DoLinks(Processor):
                 for inter_type, params in link.interactions.items():
                     for param in params:
                         param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))
-                        molecule.add_interaction(inter_type, *param)
+                        molecule.add_or_replace_interaction(inter_type, *param)
         return molecule

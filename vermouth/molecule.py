@@ -83,15 +83,31 @@ class Molecule(nx.Graph):
             Interaction(atoms=tuple(atoms), parameters=parameters, meta=meta)
         )
 
+    def add_or_replace_interaction(self, type_, atoms, parameters, meta=None):
+        if meta is None:
+            meta = {}
+        for idx, interaction in enumerate(self.interactions[type_]):
+            if (interaction.atoms == tuple(atoms)
+                    and interaction.meta.get('version', 0) == meta.get('version', 0)):
+                new_interaction = Interaction(
+                    atoms=tuple(atoms), parameters=parameters, meta=meta,
+                )
+                self.interactions[type_][idx] = new_interaction
+                break
+        else:  # no break
+            self.add_interaction(type_, atoms, parameters, meta)
+
     def get_interaction(self, type_):
         return self.interactions[type_]
 
-    def remove_interaction(self, type_, atoms):
+    def remove_interaction(self, type_, atoms, version=0):
         for idx, interaction in enumerate(self.interactions[type_]):
-            if interaction.atoms == atoms:
+            if interaction.atoms == atoms and interaction.meta.get('version', 0):
                 break
         else:  # no break
-            raise KeyError("Can't find interaction of type {} between atoms {}".format(type_, atoms))
+            msg = ("Can't find interaction of type {} between atoms {} "
+                   "and with version {}")
+            raise KeyError(msg.format(type_, atoms, version))
         del self.interactions[type_][idx]
 
     def find_atoms(self, **attrs):
