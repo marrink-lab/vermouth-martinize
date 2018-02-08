@@ -284,7 +284,10 @@ def _treat_atom_prefix(reference, attributes):
     # is no prefix, which is what we expect.
     order_prefix = factors.get(reference[0], 0) * len(prefix)
 
-    order_attribute = attributes.get('order', 0)
+    try:
+        order_attribute = attributes.get('order', 0)
+    except AttributeError as e:
+        raise e
     # If the order read from the prefix is 0, then it may just be that
     # the order was not specified by prefix, but only by atom attribute.
     # If the order is not defined in the attributes, it is assumed to
@@ -387,7 +390,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None):
     context.interactions[section] = interaction_list
 
 
-def _parse_atom(line, context):
+def _parse_block_atom(line, context):
     _, atype, _, resname, name, charge_group, charge = line.split()
     atom = {
         'atomname': name,
@@ -397,6 +400,29 @@ def _parse_atom(line, context):
         'charge_group': int(charge_group),
     }
     context.add_atom(atom)
+
+
+def _parse_link_atom(tokens, context):
+    if len(tokens) > 2:
+        raise IOError('Unexpected column in link atom definition.')
+    elif len(tokens) < 2:
+        raise IOError('Missing column in link atom definition.')
+    reference = tokens[0]
+    attributes = _parse_atom_attributes(tokens[1])
+    prefixed_reference, _, attributes = _treat_atom_prefix(reference, attributes)
+    node_attributes = context.nodes.get(prefixed_reference, {})
+    for attr, value in attributes.items():
+        if value != node_attributes.get(attr, value):
+            msg = ('Conflict in an atom attributes in the definition of a '
+                   'link node. Cannot set the attribute "{}" of atom "{}" '
+                   'to "{}" because it is already defined as "{}".')
+            raise IOError(msg.format(attr, reference, value,
+                                     node_attributes[node_attributes[attr]]))
+    full_attributes = dict(collections.ChainMap(attributes, node_attributes))
+    if prefixed_reference in context.nodes:
+        context.nodes[prefixed_reference] = full_attributes
+    else:
+        context.add_node(prefixed_reference, **full_attributes)
 
 
 def _parse_macro(tokens, macros):
@@ -495,7 +521,10 @@ def read_ff(lines):
         elif section == 'link':
             _parse_link_attribute(tokens, context)
         elif section == 'atoms':
-            _parse_atom(cleaned, context)
+            if context_type == 'block':
+                _parse_block_atom(cleaned, context)
+            elif context_type == 'link':
+                _parse_link_atom(tokens, context)
         elif section == 'non-edges':
             _parse_non_edges(tokens, context, context_type)
         elif tokens[0] == '#meta':

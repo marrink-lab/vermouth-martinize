@@ -576,6 +576,22 @@ SC1 BB +BB 2 100 25
 [ non-edges ]
 BB -BB
 
+[ link ]
+
+[ atoms ]
+BB {"replace": {"atype": "Qd", "charge": 1}}
+
+[ non-edges ]
+BB -BB
+
+[ link ]
+
+[ atoms ]
+BB {"replace": {"atype": "Qa", "charge": -1}}
+
+[ non-edges ]
+BB +BB
+
 ;[ link ]
 ;resname $protein_resnames
 ;
