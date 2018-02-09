@@ -112,6 +112,10 @@ class DoLinks(Processor):
                     if 'replace' in node_attrs:
                         node_mol = molecule.nodes[match[node]]
                         node_mol.update(node_attrs['replace'])
+                for inter_type, params in link.removed_interactions.items():
+                    for param in params:
+                        param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))
+                        molecule.remove_matching_interaction(inter_type, param)
                 for inter_type, params in link.interactions.items():
                     for param in params:
                         param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))

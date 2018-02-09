@@ -29,6 +29,8 @@ from . import graph_utils
 
 
 Interaction = namedtuple('Interaction', 'atoms parameters meta')
+DeleteInteraction = namedtuple('DeleteInteraction',
+                               'atoms atom_attrs parameters meta')
 
 
 class Choice(list):
@@ -110,6 +112,14 @@ class Molecule(nx.Graph):
             msg = ("Can't find interaction of type {} between atoms {} "
                    "and with version {}")
             raise KeyError(msg.format(type_, atoms, version))
+        del self.interactions[type_][idx]
+
+    def remove_matching_interaction(self, type_, template_interaction):
+        for idx, interaction in enumerate(self.interactions[type_]):
+            if interaction_match(self, interaction, template_interaction):
+                break
+        else:  # no break
+            raise ValueError('Cannot find a matching interaction.')
         del self.interactions[type_][idx]
 
     def find_atoms(self, **attrs):
@@ -368,6 +378,37 @@ class Link(Block):
     def __init__(self):
         super().__init__()
         self.non_edges = []
+        self.removed_interactions = {}
+
+
+def attributes_match(attributes, template_attributes):
+    for attr, value in template_attributes.items():
+        if isinstance(value, Choice):
+            if attributes.get(attr) not in value:
+                return False
+        else:
+            if attributes.get(attr) != value:
+                return False
+    return True
+
+
+def interaction_match(molecule, interaction, template_interaction):
+    atoms_match = tuple(template_interaction.atoms) == tuple(interaction.atoms)
+    parameters_match = (
+        not template_interaction.parameters
+        or tuple(template_interaction.parameters) == tuple(interaction.parameters)
+    )
+    if atoms_match and parameters_match:
+        try:
+            atom_attrs = template_interaction.atom_attrs
+        except AttributeError:
+            atom_attrs = [{}, ] * len(template_interaction.atoms)
+        nodes = [molecule.nodes[atom] for atom in interaction.atoms]
+        for atom, template_atom in zip(nodes, atom_attrs):
+            if not attributes_match(atom, template_atom):
+                return False
+        return attributes_match(interaction.meta, template_interaction.meta)
+    return False
 
 
 if __name__ == '__main__':
