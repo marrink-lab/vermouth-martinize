@@ -378,9 +378,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
         meta = {}
     parameters = list(tokens)
 
-    apply_to_all_interactions = {}
-    if hasattr(context, '_apply_to_all_interactions'):
-        apply_to_all_interactions = context._apply_to_all_interactions[section]
+    apply_to_all_interactions = context._apply_to_all_interactions[section]
     meta = dict(collections.ChainMap(meta, apply_to_all_interactions))
 
     if delete:
@@ -424,6 +422,7 @@ def _parse_link_atom(tokens, context):
     reference = tokens[0]
     attributes = _parse_atom_attributes(tokens[1])
     prefixed_reference, _, attributes = _treat_atom_prefix(reference, attributes)
+    attributes = dict(collections.ChainMap(attributes, context._apply_to_all_nodes))
     node_attributes = context.nodes.get(prefixed_reference, {})
     for attr, value in attributes.items():
         if value != node_attributes.get(attr, value):
@@ -468,14 +467,12 @@ def _parse_meta(tokens, context, context_type, section):
     elif len(tokens) < 2:
         msg = 'Missing column when defining meta attributes for section "{}" of a {}.'
         raise IOError(msg.format(section, context_type))
-    if not hasattr(context, '_apply_to_all_interactions'):
-        context._apply_to_all_interactions = collections.defaultdict(dict)
     attributes = json.loads(tokens[-1])
     context._apply_to_all_interactions[section].update(attributes)
 
 
-def _parse_non_edges(tokens, context, context_type):
-    if context_type != 'link':
+def _parse_edges(tokens, context, context_type, negate):
+    if negate and context_type != 'link':
         raise IOError('The "non-edges" section is only valid in links.')
     atoms = _get_atoms(tokens, natoms=2)
     prefixed_atoms = []
@@ -487,7 +484,10 @@ def _parse_non_edges(tokens, context, context_type):
             apply_to_all_nodes = {}
         full_attributes = dict(collections.ChainMap(attributes, apply_to_all_nodes))
         prefixed_atoms.append([prefixed_reference, full_attributes])
-    context.non_edges.append([prefixed_atoms[0][0], prefixed_atoms[1][1]])
+    if negate:
+        context.non_edges.append([prefixed_atoms[0][0], prefixed_atoms[1][1]])
+    else:
+        context.add_edge(prefixed_atoms[0][0], prefixed_atoms[1][0])
 
 
 def read_ff(lines):
@@ -546,7 +546,9 @@ def read_ff(lines):
             elif context_type == 'link':
                 _parse_link_atom(tokens, context)
         elif section == 'non-edges':
-            _parse_non_edges(tokens, context, context_type)
+            _parse_edges(tokens, context, context_type, negate=True)
+        elif section == 'edges':
+            _parse_edges(tokens, context, context_type, negate=False)
         elif tokens[0] == '#meta':
             _parse_meta(tokens, context, context_type, section)
         else:
