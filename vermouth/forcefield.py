@@ -22,10 +22,12 @@ from . import DATA_PATH
 
 FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
 
+
 class ForceField(object):
     def __init__(self, directory):
         self.blocks = {}
         self.links = []
+        self.modifications = []
         self.name = os.path.basename(directory)
         self.variables = {}
         self.read_from(directory)
