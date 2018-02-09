@@ -223,6 +223,7 @@ class Block(nx.Graph):
         super(Block, self).__init__(self)
         self.name = None
         self.interactions = {}
+        self._apply_to_all_interactions = defaultdict(dict)
 
     def __repr__(self):
         name = self.name
@@ -273,8 +274,9 @@ class Block(nx.Graph):
             The name of the interaction type the edges should be built from.
         """
         for interaction in self.interactions.get(type_, []):
-            atoms = interaction.atoms
-            self.add_edges_from(zip(atoms[:-1], atoms[1:]))
+            if interaction.meta.get('edge', True):
+                atoms = interaction.atoms
+                self.add_edges_from(zip(atoms[:-1], atoms[1:]))
 
     def make_edges_from_interactions(self):
         """
@@ -379,6 +381,7 @@ class Link(Block):
         super().__init__()
         self.non_edges = []
         self.removed_interactions = {}
+        self._apply_to_all_nodes = {}
 
 
 def attributes_match(attributes, template_attributes):
