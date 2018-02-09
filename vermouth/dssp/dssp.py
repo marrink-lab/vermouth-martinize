@@ -16,6 +16,7 @@
 Assign protein secondary structures using DSSP.
 """
 
+import collections
 import itertools
 import os
 import subprocess
@@ -359,6 +360,71 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     return molecule
 
 
+def convert_dssp_to_martini(sequence):
+    """
+    Convert a sequence of secondary structure to martini secondary sequence.
+
+    Martini treats some secondary structures with less resolution than dssp.
+    For instance, the different types of helices that dssp discriminates are
+    seen the same by martini. Yet, different parts of the same helix are seen
+    differently in martini.
+
+    Parameters
+    ----------
+    sequence: str
+        A sequence of secondary structures as read from dssp. One letter per
+        residue.
+
+    Returns
+    -------
+    str
+        A sequence of secondary structures usable for martini. One letter per
+        residue.
+    """
+    ss_cg = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
+             'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
+    patterns = collections.OrderedDict([
+        ('.H.', '.3.'), ('.HH.', '.33.'), ('.HHH.', '.333.'),
+        ('.HHHH.', '.3333.'), ('.HHHHH.', '.13332.'),
+        ('.HHHHHH.', '.113322.'), ('.HHHHHHH.', '.1113222.'),
+        ('.HHHH', '.1111'), ('HHHH.', '2222.'),
+    ])
+    cg_sequence = ''.join(ss_cg[secstruct] for secstruct in sequence)
+    wildcard_sequence = ''.join('H' if secstruct == 'H' else '.'
+                                for secstruct in cg_sequence)
+    for pattern, replacement in patterns.items():
+        wildcard_sequence = wildcard_sequence.replace(pattern, replacement)
+    result = ''.join(
+        wildcard if wildcard != '.' else cg
+        for wildcard, cg in zip(wildcard_sequence, cg_sequence)
+    )
+    return result
+
+
+def sequence_from_residues(molecule, attribute, default=None):
+    sequence = []
+    for residue_nodes in molecule.iter_residues():
+        first_name = residue_nodes[0]
+        first_node = molecule.nodes[first_name]
+        value = first_node.get(attribute, default)
+        sequence.append(value)
+    return sequence
+
+
+def annotate_residues_from_sequence(molecule, attribute, sequence):
+    for residue_nodes, value in zip(molecule.iter_residues(), sequence):
+        for node_name in residue_nodes:
+            node = molecule.nodes[node_name][attribute] = value
+
+
+def convert_dssp_annotation_to_martini(
+        molecule, from_attribute='secstruct', to_attribute='cgsecstruct'):
+    dssp_sequence = sequence_from_residues(molecule, from_attribute)
+    if None not in dssp_sequence:
+        cg_sequence = list(convert_dssp_to_martini(dssp_sequence))
+        annotate_residues_from_sequence(molecule, to_attribute, cg_sequence)
+
+
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
@@ -369,3 +435,11 @@ class AnnotateDSSP(Processor):
 
     def run_molecule(self, molecule):
         return annotate_dssp(molecule, self.executable, self.savedir)
+
+
+class AnnotateMartiniSecondaryStructures(Processor):
+    name = 'AnnotateMartiniSecondaryStructures'
+
+    def run_molecule(self, molecule):
+        convert_dssp_annotation_to_martini(molecule)
+        return molecule
