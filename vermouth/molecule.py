@@ -25,6 +25,8 @@ from functools import partial
 
 import networkx as nx
 
+from . import graph_utils
+
 
 Interaction = namedtuple('Interaction', 'atoms parameters meta')
 
@@ -173,6 +175,10 @@ class Molecule(nx.Graph):
         # TODO: Test the node attributes, the molecule attributes, and
         # the interactions.
         return nx.is_isomorphic(self, other)
+
+    def iter_residues(self):
+        residue_graph = graph_utils.make_residue_graph(self)
+        return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
 
 
 class Block(nx.Graph):
