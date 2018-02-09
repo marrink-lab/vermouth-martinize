@@ -25,7 +25,7 @@ is done in the same way an ITP file describes a molecule.
 import collections
 import math
 import json
-from .molecule import Block, Link, Interaction, Choice
+from .molecule import Block, Link, Interaction, DeleteInteraction, Choice
 
 
 def _tokenize(line):
@@ -339,7 +339,9 @@ def _treat_link_interaction_atoms(atoms, context, section):
             context.add_node(prefixed_reference, **attributes)
 
 
-def _base_parser(tokens, context, context_type, section, natoms=None):
+def _base_parser(tokens, context, context_type, section, natoms=None, delete=False):
+    if context_type != 'link' and delete:
+        raise IOError('Interactions can only be removed in links.')
     delimiter_count = tokens.count('--')
     if delimiter_count > 1:
         msg = 'There can be 0 or 1 "--" delimiter; {} found.'
@@ -369,7 +371,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None):
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
     # are the interaction parameters or the meta attributes.
-    if tokens[-1].startswith('{'):
+    if tokens and tokens[-1].startswith('{'):
         token = tokens.pop()
         meta = json.loads(token)
     else:
@@ -380,14 +382,26 @@ def _base_parser(tokens, context, context_type, section, natoms=None):
     if hasattr(context, '_apply_to_all_interactions'):
         apply_to_all_interactions = context._apply_to_all_interactions[section]
     meta = dict(collections.ChainMap(meta, apply_to_all_interactions))
-    interaction = Interaction(
-        atoms=[atom[0] for atom in atoms],
-        parameters=parameters,
-        meta=meta,
-    )
-    interaction_list = context.interactions.get(section, [])
-    interaction_list.append(interaction)
-    context.interactions[section] = interaction_list
+
+    if delete:
+        interaction = DeleteInteraction(
+            atoms=[atom[0] for atom in atoms],
+            atom_attrs=[atom[1] for atom in atoms],
+            parameters=parameters,
+            meta=meta,
+        )
+        interaction_list = context.removed_interactions.get(section, [])
+        interaction_list.append(interaction)
+        context.removed_interactions[section] = interaction_list
+    else:
+        interaction = Interaction(
+            atoms=[atom[0] for atom in atoms],
+            parameters=parameters,
+            meta=meta,
+        )
+        interaction_list = context.interactions.get(section, [])
+        interaction_list.append(interaction)
+        context.interactions[section] = interaction_list
 
 
 def _parse_block_atom(line, context):
@@ -491,6 +505,7 @@ def read_ff(lines):
     context_type = None
     context = None
     section = None
+    delete = False
     for line_num, line in enumerate(lines, start=1):
         cleaned = _substitute_macros(line.split(';', 1)[0].strip(), macros)
         if not cleaned:
@@ -503,6 +518,11 @@ def read_ff(lines):
                 raise IOError('Misformated section header at line {}.'
                               .format(line_num))
             section = cleaned[1:-1].strip().lower()
+            if section.startswith('!'):
+                section = section[1:]
+                delete = True
+            else:
+                delete = False
             if section == 'link':
                 context_type = 'link'
                 context = Link()
@@ -532,7 +552,8 @@ def read_ff(lines):
         else:
             natoms = interactions_natoms.get(section)
             try:
-                _base_parser(tokens, context, context_type, section, natoms)
+                _base_parser(tokens, context, context_type, section,
+                             natoms=natoms, delete=delete)
             except Exception:
                 raise IOError('Error while reading line {} in section {}.'
                               .format(line_num, section))
