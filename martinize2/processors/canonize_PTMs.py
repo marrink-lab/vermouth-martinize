@@ -9,25 +9,6 @@ import itertools
 import networkx as nx
 
 
-# FIXME: read PTMs from files
-KNOWN_PTMS = []
-n_term = nx.Graph()  # Molecule? Block? Link? PTM?
-n_term.graph['name'] = 'N-terminus'
-n_term.add_edges_from([(0, 1), (0, 2), (0, 3)])
-n_term.nodes[0].update(atomname='N', element='N', PTM_atom=False)
-n_term.nodes[1].update(atomname='HN', element='H', PTM_atom=False, rename='HN1')
-n_term.nodes[2].update(atomname='HN2', element='H', PTM_atom=True)
-n_term.nodes[3].update(atomname='HN3', element='H', PTM_atom=True)
-KNOWN_PTMS.append(n_term)
-c_term = nx.Graph()
-c_term.graph['name'] = 'C-terminus'
-c_term.add_edges_from([(0, 1), (0, 2)])
-c_term.nodes[0].update(atomname='C', element='C', PTM_atom=False)
-c_term.nodes[1].update(atomname='O', element='O', PTM_atom=False, rename='OC1')
-c_term.nodes[2].update(atomname='OC2', element='O', PTM_atom=True)
-KNOWN_PTMS.append(c_term)
-
-
 class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
     # G1 >= G2; G1 is the found residue; G2 the PTM reference
     def semantic_feasibility(self, node1, node2):
@@ -152,19 +133,17 @@ def identify_ptms(residue, residue_ptms, options):
             available.update(res_ptm[0])
         for match in matches:
             matching = set(match.keys())
-            # FIXME: Currently we greedily take the first way it matches, even
-            #        if this results in a dead-end later on. What we probably
-            #        should do is expand `options` to all matches *before*
-            #        calling this function. This should also change the output.
-            #        On second thought, if every PTM has at least one anchor,
-            #        this probably can't every become a problem.
-            if matching.issubset(available):
+            has_anchor = any(m in r[1] for m in matching for r in residue_ptms)
+            if matching.issubset(available) and has_anchor:
                 new_res_ptms = []
                 for res_ptm in residue_ptms:
                     new_res_ptms.append((res_ptm[0] - matching, res_ptm[1]))
                 # Continue with the remaining ptm atoms, and try just this
                 # option and all smaller.
-                return [(ptm, match)] + identify_ptms(residue, new_res_ptms, options[idx:])
+                try:
+                    return [(ptm, match)] + identify_ptms(residue, new_res_ptms, options[idx:])
+                except KeyError:
+                    continue
     raise KeyError('Could not identify PTM')
 
 
@@ -227,8 +206,7 @@ def fix_ptm(molecule):
         resid_to_idxs[residx].append(n_idx)
     resid_to_idxs = dict(resid_to_idxs)
 
-    # FIXME: read from file
-    known_PTMs = KNOWN_PTMS
+    known_PTMs = molecule.force_field.modifications
 
     for resids, res_ptms in itertools.groupby(ptm_atoms, key_func):
         # How to solve this graph covering problem
@@ -254,7 +232,7 @@ def fix_ptm(molecule):
         residue = molecule.subgraph(n_idxs)
         options = allowed_ptms(residue, res_ptms, known_PTMs)
         # TODO/FIXME: This includes anchors in sorting by size.
-        options = sorted(options, key=lambda opt: len(opt[0]))
+        options = sorted(options, key=lambda opt: len(opt[0]), reverse=True)
         identified = identify_ptms(residue, res_ptms, options)
         # INFO output: Identified modification X.
         print('Today your answer is: {}!'.format([out[0].graph['name'] for out in identified]))
