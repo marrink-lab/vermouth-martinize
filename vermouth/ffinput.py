@@ -446,18 +446,27 @@ def _parse_macro(tokens, macros):
     macros[macro_name] = macro_value
 
 
-def _parse_link_attribute(tokens, context):
+def _parse_link_attribute(tokens, context, section):
     if len(tokens) > 2:
-        raise IOError('Unexpected column in link attribute definition.')
+        raise IOError('Unexpected column in section "{}".'.format(section))
     elif len(tokens) < 2:
-        raise IOError('Missing column in link attribute definition.')
-    if not hasattr(context, '_apply_to_all_nodes'):
-        context._apply_to_all_nodes = {}
+        raise IOError('Missing column in section "{}".'.format(section))
     key, value = tokens
     value = json.loads(value)
-    if '|' in value:
-        value = Choice(value.split('|'))
-    context._apply_to_all_nodes[key] = value
+    try:
+        if '|' in value:
+            value = Choice(value.split('|'))
+    except TypeError:
+        # "value" can be something else than an iterable (bool, number...),
+        # then, looking for "|" in it will fail; which is perfectly normal and
+        # expected.
+        pass
+    if section == 'link':
+        context._apply_to_all_nodes[key] = value
+    elif section == 'molmeta':
+        context.molecule_meta[key] = value
+    else:
+        raise ValueError('Parser only defined for sections "link" and "molmeta".')
 
 
 def _parse_meta(tokens, context, context_type, section):
@@ -539,7 +548,9 @@ def read_ff(lines):
             context_type = None
             _parse_macro(tokens, macros)
         elif section == 'link':
-            _parse_link_attribute(tokens, context)
+            _parse_link_attribute(tokens, context, section)
+        elif section == 'molmeta':
+            _parse_link_attribute(tokens, context, section)
         elif section == 'atoms':
             if context_type == 'block':
                 _parse_block_atom(cleaned, context)
