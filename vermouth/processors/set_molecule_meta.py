@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2018 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct  4 10:45:54 2017
+from .processor import Processor
 
-@author: peterkroon
-"""
 
-from .gro_reader import GROInput
-from .make_bonds import MakeBonds
-from .pdb_reader import PDBInput
-from .repair_graph import RepairGraph
-from .do_mapping import DoMapping
-from .do_links import DoLinks
-from .apply_blocks import ApplyBlocks
-from .average_beads import DoAverageBead
-from .apply_posres import ApplyPosres
-from .set_molecule_meta import SetMoleculeMeta
+class SetMoleculeMeta(Processor):
+    def __init__(self, **meta):
+        self.meta = meta
+        super().__init__()
+
+    def run_molecule(self, molecule):
+        molecule.meta.update(self.meta)
+        return molecule
