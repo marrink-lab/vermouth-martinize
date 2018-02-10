@@ -25,12 +25,7 @@ from ..pdb import pdb
 from ..system import System
 from ..molecule import Molecule
 from ..processors.processor import Processor
-
-
-PROTEIN_RESIDUES = ('ALA', 'ARG', 'ASP', 'ASN', 'CYS',
-                    'GLU', 'GLN', 'GLY', 'HIS', 'ILE',
-                    'LEU', 'LYS', 'MET', 'PHE', 'PRO',
-                    'SER', 'THR', 'TRP', 'TYR', 'VAL')
+from ..selectors import is_protein, selector_no_position, filter_out, select_all
 
 
 class DSSPError(Exception):
@@ -38,75 +33,6 @@ class DSSPError(Exception):
     Exception raised if DSSP fails.
     """
     pass
-
-
-def is_protein(molecule):
-    """
-    Return True is all the residues in the molecule are protein residues.
-
-    The function tests if the residue name of all the atoms in the input
-    molecule are in ``PROTEIN_RESIDUES``.
-
-    Parameters
-    ----------
-    molecule: Molecule
-        The molecule to test.
-
-    Returns
-    -------
-    bool
-    """
-    for atom in molecule.nodes.values():
-        resname = atom.get('resname')
-        if resname not in PROTEIN_RESIDUES:
-            return False
-    return True
-
-
-def selector_no_position(atom):
-    """
-    Return True if the atom does not have a position.
-
-    An atom is considered as not having a position if:
-    * the "position" key is not defined;
-    * the value of "position" is ``None``.
-
-    Parameters
-    ----------
-    atom: dict
-
-    Returns
-    -------
-    bool
-    """
-    return atom.get('position') is None
-
-
-def filter_out(molecule, selector):
-    """
-    Create a minimal molecule which **exclude** a selection.
-
-    The minimal molecule only has nodes. It does dot have any molecule level
-    attribute, not does it have edges.
-
-    The selector must be a function that accepts an atom as a argument. The
-    atom is passed as a node attribute dictionary. The selector must return
-    ``True`` for atoms that are part of the selection to **exclude**.
-
-    Parameters
-    ----------
-    molecule: Molecule
-    selector: callback
-
-    Returns
-    -------
-    Molecule
-    """
-    filtered = Molecule()
-    for name, atom in molecule.nodes.items():
-        if not selector(atom):
-            filtered.add_node(name, **atom)
-    return filtered
 
 
 def read_dssp2(lines):
@@ -412,7 +338,14 @@ def sequence_from_residues(molecule, attribute, default=None):
 
 
 def annotate_residues_from_sequence(molecule, attribute, sequence):
-    for residue_nodes, value in zip(molecule.iter_residues(), sequence):
+    residues = list(molecule.iter_residues())
+    if len(sequence) == 1:
+        sequence = sequence * len(residues)
+    elif len(sequence) != len(residues):
+        msg = ('The sequence length does not match the number of residues. '
+               'The sequence has {} element for {} residues.')
+        raise ValueError(msg.format(len(sequence), len(residues)))
+    for residue_nodes, value in zip(residues, sequence):
         for node_name in residue_nodes:
             node = molecule.nodes[node_name][attribute] = value
 
@@ -442,4 +375,19 @@ class AnnotateMartiniSecondaryStructures(Processor):
 
     def run_molecule(self, molecule):
         convert_dssp_annotation_to_martini(molecule)
+        return molecule
+
+
+class AnnotateResidues(Processor):
+    name = 'AnnotateResidues'
+
+    def __init__(self, attribute, sequence,
+                 molecule_selector=select_all):
+        self.attribute = attribute
+        self.sequence = sequence
+        self.molecule_selector=molecule_selector
+
+    def run_molecule(self, molecule):
+        if self.molecule_selector(molecule):
+            annotate_residues_from_sequence(molecule, self.attribute, self.sequence)
         return molecule

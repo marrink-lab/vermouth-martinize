@@ -128,7 +128,7 @@ PRO                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
- 1   P5   1     PRO     BB     1      0    
+ 1   P4   1     PRO     BB     1      0    
  2   C3   1     PRO     SC1    2      0    
 
 [bonds]
@@ -548,52 +548,189 @@ TRP                1
 
 ;;; Links
 
+;; Links for COIL. We apply them first as coil is the default.
 [ link ]
 resname $protein_resnames
-
 [ bonds ]
 BB +BB 1 0.350 1250 {"group": "Backbone bonds"}
 
 [ link ]
 resname $protein_resnames
-
 [ angles ]
 -BB BB +BB 2 119.2 150 {"group": "BBB angles"}
 
 [ link ]
 resname $protein_resnames
-
 [ angles ]
 -BB  BB  SC1  2 100 25 {"group": "BBS angles"}
 
 [ link ]
 resname $protein_resnames
-
 [ angles ]
 #meta {"group": "First SBB"}
 SC1 BB +BB 2 100 25
-
 [ non-edges ]
 BB -BB
 
+;; Links for the different secondary structures.
+;; Set the bead type as a function of the secondary structures.
+;; We first replace for all amino acids, including for PRO and ALA that are
+;; special.
 [ link ]
+resname $protein_resnames
+[ atoms ]
+BB {"cgsecstruct": "T|3|E", "replace": {"atype": "Nda"}}
 
+[ link ]
+resname $protein_resnames
+[ atoms ]
+BB {"cgsecstruct": "2", "replace": {"atype": "Na"}}
+
+[ link ]
+resname $protein_resnames
+[ atoms ]
+BB {"cgsecstruct": "1", "replace": {"atype": "Nd"}}
+
+[ link ]
+resname $protein_resnames
+[ atoms ]
+BB {"cgsecstruct": "H|F", "replace": {"atype": "N0"}}
+
+;; Fix bead types for ALA and PRO.
+[ link ]
+resname "ALA|PRO|HYP"
+[ atoms ]
+BB {"cgsecstruct": "S", "replace": {"atype": "P4"}}
+
+[ link ]
+resname "ALA|PRO|HYP"
+[ atoms ]
+BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}}
+
+[ link ]
+resname "ALA|PRO|HYP"
+[ atoms ]
+BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}}
+
+[ link ]
+resname "PRO"
+[ atoms ]
+BB {"cgsecstruct": "2", "replace": {"atype": "Na"}}
+
+;; Setup the bonds. We only define those that are different from coil.
+[ link ]
+resname $protein_resnames
+cgsecstruct "H|1|2|3"
+[ constraints ]
+BB +BB 1 0.310 
+[ !bonds ]
+BB +BB
+
+;; Setup the angles. We only define those that are different from coil.
+[ link ]
+resname $protein_resnames
+[ angles ]
+-BB BB {"cgsecstruct": "H|1|2|3"} +BB 2 96 700
+
+[ link ]
+resname $protein_resnames
+[ angles ]
+-BB BB {"cgsecstruct": "S"} +BB 2 130 20
+
+[ link ]
+resname $protein_resnames
+[ angles ]
+-BB BB {"cgsecstruct": "T"} +BB 2 100 20
+
+[ link ]
+resname $protein_resnames
+[ angles ]
+-BB BB {"cgsecstruct": "E"} +BB 2 134 25
+
+[ link ]
+resname $protein_resnames
+[ angles ]
+-BB BB {"cgsecstruct": "F"} +BB 2 119.2 150
+
+[ link ]
+resname "PRO|HYP"
+[ angles ]
+-BB BB {"cgsecstruct": "H|1|2|3"} +BB 2 98 100
+
+[ link ]
+resname "PRO|HYP"
+[ angles ]
+-BB BB {"cgsecstruct": "S"} +BB 2 130 25
+
+[ link ]
+resname "PRO|HYP"
+[ angles ]
+-BB BB {"cgsecstruct": "T"} +BB 2 100 25
+
+[ link ]
+resname "PRO|HYP"
+[ angles ]
+-BB BB {"cgsecstruct": "E"} +BB 2 134 25
+
+;; Backbone dihedrals.
+[ link ]
+resname $protein_resnames
+cgsecstruct "H|1|2|3"
+[ dihedrals ]
+-BB BB +BB ++BB 1 -120 400 1
+
+[ link ]
+resname $protein_resnames
+cgsecstruct "F"
+[ dihedrals ]
+-BB BB  +BB ++BB 1 90.7 100 1
+
+;; Local elastic network to stabilize extented regions of proteins.
+[ link ]
+resname $protein_resnames
+cgsecstruct "E"
+[ edges ]
+BB +BB
++BB ++BB
+++BB +++BB
+[ bonds ]
+BB ++BB 1 0.640 2500 {"group": "Short elastic bonds for extended regions", "edge": false}
++BB +++BB 1 0.640 2500 {"group": "Short elastic bonds for extended regions", "edge": false}
+BB +++BB 1 0.970 2500 {"group": "Long elastic bonds for extended regions", "edge": false}
+
+; Use dihedrals rather than an elastic network for extended regions of proteins.
+[ link ]
+resname $protein_resnames
+cgsecstruct "E"
+[ molmeta ]
+extdih true
+[ dihedrals ]
+-BB BB +BB ++BB 1 0 10 1
+
+[ link ]
+resname $protein_resnames
+cgsecstruct "E"
+[ molmeta ]
+extdih true
+[ edges ]
+BB +BB
++BB ++BB
+++BB +++BB
+[ !bonds ]
+BB ++BB 1 0.640 2500
++BB +++BB 1 0.640 2500
+BB +++BB 1 0.970 2500
+
+;; Protein terminii. These links should be applied last.
+[ link ]
 [ atoms ]
 BB {"replace": {"atype": "Qd", "charge": 1}}
-
 [ non-edges ]
 BB -BB
 
 [ link ]
-
 [ atoms ]
 BB {"replace": {"atype": "Qa", "charge": -1}}
-
 [ non-edges ]
 BB +BB
 
-;[ link ]
-;resname $protein_resnames
-;
-;[ dihedrals ]
-;-BB BB +BB ++BB 1 90.7 100
