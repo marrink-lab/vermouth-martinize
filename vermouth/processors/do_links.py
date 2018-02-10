@@ -19,7 +19,7 @@ Created on Wed Oct 25 16:00:02 2017
 
 @author: peterkroon
 """
-from ..molecule import Choice
+from ..molecule import Choice, attributes_match
 from .processor import Processor
 from ..gmx import read_rtp
 
@@ -71,6 +71,9 @@ def _is_valid_non_edges(molecule, link, raw_match):
 
         
 def match_link(molecule, link):
+    if not attributes_match(molecule.meta, link.molecule_meta):
+        return
+
     GM = LinkGraphMatcher(molecule, link)
 
     raw_matches = GM.subgraph_isomorphisms_iter()
@@ -115,7 +118,10 @@ class DoLinks(Processor):
                 for inter_type, params in link.removed_interactions.items():
                     for param in params:
                         param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))
-                        molecule.remove_matching_interaction(inter_type, param)
+                        try:
+                            molecule.remove_matching_interaction(inter_type, param)
+                        except ValueError:
+                            pass
                 for inter_type, params in link.interactions.items():
                     for param in params:
                         param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))

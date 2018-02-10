@@ -43,6 +43,7 @@ class Molecule(nx.Graph):
     node_dict_factory = OrderedDict
 
     def __init__(self, *args, **kwargs):
+        self.meta = kwargs.pop('meta', {})
         self._force_field = kwargs.pop('force_field', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
@@ -71,6 +72,7 @@ class Molecule(nx.Graph):
         if not as_view:
             copy = self.__class__(copy)
         copy._force_field = self.force_field
+        copy.meta = self.meta.copy()
         return copy
 
     def subgraph(self, *args, **kwargs):
@@ -382,6 +384,7 @@ class Link(Block):
         self.non_edges = []
         self.removed_interactions = {}
         self._apply_to_all_nodes = {}
+        self.molecule_meta = {}
 
 
 def attributes_match(attributes, template_attributes):

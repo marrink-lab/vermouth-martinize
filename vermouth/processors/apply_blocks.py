@@ -31,7 +31,10 @@ from itertools import product
 
 def apply_blocks(molecule, blocks):
     residue_graph = make_residue_graph(molecule)
-    graph_out = Molecule(force_field=molecule.force_field)
+    graph_out = Molecule(
+        force_field=molecule.force_field,
+        meta=molecule.meta.copy()
+    )
 
     # nrexcl may not be defined, but if it is we probably want to keep it
     try:

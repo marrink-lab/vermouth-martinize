@@ -221,6 +221,7 @@ def do_mapping(molecule, mappings, to_ff):
                     break  # On to the combination of beads
 
     graph_out._force_field = to_ff
+    graph_out.meta = molecule.meta.copy()
     return graph_out
 
 
