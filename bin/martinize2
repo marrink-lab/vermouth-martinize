@@ -247,6 +247,7 @@ def entry():
     parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
     parser.add_argument('-ff', dest='to_ff', default='martini22')
     parser.add_argument('-dssp', nargs='?', const='dssp')
+    parser.add_argument('-ed', dest='extdih', action='store_true', default=False) 
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -271,6 +272,7 @@ def entry():
     if args.dssp is not None:
         AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
+    vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
 
     # Run martinize on the system.
     system = martinize(
