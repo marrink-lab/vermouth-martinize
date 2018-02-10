@@ -405,15 +405,21 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
         context.interactions[section] = interaction_list
 
 
-def _parse_block_atom(line, context):
-    _, atype, _, resname, name, charge_group, charge = line.split()
+def _parse_block_atom(tokens, context):
+    # deque does not support slicing
+    first_six = (tokens.popleft() for i in range(6))
+    _, atype, _, resname, name, charge_group = first_six
     atom = {
         'atomname': name,
         'atype': atype,
         'resname': resname,
-        'charge': float(charge),
         'charge_group': int(charge_group),
     }
+    # charge and mass are optional, but charge has to be defined for mass to be
+    if tokens:
+        atom['charge'] = float(tokens.popleft())
+    if tokens:
+        atom['mass'] = float(tokens.popleft())
     context.add_atom(atom)
 
 
@@ -563,7 +569,7 @@ def read_ff(lines):
             _parse_link_attribute(tokens, context, section)
         elif section == 'atoms':
             if context_type == 'block':
-                _parse_block_atom(cleaned, context)
+                _parse_block_atom(tokens, context)
             elif context_type == 'link':
                 _parse_link_atom(tokens, context)
         elif section == 'non-edges':
