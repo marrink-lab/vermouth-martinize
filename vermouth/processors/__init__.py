@@ -30,3 +30,4 @@ from .apply_blocks import ApplyBlocks
 from .average_beads import DoAverageBead
 from .apply_posres import ApplyPosres
 from .set_molecule_meta import SetMoleculeMeta
+from .locate_charge_dummies import LocateChargeDummies

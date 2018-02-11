@@ -406,6 +406,11 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
 
 
 def _parse_block_atom(tokens, context):
+    if tokens[-1].startswith('{'):
+        attributes = _parse_atom_attributes(tokens.pop())
+    else:
+        attributes = {}
+
     # deque does not support slicing
     first_six = (tokens.popleft() for i in range(6))
     _, atype, _, resname, name, charge_group = first_six
@@ -420,7 +425,7 @@ def _parse_block_atom(tokens, context):
         atom['charge'] = float(tokens.popleft())
     if tokens:
         atom['mass'] = float(tokens.popleft())
-    context.add_atom(atom)
+    context.add_atom(dict(collections.ChainMap(attributes, atom)))
 
 
 def _parse_link_atom(tokens, context):
@@ -522,6 +527,7 @@ def read_ff(lines):
         'dihedrals': 4,
         'impropers': 4,
         'constraints': 2,
+        'virtual_sites2': 3,
     }
 
     macros = {}

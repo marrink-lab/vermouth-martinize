@@ -16,10 +16,10 @@
 universal
 
 [to]
-martini22
+martini22p
 
 [ molecule ]
-THR
+ASN
 
 [ martini ]
 BB SC1
@@ -32,30 +32,25 @@ charmm27 charmm36
     2    HN    BB
     3    CA    BB
     4    HA    BB
-    5    CB   SC1 BB BB 
-    6    HB   SC1 BB BB
-    7   OG1   SC1 SC1 BB
-    8   HG1   SC1
-    9   CG2   SC1 
-   10   HG21  SC1 
-   11   HG22  SC1 
-   12   HG23  SC1 
+    5    CB   SC1 BB BB
+    6   HB1   SC1 BB BB
+    7   HB2   SC1 BB BB
+    8    CG   SC1 SC1 BB
+    9   OD1   SC1
+   10   ND2   SC1
+   11  HD21   SC1
+   12  HD22   SC1
    13     C    BB
    14     O    BB
 
 [ chiral ]
   CB     CA    N    C
-  HB     CA    N    C
+  HB1    CA    N    C
+  HB2    CA    N    C
 
 [ chiral ]
-  HA     CA    N    CB    C ; L-Thr
-; HA     CA    N    C    CB ; D-Thr
+  HA     CA    N    CB    C ; L-Asn
+; HA     CA    N    C    CB ; D-Asn
 
-[ out ] 
-OG1 CB CG2 CA
-[ trans ]
-HG1 OG1 CB CA
-
-[ chiral ]
-  HB  CB  CG2  OG1 CA  ; 3R stereoisomer (natural form)
-; HB  CB  CG2  CA  CG1 ; 3S stereoisomer
+[ extra ]
+SC2 SC3

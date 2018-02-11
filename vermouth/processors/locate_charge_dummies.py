@@ -1,0 +1,121 @@
+# Copyright 2018 University of Groningen
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import itertools
+import operator
+import numpy as np
+from .processor import Processor
+
+DEFAULT_DUMMY_ATTRIBUTE = 'charge_dummy'
+
+
+def fibonacci_sphere(n_samples):
+    offset = 2 / n_samples
+    increment = np.pi * (3 - np.sqrt(5))
+    sample_idx = np.arange(n_samples)
+    y = (sample_idx * offset - 1) + offset / 2
+    r = np.sqrt(1 - y * y)
+    phi = (sample_idx % n_samples) * increment
+    x = np.cos(phi) * r
+    z = np.sin(phi) * r
+    return np.stack([x, y, z]).T
+
+
+def colinear_pair():
+    # We want to create a randomly oriented vector of norm 2, and center it on
+    # the origin.
+    vector = np.random.rand(3)
+    vector /= np.linalg.norm(vector)
+    vector *= 2
+    points = np.stack([np.zeros((3, )), vector])
+    points -= points / 2
+    return points
+
+
+def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
+    dummy = molecule.nodes[node_key]
+    if dummy.get(attribute_tag, None) is None:
+        msg = 'Node "{}" is not a charge dummy. Check the "{}" node attribute.'
+        raise ValueError(msg.format(node_key, attribute_tag))
+
+    # There should be only one anchor, and that anchor is the (hopefully) only
+    # neighbor that is not a dummy.
+    potential_anchors = [
+        neighbor
+        for neighbor in molecule.neighbors(node_key)
+        if molecule.nodes[neighbor].get(attribute_tag, None) is None
+    ]
+    if not potential_anchors:
+        raise ValueError('No anchor found for dummy bead "{}": {}.'
+                         .format(node_key, molecule.nodes[node_key]))
+    elif len(potential_anchors) > 1:
+        raise ValueError('Too many potential anchors found for dummy "{}" ({} found).'
+                         .format(node_key, len(potential_anchors)))
+
+    return potential_anchors[0]
+
+
+def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
+    
+    anchor_position = molecule.nodes[anchor_key].get('position')
+    if anchor_position is None:
+        msg = 'The anchor of the "{}" dummy ("{}") does not have a position.'
+        raise ValueError(msg.format(node_key, anchor_position[0]))
+
+    distances = []
+    distance_error_keys = []
+    for dummy_key in dummy_keys:
+        try:
+            distances.append(float(molecule.nodes[dummy_key].get(attribute_tag)))
+        except ValueError:
+            distance_error_keys.append(dummy_key)
+    if distance_error_keys:
+        msg = ('The following charge dummies have an invalid for their {} ',
+               'attribute: {}. The values have to be numbers.'
+                .format(attribute_tag, ', '.join(distance_error_keys)))
+        raise ValueError(msg)
+    distances = np.array(distances)
+
+    if len(dummy_keys) == 2:
+        points = colinear_pair()
+    else:
+        points = fibonacci_sphere(len(dummy_keys))
+    points *= distances[:, None]
+
+    for dummy_key, position in zip(dummy_keys, points):
+        molecule.nodes[dummy_key]['position'] = position + anchor_position
+
+
+def locate_all_dummies(molecule, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
+    dummies = [
+        (find_anchor(molecule, dummy_key, attribute_tag), dummy_key)
+        for dummy_key in molecule.nodes
+        if molecule.nodes[dummy_key].get(attribute_tag, None) is not None
+    ]
+    dummies.sort()  # Sort primarily on the anchor key as it appears first
+
+    grouped_by_anchor = itertools.groupby(dummies, key=operator.itemgetter(0))
+    for anchor_key, dummy_pairs in grouped_by_anchor:
+        dummy_keys = [pair[1] for pair in dummy_pairs]
+        locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag)
+
+
+class LocateChargeDummies(Processor):
+    def __init__(self, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
+        super().__init__()
+        self.attribute_tag = attribute_tag
+
+    def run_molecule(self, molecule):
+        locate_all_dummies(molecule, attribute_tag=self.attribute_tag)
+        return molecule

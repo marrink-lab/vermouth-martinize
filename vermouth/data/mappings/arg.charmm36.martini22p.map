@@ -16,14 +16,13 @@
 universal
 
 [to]
-martini22
 martini22p
 
 [ molecule ]
-TRP
+ARG
 
 [ martini ]
-BB SC1 SC2 SC3 SC4
+BB SC1 SC2
 
 [ mapping ]
 charmm27 charmm36
@@ -33,41 +32,52 @@ charmm27 charmm36
     2    HN    BB
     3    CA    BB
     4    HA    BB
-    5    CB   SC1 BB
-    6   HB1   SC1 BB
-    7   HB2   SC1 BB
-    8    CG   SC1 SC1 SC1 SC1 SC3 SC3
-    9   CD1   SC1 
-   10   HD1   SC1
-   11   NE1   SC2 SC1
-   12   HE1   SC2
-   13   CE2   SC2 SC2 SC3 
-   14   CD2   SC3 SC3 SC2
-   15   CE3   SC3 SC3 SC4
-   16   HE3   SC3
-   17   CZ3   SC4 SC4 SC3
-   18   HZ3   SC4 
-   19   CZ2   SC2 SC2 SC4
-   20   HZ2   SC2 
-   21   CH2   SC4 SC4 SC2 
-   22   HH2   SC4
+    5    CB   SC1  BB BB
+    6   HB1   SC1  BB BB
+    7   HB2   SC1  BB BB
+    8    CG   SC1 SC1 BB
+    9   HG1   SC1 SC1 BB
+   10   HG2   SC1 SC1 BB
+   11    CD   SC1 
+   12   HD1   SC1
+   13   HD2   SC1
+   14    NE   SC2 SC1
+   15    HE   SC2 SC1
+   16    CZ   SC2
+   17   NH1   SC2
+   18  HH11   SC2
+   19  HH12   SC2
+   20   NH2   SC2
+   21  HH21   SC2
+   22  HH22   SC2
    23     C    BB
    24     O    BB
 
-[ trans ]
-CB  CG  CD2 CE2  
-HD1 CD1 NE1 CE2
-HE1 NE1 CD1 CG
-HE3 CE3 CD2 CE2
-HZ2 CZ2 CE2 CD2
-HZ3 CZ3 CE3 CD2
-HH2 CH2 CZ3 CE3
-
 [ chiral ]
-  CB     CA    N    C  
+  CB     CA    N    C
   HB1    CA    N    C
   HB2    CA    N    C
-
 [ chiral ]
-  HA     CA    N    CB    C ; L-Trp
-; HA     CA    N    C    CB ; D-Trp
+  HA     CA    N    CB    C ; L-Arg
+; HA     CA    N    C    CB ; D-Arg
+
+
+; The cis/trans are added to ensure proper
+; splitting of the guanidinium group
+
+[ trans ]
+; Because of the use of normalized vectors, this makes sense:
+  NH1    CZ    NE    HE
+
+[ out ]
+  NH2    CZ    NE    NH1
+  NH1    CZ    NE    NH2
+
+[ out ]
+ HH11    NH1   CZ   HH12
+ HH12    NH1   CZ   HH11
+ HH21    NH2   CZ   HH22
+ HH22    NH2   CZ   HH21
+
+[ extra ]
+SC3

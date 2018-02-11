@@ -48,7 +48,7 @@ class GraphMapping:
     #       or we need to at least garantue we run it all in order. Which we
     #       can't unless we do run_system instead of run_molecule. We should
     #       maybe also move this class to a different file, but we'll see.
-    def __init__(self, blocks_from, blocks_to, mapping):
+    def __init__(self, blocks_from, blocks_to, mapping, extra=()):
         """
         blocks_from and blocks_to are sequences of Blocks.
         Mapping is a dictionary of {(residx, atomname): [(residx, atomname), ...], ...}.
@@ -69,6 +69,7 @@ class GraphMapping:
                     self.mapping[to_idx].update(from_idxs)
 
         self.mapping = dict(self.mapping)
+        self.extra = extra
 
         # We can't do this in _merge, since we need the resids to translate the
         # mapping from (ambiguous) atomnames to (unique) graph keys. We do have
@@ -131,10 +132,12 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     pair_mapping = mappings[from_ff.name][to_ff.name]
     for name in from_ff.blocks.keys():
         if name in to_ff.blocks and name in pair_mapping:
+            mapping, extra = pair_mapping[name]
             graph_mapping_collection[name] = GraphMapping(
                 [from_ff.blocks[name], ],
                 [to_ff.blocks[name], ],
-                pair_mapping[name]
+                mapping,
+                extra
             )
     return graph_mapping_collection
 
@@ -196,6 +199,20 @@ def do_mapping(molecule, mappings, to_ff):
             graph_out.add_node(bead_idx, **bead)
 
             bead_idx += 1
+        for extra in mapping.extra:
+            block_to_idx += 1
+            # We fill the chain and the residue name/id from the last bead we
+            # actually mapped.
+            extra_bead = {
+                'atomname': extra,
+                'resid': bead['resid'],
+                'resname': bead['resname'],
+                'chain': bead['chain'],
+            }
+            block_to_bead_idx[block_to_idx] = bead_idx
+            graph_out.add_node(bead_idx, **extra_bead)
+            bead_idx += 1
+
         # Make bonds within residue. We're not going to add interactions, we'll
         # leave that to the do_blocks processor since we might need to do
         # several mapping steps before we arive at the resolution we want.
