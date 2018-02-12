@@ -44,6 +44,7 @@ def apply_blocks(molecule, blocks):
 
     old_to_new_idxs = {}
     at_idx = 0
+    charge_group_offset = 0
     for res_idx in residue_graph:
         residue = residue_graph.nodes[res_idx]
         res_graph = residue['graph']
@@ -69,7 +70,9 @@ def apply_blocks(molecule, blocks):
             attrs = molecule.nodes[atom[0]]
             graph_out.add_node(at_idx, **ChainMap(block.nodes[atname], attrs))
             graph_out.nodes[at_idx]['graph'] = molecule.subgraph(atom)
+            graph_out.nodes[at_idx]['charge_group'] += charge_group_offset
             at_idx += 1
+        charge_group_offset = graph_out.nodes[at_idx - 1]['charge_group']
         for idx, jdx, data in block.edges(data=True):
             idx = atname_to_idx[idx]
             jdx = atname_to_idx[jdx]
