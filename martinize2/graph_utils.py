@@ -7,7 +7,6 @@ Created on Tue Oct 10 10:51:03 2017
 """
 import itertools
 import networkx as nx
-from networkx.algorithms.approximation import max_clique
 
 from .utils import maxes, first_alpha
 
@@ -192,15 +191,12 @@ class ElementGraphMatcher(nx.isomorphism.GraphMatcher):
 def blockmodel(G, partitions, **attrs):
     """
     Analogous to networkx.blockmodel, but can deal with incomplete partitions,
-    assigns ``attrs`` to nodes, and calculates the new ``position`` attribute as
-    center of geometry.
+    and assigns ``attrs`` to nodes.
 
     Parameters
     ----------
     G: networkx.Graph
         The graph to partition
-    partitions: iterable of iterables
-        Each element contains the node indices that construct the new node.
     **attrs: dict of str: iterable
         Attributes to assign to new nodes. Attribute values are assigned to the
         new nodes in order.
@@ -212,7 +208,6 @@ def blockmodel(G, partitions, **attrs):
         Node attributes:
 
             :graph: Subgraph of constructing nodes.
-            :position: Center of geometry of the ``position`` of nodes in ``graph``.
             :nnodes: Number of nodes in ``graph``.
             :nedges: Number of edges in ``graph``.
             :density: Density of ``graph``.
@@ -311,8 +306,6 @@ def make_residue_graph(mol):
             :density: The density of ``graph``.
             :nedges: The number of edges in ``graph``.
             :nnodes: The number of nodes in ``graph``.
-            :position: The center of geometry of the ``position`` of the nodes in
-                       ``graph``.
             :resid: The residue index.
             :resname: The residue name.
             :atomname: The residue name.

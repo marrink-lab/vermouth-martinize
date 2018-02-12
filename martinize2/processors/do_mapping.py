@@ -138,23 +138,17 @@ def do_mapping(molecule, mappings, to_ff):
         graph = residue['graph']
         mapping = pair_mapping[residue['resname']]
 
+        # Atomnames must match
         node_match = iso.categorical_node_match('atomname', '')
+        graphmatcher = iso.GraphMatcher(mapping.block_from, graph, node_match=node_match)
 
-        # TODO: Reverse graph and block_from, and remove match inversion below.
-        #       Can't do that right now, since we need to do
-        #       subgraph_isomorphism, which is wrong (should be isomorphism).
-        #       However, at time of writing we're still stuck with extraneous
-        #       atoms such as termini, and no appropriate resnames and mappings.
-        graphmatcher = iso.GraphMatcher(graph, mapping.block_from, node_match=node_match)
-
-        matches = list(graphmatcher.subgraph_isomorphisms_iter())
+        matches = list(graphmatcher.isomorphisms_iter())
         if len(matches) != 1:
             msg = ('Not one match ({}) for residue {}:{}.'
                    .format(len(matches), residue['resname'], res_node_idx))
             raise KeyError(msg)
-        match = matches[0]
 
-        match = {v: k for k, v in match.items()}  # TODO remove me. See above.
+        match = matches[0]
 
         mapped_match = {}
         for to_idx, from_idxs in mapping.mapping.items():
@@ -235,4 +229,3 @@ class DoMapping(Processor):
                 mols.append(new_molecule)
         system.molecules = mols
         system.force_field = self.to_ff
-

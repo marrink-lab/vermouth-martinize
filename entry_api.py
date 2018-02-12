@@ -144,6 +144,7 @@ def pdb_to_universal(system, delete_unknown=False):
     canonicalized.force_field = FORCE_FIELDS['universal']
     m2.MakeBonds().run_system(canonicalized)
     m2.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
+    m2.CanonizePTMs().run_system(canonicalized)
     return canonicalized
 
 
