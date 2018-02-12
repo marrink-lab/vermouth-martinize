@@ -75,8 +75,36 @@ def write_pdb(system, file_name, conect=True):
         out.write('END   \n')
 
 
+def do_conect(mol, conectlist):
+    """Apply connections to molecule based on CONECT records read from PDB file"""
+    atidx2nodeidx = {node_data['atomid']: node_idx
+                     for node_idx, node_data in mol.node.items()}
+
+    for line in conectlist:
+        start = 6
+        width = 5
+        ats = []
+        for num in range(start, len(line.rstrip()), width):
+            at = int(line[num:num + width])
+            ats.append(at)
+            try:
+                at0 = atidx2nodeidx[ats[0]]
+            except KeyError:
+                continue
+            for at in ats[1:]:
+                try:
+                    at = atidx2nodeidx[at]
+                except KeyError:
+                    continue
+                dist = distance(mol.node[at0]['position'], mol.node[at]['position'])
+                mol.add_edge(at0, at, distance=dist)
+
+    return
+
+                    
 def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
     models = [Molecule()]
+    conect = []
     idx = 0
     
     field_widths = (-6, 5, -1, 4, 1, 3, -1, 1, 4, 1, -3, 8, 8, 8, 6, 6, -10, 2, 2)
@@ -113,26 +141,11 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
                 models[-1].add_node(idx, **properties)
                 idx += 1
             elif record == 'CONECT':
-                atidx2nodeidx = {node_data['atomid']: node_idx
-                                 for node_idx, node_data in models[-1].node.items()}
-                start = 6
-                width = 5
-                ats = []
-                for num in range(start, len(line.rstrip()), width):
-                    at = int(line[num:num + width])
-                    ats.append(at)
-                try:
-                    at0 = atidx2nodeidx[ats[0]]
-                except KeyError:
-                    continue
-                for at in ats[1:]:
-                    try:
-                        at = atidx2nodeidx[at]
-                    except KeyError:
-                        continue
-                    dist = distance(models[-1].node[at0]['position'], models[-1].node[at]['position'])
-                    models[-1].add_edge(at0, at, distance=dist)
+                conect.append(line)
 
+    for molecule in models:
+        do_conect(molecule, conect)
+                
     molecule = models[model]
 
 #    if molecule.number_of_edges() == 0:
