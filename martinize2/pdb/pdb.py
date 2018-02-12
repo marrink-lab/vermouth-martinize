@@ -143,6 +143,9 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
             elif record == 'CONECT':
                 conect.append(line)
 
+    if not len(models[-1]):
+        models.pop()
+        
     for molecule in models:
         do_conect(molecule, conect)
                 
