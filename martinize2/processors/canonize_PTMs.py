@@ -240,12 +240,22 @@ def fix_ptm(molecule):
             for mol_idx, ptm_idx in match.items():
                 ptm_node = ptm.nodes[ptm_idx]
                 mol_node = molecule.nodes[mol_idx]
-                if ptm_node['PTM_atom'] or 'rename' in ptm_node:
+                # Names of PTM atoms still need to be corrected, and for some
+                # non PTM atoms attributes need to change.
+                # Nodes with 'replace': {'atomname': None} will be removed.
+                if ptm_node['PTM_atom'] or 'replace' in ptm_node:
                     mol_node['graph'] = molecule.subgraph([mol_idx]).copy()
-                    new_name = ptm_node.get('rename', ptm_node['atomname'])
-                    # DEBUG output
-                    print('Renaming {} to {}'.format(mol_node['atomname'], new_name))
-                    mol_node['atomname'] = new_name
+                    to_replace = ptm_node.get('replace', dict())
+                    for attr_name, val in to_replace.items():
+                        if attr_name == 'atomname' and val is None:
+                            # DEBUG output
+                            print('Removing node {}, {}'.format(mol_idx), mol_node['atomname'])
+                            mol_node.remove_node(mol_idx)
+                            n_idxs.remove(mol_idx)
+                            break
+                        # DEBUG output
+                        print('Changing attribute {} from {} to {}'.format(attr_name, mol_node[attr_name], val))
+                        mol_node[attr_name] = val
             for n_idx in n_idxs:
                 molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])
                 molecule.nodes[n_idx]['modifications'].append(ptm)
