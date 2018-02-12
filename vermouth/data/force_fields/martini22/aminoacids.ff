@@ -557,7 +557,7 @@ BB +BB 1 0.350 1250 {"group": "Backbone bonds"}
 [ link ]
 resname $protein_resnames
 [ angles ]
--BB BB +BB 2 119.2 150 {"group": "BBB angles"}
+-BB BB +BB 2 127 20 {"group": "BBB angles"}
 
 [ link ]
 resname $protein_resnames
