@@ -75,8 +75,8 @@ def write_pdb(system, file_name, conect=True):
         out.write('END   \n')
 
 
-def read_pdb(file_name, exclude=('SOL',), ignh=False):
-    molecule = Molecule()
+def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
+    models = [Molecule()]
     idx = 0
     
     field_widths = (-6, 5, -1, 4, 1, 3, -1, 1, 4, 1, -3, 8, 8, 8, 6, 6, -10, 2, 2)
@@ -95,7 +95,9 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False):
     with open(file_name) as pdb:
         for line in pdb:
             record = line[:6]
-            if record == 'ATOM  ' or record == 'HETATM':
+            if record == 'ENDMDL':
+                models.append(Molecule())
+            elif record == 'ATOM  ' or record == 'HETATM':
                 properties = {}
                 for name, type_, slice_ in zip(field_names, field_types, slices):
                     properties[name] = type_(line[slice_].strip())
@@ -108,11 +110,11 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False):
                     properties['element'] = first_alpha(atomname)
                 if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):
                     continue
-                molecule.add_node(idx, **properties)
+                models[-1].add_node(idx, **properties)
                 idx += 1
             elif record == 'CONECT':
                 atidx2nodeidx = {node_data['atomid']: node_idx
-                                 for node_idx, node_data in molecule.node.items()}
+                                 for node_idx, node_data in models[-1].node.items()}
                 start = 6
                 width = 5
                 ats = []
@@ -128,8 +130,10 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False):
                         at = atidx2nodeidx[at]
                     except KeyError:
                         continue
-                    dist = distance(molecule.node[at0]['position'], molecule.node[at]['position'])
-                    molecule.add_edge(at0, at, distance=dist)
+                    dist = distance(models[-1].node[at0]['position'], models[-1].node[at]['position'])
+                    models[-1].add_edge(at0, at, distance=dist)
+
+    molecule = models[model]
 
 #    if molecule.number_of_edges() == 0:
 #        edges_from_distance(molecule)
@@ -139,4 +143,5 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False):
 #        idxs = np.where((distances < threshold) & (distances != 0))
 #        weights = 1/distances[idxs]
 #        molecule.add_weighted_edges_from(zip(idxs[0], idxs[1], weights))
+
     return molecule
