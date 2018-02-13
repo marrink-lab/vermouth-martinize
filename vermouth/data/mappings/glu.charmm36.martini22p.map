@@ -55,4 +55,4 @@ charmm27 charmm36
 ; HA     CA    N    C    CB ; D-Glu
 
 [ extra ]
-SC2
+SCN

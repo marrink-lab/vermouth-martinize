@@ -61,4 +61,4 @@ charmm27 charmm36
 ; HA     CA    N    C    CB ; D-Lys
 
 [ extra ]
-SC3
+SCP

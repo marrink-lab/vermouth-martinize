@@ -50,4 +50,4 @@ charmm27 charmm36
 ; HA     CA    N    C    CB ; D-Ser
 
 [ extra ]
-SC2 SC3
+SCP SCN
