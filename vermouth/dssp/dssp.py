@@ -25,7 +25,7 @@ from ..pdb import pdb
 from ..system import System
 from ..molecule import Molecule
 from ..processors.processor import Processor
-from ..selectors import is_protein, selector_no_position, filter_out, select_all
+from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 
 
 class DSSPError(Exception):
@@ -80,13 +80,10 @@ def read_dssp2(lines):
         is not supported.
     """
     secstructs = []
-    # We want to be able to read the first line in the same way regardless of
-    # the type of the input. As we cannot read the first element of a list
-    # using `next`, nor can we read the first line of a file by indexing,
-    # we normalize the interface of the input by making it an iterator.
-    # It should always be possible to make an iterator out of a iterable.
-    lines = iter(lines)
-    first_line = next(lines)
+    # We use the line number for the error messages. It is more natural for a
+    # user to count lines in a file starting from 1 rather than 0.
+    numbered_lines = enumerate(lines, start=1)
+
     # The function can only read output from DSSP version 2. Hopefully, if the
     # input file is not in this format, then the parser will break as it reads
     # the file; we can expect that the end of the header will not be found or
@@ -100,18 +97,17 @@ def read_dssp2(lines):
     # Yet, we can identify files from DSSP v1 from the first line. These files
     # start with "****" instead of "====". If we identify such a file, we can
     # fail with a useful error message.
-    if first_line and not first_line.startswith('===='):
-        if first_line.startswith('****'):
-            msg = ('Based on its header, the input file could come from a '
-                   'pre-July 1995 version of DSSP (or the compatibility mode '
-                   'of a more recent version). Only output from the version 2 '
-                   'of DSSP are supported.')
-            raise IOError(msg)
+    _, first_line = next(numbered_lines)
+    if first_line and first_line.startswith('****'):
+        msg = ('Based on its header, the input file could come from a '
+               'pre-July 1995 version of DSSP (or the compatibility mode '
+               'of a more recent version). Only output from the version 2 '
+               'of DSSP are supported.')
+        raise IOError(msg)
 
     # First we skip the header and the histogram.
-    line_num = 0  # This should not be required, except maybe weird edge-cases
-    for line_num, line in enumerate(lines, start=2):
-        if line[:15] == '  #  RESIDUE AA':
+    for line_num, line in numbered_lines:
+        if line.startswith('  #  RESIDUE AA'):
             break
     else:  # no break
         msg = ('No secondary structure assignation could be read because the '
@@ -120,14 +116,14 @@ def read_dssp2(lines):
         raise IOError(msg)
 
     # Now, every line should be a secondary structure assignation.
-    for line_num, line in enumerate(lines, start=line_num + 1):
+    for line_num, line in numbered_lines:
         if '!' in line:
             # This is a TER record, we ignore it.
             continue
-        if not line:
+        elif not line:
             # We ignore the empty lines.
             continue
-        if len(line) >= 17:
+        elif len(line) >= 17:
             secondary_structure = line[16]
             if secondary_structure not in 'HBEGITS ':
                 msg = 'Unrecognize secondary structure "{}" in line {}: "{}"'
@@ -230,7 +226,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     stored is controlled with the "attribute" argument.
 
     Only proteins can be annotated. Non-protein molecules are returned
-    unmodified, so as empty molecules, and molecules for which no positions
+    unmodified, so are empty molecules, and molecules for which no positions
     are set.
 
     The atom names are assumed to be compatible with DSSP. Atoms with no known
@@ -238,7 +234,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
 
     .. warning::
 
-        The molecule is annotated **on-place**.
+        The molecule is annotated **in-place**.
 
     Parameters
     ----------
@@ -255,11 +251,6 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     attribute: str
         The name of the atom attribute in which to store the annotation.
 
-    Returns
-    -------
-    Molecule
-        The modified molecule.
-
     See Also
     --------
     run_dssp, read_dssp2
@@ -267,7 +258,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     if not is_protein(molecule):
         return molecule
 
-    clean_pos = filter_out(molecule, selector=selector_no_position)
+    clean_pos = filter_minimal(molecule, selector=selector_has_position)
 
     # We ignore empty molecule, there is no point at running DSSP on them.
     if not clean_pos:
@@ -279,11 +270,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     system.add_molecule(clean_pos)
     secstructs = run_dssp(system, executable, savefile)
 
-    group_residues = itertools.groupby(molecule, key=lambda atom: molecule.nodes[atom]['resid'])
-    for (_, atoms), secondary_structure in zip(group_residues, secstructs):
-        for atom in atoms:
-            molecule.nodes[atom][attribute] = secondary_structure
-    return molecule
+    annotate_residues_from_sequence(molecule, attribute, secstructs)
 
 
 def convert_dssp_to_martini(sequence):
@@ -294,6 +281,22 @@ def convert_dssp_to_martini(sequence):
     For instance, the different types of helices that dssp discriminates are
     seen the same by martini. Yet, different parts of the same helix are seen
     differently in martini.
+
+    In the Martini force field, the B and E secondary structures from DSSP are
+    both treated as extended regions. All the DSSP helices are treated the
+    same, but the different part of the helices (beginning, end, core of a
+    short helix, core of a long helix) are treated differently.
+
+    After the conversion, the secondary structures are:
+    * :F: Collagenous Fiber
+    * :E: Extended structure (β sheet)
+    * :H: Helix structure
+    * :1: Helix start (H-bond donor)
+    * :2: Helix end (H-bond acceptor)
+    * :3: Ambivalent helix type (short helices)
+    * :T: Turn
+    * :S: Bend
+    * :C: Coil
 
     Parameters
     ----------
@@ -367,7 +370,8 @@ class AnnotateDSSP(Processor):
         self.savedir = savedir
 
     def run_molecule(self, molecule):
-        return annotate_dssp(molecule, self.executable, self.savedir)
+        annotate_dssp(molecule, self.executable, self.savedir)
+        return molecule
 
 
 class AnnotateMartiniSecondaryStructures(Processor):
