@@ -54,7 +54,7 @@ def write_pdb_string(system, conect=True):
             chain = node['chain']
             resid = node['resid']
             insertion_code = node.get('insertioncode', '')
-            x, y, z = node['position']
+            x, y, z = node['position'] * 10  # converting from nm to A
             occupancy = node.get('occupancy', 1)
             temp_factor = node.get('temp_factor', 0)
             element = node.get('element', first_alpha(atomname))
@@ -152,7 +152,8 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
                     properties[name] = type_(line[slice_].strip())
 
                 pos = (properties.pop('x'), properties.pop('y'), properties.pop('z'))
-                properties['position'] = np.array(pos, dtype=float)
+                # Coordinates are read in Angstrom, but we want them in nm
+                properties['position'] = np.array(pos, dtype=float) / 10
 
                 if not properties['element']:
                     atomname = properties['atomname']

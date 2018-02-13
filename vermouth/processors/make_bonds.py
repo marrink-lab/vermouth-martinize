@@ -34,7 +34,7 @@ except ImportError:
     from ..redistributed.kdtree import KDTree
 
 
-COVALENT_RADII = {'H': 0.31, 'C': 0.76, 'N': 0.71, 'O': 0.66, 'S': 1.05}
+COVALENT_RADII = {'H': 0.031, 'C': 0.076, 'N': 0.071, 'O': 0.066, 'S': 0.105}
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
 
 
