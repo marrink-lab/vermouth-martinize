@@ -50,11 +50,10 @@ def _atoms_match(node1, node2):
         return True
 
 
-def _is_valid_non_edges(molecule, link, raw_match):
+def _is_valid_non_edges(molecule, link, rev_raw_match):
     for from_node, to_node_attrs in link.non_edges:
         if from_node not in link:
             continue
-        rev_raw_match = {value: key for key, value in raw_match.items()}
         from_mol_node_name = rev_raw_match[from_node]
         from_mol = molecule.nodes[from_mol_node_name]
         from_link = link.nodes[from_node]
@@ -69,6 +68,23 @@ def _is_valid_non_edges(molecule, link, raw_match):
                 return False
     return True
 
+
+def _pattern_match(molecule, atoms, raw_match):
+    for link_key, template_attr in atoms:
+        try:
+            molecule_key = raw_match[link_key]
+        except KeyError as err:
+            print(raw_match)
+            raise err
+        molecule_attr = molecule.nodes[molecule_key]
+        if not _atoms_match(molecule_attr, template_attr):
+            return False
+    return True
+
+
+def _any_pattern_match(molecule, patterns, rev_raw_match):
+    return any(_pattern_match(molecule, atoms, rev_raw_match) for atoms in patterns)
+
         
 def match_link(molecule, link):
     if not attributes_match(molecule.meta, link.molecule_meta):
@@ -78,8 +94,13 @@ def match_link(molecule, link):
 
     raw_matches = GM.subgraph_isomorphisms_iter()
     for raw_match in raw_matches:
-        # mol -> link
-        if not _is_valid_non_edges(molecule, link, raw_match):
+        # raw_match: mol -> link
+        # rev_raw_match: link -> mol
+        rev_raw_match = {value: key for key, value in raw_match.items()}
+        if not _is_valid_non_edges(molecule, link, rev_raw_match):
+            continue
+        any_pattern_match = _any_pattern_match(molecule, link.patterns, rev_raw_match)
+        if link.patterns and (not any_pattern_match):
             continue
         order_match = {}
         for mol_idx, link_idx in raw_match.items():

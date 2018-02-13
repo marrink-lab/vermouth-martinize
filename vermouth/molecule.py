@@ -385,6 +385,7 @@ class Link(Block):
         self.removed_interactions = {}
         self._apply_to_all_nodes = {}
         self.molecule_meta = {}
+        self.patterns = []
 
 
 def attributes_match(attributes, template_attributes):

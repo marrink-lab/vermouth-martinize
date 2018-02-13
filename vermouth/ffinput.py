@@ -212,8 +212,11 @@ def _parse_atom_attributes(token):
     attributes = json.loads(token)
     modifications = {}
     for key, value in attributes.items():
-        if '|' in value:
-            modifications[key] = Choice(value.split('|'))
+        try:
+            if '|' in value:
+                modifications[key] = Choice(value.split('|'))
+        except TypeError:
+            pass
     attributes.update(modifications)
     return attributes
 
@@ -499,6 +502,13 @@ def _parse_edges(tokens, context, context_type, negate):
         context.add_edge(prefixed_atoms[0][0], prefixed_atoms[1][0])
 
 
+def _parse_patterns(tokens, context, context_type):
+    if context_type != 'link':
+        raise IOError('The "partterns" section is only valid in links.')
+    atoms = _get_atoms(tokens, natoms=None)
+    context.patterns.append(atoms)
+
+
 def read_ff(lines):
     interactions_natoms = {
         'bonds': 2,
@@ -560,6 +570,8 @@ def read_ff(lines):
             _parse_edges(tokens, context, context_type, negate=True)
         elif section == 'edges':
             _parse_edges(tokens, context, context_type, negate=False)
+        elif section == 'patterns':
+            _parse_patterns(tokens, context, context_type)
         elif tokens[0] == '#meta':
             _parse_meta(tokens, context, context_type, section)
         else:
