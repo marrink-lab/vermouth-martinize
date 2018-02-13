@@ -311,7 +311,7 @@ def _treat_atom_prefix(reference, attributes):
     if order_attribute < 0:
         prefix_symbol = '-'
     atom_name = reference[prefix_end:]
-    attributes['atomname'] = atom_name
+    attributes['atomname'] = attributes.get('atomname', atom_name)
     prefixed_reference = prefix_symbol * int(math.fabs(order_attribute)) + atom_name
 
     return prefixed_reference, atom_name, attributes
@@ -338,7 +338,6 @@ def _treat_link_interaction_atoms(atoms, context, section):
                                              value, context_atom[key]))
             context_atom.update(attributes)
         else:
-            attributes['atomname'] = atom_name
             context.add_node(prefixed_reference, **attributes)
 
 
