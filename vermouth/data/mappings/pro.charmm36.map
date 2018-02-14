@@ -31,18 +31,11 @@ charmm27 charmm36
 [ atoms ]
     1     N    BB
     2    CD   SC1
-    3   HD1   SC1
-    4   HD2   SC1
-    5    CA    BB
-    6    HA    BB
-    7    CB   SC1 BB
-    8   HB1   SC1 BB
-    9   HB2   SC1 BB
-   10    CG   SC1
-   11   HG1   SC1
-   12   HG2   SC1
-   13     C    BB
-   14     O    BB
+    3    CA    BB
+    4    CB   SC1
+    5    CG   SC1
+    6     C    BB
+    7     O    BB
 
 [ chiral ]
   CB     CA    N    C

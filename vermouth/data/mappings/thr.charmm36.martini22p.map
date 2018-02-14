@@ -31,15 +31,10 @@ charmm27 charmm36
     1     N    BB
     2    HN    BB
     3    CA    BB
-    4    HA    BB
-    5    CB   SC1 BB BB 
-    6    HB   SC1 BB BB
-    7   OG1   SC1 SC1 BB
+    5    CB   SC1
+    7   OG1   SC1
     8   HG1   SC1
     9   CG2   SC1 
-   10   HG21  SC1 
-   11   HG22  SC1 
-   12   HG23  SC1 
    13     C    BB
    14     O    BB
 
