@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2018 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,21 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct  4 10:45:54 2017
+from .processor import Processor
 
-@author: peterkroon
-"""
+# TODO: make the masses part of the forcefield
+ATOM_MASSES = {'H': 1, 'C': 12, 'N': 14, 'O': 16, 'S': 32, 'P': 31, 'M': 0}
 
-from .gro_reader import GROInput
-from .make_bonds import MakeBonds
-from .pdb_reader import PDBInput
-from .repair_graph import RepairGraph
-from .do_mapping import DoMapping
-from .do_links import DoLinks
-from .apply_blocks import ApplyBlocks
-from .average_beads import DoAverageBead
-from .apply_posres import ApplyPosres
-from .set_molecule_meta import SetMoleculeMeta
-from .locate_charge_dummies import LocateChargeDummies
-from .attach_mass import AttachMass
+
+def attach_mass(molecule, attribute='mass'):
+    for node in molecule.nodes.values():
+        node[attribute] = ATOM_MASSES[node['element']]
+
+
+class AttachMass(Processor):
+    def __init__(self, attribute='mass'):
+        super().__init__()
+        self.attribute = attribute
+
+    def run_molecule(self, molecule):
+        attach_mass(molecule, attribute=self.attribute)
+        return molecule

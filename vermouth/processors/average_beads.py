@@ -46,7 +46,12 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
                 for subnode in node['graph'].nodes().values()
                 if 'position' in subnode and subnode['position'] is not None
             ])
-            node['position'] = positions.mean(axis=0)
+            weights = np.array([
+                node.get('mapping_weights', {}).get(subnode_key, 1) * subnode['mass']
+                for subnode_key, subnode in node['graph'].nodes.items()
+                if 'position' in subnode
+            ])
+            node['position'] = np.average(positions, axis=0, weights=weights)
 
     return molecule
 
