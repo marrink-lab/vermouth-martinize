@@ -276,6 +276,13 @@ def entry():
     parser.add_argument('-dssp', nargs='?', const='dssp')
     parser.add_argument('-ed', dest='extdih', action='store_true', default=False) 
     parser.add_argument('-collagen', action='store_true', default=False)
+    parser.add_argument('-elastic', action='store_true', default=False)
+    parser.add_argument('-ef', dest='rb_force_constant', type=float, default=500)
+    parser.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5)
+    parser.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9)
+    parser.add_argument('-ea', dest='rb_decay_factor', type=float, default=0)
+    parser.add_argument('-ep', dest='rb_decay_power', type=float, default=0)
+    parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0)
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -312,6 +319,18 @@ def entry():
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
     )
+
+    # Apply a rubber band elastic network is required.
+    if args.elastic:
+        rubber_band_processor = vermouth.ApplyRubberBand(
+            lower_bound=args.rb_lower_bound,
+            upper_bound=args.rb_upper_bound,
+            decay_factor=args.rb_decay_factor,
+            decay_power=args.rb_decay_power,
+            base_constant=args.rb_force_constant,
+            minimum_force=args.rb_minimum_force,
+        )
+        rubber_band_processor.run_system(system)
 
     # Apply position restraints if required.
     if args.posres != 'None':
