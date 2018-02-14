@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 import numpy as np
 import networkx as nx
 from .processor import Processor
@@ -37,6 +38,22 @@ def compute_force_constants(distance_matrix, lower_bound, upper_bound,
     return constants
 
 
+def build_connectivity_matrix(graph, separation, selection=None):
+    if separation <= 0:
+        raise ValueError('Separation has to be strictly positive.')
+    if separation == 1:
+        return nx.to_numpy_matrix(graph, nodelist=selection).astype(bool)
+    subgraph = graph.subgraph(selection)
+    connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
+    for (i, key_i),  (j, key_j) in itertools.combinations(enumerate(subgraph.nodes), 2):
+        shortest_path = len(nx.shortest_path(subgraph, key_i, key_j))
+        # The source and the target are counted in the shortest path
+        connectivity[i, j] = shortest_path <= separation + 2
+        connectivity[j, i] = connectivity[i, j]
+    return connectivity
+
+
+
 def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
@@ -60,7 +77,7 @@ def apply_rubber_band(molecule, selector,
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,
                                         base_constant, minimum_force)
-    connectivity = nx.to_numpy_matrix(molecule, nodelist=selection).astype(bool)
+    connectivity = build_connectivity_matrix(molecule, 2, selection=selection)
     constants *= ~connectivity
     for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
         from_key = selection[from_idx]
