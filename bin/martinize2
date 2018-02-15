@@ -149,6 +149,7 @@ def entry():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', dest='inpath', required=True, type=Path)
     parser.add_argument('-x', dest='outpath', required=True, type=Path)
+    parser.add_argument('-o', dest='top_path', type=Path)
     parser.add_argument('-p', dest='posres',
                         choices=('None', 'All', 'Backbone'), default='None')
     parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
@@ -229,7 +230,8 @@ def entry():
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath))
 
-    write_gmx_topology(system, Path('topol.top'))
+    if args.top_path is not None:
+        write_gmx_topology(system, args.top_path)
 
 
 if __name__ == '__main__':
