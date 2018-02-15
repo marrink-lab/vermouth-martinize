@@ -150,7 +150,10 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     return graph_mapping_collection
 
 
-def do_mapping(molecule, mappings, to_ff):
+def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
+    # We always keep the chain, the resid, and the resname from the original
+    # molecule.
+    attribute_keep = ['chain', 'resname', 'resid'] + list(attribute_keep)
     pair_mapping = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
 
     residue_graph = make_residue_graph(molecule)
@@ -196,13 +199,17 @@ def do_mapping(molecule, mappings, to_ff):
 
             # Bead properties are taken from the last (!) atom, overwritten by
             # the block, and given a 'graph'
+            # Only the properties that are listed in the attribute_keep
+            # argument and those required to identify the residue (chain,
+            # resid, and resname) are kept.
             # TODO: nx.quotient_graph?
             # FIXME: properties take from last bead instead of chosen 
             #        intellegently
             bead['mapping_weights'] = {}
             for n_idx in from_idxs:
-                bead.update(graph.nodes[n_idx])
                 bead['mapping_weights'][n_idx] = mapping.weights[block_to_idx][rev_match[n_idx]]
+            for attribute_key in attribute_keep:
+                bead[attribute_key] = graph.nodes[from_idxs[-1]].get(attribute_key)
             bead.update(mapping.block_to.nodes[block_to_idx])
             bead['graph'] = graph.subgraph(from_idxs)
             assert bead_idx not in graph_out
@@ -253,14 +260,20 @@ def do_mapping(molecule, mappings, to_ff):
 
 
 class DoMapping(Processor):
-    def __init__(self, mappings, to_ff, delete_unknown=False):
+    def __init__(self, mappings, to_ff, delete_unknown=False, attribute_keep=()):
         self.mappings = mappings
         self.to_ff = to_ff
         self.delete_unknown = delete_unknown
+        self.attribute_keep = attribute_keep
         super().__init__()
 
     def run_molecule(self, molecule):
-        return do_mapping(molecule, mappings=self.mappings, to_ff=self.to_ff)
+        return do_mapping(
+            molecule,
+            mappings=self.mappings,
+            to_ff=self.to_ff,
+            attribute_keep=self.attribute_keep
+        )
 
     def run_system(self, system):
         mols = []

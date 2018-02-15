@@ -195,7 +195,8 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     """
     vermouth.DoMapping(mappings=mappings,
                        to_ff=to_ff,
-                       delete_unknown=delete_unknown).run_system(system)
+                       delete_unknown=delete_unknown,
+                       attribute_keep=('cgsecstruct', )).run_system(system)
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
     vermouth.ApplyBlocks().run_system(system)
     vermouth.DoLinks().run_system(system)
