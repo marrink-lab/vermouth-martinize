@@ -199,3 +199,7 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+Files from other sources are redistributed as part of the package in the
+vermouth/redistributed directory. See vermouth/redistributed/LICENSE for the
+license of these files.

@@ -31,7 +31,7 @@ try:
     from scipy.spatial import cKDTree as KDTree
 except ImportError:
     print('Using redistributed KDTree')
-    from ..kdtree import KDTree
+    from ..redistributed.kdtree import KDTree
 
 
 COVALENT_RADII = {'H': 0.31, 'C': 0.76, 'N': 0.71, 'O': 0.66, 'S': 1.05}
