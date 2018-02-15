@@ -2,7 +2,7 @@ import collections
 import pytest
 import networkx as nx
 
-import martinize2.graphing.grappa as grappa
+import vermouth.graphing.grappa as grappa
 
 
 RefEntry = collections.namedtuple(

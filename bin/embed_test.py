@@ -6,7 +6,7 @@ Created on Wed Aug 30 13:07:14 2017
 @author: peterkroon
 """
 
-from martinize2 import *
+from vermouth import *
 import networkx as nx
 import numpy as np
 import scipy.sparse.csgraph as ssc

@@ -6,7 +6,7 @@ Created on Tue Aug 22 11:48:46 2017
 """
 #import matplotlib.pyplot as plt
 #plt.close('all')
-from martinize2 import *
+from vermouth import *
 
 import os.path as osp
 

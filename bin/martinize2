@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 High level API for Martinize2
@@ -7,9 +8,9 @@ import argparse
 from pathlib import Path
 import os
 import numpy as np
-import martinize2 as m2
-from martinize2.forcefield import find_force_fields, FORCE_FIELDS
-from martinize2 import DATA_PATH
+import vermouth
+from vermouth.forcefield import find_force_fields, FORCE_FIELDS
+from vermouth import DATA_PATH
 import itertools
 import operator
 import textwrap
@@ -117,12 +118,12 @@ def read_system(path):
 
     The resulting system does not have a force field and may not have edges.
     """
-    system = m2.System()
+    system = vermouth.System()
     file_extension = path.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ['PDB', 'ENT']:
-        m2.PDBInput().run_system(system, str(path))
+        vermouth.PDBInput().run_system(system, str(path))
     elif file_extension in ['GRO']:
-        m2.GROInput().run_system(system, str(path))
+        vermouth.GROInput().run_system(system, str(path))
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
@@ -142,8 +143,8 @@ def pdb_to_universal(system, delete_unknown=False):
     """
     canonicalized = system.copy()
     canonicalized.force_field = FORCE_FIELDS['universal']
-    m2.MakeBonds().run_system(canonicalized)
-    m2.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
+    vermouth.MakeBonds().run_system(canonicalized)
+    vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
     return canonicalized
 
 
@@ -151,10 +152,12 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     """
     Convert a system from one force field to an other at lower resolution.
     """
-    m2.DoMapping(mappings=mappings, to_ff=to_ff, delete_unknown=delete_unknown).run_system(system)
-    m2.DoAverageBead().run_system(system)
-    m2.ApplyBlocks().run_system(system)
-    m2.DoLinks().run_system(system)
+    vermouth.DoMapping(mappings=mappings,
+                       to_ff=to_ff,
+                       delete_unknown=delete_unknown).run_system(system)
+    vermouth.DoAverageBead().run_system(system)
+    vermouth.ApplyBlocks().run_system(system)
+    vermouth.DoLinks().run_system(system)
     return system
 
 
@@ -175,7 +178,7 @@ def write_gmx_topology(system, top_path):
     for molidx, (molecule_type, _) in enumerate(molecule_types):
         molecule_type.moltype = 'molecule_{}'.format(molidx)
         with open('molecule_{}.itp'.format(molidx), 'w') as outfile:
-            m2.gmx.itp.write_molecule_itp(molecule_type, outfile)
+            vermouth.gmx.itp.write_molecule_itp(molecule_type, outfile)
     # Reorganize the molecule type assignment to write the top file.
     # The top file "molecules" section lists the molecules in the same order
     # as in the structure and group them. To do the grouping, we associate each
@@ -230,7 +233,9 @@ def entry():
     parser.add_argument('-ff', dest='to_ff', default='martini22')
     args = parser.parse_args()
 
-    known_force_fields = m2.forcefield.find_force_fields(Path(DATA_PATH) / 'force_fields')
+    known_force_fields = vermouth.forcefield.find_force_fields(
+        Path(DATA_PATH) / 'force_fields'
+    )
     known_mappings = read_mapping_directory(Path(DATA_PATH) / 'mappings')
 
     from_ff = 'universal'
@@ -259,10 +264,10 @@ def entry():
     if args.posres != 'None':
         selectors = {'All': select_all, 'Backbone': select_backbone}
         selector = selectors[args.posres]
-        m2.ApplyPosres(selector, args.posres_fc).run_system(system)
+        vermouth.ApplyPosres(selector, args.posres_fc).run_system(system)
 
     # Write a PDB file.
-    m2.pdb.write_pdb(system, str(args.outpath))
+    vermouth.pdb.write_pdb(system, str(args.outpath))
 
     write_gmx_topology(system, Path('topol.top'))
 

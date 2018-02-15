@@ -8,7 +8,7 @@ def do_average_bead(molecule):
 
     Parameters
     ----------
-    molecule: martinize2.Molecule
+    molecule: vermouth.Molecule
         The molecule to update. The attribute :attr:`position` of the particles
         is updated on place. The nodes of the molecule must have an attribute
         :attr:`graph` that contains the subgraph of the initial molecule.

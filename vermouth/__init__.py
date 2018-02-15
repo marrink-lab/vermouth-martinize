@@ -13,7 +13,7 @@ except ImportError:
     DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     del os
 else:
-    DATA_PATH = pkg_resources.resource_filename('martinize2', 'data')
+    DATA_PATH = pkg_resources.resource_filename('vermouth', 'data')
     del pkg_resources
 
-from .martinize2 import *
+from .vermouth import *
