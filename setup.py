@@ -10,7 +10,7 @@ def package_files(directory):
     return paths
 
 setup(
-    package_data={'': package_files('martinize2/data'),},
+    package_data={'': package_files('vermouth/data'),},
     scripts=['bin/martinize2', ],
     setup_requires=['setuptools>=30.3.0']
 )

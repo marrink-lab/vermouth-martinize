@@ -1,3 +1,3 @@
-# Martinize2: The ultimate resolution transformation tool
+# Martinize2 and vermouth: The ultimate resolution transformation tools
 
 TODO: documentation
