@@ -25,7 +25,15 @@ is done in the same way an ITP file describes a molecule.
 import collections
 import math
 import json
-from .molecule import Block, Link, Interaction, DeleteInteraction, Choice
+from .molecule import (
+    Block, Link,
+    Interaction, DeleteInteraction,
+    Choice, NotDefinedOrNot,
+)
+
+VALUE_PREDICATES = {
+    'not': NotDefinedOrNot,
+}
 
 
 def _tokenize(line):
@@ -469,15 +477,16 @@ def _parse_link_attribute(tokens, context, section):
     elif len(tokens) < 2:
         raise IOError('Missing column in section "{}".'.format(section))
     key, value = tokens
-    value = json.loads(value)
-    try:
-        if '|' in value:
-            value = Choice(value.split('|'))
-    except TypeError:
-        # "value" can be something else than an iterable (bool, number...),
-        # then, looking for "|" in it will fail; which is perfectly normal and
-        # expected.
-        pass
+    if '|' in value:
+        value = Choice(json.loads(value).split('|'))
+    elif '(' in value and value.endswith(')') and not value.startswith('('):
+        open_pos = value.find('(')
+        function = value[:open_pos]
+        argument = json.loads(value[open_pos + 1:-1])
+        value = VALUE_PREDICATES[function](argument)
+    else:
+        value = json.loads(value)
+
     if section == 'link':
         context._apply_to_all_nodes[key] = value
     elif section == 'molmeta':

@@ -19,7 +19,7 @@ Created on Wed Oct 25 16:00:02 2017
 
 @author: peterkroon
 """
-from ..molecule import Choice, attributes_match
+from ..molecule import LinkPredicate, attributes_match, NotDefinedOrNot
 from .processor import Processor
 from ..gmx import read_rtp
 
@@ -38,16 +38,7 @@ class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
 
 
 def _atoms_match(node1, node2):
-    for attr in node2:
-        if attr in ['order', 'replace']:
-            continue
-        if isinstance(node2[attr], Choice):
-            if node1.get(attr, None) not in node2[attr]:
-                return False
-        elif node1.get(attr, None) != node2[attr]:
-            return False
-    else:
-        return True
+    return attributes_match(node1, node2, ignore_keys=('order', 'replace'))
 
 
 def _is_valid_non_edges(molecule, link, rev_raw_match):

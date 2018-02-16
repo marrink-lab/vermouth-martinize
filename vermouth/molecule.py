@@ -33,8 +33,25 @@ DeleteInteraction = namedtuple('DeleteInteraction',
                                'atoms atom_attrs parameters meta')
 
 
-class Choice(list):
-    pass
+class LinkPredicate:
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, node, key):
+        raise NotImplementedError
+
+    def __repr__(self):
+        return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
+
+
+class Choice(LinkPredicate):
+    def match(self, node, key):
+        return node.get(key) in self.value
+
+
+class NotDefinedOrNot(LinkPredicate):
+    def match(self, node, key):
+        return key not in node or node[key] != self.value
 
 
 class Molecule(nx.Graph):
@@ -388,14 +405,16 @@ class Link(Block):
         self.patterns = []
 
 
-def attributes_match(attributes, template_attributes):
+def attributes_match(attributes, template_attributes, ignore_keys=()):
     for attr, value in template_attributes.items():
-        if isinstance(value, Choice):
-            if attributes.get(attr) not in value:
+        if attr in ignore_keys:
+            continue
+        if isinstance(value, LinkPredicate):
+            match = value.match(attributes, attr)
+            if not value.match(attributes, attr):
                 return False
-        else:
-            if attributes.get(attr) != value:
-                return False
+        elif attributes.get(attr) != value:
+            return False
     return True
 
 
