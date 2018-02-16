@@ -164,6 +164,8 @@ def entry():
     parser.add_argument('-ea', dest='rb_decay_factor', type=float, default=0)
     parser.add_argument('-ep', dest='rb_decay_power', type=float, default=0)
     parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0)
+    parser.add_argument('-nt', dest='neutral_terminii',
+                        action='store_true', default=False)
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -192,6 +194,7 @@ def entry():
         AnnotateResidues(attribute='cgsecstruct', sequence='F',
                          molecule_selector=selectors.is_protein).run_system(system)
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
+    vermouth.SetMoleculeMeta(neutral_terminii=args.neutral_terminii).run_system(system)
 
     # Run martinize on the system.
     system = martinize(
