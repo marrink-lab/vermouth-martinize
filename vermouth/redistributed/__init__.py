@@ -10,21 +10,4 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.import os
-
-import os
-from setuptools import setup
-
-def package_files(directory):
-    paths = []
-    for (path, directories, filenames) in os.walk(directory):
-        for filename in filenames:
-            paths.append(os.path.join('..', path, filename))
-    return paths
-
-setup(
-    package_data={'': package_files('vermouth/data'),},
-    scripts=['bin/martinize2', ],
-    setup_requires=['setuptools>=30.3.0']
-)
-
+# limitations under the License.
