@@ -150,8 +150,8 @@ def entry():
     parser.add_argument('-f', dest='inpath', required=True, type=Path)
     parser.add_argument('-x', dest='outpath', required=True, type=Path)
     parser.add_argument('-o', dest='top_path', type=Path)
-    parser.add_argument('-p', dest='posres',
-                        choices=('None', 'All', 'Backbone'), default='None')
+    parser.add_argument('-p', dest='posres', type=lambda x: x.lower(),
+                        choices=('none', 'all', 'backbone'), default='None')
     parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
     parser.add_argument('-ff', dest='to_ff', default='martini22')
     parser.add_argument('-dssp', nargs='?', const='dssp')
@@ -217,9 +217,9 @@ def entry():
         rubber_band_processor.run_system(system)
 
     # Apply position restraints if required.
-    if args.posres != 'None':
-        node_selectors = {'All': selectors.select_all,
-                          'Backbone': selectors.select_backbone}
+    if args.posres != 'none':
+        node_selectors = {'all': selectors.select_all,
+                          'backbone': selectors.select_backbone}
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
