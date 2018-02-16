@@ -21,7 +21,7 @@ PRODUCTION.**
 Martinize2 and vermouth require python 3.4 or greater. They can be installed
 using the `pip` command:
 
-    pip install git+https://github.com/jbarnoud/martinize2.git#vermouth
+    pip install git+https://github.com/marrink-lab/vermouth-martinize.git#vermouth
 
 The behavior of the `pip` command can vary depending of the specificity of your
 python installation. See the [documentation on installing a python
@@ -73,7 +73,7 @@ academic paper is left to our sole discretion.
 [Martini tutorials]: http://cgmartini.nl/index.php/tutorials-general-introduction-gmx5
 [Gromacs]: http://www.gromacs.org
 [pipdoc]: https://packaging.python.org/tutorials/installing-packages/#installing-packages
-[license]: https://github.com/jbarnoud/martinize2/blob/master/LICENSE
-[github]: https://github.com/jbarnoud/martinize2
-[bug reports]: https://github.com/jbarnoud/martinize2/issues
-[pull requests]: https://github.com/jbarnoud/martinize2/pulls
+[license]: https://github.com/marrink-lab/vermouth-martinize/blob/master/LICENSE
+[github]: https://github.com/marrink-lab/vermouth-martinize
+[bug reports]: https://github.com/marrink-lab/vermouth-martinize/issues
+[pull requests]: https://github.com/marrink-lab/vermouth-martinize/pulls
