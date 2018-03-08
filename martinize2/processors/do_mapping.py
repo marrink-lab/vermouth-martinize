@@ -148,6 +148,7 @@ def do_mapping(molecule, mappings, to_ff):
                    .format(len(matches), residue['resname'], res_node_idx))
             raise KeyError(msg)
 
+        # XXX Jonathan beware!
         match = matches[0]
 
         mapped_match = {}
