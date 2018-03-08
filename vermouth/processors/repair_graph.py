@@ -88,7 +88,7 @@ def make_reference(mol):
             matches = isomorphism(residue, reference)
             matches = [{v: k for k, v in match.items()} for match in matches]
         if not matches:
-            # INFO
+            # DEBUG
             print('Doing MCS matching for residue {}{}'.format(resname, resid))
             # The problem is that some residues (termini in particular) will
             # contain more atoms than they should according to the reference.
@@ -171,7 +171,11 @@ def repair_residue(molecule, ref_residue):
                 continue
             added = True
             missing.pop(missing.index(ref_idx))
-            res_idx = max(molecule) + 1  # Alternative: find the first unused number
+            # We don't find the lowest available number since that's just
+            # asking for problems where you find an atom you don't expect
+            # because the old one you were looking for was removed, and it's
+            # number was reassigned.
+            res_idx = max(molecule) + 1
 
             # Create the new node
             node = {}
@@ -206,9 +210,10 @@ def repair_residue(molecule, ref_residue):
 
 def repair_graph(molecule, reference_graph):
     """
-    Repairs a molecule graph produced based on the
-    information in ``reference_graph``. Missing atoms will be added and atom-
-    and residue names will be canonicalized.
+    Repairs a molecule graph produced based on the information in
+    ``reference_graph``. Missing atoms will be added and atom- and residue-
+    names will be canonicalized. Atoms not present in ``reference_graph`` will
+    have the attribute ``PTM_atom`` set to ``True``.
 
     Parameters
     ----------
@@ -234,9 +239,10 @@ def repair_graph(molecule, reference_graph):
 
     Returns
     -------
-    networkx.Graph
-        A new graph like ``molecule``, but with missing atoms (as per
-        ``reference_graph``) added, and canonicalized atom and residue names.
+    None
+        ``molecule`` is modified in place. Missing atoms (as per
+        ``reference_graph``) are added, atom and residue names are
+        canonicalized, and PTM atoms are marked.
     """
     for residx in reference_graph:
         residue = reference_graph.nodes[residx]

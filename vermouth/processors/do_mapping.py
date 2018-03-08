@@ -175,6 +175,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             msg = ('Not one match ({}) for residue {}:{}.'
                    .format(len(matches), residue['resname'], res_node_idx))
             raise KeyError(msg)
+
+        # XXX Jonathan beware!
         match = matches[0]
         rev_match = {v: k for k, v in rev_match.items()}  # TODO remove me. See above.
 

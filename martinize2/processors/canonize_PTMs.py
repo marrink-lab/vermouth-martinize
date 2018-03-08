@@ -85,11 +85,11 @@ def find_PTM_atoms(molecule):
     return PTMs
 
 
-def identify_ptms(residue, residue_ptms, options):
+def identify_ptms(residue, residue_ptms, known_PTMs):
     """
-    Identifies all PTMs in ``options`` nescessary to describe all PTM atoms in
+    Identifies all PTMs in ``known_PTMs`` nescessary to describe all PTM atoms in
     ``residue_ptms``. Will take PTMs such that all PTM atoms in ``residue``
-    will be covered by applying PTMs from ``options`` in order.
+    will be covered by applying PTMs from ``known_PTMs`` in order.
     Nodes in ``residue`` must have correct ``atomname`` attributes, and may not
     be missing. In addition, every PTM in must be anchored to a non-PTM atom.
 
@@ -102,26 +102,26 @@ def identify_ptms(residue, residue_ptms, options):
         As returned by ``find_PTM_atoms``, but only those relevant for
         ``residue``.
 
-    options : sequence of tuples of (networkx.Graph, PTMGraphMatcher)
+    known_PTMs : sequence of tuples of (networkx.Graph, PTMGraphMatcher)
 
     Returns
     -------
     list of tuples of (networkx.Graph, dict)
-        All PTMs from ``options`` needed to describe the PTM atoms in
+        All PTMs from ``known_PTMs`` needed to describe the PTM atoms in
         ``residue`` along with a ``dict`` of node correspondences. The order of
-        ``options`` is preserved.
+        ``known_PTMs`` is preserved.
 
     Raises
     ------
     KeyError
-        Not all PTM atoms in ``residue`` can be covered with ``options``.
+        Not all PTM atoms in ``residue`` can be covered with ``known_PTMs``.
     """
     # BASECASE: residue_ptms is empty
     if not any(res_ptm[0] for res_ptm in residue_ptms):
         return []
-    # REDUCTION: Apply one of options, remove those atoms from residue_ptms
+    # REDUCTION: Apply one of known_PTMs, remove those atoms from residue_ptms
     # COMBINATION: add the applied option to the output.
-    for idx, option in enumerate(options):
+    for idx, option in enumerate(known_PTMs):
         ptm, matcher = option
         matches = list(matcher.subgraph_isomorphisms_iter())
         # Matches: [{res_idxs: ptm_idxs}, {...}, ...]
@@ -141,7 +141,7 @@ def identify_ptms(residue, residue_ptms, options):
                 # Continue with the remaining ptm atoms, and try just this
                 # option and all smaller.
                 try:
-                    return [(ptm, match)] + identify_ptms(residue, new_res_ptms, options[idx:])
+                    return [(ptm, match)] + identify_ptms(residue, new_res_ptms, known_PTMs[idx:])
                 except KeyError:
                     continue
     raise KeyError('Could not identify PTM')
