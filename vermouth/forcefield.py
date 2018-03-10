@@ -50,8 +50,11 @@ def find_force_fields(directory):
     directory = str(directory)  # Py<3.6 compliance
     for name in os.listdir(directory):
         path = os.path.join(directory, name)
-        has_force_field_file = any(True for _ in iter_force_field_files(path))
-        if has_force_field_file:
+        try:
+            next(iter_force_field_files(path))
+        except StopIteration:
+            pass
+        else:
             force_fields[name] = ForceField(path)
     return force_fields
 

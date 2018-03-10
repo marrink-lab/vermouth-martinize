@@ -20,6 +20,7 @@ import collections
 import itertools
 import os
 import subprocess
+import logging
 
 from ..pdb import pdb
 from ..system import System
@@ -151,7 +152,7 @@ def run_dssp(system, executable='dssp', savefile=None):
 
     In order to call DSSP, a PDB file is produced. Therefore, all the molecules
     in the system must contain the required attributes for such a file to be
-    generated. Also, the atom names are assumed to be compatible with them
+    generated. Also, the atom names are assumed to be compatible with the
     'universal' force field for DSSP to recognize them.
     However, the molecules do not require the edges to be defined.
 
@@ -193,8 +194,9 @@ def run_dssp(system, executable='dssp', savefile=None):
         stdout=subprocess.PIPE,
         stdin=subprocess.PIPE
     )
-    process.stdin.write(pdb.write_pdb_string(system, conect=False).encode('utf8'))
-    out, err = process.communicate()
+    out, err = process.communicate(
+        pdb.write_pdb_string(system, conect=False).encode('utf8')
+    )
     out = out.decode('utf8')
     status = process.wait()
     if status:
@@ -258,7 +260,9 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     if not is_protein(molecule):
         return molecule
 
-    clean_pos = filter_minimal(molecule, selector=selector_has_position)
+    clean_pos = molecule.subgraph(
+        filter_minimal(molecule, selector=selector_has_position)
+    )
 
     # We ignore empty molecule, there is no point at running DSSP on them.
     if not clean_pos:
@@ -331,13 +335,11 @@ def convert_dssp_to_martini(sequence):
 
 
 def sequence_from_residues(molecule, attribute, default=None):
-    sequence = []
     for residue_nodes in molecule.iter_residues():
         first_name = residue_nodes[0]
         first_node = molecule.nodes[first_name]
         value = first_node.get(attribute, default)
-        sequence.append(value)
-    return sequence
+        yield value
 
 
 def annotate_residues_from_sequence(molecule, attribute, sequence):
@@ -355,10 +357,22 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
 
 def convert_dssp_annotation_to_martini(
         molecule, from_attribute='secstruct', to_attribute='cgsecstruct'):
-    dssp_sequence = sequence_from_residues(molecule, from_attribute)
+    dssp_sequence = list(sequence_from_residues(molecule, from_attribute))
     if None not in dssp_sequence:
         cg_sequence = list(convert_dssp_to_martini(dssp_sequence))
         annotate_residues_from_sequence(molecule, to_attribute, cg_sequence)
+    elif all(elem is None for elem in dssp_sequence):
+        # There is no DSSP assignation for the molecule. This is likely due to
+        # the molecule not being a protein. Anyway, we issue a debug message
+        # as it *could* be due to the DSSP assignation having been skipped
+        # for some reason.
+        msg = 'No DSSP assignation to convert to Martini secondary structure intermediates.'
+        logging.debug(msg)
+    else:
+        # This is more of a problem. For now, we do not know what to do with
+        # incomplete DSSP assignation. This may come later as a problem if
+        # a molecule is attached to a protein.
+        raise ValueError('Not all residues have a DSSP assignation.')
 
 
 class AnnotateDSSP(Processor):

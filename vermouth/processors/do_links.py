@@ -71,11 +71,7 @@ def _is_valid_non_edges(molecule, link, rev_raw_match):
 
 def _pattern_match(molecule, atoms, raw_match):
     for link_key, template_attr in atoms:
-        try:
-            molecule_key = raw_match[link_key]
-        except KeyError as err:
-            print(raw_match)
-            raise err
+        molecule_key = raw_match[link_key]
         molecule_attr = molecule.nodes[molecule_key]
         if not _atoms_match(molecule_attr, template_attr):
             return False

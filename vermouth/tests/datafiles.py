@@ -34,5 +34,4 @@ DSSP_OUTPUT = TEST_DATA / 'dssp_1bta.ssd'
 # Clean the namespace so only the data file variables can be imported.
 # An other option would be to define __all__, but it is easy to forget to add
 # a variable in that list.
-del os
 del Path

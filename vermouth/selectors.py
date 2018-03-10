@@ -16,10 +16,11 @@ import numpy as np
 from .molecule import Molecule
 
 
-PROTEIN_RESIDUES = ('ALA', 'ARG', 'ASP', 'ASN', 'CYS',
-                    'GLU', 'GLN', 'GLY', 'HIS', 'ILE',
-                    'LEU', 'LYS', 'MET', 'PHE', 'PRO',
-                    'SER', 'THR', 'TRP', 'TYR', 'VAL')
+# TODO: Make that list part of the force fields
+PROTEIN_RESIDUES = set(('ALA', 'ARG', 'ASP', 'ASN', 'CYS',
+                        'GLU', 'GLN', 'GLY', 'HIS', 'ILE',
+                        'LEU', 'LYS', 'MET', 'PHE', 'PRO',
+                        'SER', 'THR', 'TRP', 'TYR', 'VAL'))
 
 
 def is_protein(molecule):
@@ -48,6 +49,7 @@ def select_all(node):
     return True
 
 
+# TODO: Have the backbone definition be force field specific.
 def select_backbone(node):
     return node.get('atomname') == 'BB'
 
@@ -75,26 +77,31 @@ def selector_has_position(atom):
 
 def filter_minimal(molecule, selector):
     """
-    Create a minimal molecule which only include a selection.
-
-    The minimal molecule only has nodes. It does dot have any molecule level
-    attribute, not does it have edges.
+    Yield the atom keys that match the selector.
 
     The selector must be a function that accepts an atom as a argument. The
     atom is passed as a node attribute dictionary. The selector must return
     ``True`` for atoms to keep in the selection.
+
+    The function can be used to build a subgraph that only contains the
+    selection:
+
+    .. code:: python
+        selection = molecule.subgraph(
+             filter_minimal(molecule, selector_function)
+        )
 
     Parameters
     ----------
     molecule: Molecule
     selector: callback
 
-    Returns
-    -------
-    Molecule
+    Yields
+    ------
+    keys:
+        Keys of the atoms that match the selection.
     """
     filtered = Molecule()
     for name, atom in molecule.nodes.items():
         if selector(atom):
-            filtered.add_node(name, **atom)
-    return filtered
+            yield name

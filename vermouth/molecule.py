@@ -119,10 +119,10 @@ class Molecule(nx.Graph):
     def remove_matching_interaction(self, type_, template_interaction):
         for idx, interaction in enumerate(self.interactions[type_]):
             if interaction_match(self, interaction, template_interaction):
+                del self.interactions[type_][idx]
                 break
         else:  # no break
             raise ValueError('Cannot find a matching interaction.')
-        del self.interactions[type_][idx]
 
     def find_atoms(self, **attrs):
         for node_idx in self:
