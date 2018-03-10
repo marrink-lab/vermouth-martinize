@@ -579,13 +579,13 @@ BB {"cgsecstruct": "2", "replace": {"atype": "Na"}}
 resname $protein_resnames
 cgsecstruct "F"
 [ bonds ]
-#meta group "Backbone bonds"
+#meta {"group": "Backbone bonds"}
 BB +BB 1 0.365 1250
 
 [ link ]
 resname $protein_resnames
 [ bonds ]
-#meta group "Backbone bonds"
+#meta {"group": "Backbone bonds"}
 BB +BB 1 0.3575 1250
 [ patterns ]
 BB {"cgsecstruct": "E|H|1|2|3"} +BB {"cgsecstruct": "F"}
@@ -595,7 +595,7 @@ BB {"cgsecstruct": "F"} +BB {"cgsecstruct": "E|H|1|2|3"}
 [ link ]
 resname $protein_resnames
 [ bonds ]
-#meta group "Backbone bonds"
+#meta {"group": "Backbone bonds"}
 BB +BB 1 0.350 1250
 [ patterns ]
 BB {"cgsecstruct": "E|H|1|2|3"} +BB
@@ -604,7 +604,7 @@ BB +BB {"cgsecstruct": "E|H|1|2|3"}
 [ link ]
 resname $protein_resnames
 [ bonds ]
-#meta group "Backbone bonds"
+#meta {"group": "Backbone bonds"}
 BB +BB 1 0.3575 500
 [ patterns ]
 BB {"cgsecstruct": "T"} +BB {"cgsecstruct": "F"}
@@ -613,7 +613,7 @@ BB {"cgsecstruct": "F"} +BB {"cgsecstruct": "T"}
 [ link ]
 resname $protein_resnames
 [ bonds ]
-#meta group "Backbone bonds"
+#meta {"group": "Backbone bonds"}
 BB +BB 1 0.350 500
 [ patterns ]
 BB +BB {"cgsecstruct": "T"}
@@ -622,7 +622,7 @@ BB {"cgsecstruct": "T"} +BB
 [ link ]
 resname $protein_resnames
 [ bonds ]
-#meta group "Backbone bonds"
+#meta {"group": "Backbone bonds"}
 BB +BB 1 0.3575 400
 [ patterns ]
 BB {"cgsecstruct": "C|S"} +BB {"cgsecstruct": "F"}
@@ -631,7 +631,7 @@ BB {"cgsecstruct": "F"} +BB {"cgsecstruct": "C|S"}
 [ link ]
 resname $protein_resnames
 [ bonds ]
-#meta group "Backbone bonds"
+#meta {"group": "Backbone bonds"}
 BB +BB 1 0.350 400
 [ patterns ]
 BB +BB {"cgsecstruct": "C|S"}
@@ -645,7 +645,7 @@ BB {"cgsecstruct": null} +BB {"cgsecstruct": null}
 [ link ]
 resname $protein_resnames
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB BB +BB 2 96 700
 [ patterns ]
 -BB  BB {"cgsecstruct": "H|1|2|3"} +BB 
@@ -655,7 +655,7 @@ resname $protein_resnames
 [ link ]
 resname $protein_resnames
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB BB +BB 2 119.2 150
 [ patterns ]
 -BB BB {"cgsecstruct": "F"} +BB 
@@ -665,7 +665,7 @@ resname $protein_resnames
 [ link ]
 resname $protein_resnames
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB BB +BB 2 96 700
 [ patterns ]
 -BB {"resname": $protein_resnames} BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} +BB {"resname": $protein_resnames}
@@ -675,7 +675,7 @@ resname $protein_resnames
 [ link ]
 resname $protein_resnames
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB BB +BB 2 134 25
 [ patterns ]
 -BB BB {"cgsecstruct": "E"} +BB 
@@ -685,7 +685,7 @@ resname $protein_resnames
 [ link ]
 resname $protein_resnames
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB BB +BB 2 130 25
 [ patterns ]
 -BB BB {"cgsecstruct": "S"} +BB 
@@ -695,7 +695,7 @@ resname $protein_resnames
 [ link ]
 resname $protein_resnames
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB BB +BB 2 127 25
 [ patterns ]
 -BB BB {"cgsecstruct": "C"} +BB 
@@ -706,7 +706,7 @@ resname $protein_resnames
 [ link ]
 resname $protein_resnames
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB BB +BB 2 100 25
 [ patterns ]
 -BB BB {"cgsecstruct": "T"} +BB 
@@ -717,7 +717,7 @@ resname $protein_resnames
 ; over.
 [ link ]
 [ angles ]
-#meta group "BBB angles"
+#meta {"group": "BBB angles"}
 -BB {"resname": $protein_resnames} BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} +BB {"resname": $protein_resnames}
 
 ;; Local elastic network to stabilize extented regions of proteins.

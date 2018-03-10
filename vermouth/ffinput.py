@@ -488,8 +488,9 @@ def _parse_link_attribute(tokens, context, section):
 
 def _parse_meta(tokens, context, context_type, section):
     if len(tokens) > 2:
-        msg = 'Unexpected column when defining meta attributes for section "{}" of a {}.'
-        raise IOError(msg.format(section, context_type))
+        msg = ('Unexpected column when defining meta attributes for section '
+               '"{}" of a {}. {} tokens read instead of 2.')
+        raise IOError(msg.format(section, context_type, len(tokens)))
     elif len(tokens) < 2:
         msg = 'Missing column when defining meta attributes for section "{}" of a {}.'
         raise IOError(msg.format(section, context_type))
@@ -547,57 +548,56 @@ def read_ff(lines):
             continue
 
         tokens = collections.deque(_tokenize(cleaned))
-
-        if cleaned.startswith('['):
-            if not cleaned.endswith(']'):
-                raise IOError('Misformated section header at line {}.'
-                              .format(line_num))
-            section = cleaned[1:-1].strip().lower()
-            if section.startswith('!'):
-                section = section[1:]
-                delete = True
+        try:
+            if cleaned.startswith('['):
+                if not cleaned.endswith(']'):
+                    raise IOError('Misformated section header at line {}.'
+                                  .format(line_num))
+                section = cleaned[1:-1].strip().lower()
+                if section.startswith('!'):
+                    section = section[1:]
+                    delete = True
+                else:
+                    delete = False
+                if section == 'link':
+                    context_type = 'link'
+                    context = Link()
+                    links.append(context)
+            elif section == 'moleculetype':
+                context_type = 'block'
+                context = Block()
+                name, nrexcl = cleaned.split()
+                context.name = name
+                context.nrexcl = int(nrexcl)
+                blocks[name] = context
+            elif section == 'macros':
+                context = None
+                context_type = None
+                _parse_macro(tokens, macros)
+            elif section == 'link':
+                _parse_link_attribute(tokens, context, section)
+            elif section == 'molmeta':
+                _parse_link_attribute(tokens, context, section)
+            elif section == 'atoms':
+                if context_type == 'block':
+                    _parse_block_atom(tokens, context)
+                elif context_type == 'link':
+                    _parse_link_atom(tokens, context)
+            elif section == 'non-edges':
+                _parse_edges(tokens, context, context_type, negate=True)
+            elif section == 'edges':
+                _parse_edges(tokens, context, context_type, negate=False)
+            elif section == 'patterns':
+                _parse_patterns(tokens, context, context_type)
+            elif tokens[0] == '#meta':
+                _parse_meta(tokens, context, context_type, section)
             else:
-                delete = False
-            if section == 'link':
-                context_type = 'link'
-                context = Link()
-                links.append(context)
-        elif section == 'moleculetype':
-            context_type = 'block'
-            context = Block()
-            name, nrexcl = cleaned.split()
-            context.name = name
-            context.nrexcl = int(nrexcl)
-            blocks[name] = context
-        elif section == 'macros':
-            context = None
-            context_type = None
-            _parse_macro(tokens, macros)
-        elif section == 'link':
-            _parse_link_attribute(tokens, context, section)
-        elif section == 'molmeta':
-            _parse_link_attribute(tokens, context, section)
-        elif section == 'atoms':
-            if context_type == 'block':
-                _parse_block_atom(tokens, context)
-            elif context_type == 'link':
-                _parse_link_atom(tokens, context)
-        elif section == 'non-edges':
-            _parse_edges(tokens, context, context_type, negate=True)
-        elif section == 'edges':
-            _parse_edges(tokens, context, context_type, negate=False)
-        elif section == 'patterns':
-            _parse_patterns(tokens, context, context_type)
-        elif tokens[0] == '#meta':
-            _parse_meta(tokens, context, context_type, section)
-        else:
-            natoms = interactions_natoms.get(section)
-            try:
+                natoms = interactions_natoms.get(section)
                 _base_parser(tokens, context, context_type, section,
                              natoms=natoms, delete=delete)
-            except Exception:
-                raise IOError('Error while reading line {} in section {}.'
-                              .format(line_num, section))
+        except Exception:
+            raise IOError('Error while reading line {} in section {}.'
+                          .format(line_num, section))
 
     # Finish the blocks and the links.
     # Because of hos they are described in gromacs, proper and improper
