@@ -39,7 +39,7 @@ import collections
 
 def read_mapping(path):
     """
-    Partial reader for Backward mapping files.
+    Partial reader for modified Backward mapping files.
 
     ..warning::
 
@@ -50,8 +50,6 @@ def read_mapping(path):
     only the "molecule" and the "atoms" fields are read. The origin force field
     is assumed to be "universal", and the destination force field is assumed to
     be "martini22".
-
-    There are no weight computed in case of shared atoms.
 
     The reader assumes only one molecule per file.
 
@@ -96,9 +94,9 @@ def read_mapping(path):
                 name = cleaned
             elif context == 'atoms':
                 _, from_atom, *to_atoms = line.split()
-                mapping[(0, from_atom)] = [(0, to_atom) for to_atom in to_atoms]
+                mapping[from_atom] = to_atoms
                 for to_atom in to_atoms:
-                    rev_mapping[(0, to_atom)].append((0, from_atom))
+                    rev_mapping[to_atom].append(from_atom)
             elif context in ['from', 'mapping']:
                 from_ff.extend(cleaned.split())
             elif context == 'to':
@@ -106,11 +104,51 @@ def read_mapping(path):
             elif context == 'extra':
                 extra.extend(cleaned.split())
 
-    weights = {to_atom: dict(collections.Counter(from_atoms))
-               for to_atom, from_atoms in rev_mapping.items()}
-    for bead_weigths in weights.values():
-        for from_atom, count in bead_weigths.items():
-            bead_weigths[from_atom] = 1 / count
+    # Atoms can be mapped with a null weight by prefixing the target particle
+    # with a "!". We first set the non-null weights.
+    weights = {
+        to_atom: dict(collections.Counter(from_atoms))
+        for to_atom, from_atoms in rev_mapping.items()
+        if not to_atom.startswith('!')
+    }
+    for bead_weights in weights.values():
+        for from_atom, count in bead_weights.items():
+            bead_weights[from_atom] = 1 / count
+    # Then we add the null weights.
+    null_weights = {
+        to_atom[1:]: {from_atom: 0 for from_atom in from_atoms}
+        for to_atom, from_atoms in rev_mapping.items()
+        if to_atom.startswith('!')
+    }
+    for to_atom, from_weights in null_weights.items():
+        null_keys = set(from_weights.keys())
+        non_null_keys = set(weights.get(to_atom, {}).keys())
+        redifined_keys = null_keys & non_null_keys
+        if redifined_keys:
+            msg = ('Atom(s) {} is mapped to "{}" with and without a weight '
+                   'in the molecule "{}". '
+                   'There cannot be the same target atom name with and '
+                   'without a "!" prefix on a same line.')
+            raise IOError(msg.format(redifined_keys, to_atom, name))
+        weights[to_atom] = weights.get(to_atom, {})
+        weights[to_atom].update(from_weights)
+
+    # While it is not supported by the file format, mappings can contain
+    # residue information. Atom identifiers in all the outputs must be formated
+    # as `(residue, name)`; yet, we only use the name so far. Here we set the
+    # residue to 0 for all the atoms assuming we only deal with single residue
+    # mappings.
+    # We use the opportunity to clean out the null-weight mappings.
+    mapping = {
+        (0, from_atom): [(0, to_atom if not to_atom.startswith('!') else to_atom[1:])
+                         for to_atom in to_atoms]
+        for from_atom, to_atoms in mapping.items()
+    }
+    weights = {
+        (0, to_atom): {(0, from_atom): weight
+                       for from_atom, weight in from_weights.items()}
+        for to_atom, from_weights in weights.items()
+    }
 
     # If not specified in the file, we assume the mapping is for
     # universal -> martini22
