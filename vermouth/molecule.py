@@ -25,8 +25,16 @@ from functools import partial
 
 import networkx as nx
 
+from . import graph_utils
+
 
 Interaction = namedtuple('Interaction', 'atoms parameters meta')
+DeleteInteraction = namedtuple('DeleteInteraction',
+                               'atoms atom_attrs parameters meta')
+
+
+class Choice(list):
+    pass
 
 
 class Molecule(nx.Graph):
@@ -35,6 +43,7 @@ class Molecule(nx.Graph):
     node_dict_factory = OrderedDict
 
     def __init__(self, *args, **kwargs):
+        self.meta = kwargs.pop('meta', {})
         self._force_field = kwargs.pop('force_field', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
@@ -63,6 +72,7 @@ class Molecule(nx.Graph):
         if not as_view:
             copy = self.__class__(copy)
         copy._force_field = self.force_field
+        copy.meta = self.meta.copy()
         return copy
 
     def subgraph(self, *args, **kwargs):
@@ -79,16 +89,40 @@ class Molecule(nx.Graph):
             Interaction(atoms=tuple(atoms), parameters=parameters, meta=meta)
         )
 
+    def add_or_replace_interaction(self, type_, atoms, parameters, meta=None):
+        if meta is None:
+            meta = {}
+        for idx, interaction in enumerate(self.interactions[type_]):
+            if (interaction.atoms == tuple(atoms)
+                    and interaction.meta.get('version', 0) == meta.get('version', 0)):
+                new_interaction = Interaction(
+                    atoms=tuple(atoms), parameters=parameters, meta=meta,
+                )
+                self.interactions[type_][idx] = new_interaction
+                break
+        else:  # no break
+            self.add_interaction(type_, atoms, parameters, meta)
+
     def get_interaction(self, type_):
         return self.interactions[type_]
 
-    def remove_interaction(self, type_, atoms):
+    def remove_interaction(self, type_, atoms, version=0):
         for idx, interaction in enumerate(self.interactions[type_]):
-            if interaction.atoms == atoms:
+            if interaction.atoms == atoms and interaction.meta.get('version', 0):
                 break
         else:  # no break
-            raise KeyError("Can't find interaction of type {} between atoms {}".format(type_, atoms))
+            msg = ("Can't find interaction of type {} between atoms {} "
+                   "and with version {}")
+            raise KeyError(msg.format(type_, atoms, version))
         del self.interactions[type_][idx]
+
+    def remove_matching_interaction(self, type_, template_interaction):
+        for idx, interaction in enumerate(self.interactions[type_]):
+            if interaction_match(self, interaction, template_interaction):
+                del self.interactions[type_][idx]
+                break
+        else:  # no break
+            raise ValueError('Cannot find a matching interaction.')
 
     def find_atoms(self, **attrs):
         for node_idx in self:
@@ -154,6 +188,10 @@ class Molecule(nx.Graph):
         # the interactions.
         return nx.is_isomorphic(self, other)
 
+    def iter_residues(self):
+        residue_graph = graph_utils.make_residue_graph(self)
+        return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
+
 
 class Block(nx.Graph):
     """
@@ -187,6 +225,7 @@ class Block(nx.Graph):
         super(Block, self).__init__(self)
         self.name = None
         self.interactions = {}
+        self._apply_to_all_interactions = defaultdict(dict)
 
     def __repr__(self):
         name = self.name
@@ -237,8 +276,9 @@ class Block(nx.Graph):
             The name of the interaction type the edges should be built from.
         """
         for interaction in self.interactions.get(type_, []):
-            atoms = interaction.atoms
-            self.add_edges_from(zip(atoms[:-1], atoms[1:]))
+            if interaction.meta.get('edge', True):
+                atoms = interaction.atoms
+                self.add_edges_from(zip(atoms[:-1], atoms[1:]))
 
     def make_edges_from_interactions(self):
         """
@@ -247,7 +287,7 @@ class Block(nx.Graph):
         The known interactions are bonds, angles, proper dihedral angles, and
         cmap torsions.
         """
-        known_types = ('bonds', 'angles', 'dihedrals', 'cmap')
+        known_types = ('bonds', 'angles', 'dihedrals', 'cmap', 'constraints')
         for type_ in known_types:
             self.make_edges_from_interaction_type(type_)
 
@@ -333,15 +373,49 @@ class Block(nx.Graph):
         return mol
 
 
-class Link(nx.Graph):
+class Link(Block):
     """
     Template link between two residues.
     """
     node_dict_factory = OrderedDict
 
     def __init__(self):
-        super(Link, self).__init__(self)
-        self.interactions = {}
+        super().__init__()
+        self.non_edges = []
+        self.removed_interactions = {}
+        self._apply_to_all_nodes = {}
+        self.molecule_meta = {}
+        self.patterns = []
+
+
+def attributes_match(attributes, template_attributes):
+    for attr, value in template_attributes.items():
+        if isinstance(value, Choice):
+            if attributes.get(attr) not in value:
+                return False
+        else:
+            if attributes.get(attr) != value:
+                return False
+    return True
+
+
+def interaction_match(molecule, interaction, template_interaction):
+    atoms_match = tuple(template_interaction.atoms) == tuple(interaction.atoms)
+    parameters_match = (
+        not template_interaction.parameters
+        or tuple(template_interaction.parameters) == tuple(interaction.parameters)
+    )
+    if atoms_match and parameters_match:
+        try:
+            atom_attrs = template_interaction.atom_attrs
+        except AttributeError:
+            atom_attrs = [{}, ] * len(template_interaction.atoms)
+        nodes = [molecule.nodes[atom] for atom in interaction.atoms]
+        for atom, template_atom in zip(nodes, atom_attrs):
+            if not attributes_match(atom, template_atom):
+                return False
+        return attributes_match(interaction.meta, template_interaction.meta)
+    return False
 
 
 if __name__ == '__main__':

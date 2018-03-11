@@ -31,7 +31,10 @@ from itertools import product
 
 def apply_blocks(molecule, blocks):
     residue_graph = make_residue_graph(molecule)
-    graph_out = Molecule(force_field=molecule.force_field)
+    graph_out = Molecule(
+        force_field=molecule.force_field,
+        meta=molecule.meta.copy()
+    )
 
     # nrexcl may not be defined, but if it is we probably want to keep it
     try:
@@ -41,6 +44,7 @@ def apply_blocks(molecule, blocks):
 
     old_to_new_idxs = {}
     at_idx = 0
+    charge_group_offset = 0
     for res_idx in residue_graph:
         residue = residue_graph.nodes[res_idx]
         res_graph = residue['graph']
@@ -66,7 +70,9 @@ def apply_blocks(molecule, blocks):
             attrs = molecule.nodes[atom[0]]
             graph_out.add_node(at_idx, **ChainMap(block.nodes[atname], attrs))
             graph_out.nodes[at_idx]['graph'] = molecule.subgraph(atom)
+            graph_out.nodes[at_idx]['charge_group'] += charge_group_offset
             at_idx += 1
+        charge_group_offset = graph_out.nodes[at_idx - 1]['charge_group']
         for idx, jdx, data in block.edges(data=True):
             idx = atname_to_idx[idx]
             jdx = atname_to_idx[jdx]
@@ -75,9 +81,16 @@ def apply_blocks(molecule, blocks):
             for interaction in interactions:
                 atom_idxs = []
                 for atom_name in interaction.atoms:
-                    atom_idxs.extend(graph_out.find_atoms(atomname=atom_name,
-                                                          resname=residue['resname'],
-                                                          resid=residue['resid']))
+                    atom_index = graph_out.find_atoms(atomname=atom_name,
+                                                      resname=residue['resname'],
+                                                      resid=residue['resid'])
+                    atom_index = list(atom_index)
+                    if not atom_index:
+                        msg = ('Could not find a atom named "{}" '
+                               'with resname being "{}" '
+                               'and resid being "{}".')
+                        raise ValueError(msg.format(atom_name, residue['resname'], residue['resid']))
+                    atom_idxs.extend(atom_index)
                 interactions = interaction._replace(atoms=atom_idxs)
                 graph_out.add_interaction(inter_type, *interactions)
 

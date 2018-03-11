@@ -25,6 +25,12 @@ import numpy as np
 import vermouth
 from vermouth.forcefield import find_force_fields, FORCE_FIELDS
 from vermouth import DATA_PATH
+from vermouth.dssp.dssp import (
+    AnnotateDSSP,
+    AnnotateMartiniSecondaryStructures,
+    AnnotateResidues,
+)
+from vermouth import selectors
 import itertools
 import operator
 import textwrap
@@ -143,14 +149,6 @@ def read_system(path):
     return system
 
 
-def select_all(node):
-    return True
-
-
-def select_backbone(node):
-    return node.get('atomname') == 'BB'
-
-
 def pdb_to_universal(system, delete_unknown=False):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
@@ -245,6 +243,9 @@ def entry():
                         choices=('None', 'All', 'Backbone'), default='None')
     parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
     parser.add_argument('-ff', dest='to_ff', default='martini22')
+    parser.add_argument('-dssp', nargs='?', const='dssp')
+    parser.add_argument('-ed', dest='extdih', action='store_true', default=False) 
+    parser.add_argument('-collagen', action='store_true', default=False)
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -266,6 +267,14 @@ def entry():
     system = read_system(args.inpath)
     system = pdb_to_universal(system, delete_unknown=True)
 
+    if args.dssp is not None:
+        AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
+        AnnotateMartiniSecondaryStructures().run_system(system)
+    elif args.collagen:
+        AnnotateResidues(attribute='cgsecstruct', sequence='F',
+                         molecule_selector=selectors.is_protein).run_system(system)
+    vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
+
     # Run martinize on the system.
     system = martinize(
         system,
@@ -276,9 +285,17 @@ def entry():
 
     # Apply position restraints if required.
     if args.posres != 'None':
-        selectors = {'All': select_all, 'Backbone': select_backbone}
-        selector = selectors[args.posres]
-        vermouth.ApplyPosres(selector, args.posres_fc).run_system(system)
+        node_selectors = {'All': selectors.select_all,
+                          'Backbone': selectors.select_backbone}
+        node_selector = node_selectors[args.posres]
+        vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
+
+    # For demonstration purpose, write the secondary structure assignation
+    # instead of the element.
+    # TODO: remove this code for production
+    for molecule in system.molecules:
+        for atom in molecule.nodes.values():
+            atom['element'] = atom.get('cgsecstruct', 'X')
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath))

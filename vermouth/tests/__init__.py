@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2018 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,20 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""
-Created on Wed Oct  4 10:45:54 2017
-
-@author: peterkroon
-"""
-
-from .gro_reader import GROInput
-from .make_bonds import MakeBonds
-from .pdb_reader import PDBInput
-from .repair_graph import RepairGraph
-from .do_mapping import DoMapping
-from .do_links import DoLinks
-from .apply_blocks import ApplyBlocks
-from .average_beads import DoAverageBead
-from .apply_posres import ApplyPosres
-from .set_molecule_meta import SetMoleculeMeta
