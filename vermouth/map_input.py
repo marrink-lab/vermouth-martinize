@@ -18,7 +18,7 @@ from pathlib import Path
 import collections
 
 
-def read_mapping(path):
+def read_mapping(lines):
     """
     Partial reader for modified Backward mapping files.
 
@@ -36,8 +36,8 @@ def read_mapping(path):
 
     Parameters
     ----------
-    path: str or Path
-        Path to the mapping file to read.
+    lines: iterable of str
+        Collection of lines to read.
 
     Returns
     -------
@@ -62,28 +62,27 @@ def read_mapping(path):
     rev_mapping = collections.defaultdict(list)
     extra = []
     
-    with open(str(path)) as infile:
-        for line_number, line in enumerate(infile, start=1):
-            cleaned = line.split(';', 1)[0].strip()
-            if not cleaned:
-                continue
-            elif cleaned[0] == '[':
-                if cleaned[-1] != ']':
-                    raise IOError('Format error at line {}.'.format(line_number))
-                context = cleaned[1:-1].strip()
-            elif context == 'molecule':
-                name = cleaned
-            elif context == 'atoms':
-                _, from_atom, *to_atoms = line.split()
-                mapping[from_atom] = to_atoms
-                for to_atom in to_atoms:
-                    rev_mapping[to_atom].append(from_atom)
-            elif context in ['from', 'mapping']:
-                from_ff.extend(cleaned.split())
-            elif context == 'to':
-                to_ff.append(cleaned)
-            elif context == 'extra':
-                extra.extend(cleaned.split())
+    for line_number, line in enumerate(lines, start=1):
+        cleaned = line.split(';', 1)[0].strip()
+        if not cleaned:
+            continue
+        elif cleaned[0] == '[':
+            if cleaned[-1] != ']':
+                raise IOError('Format error at line {}.'.format(line_number))
+            context = cleaned[1:-1].strip()
+        elif context == 'molecule':
+            name = cleaned
+        elif context == 'atoms':
+            _, from_atom, *to_atoms = line.split()
+            mapping[from_atom] = to_atoms
+            for to_atom in to_atoms:
+                rev_mapping[to_atom].append(from_atom)
+        elif context in ['from', 'mapping']:
+            from_ff.extend(cleaned.split())
+        elif context == 'to':
+            to_ff.append(cleaned)
+        elif context == 'extra':
+            extra.extend(cleaned.split())
 
     # Atoms can be mapped with a null weight by prefixing the target particle
     # with a "!". We first set the non-null weights.
@@ -168,7 +167,8 @@ def read_mapping_directory(directory):
     directory = Path(directory)
     mappings = {}
     for path in directory.glob('**/*.map'):
-        name, all_from_ff, all_to_ff, mapping, weights, extra = read_mapping(path)
+        with open(path) as infile:
+            name, all_from_ff, all_to_ff, mapping, weights, extra = read_mapping(infile)
         for from_ff in all_from_ff:
             mappings[from_ff] = mappings.get(from_ff, {})
             for to_ff in all_to_ff:
