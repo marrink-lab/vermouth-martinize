@@ -782,6 +782,8 @@ resname $protein_resnames
 [ link ]
 [ angles ]
 #meta {"group": "BBB angles"}
+-BB BB +BB 2 96 700
+[ patterns ]
 -BB {"resname": $protein_resnames} BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} +BB {"resname": $protein_resnames}
 
 ;; Local elastic network to stabilize extented regions of proteins.

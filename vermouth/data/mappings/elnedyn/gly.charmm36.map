@@ -30,4 +30,8 @@ BB
 charmm27 charmm36
 
 [ atoms ]
+    1     N    !BB
+    2    HN    !BB
     3    CA    BB
+    9     C    BB
+   10     O    BB

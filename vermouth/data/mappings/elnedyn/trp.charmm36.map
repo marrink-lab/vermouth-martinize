@@ -30,6 +30,8 @@ BB SC1 SC2 SC3 SC4
 charmm27 charmm36
 
 [ atoms ]
+    1     N    !BB
+    2    HN    !BB
     3    CA    BB
     5    CB   SC1
     8    CG   SC1
@@ -47,3 +49,23 @@ charmm27 charmm36
    20   HZ2   SC4 
    21   CH2   SC4
    22   HH2   SC4
+   23     C    BB
+   24     O    BB
+
+[ trans ]
+CB  CG  CD2 CE2  
+HD1 CD1 NE1 CE2
+HE1 NE1 CD1 CG
+HE3 CE3 CD2 CE2
+HZ2 CZ2 CE2 CD2
+HZ3 CZ3 CE3 CD2
+HH2 CH2 CZ3 CE3
+
+[ chiral ]
+  CB     CA    N    C  
+  HB1    CA    N    C
+  HB2    CA    N    C
+
+[ chiral ]
+  HA     CA    N    CB    C ; L-Trp
+; HA     CA    N    C    CB ; D-Trp

@@ -16,7 +16,7 @@
 universal
 
 [to]
-martini22p
+elnedyn22p
 
 [ molecule ]
 GLU
@@ -28,8 +28,8 @@ BB SC1
 charmm27 charmm36
 
 [ atoms ]
-    1     N    BB
-    2    HN    BB
+    1     N    !BB
+    2    HN    !BB
     3    CA    BB
 ;    4    HA    BB
     5    CB   SC1
