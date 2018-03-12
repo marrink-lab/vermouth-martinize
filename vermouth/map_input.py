@@ -73,14 +73,14 @@ def read_mapping(lines):
         elif context == 'molecule':
             name = cleaned
         elif context == 'atoms':
-            _, from_atom, *to_atoms = line.split()
+            _, from_atom, *to_atoms = cleaned.split()
             mapping[from_atom] = to_atoms
             for to_atom in to_atoms:
                 rev_mapping[to_atom].append(from_atom)
         elif context in ['from', 'mapping']:
             from_ff.extend(cleaned.split())
         elif context == 'to':
-            to_ff.append(cleaned)
+            to_ff.extend(cleaned.split())
         elif context == 'extra':
             extra.extend(cleaned.split())
 
