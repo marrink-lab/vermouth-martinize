@@ -64,12 +64,12 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
     """
     Find the non-dummy bead to which a charge dummy is anchored.
 
-    Each charge dummy has to be attached to one non-dummy atom. This function
-    returns the node key for that non-dummy atom.
+    Each charge dummy has to be attached to exactly one non-dummy atom. This
+    function returns the node key for that non-dummy atom.
 
     Parameters
     ----------
-    molecule: vermouth.Molecule
+    molecule: nx.Groph
         The molecule to work on.
     node_key:
         The node key of the charge dummy.
@@ -111,7 +111,7 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
 def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
     """
-    Set the position of a group of charge dummies around anon-dummy anchor.
+    Set the position of a group of charge dummies around a non-dummy anchor.
 
     The molecule is modified in-place.
     
