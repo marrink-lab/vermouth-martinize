@@ -21,6 +21,22 @@ DEFAULT_DUMMY_ATTRIBUTE = 'charge_dummy'
 
 
 def fibonacci_sphere(n_samples):
+    """
+    Place points near-evenly distributed on a sphere.
+
+    Use the Fibonacci sphere algorithm to place 'n_samples' points at the
+    surface of a sphere of radius 1, centered on the origin.
+
+    Parameters
+    ----------
+    n_samples: int
+        Number of points to place.
+
+    Returns
+    -------
+    np.ndarray
+        3D coordinates of the points.
+    """
     offset = 2 / n_samples
     increment = np.pi * (3 - np.sqrt(5))
     sample_idx = np.arange(n_samples)
@@ -33,8 +49,9 @@ def fibonacci_sphere(n_samples):
 
 
 def colinear_pair():
-    # We want to create a randomly oriented vector of norm 2, and center it on
-    # the origin.
+    """
+    Build two points on a line around the origin at a random orientation.
+    """
     vector = np.random.rand(3)
     vector /= np.linalg.norm(vector)
     vector *= 2
@@ -44,6 +61,32 @@ def colinear_pair():
 
 
 def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
+    """
+    Find the non-dummy bead to which a charge dummy is anchored.
+
+    Each charge dummy has to be attached to one non-dummy atom. This function
+    returns the node key for that non-dummy atom.
+
+    Parameters
+    ----------
+    molecule: vermouth.Molecule
+        The molecule to work on.
+    node_key:
+        The node key of the charge dummy.
+    attribute_tag: str
+        The name of the atom attribute used to describe charge dummies.
+
+    Returns
+    -------
+    anchor_key:
+        The node key of the anchor in the molecule graph.
+
+    Raises
+    ------
+    ValueError
+        Raised if there are no anchor, or more than one anchor, found. Raised
+        also if the charge dummy is not a charge dummy.
+    """
     dummy = molecule.nodes[node_key]
     if dummy.get(attribute_tag, None) is None:
         msg = 'Node "{}" is not a charge dummy. Check the "{}" node attribute.'
@@ -67,7 +110,26 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
 
 def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
+    """
+    Set the position of a group of charge dummies around anon-dummy anchor.
+
+    The molecule is modified in-place.
     
+    The charge dummies are placed at a distance to the anchor defined in nm by
+    their charge dummy attribute, the name of which is given in the
+    'attribute_tag' argument.
+
+    Parameters
+    ----------
+    molecule: vermouth.Molecule
+        The molecule to work on.
+    anchor_key:
+        The key of the non-dummy anchor all the charge dummies are connected to.
+    dummy_keys: iterable
+        A collection of atom keys for charge dummies to position.
+    attribute_tag: str
+        Name of the atom attribute that describe charge dummies.
+    """
     anchor_position = molecule.nodes[anchor_key].get('position')
     if anchor_position is None:
         msg = 'The anchor of the "{}" dummy ("{}") does not have a position.'
@@ -98,6 +160,23 @@ def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_A
 
 
 def locate_all_dummies(molecule, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
+    """
+    Set the position of all charge dummies of a molecule.
+
+    The molecule is modified in-place.
+    
+    The charge dummies are placed at a distance to the anchor defined in nm by
+    their charge dummy attribute, the name of which is given in the
+    'attribute_tag' argument.
+
+    Parameters
+    ----------
+    molecule: vermouth.Molecule
+        The molecule to work on.
+    attribute_tag: str
+        Name of the atom attribute that describe charge dummies.
+    """
+
     dummies = [
         (find_anchor(molecule, dummy_key, attribute_tag), dummy_key)
         for dummy_key in molecule.nodes

@@ -411,7 +411,7 @@ def _parse_block_atom(tokens, context):
         attributes = {}
 
     # deque does not support slicing
-    first_six = (tokens.popleft() for i in range(6))
+    first_six = (tokens.popleft() for _ in range(6))
     _, atype, _, resname, name, charge_group = first_six
     atom = {
         'atomname': name,

@@ -45,7 +45,7 @@ class GraphMapping:
     #       of blocks and a mapping of {node_idx: [node_idx, ...], ...}
 
     # TODO: renumber output residues. Needs information about the entire system
-    #       or we need to at least garantue we run it all in order. Which we
+    #       or we need to at least the garanty we run it all in order. Which we
     #       can't unless we do run_system instead of run_molecule. We should
     #       maybe also move this class to a different file, but we'll see.
     def __init__(self, blocks_from, blocks_to, mapping, extra=()):
