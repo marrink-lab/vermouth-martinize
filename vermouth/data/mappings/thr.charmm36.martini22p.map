@@ -16,7 +16,7 @@
 universal
 
 [to]
-martini22
+martini22p
 
 [ molecule ]
 THR
@@ -59,3 +59,6 @@ HG1 OG1 CB CA
 [ chiral ]
   HB  CB  CG2  OG1 CA  ; 3R stereoisomer (natural form)
 ; HB  CB  CG2  CA  CG1 ; 3S stereoisomer
+
+[ extra ]
+SCP SCN

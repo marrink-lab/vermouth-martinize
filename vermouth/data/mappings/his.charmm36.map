@@ -12,6 +12,13 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[from]
+universal
+
+[to]
+martini22
+martini22p
+
 [ molecule ]
 HIS  ;;;; is in fact HSP but if one of hydrogen on a nitrogen is missing in the input topology file, will become HSE or HSD automatically
 

@@ -85,12 +85,10 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
 
             pos = (properties.pop('x'), properties.pop('y'), properties.pop('z'))
             properties['position'] = np.array(pos, dtype=float)
-            properties['position'] *= 10  # Convert nm to A
 
             if has_vel:
                 vel = (properties.pop('vx'), properties.pop('vy'), properties.pop('vz'))
                 properties['velocity'] = np.array(vel, dtype=float)
-                properties['velocity'] *= 10  # Convert nm to A
 
             molecule.add_node(idx, **properties)
             idx += 1
@@ -124,7 +122,7 @@ def write_gro(system, file_name, precision=7):
                 atomname = node['atomname']
                 resname = node['resname']
                 resid = node['resid']
-                x, y, z = node['position']/10  # A to nm
+                x, y, z = node['position']
 
                 line = formatter.format(format_string, resid, resname, atomname,
                                         atomid, x, y, z)

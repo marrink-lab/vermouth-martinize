@@ -16,7 +16,7 @@ import numpy as np
 from .processor import Processor
 
 
-def do_average_bead(molecule):
+def do_average_bead(molecule, ignore_missing_graphs=False):
     """
     Set the position of the particles to the mean of the underlying atoms.
 
@@ -26,27 +26,35 @@ def do_average_bead(molecule):
         The molecule to update. The attribute :attr:`position` of the particles
         is updated on place. The nodes of the molecule must have an attribute
         :attr:`graph` that contains the subgraph of the initial molecule.
+    ignore_missing_graphs: bool
+        If `True`, skip the atoms that do not have a 'graph' attribute; else
+        fail if not all the atoms in the molecule have a 'graph' attribute.
     """
     # Make sure the molecule fullfill the requirements.
     missing = []
     for node in molecule.nodes.values():
         if 'graph' not in node:
             missing.append(node)
-    if missing:
+    if missing and not ignore_missing_graphs:
         raise ValueError('{} particles are missing the graph attribute'
                          .format(len(missing)))
 
     for node in molecule.nodes.values():
-        positions = np.stack([
-            subnode['position']
-            for subnode in node['graph'].nodes().values()
-            if 'position' in subnode
-        ])
-        node['position'] = positions.mean(axis=0)
+        if 'graph' in node:
+            positions = np.stack([
+                subnode['position']
+                for subnode in node['graph'].nodes().values()
+                if 'position' in subnode and subnode['position'] is not None
+            ])
+            node['position'] = positions.mean(axis=0)
 
     return molecule
 
 
 class DoAverageBead(Processor):
+    def __init__(self, ignore_missing_graphs=False):
+        super().__init__()
+        self.ignore_missing_graphs = ignore_missing_graphs
+
     def run_molecule(self, molecule):
-        return do_average_bead(molecule)
+        return do_average_bead(molecule, self.ignore_missing_graphs)

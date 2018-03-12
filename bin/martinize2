@@ -71,10 +71,13 @@ def read_mapping(path):
         The mapping. The keys of the dictionary are the atom names in
         the origin force field; the values are lists of atom names in the
         destination force field, the origin atom is assigned to.
+    extra: list
+        Unmapped atoms to be added.
     """
-    from_ff = ['universal', ]
-    to_ff = ['martini22', ]
+    from_ff = []
+    to_ff = []
     mapping = {}
+    extra = []
     
     with open(str(path)) as infile:
         for line_number, line in enumerate(infile, start=1):
@@ -90,8 +93,21 @@ def read_mapping(path):
             elif context == 'atoms':
                 _, from_atom, *to_atoms = line.split()
                 mapping[(0, from_atom)] = [(0, to_atom) for to_atom in to_atoms]
+            elif context in ['from', 'mapping']:
+                from_ff.extend(cleaned.split())
+            elif context == 'to':
+                to_ff.append(cleaned)
+            elif context == 'extra':
+                extra.extend(cleaned.split())
 
-    return name, from_ff, to_ff, mapping
+    # If not specified in the file, we assume the mapping is for
+    # universal -> martini22
+    if not from_ff:
+        from_ff = ['universal', ]
+    if not to_ff:
+        to_ff = ['martini22', ]
+
+    return name, from_ff, to_ff, mapping, extra
 
 
 def read_mapping_directory(directory):
@@ -121,12 +137,12 @@ def read_mapping_directory(directory):
     directory = Path(directory)
     mappings = {}
     for path in directory.glob('**/*.map'):
-        name, all_from_ff, all_to_ff, mapping = read_mapping(path)
+        name, all_from_ff, all_to_ff, mapping, extra = read_mapping(path)
         for from_ff in all_from_ff:
             mappings[from_ff] = mappings.get(from_ff, {})
             for to_ff in all_to_ff:
                 mappings[from_ff][to_ff] = mappings[from_ff].get(to_ff, {})
-                mappings[from_ff][to_ff][name] = mapping
+                mappings[from_ff][to_ff][name] = (mapping, extra)
     return mappings
 
 
@@ -167,9 +183,10 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     vermouth.DoMapping(mappings=mappings,
                        to_ff=to_ff,
                        delete_unknown=delete_unknown).run_system(system)
-    vermouth.DoAverageBead().run_system(system)
+    vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
     vermouth.ApplyBlocks().run_system(system)
     vermouth.DoLinks().run_system(system)
+    vermouth.LocateChargeDummies().run_system(system)
     return system
 
 
