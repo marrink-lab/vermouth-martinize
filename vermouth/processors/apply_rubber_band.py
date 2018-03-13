@@ -23,8 +23,8 @@ def self_distance_matrix(coordinates):
     return np.sqrt(((coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :]) ** 2).sum(axis=-1))
 
 
-def compute_decay(distance_matrix, shift, rate, power):
-    return np.exp(-rate * ((distance_matrix - shift) **  power))
+def compute_decay(distance, shift, rate, power):
+    return np.exp(-rate * ((distance - shift) **  power))
 
 
 def compute_force_constants(distance_matrix, lower_bound, upper_bound,
@@ -42,6 +42,9 @@ def build_connectivity_matrix(graph, separation, selection=None):
     if separation <= 0:
         raise ValueError('Separation has to be strictly positive.')
     if separation == 1:
+        # The connectivity matrix with a separation of 1 is the adjacency
+        # matrix. Thanksfully, networkx can directly give it to us a a numpy
+        # array.
         return nx.to_numpy_matrix(graph, nodelist=selection).astype(bool)
     subgraph = graph.subgraph(selection)
     connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
@@ -78,12 +81,17 @@ def apply_rubber_band(molecule, selector,
                                         upper_bound, decay_factor, decay_power,
                                         base_constant, minimum_force)
     connectivity = build_connectivity_matrix(molecule, 2, selection=selection)
+    # Set the force constant to 0 for pairs that are connected. `connectivity`
+    # is a matrix of booleans that is True when a pair is connected. Because
+    # booleans acts as 0 or 1 in operation, we multiply the force constant
+    # matrix by the oposite (OR) of the connectivity matrix.
     constants *= ~connectivity
+    distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
     for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
         from_key = selection[from_idx]
         to_key = selection[to_idx]
         force_constant = constants[from_idx, to_idx]
-        length = round(distance_matrix[from_idx, to_idx], 5)
+        length = distance_matrix[from_idx, to_idx]
         if force_constant > minimum_force:
             molecule.add_interaction(
                 type_='bonds',
