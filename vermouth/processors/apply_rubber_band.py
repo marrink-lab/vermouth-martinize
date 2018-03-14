@@ -18,6 +18,8 @@ import networkx as nx
 from .processor import Processor
 from .. import selectors
 
+DEFAULT_BOND_TYPE = 6
+
 
 def self_distance_matrix(coordinates):
     """
@@ -243,8 +245,9 @@ def apply_rubber_band(molecule, selector,
 class ApplyRubberBand(Processor):
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
                  base_constant, minimum_force,
-                 bond_type=6,
-                 selector=selectors.select_backbone):
+                 bond_type=None,
+                 selector=selectors.select_backbone,
+                 bond_type_variable='elastic_network_bond_type'):
         super().__init__()
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
@@ -254,8 +257,19 @@ class ApplyRubberBand(Processor):
         self.minimum_force = minimum_force
         self.bond_type = bond_type
         self.selector = selector
+        self.bond_type_variable = bond_type_variable
 
     def run_molecule(self, molecule):
+        # Choose the bond type. From high to low, the priority order is:
+        # * what is set as an argument to the processor
+        # * what is written in the force field variables
+        #   under the key `self.bond_type_variable`
+        # * the default value set in DEFAULT_BOND_TYPE
+        bond_type = self.bond_type
+        if self.bond_type is None:
+            bond_type = molecule.force_field.variables.get(self.bond_type_variable,
+                                                           DEFAULT_BOND_TYPE)
+
         apply_rubber_band(molecule, self.selector,
                           lower_bound=self.lower_bound,
                           upper_bound=self.upper_bound,
@@ -263,5 +277,5 @@ class ApplyRubberBand(Processor):
                           decay_power=self.decay_power,
                           base_constant=self.base_constant,
                           minimum_force=self.minimum_force,
-                          bond_type=self.bond_type)
+                          bond_type=bond_type)
         return molecule
