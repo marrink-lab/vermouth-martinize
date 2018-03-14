@@ -566,6 +566,16 @@ def _parse_patterns(tokens, context, context_type):
     context.patterns.append(atoms)
 
 
+def _parse_variables(tokens, force_field):
+    if len(tokens) > 2:
+        raise IOError('Unexpected column in section "{}".'.format(section))
+    elif len(tokens) < 2:
+        raise IOError('Missing column in section "{}".'.format(section))
+    key, value = tokens
+    value = json.loads(value)
+    force_field.variables[key] = value
+
+
 def read_ff(lines, force_field):
     interactions_natoms = {
         'bonds': 2,
@@ -631,6 +641,11 @@ def read_ff(lines, force_field):
                 _parse_edges(tokens, context, context_type, negate=False)
             elif section == 'patterns':
                 _parse_patterns(tokens, context, context_type)
+            elif section == 'variables':
+                if context is not None:
+                    raise IOError('The [variables] section must be defined '
+                                  'before the blocks and the links.')
+                _parse_variables(tokens, force_field)
             elif tokens[0] == '#meta':
                 _parse_meta(tokens, context, context_type, section)
             else:
