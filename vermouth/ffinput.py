@@ -29,10 +29,16 @@ from .molecule import (
     Block, Link,
     Interaction, DeleteInteraction,
     Choice, NotDefinedOrNot,
+    ParamDistance, ParamAngle,
 )
 
 VALUE_PREDICATES = {
     'not': NotDefinedOrNot,
+}
+
+PARAMETER_EFFECTORS = {
+    'dist': ParamDistance,
+    'angle': ParamAngle,
 }
 
 
@@ -349,6 +355,33 @@ def _treat_link_interaction_atoms(atoms, context, section):
             context.add_node(prefixed_reference, **attributes)
 
 
+def _parse_interaction_parameters(tokens):
+    parameters = []
+    for token in tokens:
+        if _is_param_effector(token):
+            effector_name, effector_param_str = token.split('(', 1)
+            effector_param_str = effector_param_str[:-1]  # Remove the closing parenthesis
+            try:
+                effector_class = PARAMETER_EFFECTORS[effector_name]
+            except KeyError:
+                raise IOError('{} is not a known parameter effector.'
+                              .format(effector_name))
+            effector_param = [elem.strip() for elem in effector_param_str.split(',')]
+            parameter = effector_class(effector_param)
+        else:
+            parameter = token
+        parameters.append(parameter)
+    return parameters
+
+
+def _is_param_effector(token):
+    return (
+        '(' in token
+        and not token.startswith('(')
+        and token.endswith(')')
+    )
+
+
 def _base_parser(tokens, context, context_type, section, natoms=None, delete=False):
     if context_type != 'link' and delete:
         raise IOError('Interactions can only be removed in links.')
@@ -386,7 +419,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
         meta = json.loads(token)
     else:
         meta = {}
-    parameters = list(tokens)
+    parameters = _parse_interaction_parameters(tokens)
 
     apply_to_all_interactions = context._apply_to_all_interactions[section]
     meta = dict(collections.ChainMap(meta, apply_to_all_interactions))

@@ -24,6 +24,7 @@ import copy
 from functools import partial
 
 import networkx as nx
+import numpy as np
 
 from . import graph_utils
 
@@ -52,6 +53,55 @@ class Choice(LinkPredicate):
 class NotDefinedOrNot(LinkPredicate):
     def match(self, node, key):
         return key not in node or node[key] != self.value
+
+
+class LinkParameterEffector:
+    n_keys_asked = None
+
+    def __init__(self, keys):
+        self.keys = keys
+        if self.n_keys_asked is not None and len(self.keys) != self.n_keys_asked:
+            raise ValueError(
+                'Unexpected number of keys provided in {}: '
+                '{} were expected, but {} were rovided.'
+                .format(self.__class__.name, self.n_keys_asked, len(keys))
+            )
+
+    def __call__(self, molecule, match):
+        keys = [match[key] for key in self.keys]
+        return self.apply(molecule, keys)
+
+    def apply(self, molecule, keys):
+        msg = 'The method need to be implemented by the children class.'
+        raise NotImplementedError(msg)
+
+
+class ParamDistance(LinkParameterEffector):
+    n_keys_asked = 2
+
+    def apply(self, molecule, keys):
+        # This will raise a ValueError if an atom is missing, or if an
+        # atom does not have position.
+        positions = np.stack([molecule.nodes[key]['position'] for key in keys])
+        # We assume there are two rows; which we can since we checked earlier
+        # that exactly two atom keys were passed.
+        distance = np.sqrt(np.sum(np.diff(positions, axis=0)**2))
+        return distance
+
+
+class ParamAngle(LinkParameterEffector):
+    n_keys_asked = 3
+
+    def apply(self, molecule, keys):
+        # This will raise a ValueError if an atom is missing, or if an
+        # atom does not have position.
+        positions = np.stack([molecule.nodes[key]['position'] for key in keys])
+        vectorBA = positions[0, :] - positions[1, :]
+        vectorBC = positions[2, :] - positions[1, :]
+        nominator = np.dot(vectorBA, vectorBC)
+        denominator = np.linalg.norm(vectorBA) * np.linalg.norm(vectorBC)
+        cosine = nominator / denominator
+        return np.degrees(np.arccos(cosine))
 
 
 class Molecule(nx.Graph):
