@@ -390,10 +390,12 @@ HIS                1
 [constraints]
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  
-   1     2    1       0.195
    2     3    1       0.193
    2     4    1       0.295
    3     4    1       0.216
+
+[bonds]
+   1     2    1       0.195  94000
 
 [angles]
 #meta {"group": "Side chain angles"}
@@ -417,10 +419,12 @@ HISH               1
 [constraints]
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  
-   1     2    1       0.195
    2     3    1       0.193
    2     4    1       0.295
    3     4    1       0.216
+
+[bonds]
+   1     2    1       0.195  94000
 
 [angles]
 #meta {"group": "Side chain angles"}
@@ -586,32 +590,6 @@ resname $protein_resnames
 [ angles ]
 #meta {"group": "BBB angles"}
 -BB BB +BB 2 angle(-BB,BB,+BB) 40
-
-;; Local elastic network to stabilize extented regions of proteins.
-[ link ]
-resname $protein_resnames
-cgsecstruct "E"
-[ edges ]
-BB +BB
-+BB ++BB
-++BB +++BB
-[ bonds ]
-BB ++BB 1 0.640 2500 {"group": "Short elastic bonds for extended regions", "edge": false}
-+BB +++BB 1 0.640 2500 {"group": "Short elastic bonds for extended regions", "edge": false}
-BB +++BB 1 0.970 2500 {"group": "Long elastic bonds for extended regions", "edge": false}
-
-; Use dihedrals rather than an elastic network for extended regions of proteins.
-[ link ]
-resname $protein_resnames
-cgsecstruct "E"
-[ molmeta ]
-extdih true
-[ dihedrals ]
--BB BB +BB ++BB 1 0 10 1
-[ !bonds ]
-BB ++BB 1 0.640 2500
-+BB +++BB 1 0.640 2500
-BB +++BB 1 0.970 2500
 
 ;; Protein terminii. These links should be applied last.
 [ link ]
