@@ -45,8 +45,8 @@ charmm27 charmm36
 ;   13   HE1   SC1
 ;   14   HE2   SC1
 ;   15   HE3   SC1
-   16     C    BB
-   17     O    BB
+   16    C    !BB
+   17    O    !BB
 
 [ chiral ]
   CB     CA    N    C

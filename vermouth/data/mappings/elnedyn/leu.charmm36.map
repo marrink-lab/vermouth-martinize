@@ -37,8 +37,8 @@ charmm27 charmm36
     8    CG   SC1
    10   CD1   SC1
    14   CD2   SC1
-   18     C    BB
-   19     O    BB
+   18    C    !BB
+   19    O    !BB
 
 [ chiral ]
   CB     CA    N    C

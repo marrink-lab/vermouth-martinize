@@ -35,8 +35,8 @@ charmm27 charmm36
     3    CA    BB
     4    CB   SC1
     7    SG   SC1
-    9     C    BB
-   10     O    BB
+    9    C    !BB
+   10    O    !BB
 
 [ chiral ]
   CB     CA    N    C

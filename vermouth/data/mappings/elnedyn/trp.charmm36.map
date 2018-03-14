@@ -49,8 +49,8 @@ charmm27 charmm36
    20   HZ2   SC4 
    21   CH2   SC4
    22   HH2   SC4
-   23     C    BB
-   24     O    BB
+   23    C    !BB
+   24    O    !BB
 
 [ trans ]
 CB  CG  CD2 CE2  
