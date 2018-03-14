@@ -566,7 +566,7 @@ def _parse_patterns(tokens, context, context_type):
     context.patterns.append(atoms)
 
 
-def read_ff(lines):
+def read_ff(lines, force_field):
     interactions_natoms = {
         'bonds': 2,
         'angles': 3,
@@ -670,4 +670,5 @@ def read_ff(lines):
             for interaction in interactions:
                 interaction.meta['comment'] = 'Link'
 
-    return blocks, links
+    force_field.blocks.update(blocks)
+    force_field.links.extend(links)

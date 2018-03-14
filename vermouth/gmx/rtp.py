@@ -463,23 +463,17 @@ def _dihedral_sorted_center(atoms):
     return atoms[1:-1]
 
 
-def read_rtp(lines):
+def read_rtp(lines, force_field):
     """
-    Read blocks and links from a Gromacs RTP file.
+    Read blocks and links from a Gromacs RTP file to populate a force field
 
     Parameters
     ----------
     lines
         An iterator over the lines of a RTP file (e.g. a file handle, or a
         list of string).
-
-    Returns
-    -------
-    blocks: dict
-        A dict the keys of which are residue names and the values are instances
-        of :class:`Block`.
-    links: list
-        A list of instances of :class:`Link`.
+    force_field: vermouth.forcefield.Forcefield
+        The force field to populate in place.
 
     Raises
     ------
@@ -521,4 +515,6 @@ def read_rtp(lines):
     # inter-residues information. We need to split the pre-blocks into
     # blocks and links.
     blocks, links = _split_blocks_and_links(pre_blocks)
-    return blocks, links
+
+    force_field.blocks.update(blocks)
+    force_field.links.extend(links)
