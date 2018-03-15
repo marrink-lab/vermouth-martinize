@@ -151,7 +151,7 @@ def entry():
     parser.add_argument('-x', dest='outpath', required=True, type=Path)
     parser.add_argument('-o', dest='top_path', type=Path)
     parser.add_argument('-p', dest='posres', type=lambda x: x.lower(),
-                        choices=('none', 'all', 'backbone'), default='None')
+                        choices=('none', 'all', 'backbone'), default='none')
     parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
     parser.add_argument('-ff', dest='to_ff', default='martini22')
     parser.add_argument('-dssp', nargs='?', const='dssp')
@@ -166,6 +166,8 @@ def entry():
     parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0)
     parser.add_argument('-nt', dest='neutral_terminii',
                         action='store_true', default=False)
+    parser.add_argument('-merge', dest='merge_chains',
+                        type=lambda x: x.split(','), action='append')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -229,6 +231,10 @@ def entry():
     for molecule in system.molecules:
         for atom in molecule.nodes.values():
             atom['element'] = atom.get('cgsecstruct', 'X')
+
+    if args.merge_chains:
+        for chain_set in args.merge_chains:
+            vermouth.MergeChains(chain_set).run_system(system)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath))

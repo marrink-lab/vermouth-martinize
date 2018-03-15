@@ -264,6 +264,7 @@ class Molecule(nx.Graph):
         self._force_field = kwargs.pop('force_field', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
+        self.nrexcl = None
 
     @property
     def force_field(self):
@@ -372,6 +373,12 @@ class Molecule(nx.Graph):
             raise ValueError(
                 'Cannot merge molecules with different force fields.'
             )
+        if self.nrexcl != molecule.nrexcl:
+            raise ValueError(
+                'Cannot merge molecules with different nrexcl. '
+                'This molecule has nrexcl={}, while the other has nrexcl={}.'
+                .format(self.nrexcl, molecule.nrexcl)
+            )
         if len(self.nodes()):
             # We assume that the last id is always the largest.
             last_node_idx = max(self) 
@@ -395,7 +402,7 @@ class Molecule(nx.Graph):
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
-                self.add_interaction(name, atoms, interaction.parameters)
+                self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
 
         for edge in molecule.edges:
             self.add_edge(*(correspondence[node] for node in edge))
