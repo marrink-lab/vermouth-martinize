@@ -84,19 +84,22 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     return system
 
 
-def write_gmx_topology(system, top_path):
+def write_gmx_topology(system, top_path, deduplicate=True):
     if not system.molecules:
         raise ValueError('No molecule in the system. Nothing to write.')
-    # Deduplicate the moleculetypes in order to write each molecule ITP only
-    # once.
-    molecule_types = [[system.molecules[0], [system.molecules[0]]], ]
-    for molecule in system.molecules[1:]:
-        for molecule_type, share_moltype in molecule_types:
-            if molecule.share_moltype_with(molecule_type):
-                share_moltype.append(molecule)
-                break
-        else:  # no break
-            molecule_types.append([molecule, [molecule, ]])
+    if deduplicate:
+        # Deduplicate the moleculetypes in order to write each molecule ITP only
+        # once.
+        molecule_types = [[system.molecules[0], [system.molecules[0]]], ]
+        for molecule in system.molecules[1:]:
+            for molecule_type, share_moltype in molecule_types:
+                if molecule.share_moltype_with(molecule_type):
+                    share_moltype.append(molecule)
+                    break
+            else:  # no break
+                molecule_types.append([molecule, [molecule, ]])
+    else:
+        molecule_types = [[molecule, [molecule, ]] for molecule in system.molecules]
     # Write the ITP files for the moleculetypes.
     for molidx, (molecule_type, _) in enumerate(molecule_types):
         molecule_type.moltype = 'molecule_{}'.format(molidx)
@@ -190,6 +193,9 @@ def entry():
     parser.add_argument('-merge', dest='merge_chains',
                         type=lambda x: x.split(','), action='append',
                         help='Merge chains: e.g. -merge A,B,C (+)')
+    parser.add_argument('-sep', dest='deduplicate_itp',
+                        action='store_false', default=True,
+                        help='Write separate topologies for identical chains')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -265,7 +271,7 @@ def entry():
     vermouth.pdb.write_pdb(system, str(args.outpath))
 
     if args.top_path is not None:
-        write_gmx_topology(system, args.top_path)
+        write_gmx_topology(system, args.top_path, deduplicate=args.deduplicate_itp)
 
 
 if __name__ == '__main__':
