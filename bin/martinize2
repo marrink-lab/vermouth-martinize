@@ -147,27 +147,45 @@ def write_gmx_topology(system, top_path):
 
 def entry():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', dest='inpath', required=True, type=Path)
-    parser.add_argument('-x', dest='outpath', required=True, type=Path)
-    parser.add_argument('-o', dest='top_path', type=Path)
+    parser.add_argument('-f', dest='inpath', required=True, type=Path,
+                        help='Input file (PDB|GRO)')
+    parser.add_argument('-x', dest='outpath', required=True, type=Path,
+                        help='Output coarse grained structure (PDB)')
+    parser.add_argument('-o', dest='top_path', type=Path,
+                        help='Output topology (TOP)')
     parser.add_argument('-p', dest='posres', type=lambda x: x.lower(),
-                        choices=('none', 'all', 'backbone'), default='none')
-    parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
-    parser.add_argument('-ff', dest='to_ff', default='martini22')
-    parser.add_argument('-dssp', nargs='?', const='dssp')
-    parser.add_argument('-ed', dest='extdih', action='store_true', default=False) 
-    parser.add_argument('-collagen', action='store_true', default=False)
-    parser.add_argument('-elastic', action='store_true', default=False)
-    parser.add_argument('-ef', dest='rb_force_constant', type=float, default=500)
-    parser.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5)
-    parser.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9)
-    parser.add_argument('-ea', dest='rb_decay_factor', type=float, default=0)
-    parser.add_argument('-ep', dest='rb_decay_power', type=float, default=0)
-    parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0)
+                        choices=('none', 'all', 'backbone'), default='none',
+                        help='Output position restraints (None/All/Backbone) (default: None)')
+    parser.add_argument('-pf', dest='posres_fc', type=float, default=1000,
+                        help='Position restraints force constant (default: 1000 kJ/mol/nm^2)')
+    parser.add_argument('-ff', dest='to_ff', default='martini22',
+                        help='Which forcefield to use')
+    parser.add_argument('-dssp', nargs='?', const='dssp',
+                        help='DSSP executable for determining structure')
+    parser.add_argument('-ed', dest='extdih', action='store_true', default=False,
+                        help='Use dihedrals for extended regions rather than elastic bonds') 
+    parser.add_argument('-collagen', action='store_true', default=False,
+                        help='Use collagen parameters')
+    parser.add_argument('-elastic', action='store_true', default=False,
+                        help='Write elastic bonds')
+    parser.add_argument('-ef', dest='rb_force_constant', type=float, default=500,
+                        help='Elastic bond force constant Fc in kJ/mol/nm^2')
+    parser.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5,
+                        help='Elastic bond lower cutoff: F = Fc if rij < lo')
+    parser.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
+                        help='Elastic bond upper cutoff: F = 0  if rij > up')
+    parser.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
+                        help='Elastic bond decay factor a')
+    parser.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
+                        help='Elastic bond decay power p')
+    parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0,
+                        help='Remove elastic bonds with force constant lower than this')
     parser.add_argument('-nt', dest='neutral_terminii',
-                        action='store_true', default=False)
+                        action='store_true', default=False,
+                        help='Set neutral termini (charged is default)')
     parser.add_argument('-merge', dest='merge_chains',
-                        type=lambda x: x.split(','), action='append')
+                        type=lambda x: x.split(','), action='append',
+                        help='Merge chains: e.g. -merge A,B,C (+)')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
