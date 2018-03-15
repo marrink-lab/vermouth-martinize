@@ -225,13 +225,7 @@ def entry():
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
-    # For demonstration purpose, write the secondary structure assignation
-    # instead of the element.
-    # TODO: remove this code for production
-    for molecule in system.molecules:
-        for atom in molecule.nodes.values():
-            atom['element'] = atom.get('cgsecstruct', 'X')
-
+    # Merge chains if required.
     if args.merge_chains:
         for chain_set in args.merge_chains:
             vermouth.MergeChains(chain_set).run_system(system)
