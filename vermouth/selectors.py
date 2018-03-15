@@ -75,6 +75,39 @@ def selector_has_position(atom):
     return position is not None and np.all(np.isfinite(position))
 
 
+def proto_select_attribute_in(node, attribute, values):
+    """
+    Return True if the given attribute of the node is in a list of values.
+
+    To be used as a selector, the function must be wrapped in a way that it can
+    be called without the need to explicitly specify the 'attribute' and
+    'values' arguments. This can be done using :fun:`functools.partial`:
+
+    >>> # select an atom if its name is in a given list
+    >>> to_keep = ['BB', 'SC1']
+    >>> select_name_in = functools.partial(
+    ...     proto_select_attribute_in,
+    ...     attribute='atomname',
+    ...     values=to_keep
+    ... )
+    >>> select_name_in(node)
+
+    Parameters
+    ----------
+    node: dict
+        The atom/node to consider.
+    attribute: str
+        The key to look at in the node.
+    values: list
+        The values the node attribute can take for the node to be selected.
+
+    Returns
+    -------
+    bool
+    """
+    return node.get(attribute) in values
+
+
 def filter_minimal(molecule, selector):
     """
     Yield the atom keys that match the selector.

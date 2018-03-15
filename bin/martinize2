@@ -35,6 +35,7 @@ from vermouth.map_input import read_mapping_directory
 import itertools
 import operator
 import textwrap
+import functools
 
 
 def read_system(path):
@@ -180,6 +181,9 @@ def entry():
                         help='Elastic bond decay power p')
     parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0,
                         help='Remove elastic bonds with force constant lower than this')
+    parser.add_argument('-eb', dest='rb_selection',
+                        type=lambda x: x.split(','), default=None,
+                        help='Comma separated list of bead names for elastic bonds')
     parser.add_argument('-nt', dest='neutral_terminii',
                         action='store_true', default=False,
                         help='Set neutral termini (charged is default)')
@@ -226,6 +230,14 @@ def entry():
 
     # Apply a rubber band elastic network is required.
     if args.elastic:
+        if args.rb_selection is not None:
+            selector = functools.partial(
+                selectors.proto_select_attribute_in,
+                attribute='atomname',
+                values=args.rb_selection,
+            )
+        else:
+            selector = selectors.select_backbone
         rubber_band_processor = vermouth.ApplyRubberBand(
             lower_bound=args.rb_lower_bound,
             upper_bound=args.rb_upper_bound,
@@ -233,6 +245,7 @@ def entry():
             decay_power=args.rb_decay_power,
             base_constant=args.rb_force_constant,
             minimum_force=args.rb_minimum_force,
+            selector=selector,
         )
         rubber_band_processor.run_system(system)
 
