@@ -150,52 +150,58 @@ def write_gmx_topology(system, top_path, deduplicate=True):
 
 
 def entry():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-f', dest='inpath', required=True, type=Path,
-                        help='Input file (PDB|GRO)')
-    parser.add_argument('-x', dest='outpath', required=True, type=Path,
-                        help='Output coarse grained structure (PDB)')
-    parser.add_argument('-o', dest='top_path', type=Path,
-                        help='Output topology (TOP)')
-    parser.add_argument('-p', dest='posres', type=lambda x: x.lower(),
-                        choices=('none', 'all', 'backbone'), default='none',
-                        help='Output position restraints (None/All/Backbone) (default: None)')
-    parser.add_argument('-pf', dest='posres_fc', type=float, default=1000,
-                        help='Position restraints force constant (default: 1000 kJ/mol/nm^2)')
-    parser.add_argument('-ff', dest='to_ff', default='martini22',
-                        help='Which forcefield to use')
-    parser.add_argument('-dssp', nargs='?', const='dssp',
-                        help='DSSP executable for determining structure')
-    parser.add_argument('-ed', dest='extdih', action='store_true', default=False,
-                        help='Use dihedrals for extended regions rather than elastic bonds') 
-    parser.add_argument('-collagen', action='store_true', default=False,
-                        help='Use collagen parameters')
-    parser.add_argument('-elastic', action='store_true', default=False,
-                        help='Write elastic bonds')
-    parser.add_argument('-ef', dest='rb_force_constant', type=float, default=500,
-                        help='Elastic bond force constant Fc in kJ/mol/nm^2')
-    parser.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5,
-                        help='Elastic bond lower cutoff: F = Fc if rij < lo')
-    parser.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
-                        help='Elastic bond upper cutoff: F = 0  if rij > up')
-    parser.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
-                        help='Elastic bond decay factor a')
-    parser.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
-                        help='Elastic bond decay power p')
-    parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0,
-                        help='Remove elastic bonds with force constant lower than this')
-    parser.add_argument('-eb', dest='rb_selection',
-                        type=lambda x: x.split(','), default=None,
-                        help='Comma separated list of bead names for elastic bonds')
-    parser.add_argument('-nt', dest='neutral_terminii',
-                        action='store_true', default=False,
-                        help='Set neutral termini (charged is default)')
-    parser.add_argument('-merge', dest='merge_chains',
-                        type=lambda x: x.split(','), action='append',
-                        help='Merge chains: e.g. -merge A,B,C (+)')
-    parser.add_argument('-sep', dest='deduplicate_itp',
-                        action='store_false', default=True,
-                        help='Write separate topologies for identical chains')
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    file_group = parser.add_argument_group('Input and output files')
+    file_group.add_argument('-f', dest='inpath', required=True, type=Path,
+                            help='Input file (PDB|GRO)')
+    file_group.add_argument('-x', dest='outpath', required=True, type=Path,
+                            help='Output coarse grained structure (PDB)')
+    file_group.add_argument('-o', dest='top_path', type=Path,
+                            help='Output topology (TOP)')
+    file_group.add_argument('-sep', dest='keep_duplicate_itp',
+                            action='store_true', default=False,
+                            help='Write separate topologies for identical chains')
+    file_group.add_argument('-merge', dest='merge_chains',
+                            type=lambda x: x.split(','), action='append',
+                            help='Merge chains: e.g. -merge A,B,C (+)')
+    ff_group = parser.add_argument_group('Force field selection')
+    ff_group.add_argument('-ff', dest='to_ff', default='martini22',
+                          help='Which forcefield to use')
+    posres_group = parser.add_argument_group('Position restraints')
+    posres_group.add_argument('-p', dest='posres', type=lambda x: x.lower(),
+                              choices=('none', 'all', 'backbone'), default='none',
+                              help='Output position restraints (none/all/backbone)')
+    posres_group.add_argument('-pf', dest='posres_fc', type=float, default=1000,
+                              help='Position restraints force constant in kJ/mol/nm^2')
+    secstruct_group = parser.add_argument_group('Secondary structure handling')
+    secstruct_group.add_argument('-dssp', nargs='?', const='dssp',
+                                 help='DSSP executable for determining structure')
+    secstruct_group.add_argument('-ed', dest='extdih', action='store_true', default=False,
+                                 help='Use dihedrals for extended regions rather than elastic bonds')
+    secstruct_group.add_argument('-collagen', action='store_true', default=False,
+                                 help='Use collagen parameters')
+    rb_group = parser.add_argument_group('Protein elastic network')
+    rb_group.add_argument('-elastic', action='store_true', default=False,
+                          help='Write elastic bonds')
+    rb_group.add_argument('-ef', dest='rb_force_constant', type=float, default=500,
+                          help='Elastic bond force constant Fc in kJ/mol/nm^2')
+    rb_group.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5,
+                          help='Elastic bond lower cutoff: F = Fc if rij < lo')
+    rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
+                          help='Elastic bond upper cutoff: F = 0  if rij > up')
+    rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
+                          help='Elastic bond decay factor a')
+    rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
+                          help='Elastic bond decay power p')
+    rb_group.add_argument('-em', dest='rb_minimum_force', type=float, default=0,
+                          help='Remove elastic bonds with force constant lower than this')
+    rb_group.add_argument('-eb', dest='rb_selection',
+                          type=lambda x: x.split(','), default=None,
+                          help='Comma separated list of bead names for elastic bonds')
+    prot_group = parser.add_argument_group('Protein description')
+    prot_group.add_argument('-nt', dest='neutral_terminii',
+                            action='store_true', default=False,
+                            help='Set neutral termini (charged is default)')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -271,7 +277,8 @@ def entry():
     vermouth.pdb.write_pdb(system, str(args.outpath))
 
     if args.top_path is not None:
-        write_gmx_topology(system, args.top_path, deduplicate=args.deduplicate_itp)
+        write_gmx_topology(system, args.top_path,
+                           deduplicate=not args.keep_duplicate_itp)
 
 
 if __name__ == '__main__':
