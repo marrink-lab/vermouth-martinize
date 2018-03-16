@@ -31,7 +31,11 @@ from vermouth.dssp.dssp import (
     AnnotateResidues,
 )
 from vermouth import selectors
-from vermouth.map_input import read_mapping_directory
+from vermouth.map_input import (
+    read_mapping_directory,
+    generate_all_self_mappings,
+    combine_mappings
+)
 import itertools
 import operator
 import textwrap
@@ -226,12 +230,11 @@ def entry():
         if not directory.is_dir():
             raise ValueError('"{}" given to the -map-dir option should be a directory.')
         partial_mapping = read_mapping_directory(directory)
-        for origin, destinations in partial_mapping.items():
-            known_mappings[origin] = known_mappings.get(origin, {})
-            for destination, residues in destinations.items():
-                known_mappings[origin][destination] = known_mappings[origin].get(destination, {})
-                for residue, mapping in residues.items():
-                    known_mappings[origin][destination][residue] = mapping
+        combine_mappings(known_mappings, partial_mapping)
+        
+    # Build self mappings
+    partial_mapping = generate_all_self_mappings(known_force_fields)
+    combine_mappings(known_mappings, partial_mapping)
 
     from_ff = args.from_ff
     if args.to_ff not in known_force_fields:
@@ -241,6 +244,8 @@ def entry():
     if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
         raise ValueError('No mapping known to go from "{}" to "{}".'
                          .format(from_ff, args.to_ff))
+
+    print(known_mappings['universal']['universal'])
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the

@@ -182,3 +182,34 @@ def read_mapping_directory(directory):
             mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
     return dict(mappings)
 
+
+def generate_self_mappings(blocks):
+    mappings = {}
+    for name, block in blocks.items():
+        mapping = {
+            (0, atom['atomname']): [(0, atom['atomname'])]
+            for atom in block.nodes.values()
+        }
+        weights = {
+            atom['atomname']: {atom['atomname']: 1}
+            for atom in block.nodes.values()
+        }
+        extra = []
+        mappings[name] = (mapping, weights, extra)
+    return mappings
+
+
+def generate_all_self_mappings(force_fields):
+    mappings = collections.defaultdict(dict)
+    for name, force_field in force_fields.items():
+        mappings[name][name] = generate_self_mappings(force_field.blocks)
+    return mappings
+
+
+def combine_mappings(known_mappings, partial_mapping):
+    for origin, destinations in partial_mapping.items():
+        known_mappings[origin] = known_mappings.get(origin, {})
+        for destination, residues in destinations.items():
+            known_mappings[origin][destination] = known_mappings[origin].get(destination, {})
+            for residue, mapping in residues.items():
+                known_mappings[origin][destination][residue] = mapping
