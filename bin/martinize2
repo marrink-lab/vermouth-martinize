@@ -61,12 +61,13 @@ def read_system(path):
     return system
 
 
-def pdb_to_universal(system, delete_unknown=False):
+def pdb_to_universal(system, delete_unknown=False,
+                     force_field=FORCE_FIELDS['universal']):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
     canonicalized = system.copy()
-    canonicalized.force_field = FORCE_FIELDS['universal']
+    canonicalized.force_field = force_field
     vermouth.MakeBonds().run_system(canonicalized)
     vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
@@ -250,7 +251,8 @@ def entry():
     # input structure to be a clean universal system.
     # For now at least, we silently delete molecules with unknown blocks.
     system = read_system(args.inpath)
-    system = pdb_to_universal(system, delete_unknown=True)
+    system = pdb_to_universal(system, delete_unknown=True,
+                              force_field=known_force_fields[from_ff])
 
     if args.dssp is not None:
         AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
@@ -302,12 +304,17 @@ def entry():
         for chain_set in args.merge_chains:
             vermouth.MergeChains(chain_set).run_system(system)
 
-    # Write a PDB file.
-    vermouth.pdb.write_pdb(system, str(args.outpath))
-
+    # Write the topology if requested
     if args.top_path is not None:
         write_gmx_topology(system, args.top_path,
                            deduplicate=not args.keep_duplicate_itp)
+
+    # Write a PDB file.
+    # Get rid of the charge, the PDB format is too primitive to actually write them.
+    for molecule in system.molecules:
+        for node in molecule.nodes.values():
+            del node['charge']
+    vermouth.pdb.write_pdb(system, str(args.outpath))
 
 
 if __name__ == '__main__':

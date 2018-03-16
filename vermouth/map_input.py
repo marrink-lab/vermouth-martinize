@@ -191,7 +191,7 @@ def generate_self_mappings(blocks):
             for atom in block.nodes.values()
         }
         weights = {
-            atom['atomname']: {atom['atomname']: 1}
+            (0, atom['atomname']): {(0, atom['atomname']): 1}
             for atom in block.nodes.values()
         }
         extra = []
