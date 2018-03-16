@@ -167,6 +167,14 @@ def entry():
     ff_group = parser.add_argument_group('Force field selection')
     ff_group.add_argument('-ff', dest='to_ff', default='martini22',
                           help='Which forcefield to use')
+    ff_group.add_argument('-from', dest='from_ff', default='universal',
+                          help='Force field of the original structure.')
+    ff_group.add_argument('-ff-dir', dest='extra_ff_dir', action='append',
+                          type=Path, default=[],
+                          help='Additional repository for custom force fields.')
+    ff_group.add_argument('-map-dir', dest='extra_map_dir', action='append',
+                          type=Path, default=[],
+                          help='Additional repository for mapping files.')
     posres_group = parser.add_argument_group('Position restraints')
     posres_group.add_argument('-p', dest='posres', type=lambda x: x.lower(),
                               choices=('none', 'all', 'backbone'), default='none',
@@ -209,9 +217,27 @@ def entry():
     )
     known_mappings = read_mapping_directory(Path(DATA_PATH) / 'mappings')
 
-    from_ff = 'universal'
+    # Add user force fields and mappings
+    for directory in args.extra_ff_dir:
+        if not directory.is_dir():
+            raise ValueError('"{}" given to the -ff-dir option should be a directory.')
+        known_force_fields.update(vermouth.forcefield.find_force_fields(directory))
+    for directory in args.extra_map_dir:
+        if not directory.is_dir():
+            raise ValueError('"{}" given to the -map-dir option should be a directory.')
+        partial_mapping = read_mapping_directory(directory)
+        for origin, destinations in partial_mapping.items():
+            known_mappings[origin] = known_mappings.get(origin, {})
+            for destination, residues in destinations.items():
+                known_mappings[origin][destination] = known_mappings[origin].get(destination, {})
+                for residue, mapping in residues.items():
+                    known_mappings[origin][destination][residue] = mapping
+
+    from_ff = args.from_ff
     if args.to_ff not in known_force_fields:
         raise ValueError('Unknown force field "{}".'.format(args.to_ff))
+    if args.from_ff not in known_force_fields:
+        raise ValueError('Unknown force field "{}".'.format(args.from_ff))
     if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
         raise ValueError('No mapping known to go from "{}" to "{}".'
                          .format(from_ff, args.to_ff))
