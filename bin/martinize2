@@ -245,8 +245,6 @@ def entry():
         raise ValueError('No mapping known to go from "{}" to "{}".'
                          .format(from_ff, args.to_ff))
 
-    print(known_mappings['universal']['universal'])
-
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
