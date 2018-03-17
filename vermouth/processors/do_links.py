@@ -24,8 +24,10 @@ from .processor import Processor
 from ..gmx import read_rtp
 
 from itertools import combinations
+import numbers
 
 import networkx as nx
+from numpy import sign
 
 
 class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
@@ -72,6 +74,145 @@ def _pattern_match(molecule, atoms, raw_match):
 def _any_pattern_match(molecule, patterns, rev_raw_match):
     return any(_pattern_match(molecule, atoms, rev_raw_match) for atoms in patterns)
 
+
+def _match_order(order1, resid1, order2, resid2):
+    """
+    Check if two residues match the order constraints.
+
+    The order can be:
+
+    :an integer:
+        It is then the expected distance in resid with a reference residue.
+    :a series of +:
+        This indicates that the residue must have a larger resid than a
+        reference residue. Multiple atoms with the same number of + are
+        expected to be part of the same residue. The more + are in the serie,
+        the further away the residue is expected to be from the reference, so a
+        residue with ++ is expected to have a greater resid than a residue with
+        +.
+    :a series of -:
+        Same as a series of +, but for smaller resid.
+    :a series of *:
+        This indicates a different residue than the reference, but without a
+        specified order. As for the + or the -, atoms with the same number of *
+        are expected to be part of the same residue.
+
+    The comparison matrix can be sumerized as follow, with 0 being the
+    reference residue, n being an integer. In the matrix, a ? means that the
+    result depends on the comparison of the actual numbers, a ! means that the
+    comparison should ne be considere, and / means that the resids must be
+    different. The rows correspond to the order at the left of the comparison
+    (order1 argument), while the columns correspond to the order at the right
+    of it (order2 argument).
+
+    +----+---+----+---+----+---+---+---+----+
+    |    | + | ++ | - | -- | n | 0 | * | ** |
+    +----+---+----+---+----+---+---+---+----+
+    | +  | = | <  | > | >  | ! | > | ! | !  |
+    +----+---+----+---+----+---+---+---+----+
+    | ++ | > | =  | > | >  | ! | > | ! | !  |
+    +----+---+----+---+----+---+---+---+----+
+    | -  | < | <  | = | >  | ! | < | ! | !  |
+    +----+---+----+---+----+---+---+---+----+
+    | -- | < | <  | < | =  | ! | < | ! | !  |
+    +----+---+----+---+----+---+---+---+----+
+    | n  | ! | !  | ! | !  | ? | ? | ! | !  |
+    +----+---+----+---+----+---+---+---+----+
+    | 0  | < | <  | > | >  | ? | = | / | /  |
+    +----+---+----+---+----+---+---+---+----+
+    | *  | ! | !  | ! | !  | ! | / | = | /  |
+    +----+---+----+---+----+---+---+---+----+
+    | ** | ! | !  | ! | !  | ! | / | / | =  |
+    +----+---+----+---+----+---+---+---+----+
+
+    Parameters
+    ----------
+    order1: int or str
+        The order attribute of the residue on the left of the comparison.
+    resid1: int
+        The residue id of the residue on the left of the comparison.
+    order2: int or str
+        The order attribute of the residue on the right of the comparison.
+    resid2: int
+        The residue id of the residue on the right of the comparison.
+
+    Returns
+    -------
+    bool
+        `True` if the conditions match.
+
+    Raises
+    ------
+    ValueError
+        Raised if the order arguments do not follow the expected format.
+    """
+    # Validate the order arguments, and format it for what comes next.
+    orders = []
+    order_types = []
+    error_msg = ('"{}" is not a valid value for the "order" node attribute. '
+                 'The value must be an integer, a series of + '
+                 '(i.e. +, ++, +++, ...), a series of -, or a series of *.')
+    for i, order in enumerate((order1, order2), start=1):
+        if isinstance(order, numbers.Number):
+            if int(order) != float(order):
+                # order is a number but not an int (or int-like)
+                raise ValueError(error_msg.format(order))
+            order_types.append('number')
+            orders.append(order)
+        else:
+            try:
+                first_character = order[0]
+            except (TypeError, ValueError):
+                # order is not an int, nor a sequence (str, list, tuple,...)
+                # or it is an empty sequence. Anyway, we cannot work with it.
+                raise ValueError(error_msg.format(order))
+            if len(set(order)) != 1 or first_character not in '+-*':
+                # order is a str (or any sequence, we do not really care),
+                # but it contains a mixture of characters (e.g. '+-'), or
+                # the characters are not among the ones we expect.
+                raise ValueError(error_msg.format(order))
+            signs = {'+': +1, '-': -1}
+            if first_character in signs:
+                order_types.append('+-')
+                orders.append(signs[first_character] * len(order))
+            elif first_character == '*':
+                # This could be an 'else', but it would hide bugs if the code
+                # above changes.
+                order_types.append('*')
+                orders.append(len(order))
+        # OK, it should be good.
+
+    if order_types[0] == 'number':  # Rows n and 0 in the comparison matrix
+        if order_types[1] == 'number':
+            # Columns n, and 0
+            if (orders[1] - orders[0]) != (resid2 - resid1):
+                return False
+        elif orders[0] == 0:  # Row 0 in the comparison matrix
+            if order_types[1] == '+-' and sign(resid2 - resid1) != sign(orders[1]):
+                # Columns +, ++, -, and --
+                return False
+            elif order_types[1] == '*' and resid1 == resid2:
+                # Columns *, and **
+                return False
+    elif order_types[0] == '+-':  # Rows +, ++, -, and --
+        if (order_types[1] == 'number' and orders[1] == 0
+                and sign(resid1 - resid2) != sign(orders[0])):
+            # Column 0
+            return False
+        elif (order_types[1] == '+-'
+              and sign(resid2 - resid1) != sign(orders[1] - orders[0])):
+            # Column +, ++, -, and --
+            return False
+    elif order_types[0] == '*':  # Rows *, and **
+        if order_types[1] == 'number' and orders[1] == 0 and resid1 == resid2:
+            # Column 0
+            return False
+        elif order_types[1] == '*' and ((orders[0] == orders[1]) != (resid1 == resid2)):
+            # Columns *, and **
+            return False
+
+    return True
+
         
 def match_link(molecule, link):
     if not attributes_match(molecule.meta, link.molecule_meta):
@@ -103,14 +244,27 @@ def match_link(molecule, link):
                     break
         else:  # No break
             for ((order1, resid1), (order2, resid2)) in combinations(order_match.items(), 2):
-                # Assert the differences between orders correspond to
-                # differences in resid
-                if order2 - order1 != resid2 - resid1:
+                # Assert the differences between resids correspond to what
+                # the orders require.
+                if not _match_order(order1, resid1, order2, resid2):
                     break
             else:  # No break
                 # raw_match is molecule -> link. The other way around is more
                 # usefull
                 yield {v: k for k, v in raw_match.items()}
+
+
+def _build_link_interaction_from(interaction, match):
+    atoms = tuple(match[idx] for idx in interaction.atoms)
+    parameters = [
+        param(molecule, match) if callable(param) else param
+        for param in interaction.parameters
+    ]
+    new_interaction = interaction._replace(
+        atoms=atoms,
+        parameters=parameters
+    )
+    return new_interaction
 
 
 class DoLinks(Processor):
@@ -125,29 +279,13 @@ class DoLinks(Processor):
                         node_mol.update(node_attrs['replace'])
                 for inter_type, interactions in link.removed_interactions.items():
                     for interaction in interactions:
-                        atoms = tuple(match[idx] for idx in interaction.atoms)
-                        parameters = [
-                            param(molecule, match) if callable(param) else param
-                            for param in interaction.parameters
-                        ]
-                        interaction = interaction._replace(
-                            atoms=atoms,
-                            parameters=parameters
-                        )
+                        interaction = _build_link_interaction_from(interaction, match)
                         try:
                             molecule.remove_matching_interaction(inter_type, interaction)
                         except ValueError:
                             pass
                 for inter_type, interactions in link.interactions.items():
                     for interaction in interactions:
-                        atoms = tuple(match[idx] for idx in interaction.atoms)
-                        parameters = [
-                            param(molecule, match) if callable(param) else param
-                            for param in interaction.parameters
-                        ]
-                        interaction = interaction._replace(
-                            atoms=atoms,
-                            parameters=parameters
-                        )
+                        interaction = _build_link_interaction_from(interaction, match)
                         molecule.add_or_replace_interaction(inter_type, *interaction)
         return molecule
