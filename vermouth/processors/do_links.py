@@ -75,6 +75,44 @@ def _any_pattern_match(molecule, patterns, rev_raw_match):
     return any(_pattern_match(molecule, atoms, rev_raw_match) for atoms in patterns)
 
 
+def _interpret_order(order):
+    error_msg = ('"{}" is not a valid value for the "order" node attribute. '
+                 'The value must be an integer, a series of + '
+                 '(i.e. +, ++, +++, ...), a series of -, or a series of *.')
+    if order is True or order is False:
+        # Booleans match the Number abstract base class, so we have to test
+        # for them separately.
+        raise ValueError(error_msg.format(order))
+    elif isinstance(order, numbers.Number):
+        if int(order) != float(order):
+            # order is a number but not an int (or int-like)
+            raise ValueError(error_msg.format(order))
+        order_type = 'number'
+        order_value = order
+    else:
+        try:
+            first_character = order[0]
+        except (TypeError, IndexError, KeyError):
+            # order is not an int, nor a sequence (str, list, tuple,...)
+            # or it is an empty sequence. Anyway, we cannot work with it.
+            raise ValueError(error_msg.format(order))
+        if len(set(order)) != 1 or first_character not in '+-*':
+            # order is a str (or any sequence, we do not really care),
+            # but it contains a mixture of characters (e.g. '+-'), or
+            # the characters are not among the ones we expect.
+            raise ValueError(error_msg.format(order))
+        signs = {'+': +1, '-': -1}
+        if first_character in signs:
+            order_type = '+-'
+            order_value = signs[first_character] * len(order)
+        elif first_character == '*':
+            # This could be an 'else', but it would hide bugs if the code
+            # above changes.
+            order_type = '*'
+            order_value = len(order)
+    return order_type, order_value
+
+
 def _match_order(order1, resid1, order2, resid2):
     """
     Check if two residues match the order constraints.
@@ -149,38 +187,10 @@ def _match_order(order1, resid1, order2, resid2):
     # Validate the order arguments, and format it for what comes next.
     orders = []
     order_types = []
-    error_msg = ('"{}" is not a valid value for the "order" node attribute. '
-                 'The value must be an integer, a series of + '
-                 '(i.e. +, ++, +++, ...), a series of -, or a series of *.')
     for i, order in enumerate((order1, order2), start=1):
-        if isinstance(order, numbers.Number):
-            if int(order) != float(order):
-                # order is a number but not an int (or int-like)
-                raise ValueError(error_msg.format(order))
-            order_types.append('number')
-            orders.append(order)
-        else:
-            try:
-                first_character = order[0]
-            except (TypeError, ValueError):
-                # order is not an int, nor a sequence (str, list, tuple,...)
-                # or it is an empty sequence. Anyway, we cannot work with it.
-                raise ValueError(error_msg.format(order))
-            if len(set(order)) != 1 or first_character not in '+-*':
-                # order is a str (or any sequence, we do not really care),
-                # but it contains a mixture of characters (e.g. '+-'), or
-                # the characters are not among the ones we expect.
-                raise ValueError(error_msg.format(order))
-            signs = {'+': +1, '-': -1}
-            if first_character in signs:
-                order_types.append('+-')
-                orders.append(signs[first_character] * len(order))
-            elif first_character == '*':
-                # This could be an 'else', but it would hide bugs if the code
-                # above changes.
-                order_types.append('*')
-                orders.append(len(order))
-        # OK, it should be good.
+        order_type, order_value = _interpret_order(order)
+        order_types.append(order_type)
+        orders.append(order_value)
 
     if order_types[0] == 'number':  # Rows n and 0 in the comparison matrix
         if order_types[1] == 'number':

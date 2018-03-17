@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import pytest
+import numpy as np
 from vermouth.processors import do_links
 
 @pytest.mark.parametrize(
@@ -169,3 +170,32 @@ def test_match_order(orders, resids, answer):
     resid1, resid2 = resids
     match = do_links._match_order(order1, resid1, order2, resid2)
     assert match == answer
+
+
+@pytest.mark.parametrize("order", (
+    1.2, -3.9, None, True, False, {'a': 3},
+    '+-', '#++', '#$H', '', [], np.nan, 
+))
+def test_order_errors(order):
+    with pytest.raises(ValueError):
+        _, _ = do_links._interpret_order(order)
+
+
+@pytest.mark.parametrize("order, ref_order_type, ref_order_value", (
+    (0, 'number', 0),
+    (2, 'number', 2),
+    (-3, 'number', -3),
+    ('+', '+-', 1),
+    ('++', '+-', 2),
+    ('+++', '+-', 3),
+    ('-', '+-', -1),
+    ('--', '+-', -2),
+    ('---', '+-', -3),
+    ('*', '*', 1),
+    ('**', '*', 2),
+    ('***', '*', 3),
+))
+def test_interpret_order(order, ref_order_type, ref_order_value):
+    order_type, order_value = do_links._interpret_order(order)
+    assert order_type == ref_order_type
+    assert order_value == ref_order_value
