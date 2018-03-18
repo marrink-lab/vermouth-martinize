@@ -260,7 +260,7 @@ def match_link(molecule, link):
                     break
             else:  # No break
                 # raw_match is molecule -> link. The other way around is more
-                # usefull
+                # useful
                 yield {v: k for k, v in raw_match.items()}
 
 
