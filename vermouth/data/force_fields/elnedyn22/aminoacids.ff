@@ -595,6 +595,12 @@ resname $protein_resnames
 #meta {"group": "BBB angles"}
 -BB BB +BB 2 angle(-BB,BB,+BB) 40
 
+;; Cystein bridge
+[ link ]
+resname CYS
+[ constraints ]
+SC1 *SC1 {"order": "+"} 0.24
+
 ;; Protein terminii. These links should be applied last.
 [ link ]
 [ molmeta ]

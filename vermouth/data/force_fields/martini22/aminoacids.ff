@@ -831,6 +831,12 @@ BB ++BB 1 0.640 2500
 +BB +++BB 1 0.640 2500
 BB +++BB 1 0.970 2500
 
+;; Cystein bridge
+[ link ]
+resname CYS
+[ constraints ]
+SC1 *SC1 {"order": "+"} 0.24
+
 ;; Protein terminii. These links should be applied last.
 [ link ]
 [ molmeta ]
@@ -851,4 +857,3 @@ neutral_termini
 BB {"replace": {"atype": "Qa", "charge": -1}}
 [ non-edges ]
 BB +BB
-
