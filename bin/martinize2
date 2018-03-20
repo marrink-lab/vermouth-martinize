@@ -226,7 +226,7 @@ def entry():
     for directory in args.extra_ff_dir:
         if not directory.is_dir():
             raise ValueError('"{}" given to the -ff-dir option should be a directory.')
-        known_force_fields.update(vermouth.forcefield.find_force_fields(directory))
+        vermouth.forcefield.find_force_fields(directory, known_force_fields)
     for directory in args.extra_map_dir:
         if not directory.is_dir():
             raise ValueError('"{}" given to the -map-dir option should be a directory.')
