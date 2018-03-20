@@ -313,7 +313,10 @@ def entry():
     # Get rid of the charge, the PDB format is too primitive to actually write them.
     for molecule in system.molecules:
         for node in molecule.nodes.values():
-            del node['charge']
+            try:
+                del node['charge']
+            except KeyError:
+                pass
     vermouth.pdb.write_pdb(system, str(args.outpath))
 
 
