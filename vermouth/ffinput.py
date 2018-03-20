@@ -527,6 +527,7 @@ def read_ff(lines):
         'impropers': 4,
         'constraints': 2,
         'virtual_sites2': 3,
+        'pairs': 2,
     }
 
     macros = {}
