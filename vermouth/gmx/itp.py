@@ -113,6 +113,14 @@ def write_molecule_itp(molecule, outfile):
 
     # Write the interactions
     for name, interactions in molecule.interactions.items():
+        # Do not write an empty section.
+        if not interactions:
+            continue
+        # Improper dihedral angles have their own section in the Molecule
+        # object to distinguish them from the proper dihedrals. Yet, they
+        # should be written under the [ dihedrals ] section of the ITP file.
+        if name == 'impropers':
+            name = 'dihedrals'
         outfile.write('[ {} ]\n'.format(name))
         interactions_group_sorted = sorted(
             interactions,

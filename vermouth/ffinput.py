@@ -595,9 +595,24 @@ def read_ff(lines):
                 raise IOError('Error while reading line {} in section {}.'
                               .format(line_num, section))
 
-    # Finish the blocks and the links. We have the nodes and The
-    # interactions, but the edges are missing.
-    for name, block in blocks.items():
+    # Finish the blocks and the links.
+    # Because of hos they are described in gromacs, proper and improper
+    # dihedral angles are all under the [ dihedrals ] section. However
+    # the way they are treated differently in the library, at least on how
+    # they generate edges. Here we move the all the impropers into their own
+    # [ impropers ] section.
+    for block in blocks.values():
+        propers = []
+        impropers = []
+        for dihedral in block.interactions.get('dihedrals', []):
+            if dihedral.parameters and dihedral.parameters[0] == '2':
+                impropers.append(dihedral)
+            else:
+                propers.append(dihedral)
+        block.interactions['dihedrals'] = propers
+        block.interactions['impropers'] = impropers
+    # We have the nodes and The # interactions, but the edges are missing.
+    for block in blocks.values():
         block.make_edges_from_interactions()
     for link in links:
         link.make_edges_from_interactions()
