@@ -88,7 +88,7 @@ def make_reference(mol):
                 mcs_match = max(maximum_common_subgraph(reference, residue, ['element']),
                                 key=lambda m: rate_match(reference, residue, m))
             except ValueError:
-                raise ValueError('No common subgraph found between {} and'
+                raise ValueError('No common subgraph found between {} and '
                                  'reference {}.'.format(resname, resname))
             # We could seed the isomorphism calculation with the knowledge from
             # the mcs_match, but thats to much effort for now.
