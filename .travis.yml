@@ -11,6 +11,7 @@ python:
 matrix:
     allow_failures:
         - python: "2.7"
+        - python: "3.4"
         - python: "3.7-dev"
 addons:
     apt:
