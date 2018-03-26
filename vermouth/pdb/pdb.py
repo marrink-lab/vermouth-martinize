@@ -27,6 +27,13 @@ from functools import partial
 import numpy as np
 
 
+def get_not_none(node, attr, default):
+    value = node.get(attr)
+    if value is None:
+        value = default
+    return value
+
+
 def write_pdb_string(system, conect=True):
     def keyfunc(graph, node_idx):
         # TODO add something like idx_in_residue
@@ -49,16 +56,16 @@ def write_pdb_string(system, conect=True):
             nodeidx2atomid[node_idx] = atomid
             node = molecule.node[node_idx]
             atomname = node['atomname']
-            altloc = node.get('altloc', '')
+            altloc = get_not_none(node, 'altloc', '')
             resname = node['resname']
             chain = node['chain']
             resid = node['resid']
-            insertion_code = node.get('insertioncode', '')
+            insertion_code = get_not_none(node, 'insertioncode', '')
             x, y, z = node['position'] * 10  # converting from nm to A
-            occupancy = node.get('occupancy', 1)
-            temp_factor = node.get('temp_factor', 0)
-            element = node.get('element', first_alpha(atomname))
-            charge = node.get('charge', 0)
+            occupancy = get_not_none(node, 'occupancy', 1)
+            temp_factor = get_not_none(node, 'temp_factor', 0)
+            element = get_not_none(node, 'element', '')
+            charge = get_not_none(node, 'charge', 0)
             if charge:
                 charge = '{:+2d}'.format(int(charge))[::-1]
             else:

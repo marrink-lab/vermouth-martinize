@@ -31,3 +31,5 @@ from .average_beads import DoAverageBead
 from .apply_posres import ApplyPosres
 from .set_molecule_meta import SetMoleculeMeta
 from .locate_charge_dummies import LocateChargeDummies
+from .attach_mass import AttachMass
+from .apply_rubber_band import ApplyRubberBand

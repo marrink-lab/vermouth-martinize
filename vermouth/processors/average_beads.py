@@ -20,6 +20,20 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
     """
     Set the position of the particles to the mean of the underlying atoms.
 
+    This requires the atoms to have a 'graph' attributes. By default, a
+    :exc:`ValueError` is raised if any atom in the molecule is missing that
+    'graph' attribute. This behavior can be changed by setting the
+    'ignore_missing_graphs' argument to `True`, then the average positions are
+    computed, but the atoms without a 'graph' attribute are skipped.
+
+    The average is weighted using the 'mapping_weights' atom attribute. If the
+    'mapping_weights' attribute is set, it has to be a dictionary with the
+    atomname from the underlying graph as keys, and the weights as values.
+    Atoms without a weight set use a default weight of 1. 
+
+    The atoms in the underlying graph must have a position. If they do not,
+    they are ignored from the average.
+
     Parameters
     ----------
     molecule: vermouth.Molecule
@@ -44,9 +58,14 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
             positions = np.stack([
                 subnode['position']
                 for subnode in node['graph'].nodes().values()
-                if 'position' in subnode and subnode['position'] is not None
+                if subnode.get('position') is not None
             ])
-            node['position'] = positions.mean(axis=0)
+            weights = np.array([
+                node.get('mapping_weights', {}).get(subnode_key, 1) * subnode['mass']
+                for subnode_key, subnode in node['graph'].nodes.items()
+                if subnode.get('position') is not None
+            ])
+            node['position'] = np.average(positions, axis=0, weights=weights)
 
     return molecule
 

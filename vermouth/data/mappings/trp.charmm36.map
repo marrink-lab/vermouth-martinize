@@ -32,24 +32,21 @@ charmm27 charmm36
     1     N    BB
     2    HN    BB
     3    CA    BB
-    4    HA    BB
-    5    CB   SC1 BB
-    6   HB1   SC1 BB
-    7   HB2   SC1 BB
-    8    CG   SC1 SC1 SC1 SC1 SC3 SC3
-    9   CD1   SC1 
-   10   HD1   SC1
-   11   NE1   SC2 SC1
+    5    CB   SC1
+    8    CG   SC1
+    9   CD1   SC2 
+   10   HD1   SC2
+   11   NE1   SC2
    12   HE1   SC2
-   13   CE2   SC2 SC2 SC3 
-   14   CD2   SC3 SC3 SC2
-   15   CE3   SC3 SC3 SC4
+   13   CE2   SC2
+   14   CD2   SC1
+   15   CE3   SC3
    16   HE3   SC3
-   17   CZ3   SC4 SC4 SC3
-   18   HZ3   SC4 
-   19   CZ2   SC2 SC2 SC4
-   20   HZ2   SC2 
-   21   CH2   SC4 SC4 SC2 
+   17   CZ3   SC3
+   18   HZ3   SC3 
+   19   CZ2   SC4
+   20   HZ2   SC4 
+   21   CH2   SC4
    22   HH2   SC4
    23     C    BB
    24     O    BB

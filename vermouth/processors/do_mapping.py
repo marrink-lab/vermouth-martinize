@@ -48,25 +48,32 @@ class GraphMapping:
     #       or we need to at least the garantee we run it all in order. Which we
     #       can't unless we do run_system instead of run_molecule. We should
     #       maybe also move this class to a different file, but we'll see.
-    def __init__(self, blocks_from, blocks_to, mapping, extra=()):
+    def __init__(self, blocks_from, blocks_to, mapping, weights=None, extra=()):
         """
         blocks_from and blocks_to are sequences of Blocks.
         Mapping is a dictionary of {(residx, atomname): [(residx, atomname), ...], ...}.
         residx in these cases is the index of the residue in blocks_from and
         blocks_to respectively.
         """
+        if weights is None:
+            weights = {}
         self.block_from = self._merge(blocks_from)
         self.block_to = self._merge(blocks_to)
 
         self.mapping = defaultdict(set)
+        self.weights = defaultdict(dict)
         # Translate atomnames in mapping to node keys.
         for from_, to in mapping.items():
             res_from, name_from = from_
+            from_idxs = list(self.block_from.find_atoms(atomname=name_from, resid=res_from))
             for res_to, name_to in to:
-                from_idxs = self.block_from.find_atoms(atomname=name_from, resid=res_from)
                 to_idxs = self.block_to.find_atoms(atomname=name_to, resid=res_to)
                 for to_idx in to_idxs:
                     self.mapping[to_idx].update(from_idxs)
+                    if from_idxs:
+                        self.weights[to_idx][from_idxs[0]] = (
+                            weights[(res_to, name_to)][(res_from, name_from)]
+                        )
 
         self.mapping = dict(self.mapping)
         self.extra = extra
@@ -132,17 +139,21 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     pair_mapping = mappings[from_ff.name][to_ff.name]
     for name in from_ff.blocks.keys():
         if name in to_ff.blocks and name in pair_mapping:
-            mapping, extra = pair_mapping[name]
+            mapping, weights, extra = pair_mapping[name]
             graph_mapping_collection[name] = GraphMapping(
                 [from_ff.blocks[name], ],
                 [to_ff.blocks[name], ],
                 mapping,
-                extra
+                weights,
+                extra,
             )
     return graph_mapping_collection
 
 
-def do_mapping(molecule, mappings, to_ff):
+def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
+    # We always keep the chain, the resid, and the resname from the original
+    # molecule.
+    attribute_keep = ['chain', 'resname', 'resid'] + list(attribute_keep)
     pair_mapping = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
 
     residue_graph = make_residue_graph(molecule)
@@ -169,9 +180,9 @@ def do_mapping(molecule, mappings, to_ff):
             msg = ('Not one match ({}) for residue {}:{}.'
                    .format(len(matches), residue['resname'], res_node_idx))
             raise KeyError(msg)
-        match = matches[0]
+        rev_match = matches[0]
 
-        match = {v: k for k, v in match.items()}  # TODO remove me. See above.
+        match = {v: k for k, v in rev_match.items()}  # TODO remove me. See above.
 
         mapped_match = {}
         for to_idx, from_idxs in mapping.mapping.items():
@@ -188,11 +199,17 @@ def do_mapping(molecule, mappings, to_ff):
 
             # Bead properties are taken from the last (!) atom, overwritten by
             # the block, and given a 'graph'
+            # Only the properties that are listed in the attribute_keep
+            # argument and those required to identify the residue (chain,
+            # resid, and resname) are kept.
             # TODO: nx.quotient_graph?
             # FIXME: properties take from last bead instead of chosen 
             #        intellegently
+            bead['mapping_weights'] = {}
             for n_idx in from_idxs:
-                bead.update(graph.nodes[n_idx])
+                bead['mapping_weights'][n_idx] = mapping.weights[block_to_idx][rev_match[n_idx]]
+            for attribute_key in attribute_keep:
+                bead[attribute_key] = graph.nodes[from_idxs[-1]].get(attribute_key)
             bead.update(mapping.block_to.nodes[block_to_idx])
             bead['graph'] = graph.subgraph(from_idxs)
             assert bead_idx not in graph_out
@@ -243,14 +260,20 @@ def do_mapping(molecule, mappings, to_ff):
 
 
 class DoMapping(Processor):
-    def __init__(self, mappings, to_ff, delete_unknown=False):
+    def __init__(self, mappings, to_ff, delete_unknown=False, attribute_keep=()):
         self.mappings = mappings
         self.to_ff = to_ff
         self.delete_unknown = delete_unknown
+        self.attribute_keep = attribute_keep
         super().__init__()
 
     def run_molecule(self, molecule):
-        return do_mapping(molecule, mappings=self.mappings, to_ff=self.to_ff)
+        return do_mapping(
+            molecule,
+            mappings=self.mappings,
+            to_ff=self.to_ff,
+            attribute_keep=self.attribute_keep
+        )
 
     def run_system(self, system):
         mols = []
