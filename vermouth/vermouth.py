@@ -51,14 +51,16 @@ try:
         for idx, jdx in graph.edges:
             edges.append((node_indices.index(idx), node_indices.index(jdx)))
     
-        points = mlab.points3d(*poss.T, [node_size for _ in graph], color=node_color, scale_factor=0.025)
+        params = list(poss.T) + [node_size for _ in graph]
+        points = mlab.points3d(*params, color=node_color, scale_factor=0.025)
         points.mlab_source.dataset.lines = np.array(edges)
         points.mlab_source.update()
         tube = mlab.pipeline.tube(points, tube_radius=width/10)
         mlab.pipeline.surface(tube, color=edge_color)
         if with_label:
             for idx, label in enumerate(node_labels):
-                mlab.text3d(*poss[idx], label)
+                params = list(poss) + [label]
+                mlab.text3d(*params)
     
         mlab.gcf().scene.disable_render = False
     show = mlab.show
@@ -95,7 +97,8 @@ except (RuntimeError, ImportError):
             ax.add_collection3d(line_coll)
         if with_label:
             for idx, label in enumerate(node_labels):
-                ax.text(*poss[idx], label)
+                params = list(poss) + [label]
+                ax.text(*params)
     show = plt.show
 
 #pdb_filename = '../molecules/cycliclipopeptide_2.pdb'

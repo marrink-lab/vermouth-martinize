@@ -255,7 +255,7 @@ def write_gmx_topology(system, top_path):
         .format(mtype=mtype, num=len(list(group)), length=max_name_length)
         for mtype, group in molecule_groups
     )
-    with open(top_path, 'w') as outfile:
+    with open(str(top_path), 'w') as outfile:
         outfile.write(
             textwrap.dedent(
                 template.format(

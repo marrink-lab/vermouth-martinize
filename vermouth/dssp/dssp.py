@@ -202,7 +202,7 @@ def run_dssp(system, executable='dssp', savefile=None):
     if status:
         raise DSSPError(err.decode('utf8'))
     if savefile is not None:
-        with open(savefile, 'w') as outfile:
+        with open(str(savefile), 'w') as outfile:
             outfile.write(out)
     return read_dssp2(out.split('\n'))
 
