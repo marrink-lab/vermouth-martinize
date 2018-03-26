@@ -103,6 +103,16 @@ def identify_ptms(residue, residue_ptms, known_PTMs):
         ``residue``.
 
     known_PTMs : sequence of tuples of (networkx.Graph, PTMGraphMatcher)
+        The nodes in the graph must have the `PTM_atom` attribute (True or
+        False). It should be True for atoms that are not part of the PTM
+        itself, but describe where it is attached to the molecule.
+        In addition, it's nodes must have the `atomname` attribute, which will
+        be used to recognize where the PTM  is anchored, or to correct the
+        atomnames. Lastly, the nodes may have a `replace` attribute, which
+        is a dictionary of ``{attribute_name: new_value}`` pairs. The special
+        case here is if attribute_name is ``'atomname'`` and new_value is
+        ``None``: in this case the node will be removed.
+        Lastly, the graph (not its nodes) needs a 'name' attribute.
 
     Returns
     -------
