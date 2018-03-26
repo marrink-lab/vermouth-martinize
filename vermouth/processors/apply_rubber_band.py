@@ -49,6 +49,22 @@ def self_distance_matrix(coordinates):
 def compute_decay(distance, shift, rate, power):
     """
     Compute the decay function of the force constant as function to the distance.
+
+    The decay function for the force constant is defined as:
+
+    .. math::
+
+        \exp^{-r(d - s)^p}
+
+    where :math:`r` is the decay rate given by the 'rate' argument,
+    :math:`p` is the decay power given by 'power', :math:`s` is a shift
+    given by 'shift', and :math:`d` is the distance between the two atoms given
+    in 'distance'. If the rate or the power are set to 0, then the decay
+    function does not modify the force constant.
+
+    The 'distance' argument can be a scalar or a numpy array. If it is an
+    array, then the returned value is an array of decay factors with the same
+    shape as the input.
     """
     return np.exp(-rate * ((distance - shift) **  power))
 
@@ -171,10 +187,12 @@ def apply_rubber_band(molecule, selector,
     decay_factor, decay_power: float
         Parameters for the decay function.
     base_constant: float
-        The base force constant for the bonds in kJ/mol/nm^2. If 'decay_factor'
-        or 'decay_power' is set to 0, then it will be the used force constant.
+        The base force constant for the bonds in :math:`kJ.mol^{-1}.nm^{-2}`.
+        If 'decay_factor' or 'decay_power' is set to 0, then it will be the
+        used force constant.
     minimum_force: float
-        Minimum force constat in kJ/mol/nm^2 under which bonds are not kept.
+        Minimum force constat in :math:`kJ.mol^{-1}.nm^{-2}` under which bonds
+        are not kept.
     bond_type: int
         Gromacs bond function type to apply to the elastic network bonds.
     res_min_dist: int
