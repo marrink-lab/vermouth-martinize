@@ -413,6 +413,10 @@ def _parse_block_atom(tokens, context):
     # deque does not support slicing
     first_six = (tokens.popleft() for _ in range(6))
     _, atype, _, resname, name, charge_group = first_six
+    if name in context:
+        msg = ('There is already an atom named "{}" in the block "{}". '
+               'Atom names must be unique within a block.')
+        raise IOError(msg.format(name, context.name))
     atom = {
         'atomname': name,
         'atype': atype,

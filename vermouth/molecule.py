@@ -142,7 +142,7 @@ class Molecule(nx.Graph):
             type_ = name[len('remove_'):]
             return partial(self.remove_interaction, type_)
         else:
-            raise AttributeError
+            raise AttributeError('Unknown attribute "{}".'.format(name))
 
     def merge_molecule(self, molecule):
         """
