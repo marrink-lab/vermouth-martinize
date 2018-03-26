@@ -96,7 +96,7 @@ def test_run_dssp(savefile, tmpdir):
     system.add_molecule(read_pdb(str(PDB_PROTEIN)))
     secondary_structure = dssp.run_dssp(system,
                                         executable=DSSP_EXECUTABLE,
-                                        savefile=str(path))
+                                        savefile=path)
 
     # Make sure we produced the expected sequence of secondary structures
     assert secondary_structure == SECSTRUCT_1BTA
