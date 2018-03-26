@@ -20,16 +20,48 @@ from .. import selectors
 
 
 def self_distance_matrix(coordinates):
-    return np.sqrt(((coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :]) ** 2).sum(axis=-1))
+    """
+    Compute a distance matrix between points in a selection.
+
+    Notes
+    -----
+
+    This function does **not** account for periodic boundary conditions.
+
+    Parameters
+    ----------
+
+    coordinates: np.ndarray
+        Coordinates of the points in the selection. Each row must correspond
+        to a point and each column to a dimension.
+
+    Returns
+    -------
+    np.ndarray
+    """
+    return np.sqrt(
+        np.sum(
+            (coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :]) ** 2,
+            axis=-1)
+    )
 
 
 def compute_decay(distance, shift, rate, power):
+    """
+    Compute the decay function of the force constant as function to the distance.
+    """
     return np.exp(-rate * ((distance - shift) **  power))
 
 
 def compute_force_constants(distance_matrix, lower_bound, upper_bound,
                             decay_factor, decay_power, base_constant,
                             minimum_force):
+    """
+    Compute the force constant of an elastic network bond.
+
+    The force constant can be modified with a decay function, and it can be
+    bounded with a minimum threshold, or a distance upper and lower bonds.
+    """
     constants = compute_decay(distance_matrix, lower_bound, decay_factor, decay_power)
     np.fill_diagonal(constants, 0)
     constants *= base_constant
@@ -39,29 +71,117 @@ def compute_force_constants(distance_matrix, lower_bound, upper_bound,
 
 
 def build_connectivity_matrix(graph, separation, selection=None):
-    if separation <= 0:
-        raise ValueError('Separation has to be strictly positive.')
-    if separation == 1:
+    """
+    Build a connectivity matrix based on the separation between nodes in a graph.
+
+    The connectivity matrix is a symetric boolean matrix where cells contain
+    ``True`` if the corresponding atoms are connected in the graph and
+    separated by less or as much nodes as the given 'separation' argument.
+
+    In the following examples, the separation between A and B is 0, 1, and 2.
+    respectively:
+
+    ```
+    A - B
+    A - X - B
+    A - X - X - B
+    ```
+
+    Note that building the connectivity matrix with a separation of 0 is the
+    same as building the adjacency matrix.
+
+    Parameters
+    ----------
+    graph: nx.Graph
+        The graph/molecule to work on.
+    separation: int >= 0
+        The maximum number of nodes in the shortest path between two nodes of
+        interest for these two nodes to be considered connected.
+    selection: Iterable
+        A list of node keys to work on. If this argument is set, then the
+        matrix corresponds to the subgraph containing these keys.
+
+    Returns
+    -------
+    np.ndarray
+        A boolean matrix.
+    """
+    if separation < 0:
+        raise ValueError('Separation has to be null or positive.')
+    if separation == 0:
         # The connectivity matrix with a separation of 1 is the adjacency
         # matrix. Thanksfully, networkx can directly give it to us a a numpy
         # array.
         return nx.to_numpy_matrix(graph, nodelist=selection).astype(bool)
     subgraph = graph.subgraph(selection)
     connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
-    for (i, key_i),  (j, key_j) in itertools.combinations(enumerate(subgraph.nodes), 2):
-        shortest_path = len(nx.shortest_path(subgraph, key_i, key_j))
-        # The source and the target are counted in the shortest path
-        connectivity[i, j] = shortest_path <= separation + 2
-        connectivity[j, i] = connectivity[i, j]
+    for (i, key_i), (j, key_j) in itertools.combinations(enumerate(subgraph.nodes), 2):
+        try:
+            shortest_path = len(nx.shortest_path(subgraph, key_i, key_j))
+        except nx.NetworkXNoPath:
+            # There is no path between key_i and key_j so they are not
+            # connected; which is the default.
+            pass
+        else:
+            # The source and the target are counted in the shortest path
+            connectivity[i, j] = shortest_path <= separation + 2
+            connectivity[j, i] = connectivity[i, j]
     return connectivity
-
 
 
 def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
                       base_constant, minimum_force,
-                      bond_type):
+                      bond_type, res_min_dist=3):
+    r"""
+    Adds a rubber band elastic network to a molecule.
+
+    The eleastic network is applied as bounds between the atoms selected by the
+    function declared with the 'selector' argument. The equilibrium length for
+    the bonds is measured from the coordinates in the molecule, the force
+    constant is computed from the base force constant and an optional decay
+    function.
+
+    The decay function for the force constant is defined as:
+
+    .. math::
+
+        \exp^{-r(d - s)^p}
+
+    where :math:`r` is the decay rate given by the 'decay_factor' argument,
+    :math:`p` is the decay power given by 'decay_power', :math:`s` is a shift
+    given by 'lower_bound', and :math:`d` is the distance between the two atoms
+    in the molecule. If the rate or the power are set to 0, then the decay
+    function does not modify the force constant.
+
+    The 'selector' argument takes a callback that accepts a atom dictionary and
+    returns ``True`` if the atom match the conditions to be kept.
+
+    Parameters
+    ----------
+    molecule: Molecule
+        The molecule to which apply the elastic network. The molecule is
+        modified in-place.
+    selector: callback
+        Selection function.
+    lower_bound, upper_bound: float
+        The minimum and maximum length for a bond to be added, expressed in
+        nanometers.
+    decay_factor, decay_power: float
+        Parameters for the decay function.
+    base_constant: float
+        The base force constant for the bonds in kJ/mol/nm^2. If 'decay_factor'
+        or 'decay_power' is set to 0, then it will be the used force constant.
+    minimum_force: float
+        Minimum force constat in kJ/mol/nm^2 under which bonds are not kept.
+    bond_type: int
+        Gromacs bond function type to apply to the elastic network bonds.
+    res_min_dist: int
+        Minimum separation between two atoms for a bond to be kept.
+        Bonds are kept is the separation is greater or equal to the value
+        given.
+    """
     selection = []
     coordinates = []
     missing = []
@@ -80,7 +200,8 @@ def apply_rubber_band(molecule, selector,
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,
                                         base_constant, minimum_force)
-    connectivity = build_connectivity_matrix(molecule, 2, selection=selection)
+    connectivity = build_connectivity_matrix(molecule, res_min_dist - 1,
+                                             selection=selection)
     # Set the force constant to 0 for pairs that are connected. `connectivity`
     # is a matrix of booleans that is True when a pair is connected. Because
     # booleans acts as 0 or 1 in operation, we multiply the force constant
