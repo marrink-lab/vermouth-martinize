@@ -53,6 +53,8 @@ def dihedral(vectorAB, vectorBC, vectorCD):
              \
               C - D
     
+    The angle around the BC axis is returned with values between -pi and +pi.
+    The direction of the angle follows the right hand convention.
     """
     normalABC = np.cross(vectorAB, vectorBC)
     normalBCD = np.cross(vectorBC, vectorCD)
@@ -60,3 +62,20 @@ def dihedral(vectorAB, vectorBC, vectorCD):
     pcos = np.dot(normalABC, normalBCD)
     return np.arctan2(psin, pcos)
 
+
+def dihedral_left(vectorAB, vectorBC, vectorCD):
+    """
+    Calculate a dihedral angle in radians following the left hand convention.
+
+    See Also
+    --------
+    dihedral
+        Calculate a dihedral angle in the right hand convention.
+    """
+    angle = dihedral(vectorAB, vectorBC, vectorCD)
+    angle -= np.pi
+    if angle > np.pi:
+        angle -= 2 * np.pi
+    if angle < -np.pi:
+        angle += 2 * np.pi
+    return angle
