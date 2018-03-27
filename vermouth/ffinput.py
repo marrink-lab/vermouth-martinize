@@ -681,12 +681,5 @@ def read_ff(lines, force_field):
     for link in links:
         link.make_edges_from_interactions()
 
-    # For debug purpose, we add a comment to the link interactions so
-    # they can be easily identified in the output topology.
-    for link in links:
-        for interactions in link.interactions.values():
-            for interaction in interactions:
-                interaction.meta['comment'] = 'Link'
-
     force_field.blocks.update(blocks)
     force_field.links.extend(links)

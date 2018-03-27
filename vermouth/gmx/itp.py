@@ -21,6 +21,7 @@ import itertools
 
 __all__ = ['write_molecule_itp', ]
 
+
 def _attr_has_not_none_attr(obj, attr):
     """
     Raise a Value error is 'obj' does not have an attribute 'attr' or if its
@@ -32,6 +33,26 @@ def _attr_has_not_none_attr(obj, attr):
         value = None
     if value is None:
         raise ValueError('{} has no attribute "{}".'.format(obj, attr))
+
+
+def _interaction_sorting_key(interaction):
+    ifdef = interaction.meta.get('ifdef')
+    ifndef = interaction.meta.get('ifndef')
+    if ifdef is not None and ifndef is not None:
+        raise ValueError('An interaction cannot have both an "ifdef" '
+                         'and an "ifndef" meta attribute.')
+    if ifdef is not None:
+        conditional = (ifdef, True)
+    elif ifndef is not None:
+        conditional = (ifndef, False)
+    else:
+        conditional = ()
+
+    group = interaction.meta.get('group')
+    if group is None:
+        group = ''
+
+    return (conditional, group)
 
 
 def write_molecule_itp(molecule, outfile):
@@ -112,6 +133,7 @@ def write_molecule_itp(molecule, outfile):
     outfile.write('\n')
 
     # Write the interactions
+    conditional_keys = {True: '#ifdef', False: '#ifndef'}
     for name, interactions in molecule.interactions.items():
         # Do not write an empty section.
         if not interactions:
@@ -124,14 +146,17 @@ def write_molecule_itp(molecule, outfile):
         outfile.write('[ {} ]\n'.format(name))
         interactions_group_sorted = sorted(
             interactions,
-            key=lambda x: '' if x.meta.get('group') is None else x.meta['group']
+            key=_interaction_sorting_key
         )
         interaction_grouped = itertools.groupby(
             interactions_group_sorted,
-            key=lambda x: x.meta.get('group')
+            key=_interaction_sorting_key
         )
-        for group, interactions_in_group in interaction_grouped:
-            if group is not None:
+        for (conditional, group), interactions_in_group in interaction_grouped:
+            if conditional:
+                conditional_key = conditional_keys[conditional[1]]
+                outfile.write('{} {}\n'.format(conditional_key, conditional[0]))
+            if group:
                 outfile.write('; {}\n'.format(group))
             for interaction in interactions_in_group:
                 atoms = ' '.join('{atom_idx:>{max_length[idx]}}'
@@ -143,4 +168,6 @@ def write_molecule_itp(molecule, outfile):
                 if 'comment' in interaction.meta:
                     comment = '; ' + interaction.meta['comment']
                 outfile.write(' '.join((atoms, parameters, comment)) + '\n')
+            if conditional:
+                outfile.write('#endif\n')
             outfile.write('\n')

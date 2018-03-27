@@ -35,6 +35,7 @@ from vermouth.map_input import read_mapping_directory
 import itertools
 import operator
 import textwrap
+import functools
 
 
 def read_system(path):
@@ -83,19 +84,22 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     return system
 
 
-def write_gmx_topology(system, top_path):
+def write_gmx_topology(system, top_path, deduplicate=True):
     if not system.molecules:
         raise ValueError('No molecule in the system. Nothing to write.')
-    # Deduplicate the moleculetypes in order to write each molecule ITP only
-    # once.
-    molecule_types = [[system.molecules[0], [system.molecules[0]]], ]
-    for molecule in system.molecules[1:]:
-        for molecule_type, share_moltype in molecule_types:
-            if molecule.share_moltype_with(molecule_type):
-                share_moltype.append(molecule)
-                break
-        else:  # no break
-            molecule_types.append([molecule, [molecule, ]])
+    if deduplicate:
+        # Deduplicate the moleculetypes in order to write each molecule ITP only
+        # once.
+        molecule_types = [[system.molecules[0], [system.molecules[0]]], ]
+        for molecule in system.molecules[1:]:
+            for molecule_type, share_moltype in molecule_types:
+                if molecule.share_moltype_with(molecule_type):
+                    share_moltype.append(molecule)
+                    break
+            else:  # no break
+                molecule_types.append([molecule, [molecule, ]])
+    else:
+        molecule_types = [[molecule, [molecule, ]] for molecule in system.molecules]
     # Write the ITP files for the moleculetypes.
     for molidx, (molecule_type, _) in enumerate(molecule_types):
         molecule_type.moltype = 'molecule_{}'.format(molidx)
@@ -146,23 +150,58 @@ def write_gmx_topology(system, top_path):
 
 
 def entry():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-f', dest='inpath', required=True, type=Path)
-    parser.add_argument('-x', dest='outpath', required=True, type=Path)
-    parser.add_argument('-p', dest='posres',
-                        choices=('None', 'All', 'Backbone'), default='None')
-    parser.add_argument('-pf', dest='posres_fc', type=float, default=500)
-    parser.add_argument('-ff', dest='to_ff', default='martini22')
-    parser.add_argument('-dssp', nargs='?', const='dssp')
-    parser.add_argument('-ed', dest='extdih', action='store_true', default=False) 
-    parser.add_argument('-collagen', action='store_true', default=False)
-    parser.add_argument('-elastic', action='store_true', default=False)
-    parser.add_argument('-ef', dest='rb_force_constant', type=float, default=500)
-    parser.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5)
-    parser.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9)
-    parser.add_argument('-ea', dest='rb_decay_factor', type=float, default=0)
-    parser.add_argument('-ep', dest='rb_decay_power', type=float, default=0)
-    parser.add_argument('-em', dest='rb_minimum_force', type=float, default=0)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    file_group = parser.add_argument_group('Input and output files')
+    file_group.add_argument('-f', dest='inpath', required=True, type=Path,
+                            help='Input file (PDB|GRO)')
+    file_group.add_argument('-x', dest='outpath', required=True, type=Path,
+                            help='Output coarse grained structure (PDB)')
+    file_group.add_argument('-o', dest='top_path', type=Path,
+                            help='Output topology (TOP)')
+    file_group.add_argument('-sep', dest='keep_duplicate_itp',
+                            action='store_true', default=False,
+                            help='Write separate topologies for identical chains')
+    file_group.add_argument('-merge', dest='merge_chains',
+                            type=lambda x: x.split(','), action='append',
+                            help='Merge chains: e.g. -merge A,B,C (+)')
+    ff_group = parser.add_argument_group('Force field selection')
+    ff_group.add_argument('-ff', dest='to_ff', default='martini22',
+                          help='Which forcefield to use')
+    posres_group = parser.add_argument_group('Position restraints')
+    posres_group.add_argument('-p', dest='posres', type=lambda x: x.lower(),
+                              choices=('none', 'all', 'backbone'), default='none',
+                              help='Output position restraints (none/all/backbone)')
+    posres_group.add_argument('-pf', dest='posres_fc', type=float, default=1000,
+                              help='Position restraints force constant in kJ/mol/nm^2')
+    secstruct_group = parser.add_argument_group('Secondary structure handling')
+    secstruct_group.add_argument('-dssp', nargs='?', const='dssp',
+                                 help='DSSP executable for determining structure')
+    secstruct_group.add_argument('-ed', dest='extdih', action='store_true', default=False,
+                                 help='Use dihedrals for extended regions rather than elastic bonds')
+    secstruct_group.add_argument('-collagen', action='store_true', default=False,
+                                 help='Use collagen parameters')
+    rb_group = parser.add_argument_group('Protein elastic network')
+    rb_group.add_argument('-elastic', action='store_true', default=False,
+                          help='Write elastic bonds')
+    rb_group.add_argument('-ef', dest='rb_force_constant', type=float, default=500,
+                          help='Elastic bond force constant Fc in kJ/mol/nm^2')
+    rb_group.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5,
+                          help='Elastic bond lower cutoff: F = Fc if rij < lo')
+    rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
+                          help='Elastic bond upper cutoff: F = 0  if rij > up')
+    rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
+                          help='Elastic bond decay factor a')
+    rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
+                          help='Elastic bond decay power p')
+    rb_group.add_argument('-em', dest='rb_minimum_force', type=float, default=0,
+                          help='Remove elastic bonds with force constant lower than this')
+    rb_group.add_argument('-eb', dest='rb_selection',
+                          type=lambda x: x.split(','), default=None,
+                          help='Comma separated list of bead names for elastic bonds')
+    prot_group = parser.add_argument_group('Protein description')
+    prot_group.add_argument('-nt', dest='neutral_terminii',
+                            action='store_true', default=False,
+                            help='Set neutral termini (charged is default)')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -191,6 +230,7 @@ def entry():
         AnnotateResidues(attribute='cgsecstruct', sequence='F',
                          molecule_selector=selectors.is_protein).run_system(system)
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
+    vermouth.SetMoleculeMeta(neutral_terminii=args.neutral_terminii).run_system(system)
 
     # Run martinize on the system.
     system = martinize(
@@ -202,6 +242,14 @@ def entry():
 
     # Apply a rubber band elastic network is required.
     if args.elastic:
+        if args.rb_selection is not None:
+            selector = functools.partial(
+                selectors.proto_select_attribute_in,
+                attribute='atomname',
+                values=args.rb_selection,
+            )
+        else:
+            selector = selectors.select_backbone
         rubber_band_processor = vermouth.ApplyRubberBand(
             lower_bound=args.rb_lower_bound,
             upper_bound=args.rb_upper_bound,
@@ -209,27 +257,28 @@ def entry():
             decay_power=args.rb_decay_power,
             base_constant=args.rb_force_constant,
             minimum_force=args.rb_minimum_force,
+            selector=selector,
         )
         rubber_band_processor.run_system(system)
 
     # Apply position restraints if required.
-    if args.posres != 'None':
-        node_selectors = {'All': selectors.select_all,
-                          'Backbone': selectors.select_backbone}
+    if args.posres != 'none':
+        node_selectors = {'all': selectors.select_all,
+                          'backbone': selectors.select_backbone}
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
-    # For demonstration purpose, write the secondary structure assignation
-    # instead of the element.
-    # TODO: remove this code for production
-    for molecule in system.molecules:
-        for atom in molecule.nodes.values():
-            atom['element'] = atom.get('cgsecstruct', 'X')
+    # Merge chains if required.
+    if args.merge_chains:
+        for chain_set in args.merge_chains:
+            vermouth.MergeChains(chain_set).run_system(system)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath))
 
-    write_gmx_topology(system, Path('topol.top'))
+    if args.top_path is not None:
+        write_gmx_topology(system, args.top_path,
+                           deduplicate=not args.keep_duplicate_itp)
 
 
 if __name__ == '__main__':
