@@ -177,9 +177,7 @@ def read_mapping_directory(directory):
             except IOError:
                 raise IOError('An error occured while reading "{}".'.format(path))
         for from_ff in all_from_ff:
-            mappings[from_ff] = mappings.get(from_ff, {})
             for to_ff in all_to_ff:
-                mappings[from_ff][to_ff] = mappings[from_ff].get(to_ff, {})
                 mappings[from_ff][to_ff][name] = (mapping, weights, extra)
             mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
     return dict(mappings)
