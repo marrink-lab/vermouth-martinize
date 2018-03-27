@@ -156,7 +156,7 @@ class LinkParameterEffector:
     """
     n_keys_asked = None
 
-    def __init__(self, keys):
+    def __init__(self, keys, format=None):
         """
         Parameters
         ----------
@@ -178,6 +178,7 @@ class LinkParameterEffector:
                 '{} were expected, but {} were provided.'
                 .format(self.__class__.name, self.n_keys_asked, len(keys))
             )
+        self.format = format
 
     def __call__(self, molecule, match):
         """
@@ -195,7 +196,10 @@ class LinkParameterEffector:
             The calculated parameter value.
         """
         keys = [match[key] for key in self.keys]
-        return self._apply(molecule, keys)
+        result = self._apply(molecule, keys)
+        if self.format is not None:
+            result = '{value:{format}}'.format(value=result, format=self.format)
+        return result
 
     def _apply(self, molecule, keys):
         """
