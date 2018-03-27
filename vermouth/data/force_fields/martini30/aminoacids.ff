@@ -421,7 +421,7 @@ TRP                1
    6     5    3    2       2   180.0     60.0    ; to keep plane fixed
 
 [ virtual_sitesn ]
-;   29 2    31    30    28    27 ; TRP
+4 6 5 3 2 -- 2
 
 ;;; Links
 
@@ -435,7 +435,7 @@ BB +BB 1 0.350 1250 {"group": "Backbone bonds"}
 resname $protein_resnames
 [ dihedrals ]
 #meta {"group": "SC-BB-BB-SC scFix"}
-SC1 BB +BB +SC1 1 dihedral(SC1,BB,+BB,+SC1) 100
+SC1 BB +BB +SC1 1 dihleft(SC1,BB,+BB,+SC1|.0f) 75 1
 
 [ link ]
 resname $protein_resnames
