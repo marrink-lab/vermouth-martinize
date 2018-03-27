@@ -19,7 +19,7 @@ Created on Wed Oct 25 16:00:02 2017
 
 @author: peterkroon
 """
-from ..molecule import Choice, attributes_match
+from ..molecule import LinkPredicate, attributes_match, NotDefinedOrNot
 from .processor import Processor
 from ..gmx import read_rtp
 
@@ -38,16 +38,7 @@ class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
 
 
 def _atoms_match(node1, node2):
-    for attr in node2:
-        if attr in ['order', 'replace']:
-            continue
-        if isinstance(node2[attr], Choice):
-            if node1.get(attr, None) not in node2[attr]:
-                return False
-        elif node1.get(attr, None) != node2[attr]:
-            return False
-    else:
-        return True
+    return attributes_match(node1, node2, ignore_keys=('order', 'replace'))
 
 
 def _is_valid_non_edges(molecule, link, rev_raw_match):
@@ -132,15 +123,31 @@ class DoLinks(Processor):
                     if 'replace' in node_attrs:
                         node_mol = molecule.nodes[match[node]]
                         node_mol.update(node_attrs['replace'])
-                for inter_type, params in link.removed_interactions.items():
-                    for param in params:
-                        param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))
+                for inter_type, interactions in link.removed_interactions.items():
+                    for interaction in interactions:
+                        atoms = tuple(match[idx] for idx in interaction.atoms)
+                        parameters = [
+                            param(molecule, match) if callable(param) else param
+                            for param in interaction.parameters
+                        ]
+                        interaction = interaction._replace(
+                            atoms=atoms,
+                            parameters=parameters
+                        )
                         try:
-                            molecule.remove_matching_interaction(inter_type, param)
+                            molecule.remove_matching_interaction(inter_type, interaction)
                         except ValueError:
                             pass
-                for inter_type, params in link.interactions.items():
-                    for param in params:
-                        param = param._replace(atoms=tuple(match[idx] for idx in param.atoms))
-                        molecule.add_or_replace_interaction(inter_type, *param)
+                for inter_type, interactions in link.interactions.items():
+                    for interaction in interactions:
+                        atoms = tuple(match[idx] for idx in interaction.atoms)
+                        parameters = [
+                            param(molecule, match) if callable(param) else param
+                            for param in interaction.parameters
+                        ]
+                        interaction = interaction._replace(
+                            atoms=atoms,
+                            parameters=parameters
+                        )
+                        molecule.add_or_replace_interaction(inter_type, *interaction)
         return molecule

@@ -24,6 +24,7 @@ import copy
 from functools import partial
 
 import networkx as nx
+import numpy as np
 
 from . import graph_utils
 
@@ -33,8 +34,224 @@ DeleteInteraction = namedtuple('DeleteInteraction',
                                'atoms atom_attrs parameters meta')
 
 
-class Choice(list):
-    pass
+class LinkPredicate:
+    """
+    Comparison criteria for node and molecule attributes in links.
+
+    When comparing an attribute from a link to a corresponding attribute from
+    a molecule or a molecule node, the default behavior is to use the equality
+    as criterion for the correspondence. Some correspondence, however must be
+    broader for the link to be usable. Such alternative criteria are defined
+    as link predicates.
+
+    If an attribute in a link is set to an instance of a predicate, then the
+    correspondence is defined as the boolean result of the ``match`` method.
+
+    This is the base class for such predicate. It must be subclassed, and
+    subclasses must define a :meth:`match` method that takes a dictionary and
+    a potential key from that dictionary as arguments.
+
+    Parameters
+    ----------
+    value:
+        The per-instance value that serve as reference. How this value is
+        treated depends on the subclass.
+    """
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, node, key):
+        """
+        Do the comparison with the reference value.
+
+        Notes
+        -----
+        This function **must** be defined by the subclasses. This docstring
+        describe the *expected* format of the method.
+
+        Parameters
+        ----------
+        node: dict
+            A dictionary of attributes in which to look up. This can be a
+            node dictionary of a molecule ``meta`` attribute.
+        key:
+            A potential key from the ``node`` dictionary.
+
+        Returns
+        -------
+        bool
+        """
+        
+        raise NotImplementedError
+
+    def __repr__(self):
+        return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
+
+
+class Choice(LinkPredicate):
+    """
+    Test if an attribute is defined and in a predefined list.
+
+    Parameters
+    ----------
+    value: list
+        The list of value in which to look for the attribute.
+    """
+    def match(self, node, key):
+        """
+        Apply the comparison.
+        """
+        return node.get(key) in self.value
+
+
+class NotDefinedOrNot(LinkPredicate):
+    """
+    Test if an attribute is not the reference value.
+
+    This test passes if the attribute is not defined, if it is set to ``None``,
+    or if its value is different from the reference.
+
+    Notes
+    -----
+    If the reference is set to ``None``, then the test does not pass if the
+    attribute is explicitly set to ``None``. It still passes if the attribute
+    is not defined.
+
+    Parameters
+    ----------
+    value:
+        The value the attribute is tested not to be.
+    """
+    def match(self, node, key):
+        """
+        Apply the comparison.
+        """
+        return key not in node or node[key] != self.value
+
+
+class LinkParameterEffector:
+    """
+    Rule to calculate an interaction parameter in a link.
+
+    This class allows to store dynamic parameters in link interactions. The
+    value of the parameter can be computed from the graph using the node keys
+    given when creating the instance.
+
+    An instance of this class is first initialized with a list of node keys
+    from the link in which it is defined. The instance is latter called
+    like a function, and takes as arguments a molecule and a match dictionary
+    linking the link nodes with the molecule ones. The format of the dictionary
+    is expected to be ``{link key: molecule key}``.
+
+    This is a base class; it needs to be subclassed. A subclass must define an
+    :meth:`_apply` method that takes a molecule and a list of node keys from
+    that molecule as arguments. This method is not called directly by the user,
+    instead it is called by the :meth:`__call__` method when the user calls the
+    instance as a function. A subclass can also set the :attr:`n_keys_asked`
+    class attribute to the number of required keys. If the
+    attribute is set, then the number of keys provided when initializing a new
+    instance will be validated against that number; else, the user can pass an
+    arbitrary number of keys without validation.
+    """
+    n_keys_asked = None
+
+    def __init__(self, keys):
+        """
+        Parameters
+        ----------
+        keys: list
+            A list of node keys from the link. If the :attr:`n_keys_asked`
+            class argument is set, the number of keys must correspond to the
+            value of the attribute.
+
+        Raises
+        ------
+        ValueError
+            Raised if the :attr:`n_keys_asked` class attribute is set and the
+            number of keys does not correspond.
+        """
+        self.keys = keys
+        if self.n_keys_asked is not None and len(self.keys) != self.n_keys_asked:
+            raise ValueError(
+                'Unexpected number of keys provided in {}: '
+                '{} were expected, but {} were provided.'
+                .format(self.__class__.name, self.n_keys_asked, len(keys))
+            )
+
+    def __call__(self, molecule, match):
+        """
+        Parameters
+        ----------
+        molecule: Molecule
+            The molecule from which to calculate the parameter value.
+        match: dict
+            The correspondence between the nodes from the link (keys), and the
+            nodes from the molecule (values).
+
+        Returns
+        -------
+        value:
+            The calculated parameter value.
+        """
+        keys = [match[key] for key in self.keys]
+        return self._apply(molecule, keys)
+
+    def _apply(self, molecule, keys):
+        """
+        Calculate the parameter value from the molecule.
+
+        Notes
+        -----
+        This method **must** be defined in a subclass.
+
+        Parameters
+        ----------
+        molecule: Molecule
+            The molecule from which to compute the parameter value.
+        keys: list
+            A list of keys to use from the molecule.
+
+        Returns
+        -------
+        value:
+            The value for the parameter.
+        """
+        msg = 'The method need to be implemented by the children class.'
+        raise NotImplementedError(msg)
+
+
+class ParamDistance(LinkParameterEffector):
+    """
+    Calculate the distance between a pair of nodes.
+    """
+    n_keys_asked = 2
+
+    def _apply(self, molecule, keys):
+        # This will raise a ValueError if an atom is missing, or if an
+        # atom does not have position.
+        positions = np.stack([molecule.nodes[key]['position'] for key in keys])
+        # We assume there are two rows; which we can since we checked earlier
+        # that exactly two atom keys were passed.
+        distance = np.sqrt(np.sum(np.diff(positions, axis=0)**2))
+        return distance
+
+
+class ParamAngle(LinkParameterEffector):
+    """
+    Calculate the angle in degrees between three consecutive nodes.
+    """
+    n_keys_asked = 3
+
+    def _apply(self, molecule, keys):
+        # This will raise a ValueError if an atom is missing, or if an
+        # atom does not have position.
+        positions = np.stack([molecule.nodes[key]['position'] for key in keys])
+        vectorBA = positions[0, :] - positions[1, :]
+        vectorBC = positions[2, :] - positions[1, :]
+        nominator = np.dot(vectorBA, vectorBC)
+        denominator = np.linalg.norm(vectorBA) * np.linalg.norm(vectorBC)
+        cosine = nominator / denominator
+        return np.degrees(np.arccos(cosine))
 
 
 class Molecule(nx.Graph):
@@ -388,18 +605,70 @@ class Link(Block):
         self.patterns = []
 
 
-def attributes_match(attributes, template_attributes):
+def attributes_match(attributes, template_attributes, ignore_keys=()):
+    """
+    Compare a dict of attributes from a molecule with one from a link.
+
+    Returns ``True`` if the attributes from the link match the ones from the
+    molecule; returns ``False`` otherwise. The attributes from a link match
+    with those of a molecule is all the individual attribute from the link
+    match the corresponding ones in the molecule. In the simplest case, these
+    attribute match if their values are equal. If the value of the link
+    attribute is an instance of :class:`LinkPredicate`, then the attributes
+    match if the ``match`` method of the predicate returns ``True``.
+
+    Parameters
+    ----------
+    attributes: dict
+        Attributes from the molecule.
+    template_attributes: dict
+        Attributes from the link.
+    ignore_keys: list
+        List of keys to ignore from 'template_attributes'.
+
+    Returns
+    -------
+    bool
+    """
     for attr, value in template_attributes.items():
-        if isinstance(value, Choice):
-            if attributes.get(attr) not in value:
+        if attr in ignore_keys:
+            continue
+        if isinstance(value, LinkPredicate):
+            if not value.match(attributes, attr):
                 return False
-        else:
-            if attributes.get(attr) != value:
-                return False
+        elif attributes.get(attr) != value:
+            return False
     return True
 
 
 def interaction_match(molecule, interaction, template_interaction):
+    """
+    Compare an interaction with a template interaction or interaction to delete.
+
+    An instance of :class:`Interaction` matches a template instance of the same
+    class or of :class:`DeleteInteraction` if, at the  minimum, it involves the
+    same atoms in the same order. If the template defines parameters, then they
+    have to match as well. In the case of of a :class:`DeleteInteraction`,
+    atoms may have attributes as well, then they have to match with the
+    attributes of the corresponding atoms in the molecule.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        The molecule that contains the interaction.
+    interaction: Interaction
+        The interaction in the molecule.
+    template_interaction: Interaction or DeleteInteraction
+        The template to match with the interaction.
+
+    Returns
+    -------
+    bool
+
+    See Also
+    --------
+    attributes_match
+    """
     atoms_match = tuple(template_interaction.atoms) == tuple(interaction.atoms)
     parameters_match = (
         not template_interaction.parameters

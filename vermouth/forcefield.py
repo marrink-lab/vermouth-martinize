@@ -24,20 +24,16 @@ FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
 class ForceField(object):
     def __init__(self, directory):
         source_files = iter_force_field_files(directory)
-        blocks = {}
-        links = []
+        self.blocks = {}
+        self.links = []
+        self.name = os.path.basename(directory)
+        self.variables = {}
         for source in source_files:
             extension = os.path.splitext(source)[-1]
             with open(source) as infile:
-                file_blocks, file_links = FORCE_FIELD_PARSERS[extension](infile)
-            blocks.update(file_blocks)
-            links.extend(file_links)
-
-        self.name = os.path.basename(directory)
-        self.blocks = blocks
-        self.links = links
-        self.reference_graphs = blocks
-
+                FORCE_FIELD_PARSERS[extension](infile, self)
+        self.reference_graphs = self.blocks
+        
 
 def find_force_fields(directory):
     """
