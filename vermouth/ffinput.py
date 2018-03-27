@@ -601,6 +601,8 @@ def read_ff(lines, force_field):
 
         tokens = collections.deque(_tokenize(cleaned))
         try:
+            # We read a line that opens a section. We may have to open a new
+            # block or a new link.
             if cleaned.startswith('['):
                 if not cleaned.endswith(']'):
                     raise IOError('Misformated section header at line {}.'
@@ -615,6 +617,7 @@ def read_ff(lines, force_field):
                     context_type = 'link'
                     context = Link()
                     links.append(context)
+            # We read a line within a section.
             elif section == 'moleculetype':
                 context_type = 'block'
                 context = Block()

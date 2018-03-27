@@ -66,14 +66,18 @@ def read_mapping(lines):
         cleaned = line.split(';', 1)[0].strip()
         if not cleaned:
             continue
-        elif cleaned[0] == '[':
-            if cleaned[-1] != ']':
+        elif cleaned.startswith('['):
+            if not cleaned.endswith(']'):
                 raise IOError('Format error at line {}.'.format(line_number))
             context = cleaned[1:-1].strip()
         elif context == 'molecule':
             name = cleaned
         elif context == 'atoms':
             _, from_atom, *to_atoms = cleaned.split()
+            if from_atom in mapping:
+                msg = ('At line {}, the atom "{}", that is already defined, '
+                       'get defined again.')
+                raise IOError(msg.format(line_number, from_atom))
             mapping[from_atom] = to_atoms
             for to_atom in to_atoms:
                 rev_mapping[to_atom].append(from_atom)
@@ -165,14 +169,18 @@ def read_mapping_directory(directory):
         A collection of mappings.
     """
     directory = Path(directory)
-    mappings = {}
+    mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
     for path in directory.glob('**/*.map'):
         with open(path) as infile:
-            name, all_from_ff, all_to_ff, mapping, weights, extra = read_mapping(infile)
+            try:
+                name, all_from_ff, all_to_ff, mapping, weights, extra = read_mapping(infile)
+            except IOError:
+                raise IOError('An error occured while reading "{}".'.format(path))
         for from_ff in all_from_ff:
             mappings[from_ff] = mappings.get(from_ff, {})
             for to_ff in all_to_ff:
                 mappings[from_ff][to_ff] = mappings[from_ff].get(to_ff, {})
                 mappings[from_ff][to_ff][name] = (mapping, weights, extra)
-    return mappings
+            mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
+    return dict(mappings)
 

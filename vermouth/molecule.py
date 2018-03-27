@@ -111,6 +111,12 @@ class NotDefinedOrNot(LinkPredicate):
     This test passes if the attribute is not defined, if it is set to ``None``,
     or if its value is different from the reference.
 
+    Notes
+    -----
+    If the reference is set to ``None``, then the test does not pass if the
+    attribute is explicitly set to ``None``. It still passes if the attribute
+    is not defined.
+
     Parameters
     ----------
     value:
@@ -131,8 +137,8 @@ class LinkParameterEffector:
     value of the parameter can be computed from the graph using the node keys
     given when creating the instance.
 
-    An instance of this lass is first initialized with a list of node keys
-    from the import link in which it is defined. The instance is latter called
+    An instance of this class is first initialized with a list of node keys
+    from the link in which it is defined. The instance is latter called
     like a function, and takes as arguments a molecule and a match dictionary
     linking the link nodes with the molecule ones. The format of the dictionary
     is expected to be ``{link key: molecule key}``.
@@ -628,7 +634,6 @@ def attributes_match(attributes, template_attributes, ignore_keys=()):
         if attr in ignore_keys:
             continue
         if isinstance(value, LinkPredicate):
-            match = value.match(attributes, attr)
             if not value.match(attributes, attr):
                 return False
         elif attributes.get(attr) != value:
@@ -641,11 +646,11 @@ def interaction_match(molecule, interaction, template_interaction):
     Compare an interaction with a template interaction or interaction to delete.
 
     An instance of :class:`Interaction` matches a template instance of the same
-    class or of :class:`DeleteInteraction` if, *a minima*, it involves the same
-    atoms in the same order. If the template defines parameters, then they have
-    to match as well. In the case of of a :class:`DeleteInteraction`, atoms may
-    have attributes as well, then they have to match with the attributes of the
-    corresponding atoms in the molecule.
+    class or of :class:`DeleteInteraction` if, at the  minimum, it involves the
+    same atoms in the same order. If the template defines parameters, then they
+    have to match as well. In the case of of a :class:`DeleteInteraction`,
+    atoms may have attributes as well, then they have to match with the
+    attributes of the corresponding atoms in the molecule.
 
     Parameters
     ----------
