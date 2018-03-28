@@ -421,6 +421,13 @@ class Block(nx.Graph):
     """
     Residue topology template
 
+    Parameters
+    ----------
+    incoming_graph_data:
+        Data to initialize graph. If None (default) an empty graph is created.
+    attr:
+        Attributes to add to graph as key=value pairs.
+
     Attributes
     ----------
     name: str or None
@@ -445,10 +452,18 @@ class Block(nx.Graph):
     # ordered.
     node_dict_factory = OrderedDict
 
-    def __init__(self):
-        super(Block, self).__init__(self)
-        self.name = None
-        self.interactions = {}
+    def __init__(self, incoming_graph_data=None, **attr):
+        super(Block, self).__init__(incoming_graph_data, **attr)
+        # Arbitrary attributes can be set during the initialization. We need
+        # to set the default of some key attributes, but without overwritting
+        # what has been passed in the 'attr' argument.
+        defaults = {
+            'name': None,
+            'interactions': {},
+        }
+        for attribute, default_value in defaults.items():
+            if not hasattr(self, attribute):
+                setattr(self, attribute, default_value)
         self._apply_to_all_interactions = defaultdict(dict)
 
     def __repr__(self):
@@ -600,16 +615,31 @@ class Block(nx.Graph):
 class Link(Block):
     """
     Template link between two residues.
+
+    Parameters
+    ----------
+    incoming_graph_data:
+        Data to initialize graph. If None (default) an empty graph is created.
+    attr:
+        Attributes to add to graph as key=value pairs.
     """
     node_dict_factory = OrderedDict
 
-    def __init__(self):
-        super().__init__()
-        self.non_edges = []
-        self.removed_interactions = {}
+    def __init__(self, incoming_graph_data=None, **attr):
+        super().__init__(incoming_graph_data, **attr)
+        # Arbitrary attributes can be set during the initialization. We need
+        # to set the default of some key attributes, but without overwritting
+        # what has been passed in the 'attr' argument.
+        defaults = {
+            'non_edges': [],
+            'removed_interactions': {},
+            'molecule_meta': {},
+            'patterns': [],
+        }
+        for attribute, default_value in defaults.items():
+            if not hasattr(self, attribute):
+                setattr(self, attribute, default_value)
         self._apply_to_all_nodes = {}
-        self.molecule_meta = {}
-        self.patterns = []
 
 
 def attributes_match(attributes, template_attributes, ignore_keys=()):
