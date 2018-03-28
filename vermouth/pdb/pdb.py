@@ -34,7 +34,7 @@ def get_not_none(node, attr, default):
     return value
 
 
-def write_pdb_string(system, conect=True):
+def write_pdb_string(system, conect=True, omit_charges=True):
     def keyfunc(graph, node_idx):
         # TODO add something like idx_in_residue
         return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
@@ -66,7 +66,7 @@ def write_pdb_string(system, conect=True):
             temp_factor = get_not_none(node, 'temp_factor', 0)
             element = get_not_none(node, 'element', '')
             charge = get_not_none(node, 'charge', 0)
-            if charge:
+            if charge and not omit_charges:
                 charge = '{:+2d}'.format(int(charge))[::-1]
             else:
                 charge = ''
@@ -98,9 +98,9 @@ def write_pdb_string(system, conect=True):
     return '\n'.join(out)
 
 
-def write_pdb(system, path, conect=True):
+def write_pdb(system, path, conect=True, omit_charges=True):
     with open(path, 'w') as out:
-        out.write(write_pdb_string(system, conect))
+        out.write(write_pdb_string(system, conect, omit_charges))
 
 
 def do_conect(mol, conectlist):

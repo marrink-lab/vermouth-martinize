@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Read force field to force field mappings.
+"""
+
 from pathlib import Path
 import collections
 
@@ -61,7 +65,7 @@ def read_mapping(lines):
     mapping = {}
     rev_mapping = collections.defaultdict(list)
     extra = []
-    
+
     for line_number, line in enumerate(lines, start=1):
         cleaned = line.split(';', 1)[0].strip()
         if not cleaned:
@@ -169,6 +173,8 @@ def read_mapping_directory(directory):
         A collection of mappings.
     """
     directory = Path(directory)
+    if not directory.is_dir():
+        raise NotADirectoryError('"{}" is not a directory.'.format(directory))
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
     for path in directory.glob('**/*.map'):
         with open(path) as infile:
@@ -182,3 +188,104 @@ def read_mapping_directory(directory):
             mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
     return dict(mappings)
 
+
+def generate_self_mappings(blocks):
+    """
+    Generate self mappings from a collection of blocks.
+
+    A self mapping is a mapping that maps a force field to itself. Applying
+    such mapping is applying a neutral transformation.
+
+    Parameters
+    ----------
+    blocks: dict
+        A dictionary of blocks with block names as keys and the blocks
+        themselves as values. The blocks must be instances of :class:`nx.Graph`
+        with each node having an 'atomname' attribute.
+
+    Returns
+    -------
+    mappings: dict
+        A dictionary of mappings where the keys are the names of the blocks,
+        and the values are tuples like (mapping, weights, extra). The elements
+        of these tuples are formatted as the corresponding output of the
+        :fun:`read_mapping` function.
+
+    Raises
+    ------
+    KeyError
+        Raised if a node does not have am 'atomname' attribute.
+
+    See Also
+    --------
+    read_mapping
+        Read a mapping from a file.
+    generate_all_self_mappings
+        Generate self mappings for a list of force fields.
+    """
+    mappings = {}
+    for name, block in blocks.items():
+        mapping = {
+            (0, atom['atomname']): [(0, atom['atomname'])]
+            for atom in block.nodes.values()
+        }
+        weights = {
+            (0, atom['atomname']): {(0, atom['atomname']): 1}
+            for atom in block.nodes.values()
+        }
+        extra = []
+        mappings[name] = (mapping, weights, extra)
+    return mappings
+
+
+def generate_all_self_mappings(force_fields):
+    """
+    Generate self mappings for a list of force fields.
+
+    Parameters
+    ----------
+    force_fields: Iterable
+        List of instances of :class:`ForceField`.
+
+    Returns
+    -------
+    dict
+        A collection of mappings formatted as the output of the
+        :fun:`read_mapping_directory` function.
+    """
+    mappings = collections.defaultdict(dict)
+    for name, force_field in force_fields.items():
+        mappings[name][name] = generate_self_mappings(force_field.blocks)
+    return mappings
+
+
+def combine_mappings(known_mappings, partial_mapping):
+    """
+    Update a collection of mappings.
+
+    Add the mappings from the 'partial_mapping' argument into the
+    'known_mappings' collection. Both arguments are collections of mappings
+    similar to the output of the :fun:`read_mapping_directory` function. They
+    are dictionary with 3 levels of keys: the name of the initial force field,
+    the name of the target force field, and the name of the block. The values
+    in the third level dictionary are tuples of (mapping, weights, extra) as
+    described in the :fun:`read_mapping`.
+
+    If a force field appears in 'partial_mapping' that is not in
+    'known_mappings', then it is added. For existing pairs of initial and
+    target force fields, the blocks are updated and the version in
+    'partial_mapping' is kept in priority.
+
+    Parameters
+    ----------
+    known_mappings: dict
+        Collection of mapping to update **in-place**.
+    partial_mapping: dict
+        Collection of mappings to update from.
+    """
+    for origin, destinations in partial_mapping.items():
+        known_mappings[origin] = known_mappings.get(origin, {})
+        for destination, residues in destinations.items():
+            known_mappings[origin][destination] = known_mappings[origin].get(destination, {})
+            for residue, mapping in residues.items():
+                known_mappings[origin][destination][residue] = mapping

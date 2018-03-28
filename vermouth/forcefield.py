@@ -14,6 +14,7 @@
 
 import itertools
 from glob import glob
+from pathlib import Path
 import os
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
@@ -23,26 +24,33 @@ FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
 
 class ForceField(object):
     def __init__(self, directory):
-        source_files = iter_force_field_files(directory)
         self.blocks = {}
         self.links = []
         self.name = os.path.basename(directory)
         self.variables = {}
+        self.read_from(directory)
+
+    def read_from(self, directory):
+        source_files = iter_force_field_files(directory)
         for source in source_files:
             extension = os.path.splitext(source)[-1]
             with open(source) as infile:
                 FORCE_FIELD_PARSERS[extension](infile, self)
-        self.reference_graphs = self.blocks
+
+    @property
+    def reference_graphs(self):
+        return self.blocks
         
 
-def find_force_fields(directory):
+def find_force_fields(directory, force_fields=None):
     """
     Find all the force fields in the given directory.
 
     A force field is defined as a directory that contains at least one RTP
     file. The name of the force field is the base name of the directory.
     """
-    force_fields = {}
+    if force_fields is None:
+        force_fields = {}
     directory = str(directory)  # Py<3.6 compliance
     for name in os.listdir(directory):
         path = os.path.join(directory, name)
@@ -51,7 +59,14 @@ def find_force_fields(directory):
         except StopIteration:
             pass
         else:
-            force_fields[name] = ForceField(path)
+            try:
+                if name not in force_fields:
+                    force_fields[name] = ForceField(path)
+                else:
+                    force_fields[name].read_from(path)
+            except IOError:
+                msg = 'An error occured while reading the force field in  "{}".'
+                raise IOError(msg.format(path))
     return force_fields
 
 
