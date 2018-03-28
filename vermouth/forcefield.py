@@ -14,6 +14,7 @@
 
 import itertools
 from glob import glob
+from pathlib import Path
 import os
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
@@ -58,10 +59,14 @@ def find_force_fields(directory, force_fields=None):
         except StopIteration:
             pass
         else:
-            if name not in force_fields:
-                force_fields[name] = ForceField(path)
-            else:
-                force_fields[name].read_from(path)
+            try:
+                if name not in force_fields:
+                    force_fields[name] = ForceField(path)
+                else:
+                    force_fields[name].read_from(path)
+            except IOError:
+                msg = 'An error occured while reading the force field in  "{}".'
+                raise IOError(msg.format(path))
     return force_fields
 
 

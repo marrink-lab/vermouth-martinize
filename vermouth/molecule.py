@@ -461,10 +461,13 @@ class Block(nx.Graph):
             'name': None,
             'interactions': {},
         }
+        self._set_defaults(defaults)
+        self._apply_to_all_interactions = defaultdict(dict)
+
+    def _set_defaults(self, defaults):
         for attribute, default_value in defaults.items():
             if not hasattr(self, attribute):
                 setattr(self, attribute, default_value)
-        self._apply_to_all_interactions = defaultdict(dict)
 
     def __repr__(self):
         name = self.name
@@ -636,9 +639,7 @@ class Link(Block):
             'molecule_meta': {},
             'patterns': [],
         }
-        for attribute, default_value in defaults.items():
-            if not hasattr(self, attribute):
-                setattr(self, attribute, default_value)
+        self._set_defaults(defaults)
         self._apply_to_all_nodes = {}
 
 

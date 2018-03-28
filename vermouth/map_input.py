@@ -173,6 +173,8 @@ def read_mapping_directory(directory):
         A collection of mappings.
     """
     directory = Path(directory)
+    if not directory.is_dir():
+        raise NotADirectoryError('"{}" is not a directory.'.format(directory))
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
     for path in directory.glob('**/*.map'):
         with open(path) as infile:
