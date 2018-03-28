@@ -18,6 +18,7 @@ Tests for the geometry module.
 """
 
 import pytest
+import itertools
 import numpy as np
 from vermouth import geometry
 
@@ -101,29 +102,56 @@ def _generate_test_dihedrals(n_angles):
         yield coordinates.copy(), angle
 
 
-@pytest.mark.parametrize('points, angle', _generate_test_angles(10))
+@pytest.mark.parametrize(
+    'points, angle',
+    itertools.chain(
+        _generate_test_angles(10),
+        ((np.array([[0,  3, 0], [0, 0, 0], [0, 6, 0]]), 0), ),
+        ((np.array([[0, -9, 0], [0, 0, 0], [0, 2, 0]]), np.pi), ),
+    )
+)
 def test_angle(points, angle):
     vectorBA = points[0, :] - points[1, :]
     vectorBC = points[2, :] - points[1, :]
     assert np.allclose(geometry.angle(vectorBA, vectorBC), angle)
 
 
-@pytest.mark.parametrize('points, angle', _generate_test_dihedrals(10))
+@pytest.mark.parametrize(
+    'points, angle',
+    itertools.chain(
+        _generate_test_dihedrals(10),
+        ((np.array([[0,  3, 0], [0, 0, 0], [4, 0, 0], [7, 6, 0]]), 0), ),
+        ((np.array([[0, -9, 0], [0, 0, 0], [4, 0, 0], [5, 6, 0]]), np.pi), ),
+    )
+)
 def test_dihedral(points, angle):
-    vectorAB = points[1, :] - points[0, :]
-    vectorBC = points[2, :] - points[1, :]
-    vectorCD = points[3, :] - points[2, :]
-    assert np.allclose(geometry.dihedral(vectorAB, vectorBC, vectorCD), angle)
+    calc_angle = geometry.dihedral(points)
+    # +pi and -pi are the same angle; we normalize them to pi
+    if np.allclose(calc_angle, -np.pi):
+        calc_angle *= -1
+    if np.allclose(angle, -np.pi):
+        angle *= -1
+    assert np.allclose(calc_angle, angle)
 
 
-@pytest.mark.parametrize('points, angle', _generate_test_dihedrals(10))
+@pytest.mark.parametrize(
+    'points, angle',
+    itertools.chain(
+        _generate_test_dihedrals(10),
+        ((np.array([[0,  3, 0], [0, 0, 0], [4, 0, 0], [7, 6, 0]]), 0), ),
+        ((np.array([[0, -9, 0], [0, 0, 0], [4, 0, 0], [5, 6, 0]]), np.pi), ),
+    )
+)
 def test_dihedral_phase(points, angle):
-    vectorAB = points[1, :] - points[0, :]
-    vectorBC = points[2, :] - points[1, :]
-    vectorCD = points[3, :] - points[2, :]
     angle_phase = angle + np.pi
     if angle_phase > np.pi:
         angle_phase -= 2 * np.pi
     if angle_phase < -np.pi:
         angle_phase += 2 * np.pi
-    assert np.allclose(geometry.dihedral_phase(vectorAB, vectorBC, vectorCD), angle_phase)
+    calc_angle = geometry.dihedral_phase(points)
+    # +pi and -pi are the same angle; we normalize them to pi
+    if np.allclose(calc_angle, -np.pi):
+        calc_angle *= -1
+    if np.allclose(angle_phase, -np.pi):
+        angle_phase *= -1
+    assert np.allclose(calc_angle, angle_phase)

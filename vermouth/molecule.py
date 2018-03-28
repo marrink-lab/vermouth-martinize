@@ -263,10 +263,7 @@ class ParamDihedral(LinkParameterEffector):
         # This will raise a ValueError if an atom is missing, or if an
         # atom does not have position.
         positions = np.stack([molecule.nodes[key]['position'] for key in keys])
-        vectorAB = positions[1, :] - positions[0, :]
-        vectorBC = positions[2, :] - positions[1, :]
-        vectorCD = positions[3, :] - positions[2, :]
-        angle = geometry.dihedral(vectorAB, vectorBC, vectorCD)
+        angle = geometry.dihedral(positions)
         return np.degrees(angle)
 
 
@@ -280,10 +277,7 @@ class ParamDihedralPhase(LinkParameterEffector):
         # This will raise a ValueError if an atom is missing, or if an
         # atom does not have position.
         positions = np.stack([molecule.nodes[key]['position'] for key in keys])
-        vectorAB = positions[1, :] - positions[0, :]
-        vectorBC = positions[2, :] - positions[1, :]
-        vectorCD = positions[3, :] - positions[2, :]
-        angle = geometry.dihedral_left(vectorAB, vectorBC, vectorCD)
+        angle = geometry.dihedral_left(positions)
         return np.degrees(angle)
 
 

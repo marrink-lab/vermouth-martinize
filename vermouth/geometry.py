@@ -36,26 +36,28 @@ def angle(vectorBA, vectorBC):
     denominator = np.linalg.norm(vectorBA) * np.linalg.norm(vectorBC)
     cosine = nominator / denominator
     # Floating errors at the limits may cause issues.
-    if cosine > 1:
-        cosine = 1
-    elif cosine < -1:
-        cosine = -1
+    cosine = np.clip(cosine, -1, 1)
     return np.arccos(cosine)
 
 
-def dihedral(vectorAB, vectorBC, vectorCD):
+def dihedral(coordinates):
     """
-    Calculate the dihedral angle in radians formed by 3 vectors.
+    Calculate the dihedral angle in radians.
 
-    The function assumes the following situation:
+    Parameters
+    ----------
+    coordinates: np.ndarray
+        The coordinates of 4 points defining the dihedral angle. Each row
+        corresponds to a point, and each column to a dimension.
 
-        A - B
-             \
-              C - D
-    
-    The angle around the BC axis is returned with values between -pi and +pi.
-    The direction of the angle follows the right hand convention.
+    Returns
+    -------
+    float
+        The calculated angle between -pi and +pi.
     """
+    vectorAB = coordinates[1, :] - coordinates[0, :]
+    vectorBC = coordinates[2, :] - coordinates[1, :]
+    vectorCD = coordinates[3, :] - coordinates[2, :]
     normalABC = np.cross(vectorAB, vectorBC)
     normalBCD = np.cross(vectorBC, vectorCD)
     psin = np.dot(normalABC, vectorCD) * np.linalg.norm(vectorBC)
@@ -63,16 +65,27 @@ def dihedral(vectorAB, vectorBC, vectorCD):
     return np.arctan2(psin, pcos)
 
 
-def dihedral_phase(vectorAB, vectorBC, vectorCD):
+def dihedral_phase(coordinates):
     """
     Calculate a dihedral angle in radians with a -pi phase correction.
+
+    Parameters
+    ----------
+    coordinates: np.ndarray
+        The coordinates of 4 points defining the dihedral angle. Each row
+        corresponds to a point, and each column to a dimension.
+
+    Returns
+    -------
+    float
+        The calculated angle between -pi and +pi.
 
     See Also
     --------
     dihedral
         Calculate a dihedral angle.
     """
-    angle = dihedral(vectorAB, vectorBC, vectorCD)
+    angle = dihedral(coordinates)
     angle -= np.pi
     if angle > np.pi:
         angle -= 2 * np.pi
