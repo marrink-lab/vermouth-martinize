@@ -254,6 +254,9 @@ class ParamAngle(LinkParameterEffector):
 
 
 class ParamDihedral(LinkParameterEffector):
+    """
+    Calculate the dihedral angle in degrees defined by four nodes.
+    """
     n_keys_asked = 4
 
     def apply(self, molecule, keys):
@@ -268,6 +271,9 @@ class ParamDihedral(LinkParameterEffector):
 
 
 class ParamDihedralPhase(LinkParameterEffector):
+    """
+    Calculate the dihedral angle in degrees defined by four nodes shifted by -180 degrees.
+    """
     n_keys_asked = 4
 
     def apply(self, molecule, keys):
