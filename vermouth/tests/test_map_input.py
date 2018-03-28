@@ -16,6 +16,7 @@
 
 import pytest
 import collections
+import vermouth
 import vermouth.map_input
 
 Reference = collections.namedtuple('Reference',
@@ -186,3 +187,38 @@ def test_read_mapping(case):
     assert to_ff == case.to_ff
     assert mapping == case.mapping
     assert extra == case.extra
+
+
+def test_generate_self_mapping():
+    # Build the input blocks
+    blocks = {
+        'A0': vermouth.molecule.Block([['AA', 'BBB'], ['BBB', 'CCCC']]),
+        'B1': vermouth.molecule.Block([['BBB', 'CCCC'], ['BBB', 'E']]),
+    }
+    for name, block in blocks.items():
+        block.name = name
+        for atomname, node in block.nodes.items():
+            node['atomname'] = atomname
+    # Build the expected output
+    ref_mappings = {
+        'A0': (
+            # mapping
+            {(0, 'AA'): [(0, 'AA')], (0, 'BBB'): [(0, 'BBB')], (0, 'CCCC'): [(0, 'CCCC')]},
+            # weights
+            {(0, 'AA'): {(0, 'AA'): 1}, (0, 'BBB'): {(0, 'BBB'): 1}, (0, 'CCCC'): {(0, 'CCCC'): 1}},
+            # extra
+            [],
+        ),
+        'B1': (
+            # mapping
+            {(0, 'BBB'): [(0, 'BBB')], (0, 'CCCC'): [(0, 'CCCC')], (0, 'E'): [(0, 'E')]},
+            # weights
+            {(0, 'BBB'): {(0, 'BBB'): 1}, (0, 'CCCC'): {(0, 'CCCC'): 1}, (0, 'E'): {(0, 'E'): 1}},
+            # extra
+            [],
+        ),
+    }
+    # Actually test
+    mappings = vermouth.map_input.generate_self_mappings(blocks)
+    assert mappings.keys() == ref_mappings.keys()
+    assert ref_mappings == mappings
