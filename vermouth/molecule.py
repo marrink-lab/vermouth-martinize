@@ -27,6 +27,7 @@ import networkx as nx
 import numpy as np
 
 from . import graph_utils
+from . import geometry
 
 
 Interaction = namedtuple('Interaction', 'atoms parameters meta')
@@ -248,10 +249,36 @@ class ParamAngle(LinkParameterEffector):
         positions = np.stack([molecule.nodes[key]['position'] for key in keys])
         vectorBA = positions[0, :] - positions[1, :]
         vectorBC = positions[2, :] - positions[1, :]
-        nominator = np.dot(vectorBA, vectorBC)
-        denominator = np.linalg.norm(vectorBA) * np.linalg.norm(vectorBC)
-        cosine = nominator / denominator
-        return np.degrees(np.arccos(cosine))
+        angle = geometry.angle(vectorBA, vectorBC)
+        return np.degrees(angle)
+
+
+class ParamDihedral(LinkParameterEffector):
+    """
+    Calculate the dihedral angle in degrees defined by four nodes.
+    """
+    n_keys_asked = 4
+
+    def _apply(self, molecule, keys):
+        # This will raise a ValueError if an atom is missing, or if an
+        # atom does not have position.
+        positions = np.stack([molecule.nodes[key]['position'] for key in keys])
+        angle = geometry.dihedral(positions)
+        return np.degrees(angle)
+
+
+class ParamDihedralPhase(LinkParameterEffector):
+    """
+    Calculate the dihedral angle in degrees defined by four nodes shifted by -180 degrees.
+    """
+    n_keys_asked = 4
+
+    def _apply(self, molecule, keys):
+        # This will raise a ValueError if an atom is missing, or if an
+        # atom does not have position.
+        positions = np.stack([molecule.nodes[key]['position'] for key in keys])
+        angle = geometry.dihedral_left(positions)
+        return np.degrees(angle)
 
 
 class Molecule(nx.Graph):
