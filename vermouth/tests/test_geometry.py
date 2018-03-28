@@ -114,3 +114,16 @@ def test_dihedral(points, angle):
     vectorBC = points[2, :] - points[1, :]
     vectorCD = points[3, :] - points[2, :]
     assert np.allclose(geometry.dihedral(vectorAB, vectorBC, vectorCD), angle)
+
+
+@pytest.mark.parametrize('points, angle', _generate_test_dihedrals(10))
+def test_dihedral_phase(points, angle):
+    vectorAB = points[1, :] - points[0, :]
+    vectorBC = points[2, :] - points[1, :]
+    vectorCD = points[3, :] - points[2, :]
+    angle_phase = angle + np.pi
+    if angle_phase > np.pi:
+        angle_phase -= 2 * np.pi
+    if angle_phase < -np.pi:
+        angle_phase += 2 * np.pi
+    assert np.allclose(geometry.dihedral_phase(vectorAB, vectorBC, vectorCD), angle_phase)
