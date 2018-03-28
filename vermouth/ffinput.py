@@ -29,7 +29,7 @@ from .molecule import (
     Block, Link,
     Interaction, DeleteInteraction,
     Choice, NotDefinedOrNot,
-    ParamDistance, ParamAngle, ParamDihedral, ParamDihedralLeft,
+    ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
 
 VALUE_PREDICATES = {
@@ -40,7 +40,7 @@ PARAMETER_EFFECTORS = {
     'dist': ParamDistance,
     'angle': ParamAngle,
     'dihedral': ParamDihedral,
-    'dihleft': ParamDihedralLeft,
+    'dihphase': ParamDihedralPhase,
 }
 
 

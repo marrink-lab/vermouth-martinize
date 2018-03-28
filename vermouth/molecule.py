@@ -267,7 +267,7 @@ class ParamDihedral(LinkParameterEffector):
         return np.degrees(angle)
 
 
-class ParamDihedralLeft(LinkParameterEffector):
+class ParamDihedralPhase(LinkParameterEffector):
     n_keys_asked = 4
 
     def apply(self, molecule, keys):

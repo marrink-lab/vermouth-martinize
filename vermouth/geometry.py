@@ -63,14 +63,14 @@ def dihedral(vectorAB, vectorBC, vectorCD):
     return np.arctan2(psin, pcos)
 
 
-def dihedral_left(vectorAB, vectorBC, vectorCD):
+def dihedral_phase(vectorAB, vectorBC, vectorCD):
     """
-    Calculate a dihedral angle in radians following the left hand convention.
+    Calculate a dihedral angle in radians with a -pi phase correction.
 
     See Also
     --------
     dihedral
-        Calculate a dihedral angle in the right hand convention.
+        Calculate a dihedral angle.
     """
     angle = dihedral(vectorAB, vectorBC, vectorCD)
     angle -= np.pi
