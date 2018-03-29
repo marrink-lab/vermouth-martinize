@@ -144,6 +144,15 @@ class LinkParameterEffector:
     linking the link nodes with the molecule ones. The format of the dictionary
     is expected to be ``{link key: molecule key}``.
 
+    An instance can also have a format defined. If defined, that format will be
+    applied to the value computed by the :meth:`_apply` method causing the
+    output to be a string. The format is given as a 'format_spec' from the
+    python format string syntax. This format spec corresponds to what follows
+    the column the column in string templates. For instance, formating a
+    floating number to have 2 decimal places will be obtained by setting format
+    to `.2f`. If no format is defined, then the calculated value is not
+    modified.
+
     This is a base class; it needs to be subclassed. A subclass must define an
     :meth:`_apply` method that takes a molecule and a list of node keys from
     that molecule as arguments. This method is not called directly by the user,
@@ -164,6 +173,8 @@ class LinkParameterEffector:
             A list of node keys from the link. If the :attr:`n_keys_asked`
             class argument is set, the number of keys must correspond to the
             value of the attribute.
+        format: str
+            Format specification.
 
         Raises
         ------
@@ -193,7 +204,7 @@ class LinkParameterEffector:
         Returns
         -------
         value:
-            The calculated parameter value.
+            The calculated parameter value, formatted if required.
         """
         keys = [match[key] for key in self.keys]
         result = self._apply(molecule, keys)
