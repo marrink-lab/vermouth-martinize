@@ -135,7 +135,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
     conect = []
     idx = 0
     
-    field_widths = (-6, 5, -1, 4, 1, 3, -1, 1, 4, 1, -3, 8, 8, 8, 6, 6, -10, 2, 2)
+    field_widths = (-6, 5, -1, 4, 1, 4, 1, 4, 1, -3, 8, 8, 8, 6, 6, -10, 2, 2)
     field_types = (int, str, str, str, str, int, str, float, float, float, float, float, str, str)
     field_names = ('atomid', 'atomname', 'altloc', 'resname', 'chain', 'resid',
                    'insertion_code', 'x', 'y', 'z', 'occupancy', 'temp_factor',
