@@ -368,8 +368,12 @@ def _parse_interaction_parameters(tokens):
             except KeyError:
                 raise IOError('{} is not a known parameter effector.'
                               .format(effector_name))
+            if '|' in effector_param_str:
+                effector_param_str, effector_format = effector_param_str.split('|')
+            else:
+                effector_format = None
             effector_param = [elem.strip() for elem in effector_param_str.split(',')]
-            parameter = effector_class(effector_param)
+            parameter = effector_class(effector_param, format=effector_format)
         else:
             parameter = token
         parameters.append(parameter)
