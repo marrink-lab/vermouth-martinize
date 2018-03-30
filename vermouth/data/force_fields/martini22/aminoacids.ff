@@ -590,6 +590,8 @@ BB {"cgsecstruct": "1", "replace": {"atype": "Nd"}}
 
 [ link ]
 resname $protein_resnames
+[ features ]
+collagen
 [ atoms ]
 BB {"cgsecstruct": "H|F", "replace": {"atype": "N0"}}
 
@@ -630,6 +632,8 @@ BB {"cgsecstruct": "F"} +BB
 [ link ]
 resname $protein_resnames
 cgsecstruct "F"
+[ features ]
+collagen
 [ bonds ]
 BB +BB 1 0.365 1250
 
@@ -784,6 +788,8 @@ cgsecstruct "H|1|2|3"
 [ link ]
 resname $protein_resnames
 cgsecstruct "F"
+[ features ]
+collagen
 [ dihedrals ]
 -BB BB  +BB ++BB 1 90.7 100 1
 
@@ -806,6 +812,8 @@ resname $protein_resnames
 cgsecstruct "E"
 [ molmeta ]
 extdih true
+[ features ]
+extdih
 [ dihedrals ]
 -BB BB +BB ++BB 1 0 10 1
 
@@ -827,6 +835,8 @@ BB +++BB 1 0.970 2500
 [ link ]
 [ molmeta ]
 neutral_terminii not(true)
+[ features ]
+neutral_terminii
 [ atoms ]
 BB {"replace": {"atype": "Qd", "charge": 1}}
 [ non-edges ]
@@ -835,6 +845,8 @@ BB -BB
 [ link ]
 [ molmeta ]
 neutral_terminii not(true)
+[ features ]
+neutral_terminii
 [ atoms ]
 BB {"replace": {"atype": "Qa", "charge": -1}}
 [ non-edges ]
