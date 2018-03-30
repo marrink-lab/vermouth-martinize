@@ -876,9 +876,9 @@ BB +++BB 1 0.970 2500
 [ link ]
 resname $protein_resnames
 [ molmeta ]
-neutral_terminii not(true)
+neutral_termini not(true)
 [ features ]
-neutral_terminii
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qd", "charge": 1}}
 [ non-edges ]
@@ -887,9 +887,9 @@ BB -BB
 [ link ]
 resname $protein_resnames
 [ molmeta ]
-neutral_terminii not(true)
+neutral_termini not(true)
 [ features ]
-neutral_terminii
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qa", "charge": -1}}
 [ non-edges ]

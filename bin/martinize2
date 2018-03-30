@@ -217,7 +217,7 @@ def entry():
                           help='Comma separated list of bead names for elastic bonds')
 
     prot_group = parser.add_argument_group('Protein description')
-    prot_group.add_argument('-nt', dest='neutral_terminii',
+    prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,
                             help='Set neutral termini (charged is default)')
     args = parser.parse_args()
@@ -279,11 +279,11 @@ def entry():
                         'angles for extended regions of proteins (-extdih).'
                         .format(target_ff.name))
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
-    if args.neutral_terminii and not target_ff.has_feature('neutral_terminii'):
+    if args.neutral_termini and not target_ff.has_feature('neutral_termini'):
         logging.warning('The force field "{}" does not have specific '
                         'parameters for neutral termini (-nt).'
                         .format(target_ff.name))
-    vermouth.SetMoleculeMeta(neutral_terminii=args.neutral_terminii).run_system(system)
+    vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
 
     # Run martinize on the system.
     system = martinize(
