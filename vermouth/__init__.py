@@ -30,4 +30,8 @@ else:
     DATA_PATH = pkg_resources.resource_filename('vermouth', 'data')
     del pkg_resources
 
+import pbr.version
+__version__ = pbr.version.VersionInfo('vermouth').release_string()
+del pbr
+
 from .vermouth import *

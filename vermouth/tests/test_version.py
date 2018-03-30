@@ -10,22 +10,10 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.import os
+# limitations under the License.import pytest
 
-import os
-from setuptools import setup
+import vermouth
 
-def package_files(directory):
-    paths = []
-    for (path, directories, filenames) in os.walk(directory):
-        for filename in filenames:
-            paths.append(os.path.join('..', path, filename))
-    return paths
 
-setup(
-    package_data={'': package_files('vermouth/data')
-                  + package_files('vermouth/tests/data'),},
-    scripts=['bin/martinize2', ],
-    pbr=True,
-)
-
+def test_version():
+    assert isinstance(vermouth.__version__, str)
