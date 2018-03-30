@@ -680,6 +680,7 @@ class Link(Block):
             'removed_interactions': {},
             'molecule_meta': {},
             'patterns': [],
+            'features': [],
         }
         self._set_defaults(defaults)
         self._apply_to_all_nodes = {}

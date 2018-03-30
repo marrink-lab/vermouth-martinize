@@ -582,6 +582,12 @@ def _parse_variables(tokens, force_field):
     force_field.variables[key] = value
 
 
+def _parse_features(tokens, context, context_type):
+    if context_type != 'link':
+        raise IOError('The "features" section is only valid in links.')
+    context.features.extend(list(tokens))
+
+
 def read_ff(lines, force_field):
     interactions_natoms = {
         'bonds': 2,
@@ -650,6 +656,8 @@ def read_ff(lines, force_field):
                 _parse_edges(tokens, context, context_type, negate=False)
             elif section == 'patterns':
                 _parse_patterns(tokens, context, context_type)
+            elif section == 'features':
+                _parse_features(tokens, context, context_type)
             elif section == 'variables':
                 if context is not None:
                     raise IOError('The [variables] section must be defined '
