@@ -659,9 +659,11 @@ resname $protein_resnames
 
 ;; Cystein bridge
 [ link ]
-resname CYS
+resname "CYS"
 [ constraints ]
-SC1 *SC1 {"order": "+"} 0.24
+SC1 >SC1 0.24 {"comment": "Disulfide bridge"}
+;[ features ]
+;disulfide
 
 ;; Protein terminii. These links should be applied last.
 [ link ]
