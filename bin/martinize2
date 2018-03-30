@@ -41,6 +41,8 @@ import operator
 import textwrap
 import functools
 
+VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
+
 
 def read_system(path):
     """
@@ -155,7 +157,11 @@ def write_gmx_topology(system, top_path, deduplicate=True):
 
 
 def entry():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument('-V', '--version', action='version', version=VERSION)
+
     file_group = parser.add_argument_group('Input and output files')
     file_group.add_argument('-f', dest='inpath', required=True, type=Path,
                             help='Input file (PDB|GRO)')

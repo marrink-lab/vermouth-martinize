@@ -26,6 +26,7 @@ setup(
     package_data={'': package_files('vermouth/data')
                   + package_files('vermouth/tests/data'),},
     scripts=['bin/martinize2', ],
-    setup_requires=['setuptools>=30.3.0']
+    setup_requires=['setuptools>=30.3.0', 'pbr'],
+    pbr=True,
 )
 
