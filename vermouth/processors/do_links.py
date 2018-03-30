@@ -78,7 +78,7 @@ def _any_pattern_match(molecule, patterns, rev_raw_match):
 def _interpret_order(order):
     error_msg = ('"{}" is not a valid value for the "order" node attribute. '
                  'The value must be an integer, a series of + '
-                 '(i.e. +, ++, +++, ...), a series of -, or a series of *.')
+                 '(i.e. >, >>, >>>, ...), a series of <, or a series of *.')
     if order is True or order is False:
         # Booleans match the Number abstract base class, so we have to test
         # for them separately.
@@ -96,14 +96,14 @@ def _interpret_order(order):
             # order is not an int, nor a sequence (str, list, tuple,...)
             # or it is an empty sequence. Anyway, we cannot work with it.
             raise ValueError(error_msg.format(order))
-        if len(set(order)) != 1 or first_character not in '+-*':
+        if len(set(order)) != 1 or first_character not in '><*':
             # order is a str (or any sequence, we do not really care),
             # but it contains a mixture of characters (e.g. '+-'), or
             # the characters are not among the ones we expect.
             raise ValueError(error_msg.format(order))
-        signs = {'+': +1, '-': -1}
+        signs = {'>': +1, '<': -1}
         if first_character in signs:
-            order_type = '+-'
+            order_type = '><'
             order_value = signs[first_character] * len(order)
         elif first_character == '*':
             # This could be an 'else', but it would hide bugs if the code
@@ -121,18 +121,18 @@ def _match_order(order1, resid1, order2, resid2):
 
     :an integer:
         It is then the expected distance in resid with a reference residue.
-    :a series of +:
+    :a series of >:
         This indicates that the residue must have a larger resid than a
-        reference residue. Multiple atoms with the same number of + are
-        expected to be part of the same residue. The more + are in the serie,
+        reference residue. Multiple atoms with the same number of > are
+        expected to be part of the same residue. The more > are in the serie,
         the further away the residue is expected to be from the reference, so a
-        residue with ++ is expected to have a greater resid than a residue with
-        +.
-    :a series of -:
-        Same as a series of +, but for smaller resid.
+        residue with >> is expected to have a greater resid than a residue with
+        >.
+    :a series of <:
+        Same as a series of >, but for smaller resid.
     :a series of *:
         This indicates a different residue than the reference, but without a
-        specified order. As for the + or the -, atoms with the same number of *
+        specified order. As for the > or the <, atoms with the same number of *
         are expected to be part of the same residue.
 
     The comparison matrix can be sumerized as follow, with 0 being the
@@ -144,15 +144,15 @@ def _match_order(order1, resid1, order2, resid2):
     of it (order2 argument).
 
     +----+---+----+---+----+---+---+---+----+
-    |    | + | ++ | - | -- | n | 0 | * | ** |
+    |    | > | >> | < | << | n | 0 | * | ** |
     +----+---+----+---+----+---+---+---+----+
-    | +  | = | <  | > | >  | ! | > | ! | !  |
+    | >  | = | <  | > | >  | ! | > | ! | !  |
     +----+---+----+---+----+---+---+---+----+
-    | ++ | > | =  | > | >  | ! | > | ! | !  |
+    | >> | > | =  | > | >  | ! | > | ! | !  |
     +----+---+----+---+----+---+---+---+----+
-    | -  | < | <  | = | >  | ! | < | ! | !  |
+    | <  | < | <  | = | >  | ! | < | ! | !  |
     +----+---+----+---+----+---+---+---+----+
-    | -- | < | <  | < | =  | ! | < | ! | !  |
+    | << | < | <  | < | =  | ! | < | ! | !  |
     +----+---+----+---+----+---+---+---+----+
     | n  | ! | !  | ! | !  | ? | ? | ! | !  |
     +----+---+----+---+----+---+---+---+----+
@@ -198,20 +198,20 @@ def _match_order(order1, resid1, order2, resid2):
             if (orders[1] - orders[0]) != (resid2 - resid1):
                 return False
         elif orders[0] == 0:  # Row 0 in the comparison matrix
-            if order_types[1] == '+-' and sign(resid2 - resid1) != sign(orders[1]):
-                # Columns +, ++, -, and --
+            if order_types[1] == '><' and sign(resid2 - resid1) != sign(orders[1]):
+                # Columns >, >>, <, and <<
                 return False
             elif order_types[1] == '*' and resid1 == resid2:
                 # Columns *, and **
                 return False
-    elif order_types[0] == '+-':  # Rows +, ++, -, and --
+    elif order_types[0] == '><':  # Rows >, >>, <, and <<
         if (order_types[1] == 'number' and orders[1] == 0
                 and sign(resid1 - resid2) != sign(orders[0])):
             # Column 0
             return False
-        elif (order_types[1] == '+-'
+        elif (order_types[1] == '><'
               and sign(resid2 - resid1) != sign(orders[1] - orders[0])):
-            # Column +, ++, -, and --
+            # Column >, >>, <, and <<
             return False
     elif order_types[0] == '*':  # Rows *, and **
         if order_types[1] == 'number' and orders[1] == 0 and resid1 == resid2:
@@ -264,7 +264,7 @@ def match_link(molecule, link):
                 yield {v: k for k, v in raw_match.items()}
 
 
-def _build_link_interaction_from(interaction, match):
+def _build_link_interaction_from(molecule, interaction, match):
     atoms = tuple(match[idx] for idx in interaction.atoms)
     parameters = [
         param(molecule, match) if callable(param) else param
@@ -289,13 +289,13 @@ class DoLinks(Processor):
                         node_mol.update(node_attrs['replace'])
                 for inter_type, interactions in link.removed_interactions.items():
                     for interaction in interactions:
-                        interaction = _build_link_interaction_from(interaction, match)
+                        interaction = _build_link_interaction_from(molecule, interaction, match)
                         try:
                             molecule.remove_matching_interaction(inter_type, interaction)
                         except ValueError:
                             pass
                 for inter_type, interactions in link.interactions.items():
                     for interaction in interactions:
-                        interaction = _build_link_interaction_from(interaction, match)
+                        interaction = _build_link_interaction_from(molecule, interaction, match)
                         molecule.add_or_replace_interaction(inter_type, *interaction)
         return molecule
