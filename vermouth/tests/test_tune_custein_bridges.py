@@ -64,3 +64,58 @@ def test_prune_edges_between_selections_removed(molecule_pruned, edge):
 ])
 def test_prune_edges_between_selections_kept(molecule_pruned, edge):
     assert edge in molecule_pruned.edges
+
+
+@pytest.fixture
+def simple_protein():
+    graph = nx.Graph()
+    graph.add_nodes_from((
+        (0, {'atomname': 'BB', 'resname': 'CYS'}),
+        (1, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (2, {'atomname': 'BB', 'resname': 'OTHER'}),
+        (3, {'atomname': 'SG1', 'resname': 'OTHER'}),
+        (4, {'atomname': 'BB', 'resname': 'CYS'}),
+        (5, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (6, {'atomname': 'BB', 'resname': 'CYS'}),
+        (7, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (8, {'atomname': 'BB', 'resname': 'CYS'}),
+        (9, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (10, {'atomname': 'BB', 'resname': 'CYS'}),
+        (11, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (12, {'atomname': 'BB', 'resname': 'CYS'}),
+        (13, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (14, {'atomname': 'BB', 'resname': 'OTHER'}),
+        (15, {'atomname': 'SG1', 'resname': 'OTHER'}),
+        (16, {'atomname': 'BB', 'resname': 'OTHER'}),
+        (17, {'atomname': 'SG1', 'resname': 'OTHER'}),
+    ))
+    graph.add_edges_from((
+        # Chain edges connecting the backbone and the side chains nodes
+        (0, 1), (2, 3), (2, 4), (4, 5), (4, 6), (6, 7), (6, 8), (8, 9),
+        (8, 10), (10, 11), (10, 12), (12, 13), (12, 14), (14, 15),
+        (14, 16), (16, 17),
+        # Bridges, including that should stay
+        (1, 17), (3, 15), (5, 13), (7, 11),
+    ))
+    return graph
+
+
+@pytest.fixture
+def simple_protein_pruned(simple_protein):
+    graph = copy.deepcopy(simple_protein)
+    tune_cystein_bridges.remove_cystein_bridge_edges(graph)
+    return graph
+
+
+@pytest.mark.parametrize('edge', ((5, 13), (7, 11)))
+def test_remove_cystein_bridge_edges_remove(simple_protein_pruned, edge):
+    assert edge not in simple_protein_pruned.edges
+
+
+@pytest.mark.parametrize('edge', (
+    (0, 1), (2, 3), (2, 4), (4, 5), (4, 6), (6, 7), (6, 8), (8, 9),
+    (8, 10), (10, 11), (10, 12), (12, 13), (12, 14), (14, 15),
+    (14, 16), (16, 17), (1, 17), (3, 15),
+))
+def test_remove_cystein_bridge_edges_kept(simple_protein_pruned, edge):
+    assert edge in simple_protein_pruned.edges
