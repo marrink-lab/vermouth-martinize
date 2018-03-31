@@ -134,7 +134,6 @@ def filter_minimal(molecule, selector):
     keys:
         Keys of the atoms that match the selection.
     """
-    filtered = Molecule()
     for name, atom in molecule.nodes.items():
         if selector(atom):
             yield name
