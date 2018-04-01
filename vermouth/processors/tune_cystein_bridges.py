@@ -19,7 +19,7 @@ from ..molecule import attributes_match
 from .. import selectors
 from .processor import Processor
 
-UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG1'}
+UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG'}
 
 
 def prune_edges_between_selections(molecule, selection_a, selection_b):
@@ -93,8 +93,8 @@ def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):
     Cystein bridge edges link an atom from a cystein side chain to the same
     atom on an other cystein. Selecting the correct atom is done with a
     template node dictionary, in the same way as node matching in links. The
-    default template selects the 'SG1' bead of the residue 'CYS':
-    ``{'resname': 'CYS', 'atomname': 'SG1'}``.
+    default template selects the 'SG' bead of the residue 'CYS':
+    ``{'resname': 'CYS', 'atomname': 'SG'}``.
 
     A template is a dictionary that defines the key:value pairs that must be
     matched in the atoms. Values can be instances of

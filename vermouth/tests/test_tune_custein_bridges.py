@@ -71,23 +71,23 @@ def simple_protein():
     graph = nx.Graph()
     graph.add_nodes_from((
         (0, {'atomname': 'BB', 'resname': 'CYS'}),
-        (1, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (1, {'atomname': 'SG', 'resname': 'CYS'}),
         (2, {'atomname': 'BB', 'resname': 'OTHER'}),
-        (3, {'atomname': 'SG1', 'resname': 'OTHER'}),
+        (3, {'atomname': 'SG', 'resname': 'OTHER'}),
         (4, {'atomname': 'BB', 'resname': 'CYS'}),
-        (5, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (5, {'atomname': 'SG', 'resname': 'CYS'}),
         (6, {'atomname': 'BB', 'resname': 'CYS'}),
-        (7, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (7, {'atomname': 'SG', 'resname': 'CYS'}),
         (8, {'atomname': 'BB', 'resname': 'CYS'}),
-        (9, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (9, {'atomname': 'SG', 'resname': 'CYS'}),
         (10, {'atomname': 'BB', 'resname': 'CYS'}),
-        (11, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (11, {'atomname': 'SG', 'resname': 'CYS'}),
         (12, {'atomname': 'BB', 'resname': 'CYS'}),
-        (13, {'atomname': 'SG1', 'resname': 'CYS'}),
+        (13, {'atomname': 'SG', 'resname': 'CYS'}),
         (14, {'atomname': 'BB', 'resname': 'OTHER'}),
-        (15, {'atomname': 'SG1', 'resname': 'OTHER'}),
+        (15, {'atomname': 'SG', 'resname': 'OTHER'}),
         (16, {'atomname': 'BB', 'resname': 'OTHER'}),
-        (17, {'atomname': 'SG1', 'resname': 'OTHER'}),
+        (17, {'atomname': 'SG', 'resname': 'OTHER'}),
     ))
     graph.add_edges_from((
         # Chain edges connecting the backbone and the side chains nodes
