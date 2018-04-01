@@ -361,7 +361,7 @@ def _get_order_and_prefix_from_prefix(prefix):
     return prefix_from_prefix, order_from_prefix
 
 
-def _treat_atom_prefix(reference, attributes, section):
+def _treat_atom_prefix(reference, attributes):
     """
     Connect graph keys, order, and atom names.
 
@@ -438,11 +438,10 @@ def _treat_atom_prefix(reference, attributes, section):
     if (order_from_attributes is not None
             and prefix_from_prefix is not None
             and order_from_attributes != order_from_prefix):
-        msg = ('The sequence order for atom "{}" in section "{}" of a '
+        msg = ('The sequence order for atom "{}" of a '
                'link is not consistent between the name prefix '
                '(order={}) and the atom attributes (order={}).')
-        raise IOError(msg.format(reference, section,
-                                 order_from_prefix, order_from_attributes))
+        raise IOError(msg.format(reference, order_from_prefix, order_from_attributes))
 
     return_attributes = copy.copy(attributes)
     if order_from_attributes is None:
@@ -464,7 +463,7 @@ def _treat_link_interaction_atoms(atoms, context, section):
             intermediate.update(attributes)
             attributes = intermediate
 
-        prefixed_reference, attributes = _treat_atom_prefix(reference, attributes, section)
+        prefixed_reference, attributes = _treat_atom_prefix(reference, attributes)
 
         if prefixed_reference in context:
             context_atom = context.nodes[prefixed_reference]

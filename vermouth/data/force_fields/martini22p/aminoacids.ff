@@ -907,4 +907,4 @@ BB +BB
 [ link ]
 resname $protein_resnames
 [ exclusions ]
-BB {"atype": "Qd|Qa"} * {"atomname": "SCP|SCN"}
+BB {"atype": "Qd|Qa"} *XX {"atomname": "SCP|SCN"}

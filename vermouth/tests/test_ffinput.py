@@ -21,14 +21,6 @@ import numpy as np
 CHOICE = Choice(['A', 'B'])
 
 
-# Mock a section from a FF file
-@pytest.fixture
-def section():
-    class SectionMock(object):
-        name = 'section-name'
-    return SectionMock()
-
-
 @pytest.mark.parametrize('key, ref_prefix, ref_base', (
     ('BB', '', 'BB'),
     ('+XX', '+', 'XX'),
@@ -146,10 +138,9 @@ def test_get_order_and_prefix_from_prefix(prefix, ref_prefix, ref_order):
     ('XX', {'atomname': CHOICE}, 'XX', {'atomname': CHOICE, 'order': 0}),
 ))
 def test_treat_atom_prefix(key, attributes,
-                           ref_prefixed, ref_attributes,
-                           section):
+                           ref_prefixed, ref_attributes):
     (result_prefixed,
-     result_attributes) = ffinput._treat_atom_prefix(key, attributes, section)
+     result_attributes) = ffinput._treat_atom_prefix(key, attributes)
     assert result_prefixed == ref_prefixed
     assert result_attributes == ref_attributes
     assert result_attributes is not attributes  # We do a shallow copy

@@ -17,6 +17,7 @@
 import functools
 from ..molecule import attributes_match
 from .. import selectors
+from .processor import Processor
 
 UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG1'}
 
