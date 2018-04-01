@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import functools
+import numpy as np
 from ..molecule import attributes_match
 from .. import selectors
+from .. import geometry
 from .processor import Processor
 
 UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG'}
@@ -109,6 +111,60 @@ def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):
     """
     selector = functools.partial(attributes_match, template_attributes=template)
     prune_edges_with_selectors(molecule, selector)
+
+
+def add_edges_at_distance(molecule, threshold,
+                          selection_a, selection_b, attribute='position'):
+    """
+    Add edges within a molecule when the distance is below a threshold.
+
+    Create edges within a molecule between nodes that have an end part of
+    'selection_a', the other end part of 'selection_b', and a distance between
+    the ends that is letter than the given threshold.
+
+    All nodes that are part of 'selection_a' or 'selection_b' must have a
+    position store under the attribute which key is given with the 'attribute'
+    argument. That key is 'position' by default. If at least one node is
+    missing a :exc:`KeyError` is raised.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        Molecule to modify in-place.
+    threshold: float
+        The distance threshold under which edges will be created. The distance
+        is expressed in nm.
+    selection_a, selection_b: list
+        Lists of node keys from the molecule.
+    attribute: str (optional)
+        Name of the key in the node dictionaries under which the coordinates
+        are stored.
+
+    Raises
+    ------
+    KeyError
+        At least one node from the selections does not have a position.
+    """
+    selection_a = set(selection_a)
+    selection_b = set(selection_b)
+    coordinates_a = np.stack([
+        node[attribute]
+        for key, node in molecule.nodes.items()
+        if key in selection_a
+    ])
+    coordinates_b = np.stack([
+        node[attribute]
+        for key, node in molecule.nodes.items()
+        if key in selection_b
+    ])
+    keys_a = np.array([key for key in molecule.nodes.keys() if key in selection_a])
+    keys_b = np.array([key for key in molecule.nodes.keys() if key in selection_b])
+
+    distance_matrix = geometry.distance_matrix(coordinates_a, coordinates_b)
+    index_a, index_b = np.where(distance_matrix < threshold)
+    edges = zip(keys_a[index_a], keys_b[index_b])
+
+    molecule.add_edges_from(edges)
 
 
 class RemoveCysteinBridgeEdges(Processor):

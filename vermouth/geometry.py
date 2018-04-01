@@ -20,6 +20,35 @@ Geometric operations.
 import numpy as np
 
 
+def distance_matrix(coordinates_a, coordinates_b):
+    """
+    Compute a distance matrix between two set of points.
+
+    Notes
+    -----
+
+    This function does **not** account for periodic boundary conditions.
+
+    Parameters
+    ----------
+
+    coordinates_a, coordinates_b: np.ndarray
+        Coordinates of the points in the selections. Each row must correspond
+        to a point and each column to a dimension.
+
+    Returns
+    -------
+    np.ndarray
+        Rows correspond to the points from 'coordinates_a', columns correspond
+        from 'coordinates_b'.
+    """
+    return np.sqrt(
+        np.sum(
+            (coordinates_a[:, np.newaxis, :] - coordinates_b[np.newaxis, :, :]) ** 2,
+            axis=-1)
+    )
+
+
 def angle(vectorBA, vectorBC):
     """
     Calculate the angle in radians between two vectors.
