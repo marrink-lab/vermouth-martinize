@@ -227,6 +227,9 @@ def entry():
     prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,
                             help='Set neutral termini (charged is default)')
+    prot_group.add_argument('-cys', dest='cystein_bridge',
+                            type=lambda x: x.lower(), choices=('none', 'auto'),
+                            default='none', help='Cystein bonds')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -291,6 +294,9 @@ def entry():
                         'parameters for neutral termini (-nt).'
                         .format(target_ff.name))
     vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
+
+    if args.cystein_bridge == 'none':
+        vermouth.RemoveCysteinBridgeEdges().run_system(system)
 
     # Run martinize on the system.
     system = martinize(
