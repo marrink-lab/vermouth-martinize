@@ -231,7 +231,6 @@ def add_inter_molecule_edges(molecules, edges):
             for before, after in mol_correspondance.items():
                 correspondance[(other_index, before)] = (new_index, after)
             offset = max(base_molecule.nodes)
-        print(new_molecules)
 
     # Create the edges
     for edge in edges:
