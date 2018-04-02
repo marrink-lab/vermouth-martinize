@@ -23,8 +23,6 @@ from .. import selectors
 from .. import geometry
 from .processor import Processor
 
-from pprint import pprint
-
 UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG'}
 
 
@@ -240,6 +238,51 @@ def add_inter_molecule_edges(molecules, edges):
         new_molecules[molecule_index].add_edge(new_edge[0][1], new_edge[1][1])
 
     return new_molecules
+
+
+def pairs_under_threshold(molecules, threshold, selection, attribute='position'):
+    """
+    List pairs of nodes from a selection that are closer than a threshold.
+
+    Get the distance between nodes from multiple molecules and list the pairs
+    that are closer than the given threshold. The molecules are given as a list
+    of molecules, the selection is a list of nodes each of them a tuple
+    ``(index of the molecule in the list, key of the node in the molecule)``.
+    The result of the function is a generator of node pairs, each node formated
+    as in the selection.
+
+    All nodes from the selection must have a position accessible under the key
+    given as the 'attribute' argument. That key is 'position' by default.
+
+    Parameters
+    ----------
+    molecules: list
+        A list of :class:`vermouth.molecule.Molecule`.
+    threshold: float
+        A distance threshold in nm. Pairs are return if the nodes are closer
+        than this threshold.
+    selection: list
+        List of nodes to consider. The format is described above.
+    attribute: str
+        The dictionary key under which the node positions are stored in the
+        nodes.
+
+    Yields
+    ------
+    tuple
+        Pairs of node closer than the threshold in the format described above.
+
+    Raises
+    ------
+    KeyError
+        Raised if a node from the selection does not have a position.
+    """
+    coordinates = []
+    for key in selection:
+        coordinates.append(molecules[key[0]].nodes[key[1]][attribute])
+    kdtree = KDTree(coordinates)
+    for i, j in kdtree.query_pairs(threshold):
+        yield (selection[i], selection[j])
 
 
 class RemoveCysteinBridgeEdges(Processor):
