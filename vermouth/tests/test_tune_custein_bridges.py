@@ -18,6 +18,7 @@ import copy
 import pytest
 import numpy as np
 import networkx as nx
+import vermouth
 import vermouth.processors.tune_cystein_bridges as tune_cystein_bridges
 
 
@@ -170,3 +171,41 @@ def test_add_edges_at_distance(protein_with_coords, edge):
 
 def test_add_edges_at_distance(protein_with_coords):
     assert len(protein_with_coords.edges) == 22
+
+
+@pytest.fixture
+def multi_molecules():
+    molecules = []
+    for i in range(6):
+        molecule = vermouth.molecule.Molecule()
+        molecule.add_nodes_from([(idx, {'resid': 1}) for idx in range(6)])
+        molecules.append(molecule)
+    return molecules
+
+
+@pytest.fixture
+def multi_molecules_linked(multi_molecules):
+    edges = [
+        ((0, 1), (4, 2)),
+        ((4, 3), (5, 0)),
+        ((2, 0), (3, 1)),
+        ((3, 2), (2, 4)),
+        ((1, 1), (1, 2)),
+    ]
+    return tune_cystein_bridges.add_inter_molecule_edges(multi_molecules, edges)
+
+
+def test_add_inter_molecule_edges_nmols(multi_molecules_linked):
+    print(multi_molecules_linked)
+    assert len(multi_molecules_linked) == 3
+
+
+@pytest.mark.parametrize('mol, edge', (
+    (0, (1, 8)),
+    (0, (9, 12)),
+    (2, (0, 7)),
+    (2, (8, 4)),
+    (1, (1, 2)),
+))
+def test_add_inter_molecule_edges_edges(multi_molecules_linked, mol, edge):
+    assert edge in multi_molecules_linked[mol].edges

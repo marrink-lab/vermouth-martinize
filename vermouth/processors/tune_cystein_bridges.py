@@ -16,10 +16,14 @@
 
 import functools
 import numpy as np
+import networkx as nx
+from .. import KDTree
 from ..molecule import attributes_match
 from .. import selectors
 from .. import geometry
 from .processor import Processor
+
+from pprint import pprint
 
 UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG'}
 
@@ -165,6 +169,78 @@ def add_edges_at_distance(molecule, threshold,
     edges = zip(keys_a[index_a], keys_b[index_b])
 
     molecule.add_edges_from(edges)
+
+
+def add_inter_molecule_edges(molecules, edges):
+    """
+    Create edges between molecules.
+
+    The function is given a list of molecules and a list of edges. Each edge is
+    provided as a tuple of two nodes, each node being a tuple of the molecule
+    index in the list of molecule, and the node key in that molecule. An edge
+    therefore looks like ``((0, 10), (2, 20))`` where ``1`` and ``2`` are
+    molecules, ``10`` is a key of ``molecules[0]``, and ``20`` is a key of
+    ``molecules[2]``.
+
+    The function **can** create edges within a molecule if the same molecule
+    index is given for both ends of edges.
+
+    Molecules that get linked are merged. In a merged molecule, the order of
+    the input molecules is kept. In a list of molecules numbered from 0 to 4,
+    if molecules 1, 2, and 4 are merged, then the result molecules are, in
+    order, 0, 1-2-4, 3.
+
+    Parameters
+    ----------
+    molecules: list
+        List of molecules to link.
+    edges: list
+        List of edges in a ``(molecule_incex, node_key)`` format as described
+        above.
+
+    Returns
+    -------
+    list
+        New list of molecules.
+    """
+    molecule_graph = nx.Graph()
+    molecule_graph.add_nodes_from(range(len(molecules)))
+    molecule_edges = [(edge[0][0], edge[1][0]) for edge in edges]
+    molecule_graph.add_edges_from(molecule_edges)
+    components = nx.connected_components(molecule_graph)
+
+    # Do the merging
+    new_molecules = []
+    correspondance = {}
+    for new_index, component in enumerate(components):
+        # Connected components are yielded as sets. We need to be able to
+        # iterate over them in numerical order.
+        component = sorted(component)
+
+        # The first molecule in the component is the base for the merge.
+        base_index = component[0]
+        base_molecule = molecules[base_index]
+        new_molecules.append(base_molecule)
+        for key in base_molecule:
+            correspondance[(base_index, key)] = (new_index, key)
+        offset = max(base_molecule.nodes)
+
+        for other_index in component[1:]:
+            other_molecule = molecules[other_index]
+            mol_correspondance = base_molecule.merge_molecule(other_molecule)
+            for before, after in mol_correspondance.items():
+                correspondance[(other_index, before)] = (new_index, after)
+            offset = max(base_molecule.nodes)
+        print(new_molecules)
+
+    # Create the edges
+    for edge in edges:
+        new_edge = (correspondance[edge[0]], correspondance[edge[1]])
+        assert new_edge[0][0] == new_edge[1][0]
+        molecule_index = new_edge[0][0]
+        new_molecules[molecule_index].add_edge(new_edge[0][1], new_edge[1][1])
+
+    return new_molecules
 
 
 class RemoveCysteinBridgeEdges(Processor):
