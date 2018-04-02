@@ -20,19 +20,13 @@ Created on Wed Oct  4 10:48:58 2017
 @author: peterkroon
 """
 
+from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import distance
 
 import networkx as nx
 import numpy as np
-
-try:
-    from scipy.spatial import cKDTree as KDTree
-except ImportError:
-    print('Using redistributed KDTree')
-    from ..redistributed.kdtree import KDTree
-
 
 COVALENT_RADII = {'H': 0.031, 'C': 0.076, 'N': 0.071, 'O': 0.066, 'S': 0.105}
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
