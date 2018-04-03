@@ -560,6 +560,8 @@ BB {"cgsecstruct": "1", "replace": {"atype": "Nd"}}
 resname $protein_resnames
 [ atoms ]
 BB {"cgsecstruct": "H|F", "replace": {"atype": "N0"}}
+[ features ]
+collagen
 
 ;; Fix bead types for ALA and PRO.
 [ link ]
@@ -571,6 +573,8 @@ BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}}
 resname "ALA|PRO|HYP"
 [ atoms ]
 BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}}
+[ features ]
+collagen
 
 [ link ]
 resname "PRO"
@@ -593,12 +597,20 @@ resname $protein_resnames
 
 ;; Protein terminii. These links should be applied last.
 [ link ]
+[ molmeta ]
+neutral_termini not(true)
+[ features ]
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qd", "charge": 1}}
 [ non-edges ]
 BB -BB
 
 [ link ]
+[ molmeta ]
+neutral_termini not(true)
+[ features ]
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qa", "charge": -1}}
 [ non-edges ]

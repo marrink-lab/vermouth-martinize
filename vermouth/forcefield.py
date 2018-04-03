@@ -40,6 +40,32 @@ class ForceField(object):
     @property
     def reference_graphs(self):
         return self.blocks
+
+    @property
+    def features(self):
+        """
+        List the features declared by the links.
+
+        Returns
+        -------
+        set
+        """
+        return set(feature for link in self.links for feature in link.features)
+
+    def has_feature(self, feature):
+        """
+        Test if a feature is declared by the links.
+
+        Parameters
+        ----------
+        feature: str
+            The name of the feature of interest.
+
+        Returns
+        -------
+        bool
+        """
+        return feature in self.features
         
 
 def find_force_fields(directory, force_fields=None):

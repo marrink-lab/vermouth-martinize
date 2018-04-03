@@ -40,6 +40,7 @@ import itertools
 import operator
 import textwrap
 import functools
+import logging
 
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
 
@@ -222,7 +223,7 @@ def entry():
                           help='Comma separated list of bead names for elastic bonds')
 
     prot_group = parser.add_argument_group('Protein description')
-    prot_group.add_argument('-nt', dest='neutral_terminii',
+    prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,
                             help='Set neutral termini (charged is default)')
     args = parser.parse_args()
@@ -268,14 +269,27 @@ def entry():
     system = pdb_to_universal(system, delete_unknown=True,
                               force_field=known_force_fields[from_ff])
 
+    target_ff = known_force_fields[args.to_ff]
     if args.dssp is not None:
         AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.collagen:
+        if not target_ff.has_feature('collagen'):
+            logging.warning('The force field "{}" does not have specific '
+                            'parameters for collagen (-collagen).'
+                            .format(target_ff.name))
         AnnotateResidues(attribute='cgsecstruct', sequence='F',
                          molecule_selector=selectors.is_protein).run_system(system)
+    if args.extdih and not target_ff.has_feature('extdih'):
+        logging.warning('The force field "{}" does not define dihedral '
+                        'angles for extended regions of proteins (-extdih).'
+                        .format(target_ff.name))
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
-    vermouth.SetMoleculeMeta(neutral_terminii=args.neutral_terminii).run_system(system)
+    if args.neutral_termini and not target_ff.has_feature('neutral_termini'):
+        logging.warning('The force field "{}" does not have specific '
+                        'parameters for neutral termini (-nt).'
+                        .format(target_ff.name))
+    vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
 
     # Run martinize on the system.
     system = martinize(

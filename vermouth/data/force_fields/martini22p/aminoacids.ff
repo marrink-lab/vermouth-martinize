@@ -684,12 +684,16 @@ BB +BB 1 0.3375 1250
 [ patterns ]
 BB +BB {"cgsecstruct": "F"}
 BB {"cgsecstruct": "F"} +BB
+[ features ]
+collagen
 
 [ link ]
 resname $protein_resnames
 cgsecstruct "F"
 [ bonds ]
 BB +BB 1 0.365 1250
+[ features ]
+collagen
 
 [ link ]
 resname $protein_resnames
@@ -759,6 +763,8 @@ resname $protein_resnames
 -BB BB {"cgsecstruct": "F"} +BB 
 -BB {"cgsecstruct": "F"} BB +BB 
 -BB  BB +BB {"cgsecstruct": "F"}
+[ features ]
+collagen
 
 [ link ]
 [ angles ]
@@ -823,6 +829,8 @@ resname $protein_resnames
 cgsecstruct "F"
 [ dihedrals ]
 -BB BB  +BB ++BB 1 90.7 100 1
+[ features ]
+collagen
 
 ;; Local elastic network to stabilize extented regions of proteins.
 [ link ]
@@ -843,6 +851,8 @@ resname $protein_resnames
 cgsecstruct "E"
 [ molmeta ]
 extdih true
+[ features ]
+extdih
 [ dihedrals ]
 -BB BB +BB ++BB 1 0 10 1
 
@@ -851,6 +861,8 @@ resname $protein_resnames
 cgsecstruct "E"
 [ molmeta ]
 extdih true
+[ features ]
+extdih
 [ edges ]
 BB +BB
 +BB ++BB
@@ -864,7 +876,9 @@ BB +++BB 1 0.970 2500
 [ link ]
 resname $protein_resnames
 [ molmeta ]
-neutral_terminii not(true)
+neutral_termini not(true)
+[ features ]
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qd", "charge": 1}}
 [ non-edges ]
@@ -873,7 +887,9 @@ BB -BB
 [ link ]
 resname $protein_resnames
 [ molmeta ]
-neutral_terminii not(true)
+neutral_termini not(true)
+[ features ]
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qa", "charge": -1}}
 [ non-edges ]
