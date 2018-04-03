@@ -262,13 +262,13 @@ def pair_selected(multi_molecules):
 
 
 @pytest.mark.parametrize('edge', [
-    ([0, 2], [1, 4]),
-    ([0, 1], [2, 5]),
-    ([3, 1], [5, 4]),
+    ([0, 1], [0, 2]), ([0, 2], [1, 4]),
+    ([0, 2], [2, 5]), ([3, 1], [5, 4]),
+    ([0, 1], [2, 5]), ([2, 5], [5, 4]),
 ])
 def test_pairs_under_threshold(pair_selected, edge):
     assert edge in list(pair_selected)
 
 
 def test_pairs_under_threshold_nedges(pair_selected):
-    assert len(list(pair_selected)) == 3
+    assert len(list(pair_selected)) == 6
