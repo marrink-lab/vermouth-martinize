@@ -21,7 +21,7 @@ def rename_modified_residues(mol):
     Renames residue names based on the current residue name, and the found
     modifications. The new names are found in
     :attr:`force_field.renamed_residues`, which should be a mapping of
-    ``{(rename, [modifications, ...]): new_name}``.
+    ``{(rename, [modification_name, ...]): new_name}``.
 
     Parameters
     ----------
@@ -35,7 +35,9 @@ def rename_modified_residues(mol):
     """
     rename_map_ff = mol.force_field.renamed_residues
     rename_map = {}
-    # Sort the list of modifications, so that the order does not matter
+    # Sort the list of modifications, so that the order does not matter. Don't
+    # make a frozenset, because it might be possible to have the same
+    # modification multiple times?
     # This should probably be done as the list is parsed. Also, as we parse it,
     # make sure we actually recognize all the modification names.
     for (resname, mods), new_name in rename_map_ff.items():
@@ -44,13 +46,15 @@ def rename_modified_residues(mol):
     for node_key in mol:
         node = mol.nodes[node_key]
         modifications = node.get('modifications', [])
-        resname = node['resname']
+        resname = node.get('resname', '')
         if not modifications:
             continue
-        modifications = tuple(sorted(modifications))
+        modifications = tuple(sorted(mod.graph['name'] for mod in modifications))
         try:
             new_name = rename_map[(resname, modifications)]
         except KeyError:
+            # We don't know how to rename this residue, so continue to the next
+            # node.
             continue
         node['resname'] = new_name
     return None

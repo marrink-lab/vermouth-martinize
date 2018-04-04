@@ -28,6 +28,7 @@ class ForceField(object):
         self.blocks = {}
         self.links = []
         self.modifications = []
+        self.renamed_residues = {}
         self.name = os.path.basename(directory)
         self.variables = {}
         self.read_from(directory)
