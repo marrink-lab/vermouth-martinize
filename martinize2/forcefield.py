@@ -20,6 +20,7 @@ class ForceField(object):
         self.links = links
         self.reference_graphs = blocks
         self.modifications = []
+        self.renamed_residues = {}
 
 
 def find_force_fields(directory):
