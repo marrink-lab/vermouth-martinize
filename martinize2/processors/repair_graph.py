@@ -132,7 +132,7 @@ def repair_residue(molecule, ref_residue):
         if ref_idx in match:
             res_idx = match[ref_idx]
             node = molecule.nodes[res_idx]
-            # Copy, because it's references everywhere.
+            # Copy, because there are references everywhere.
             node['graph'] = molecule.subgraph([res_idx]).copy()
             node.update(reference.nodes[ref_idx])
             # Update found as well to keep found and molecule in line. It would

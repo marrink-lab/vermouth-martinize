@@ -15,4 +15,5 @@ from .do_links import DoLinks
 from .apply_blocks import ApplyBlocks
 from .average_beads import DoAverageBead
 from .apply_posres import ApplyPosres
-from .canonize_PTMs import CanonizePTMs
+from .canonicalize_modifications import CanonicalizeModifications
+from .rename_modified_residues import RenameModifiedResidues
