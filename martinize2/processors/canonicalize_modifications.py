@@ -272,7 +272,7 @@ def fix_ptm(molecule):
     return None
 
 
-class CanonizePTMs(Processor):
+class CanonicalizeModifications(Processor):
     def run_molecule(self, molecule):
         fix_ptm(molecule)
         return molecule
