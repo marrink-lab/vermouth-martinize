@@ -285,6 +285,43 @@ def pairs_under_threshold(molecules, threshold, selection, attribute='position')
         yield (selection[i], selection[j])
 
 
+def select_nodes_multi(molecules, selector):
+    """
+    Find the nodes that correspond to a selector among multiple molecules.
+
+    Runs a selector over multiple molecules. The selector must be a function
+    that takes a node dictionary as argument and returns ``True`` if the node
+    should be selected. The selection is yielded as tuples of a molecule indice
+    from the molecule list input, and a key from the molecule.
+
+    Parameters
+    ----------
+    molecule: list
+        A list of molecules.
+    selector: function
+        A selector function.
+
+    Yields
+    ------
+    tuple
+        Molecule/key identifier for the selected nodes.
+    """
+    for molecule_idx, molecule in enumerate(molecules):
+        for key, node in molecule.nodes.items():
+            if selector(node):
+                yield (molecule_idx, key)
+
+
+def add_cystein_bridge_threshold(molecules, threshold,
+                                 template=UNIVERSAL_BRIDGE_TEMPLATE,
+                                 attribute='position'):
+    selector = functools.partial(attributes_match, template=template)
+    selection = select_nodes_multi(molecules, selector)
+    edges = pairs_under_threshold(molecules, threshold, selection, attribute)
+    new_molecules = add_inter_molecule_edges(molecules, edges)
+    return new_molecules
+
+
 class RemoveCysteinBridgeEdges(Processor):
     def __init__(self, template=UNIVERSAL_BRIDGE_TEMPLATE):
         self.template = UNIVERSAL_BRIDGE_TEMPLATE
@@ -292,3 +329,19 @@ class RemoveCysteinBridgeEdges(Processor):
     def run_molecule(self, molecule):
         remove_cystein_bridge_edges(molecule, self.template)
         return molecule
+
+
+class AddCysteinBridgesThreshold(Processor):
+    def __init__(self, threshold,
+                 template=UNIVERSAL_BRIDGE_TEMPLATE, attribute='position'):
+        self.threshold = threshold
+        self.template = UNIVERSAL_BRIDGE_TEMPLATE
+        self.attribute = attribute
+
+    def run_system(system):
+        system.molecules = add_cystein_bridge_threshold(
+            system.molecules, self.threshold,
+            template=self.template,
+            attribute=self.attribute
+        )
+        return system
