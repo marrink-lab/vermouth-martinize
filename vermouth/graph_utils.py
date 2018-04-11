@@ -161,6 +161,24 @@ def isomorphism(reference, residue):
     GM = ElementGraphMatcher(reference, heavy_res)
     first_matches = list(GM.subgraph_isomorphisms_iter())
     for match in first_matches:
+        reverse_match = {v: k for k, v in match.items()}
+        for res_H_idx in H_idxs:
+            # We know which parent atom this hydrogen is bound to, and we know
+            # how it matches to the reference. We're going to find all the
+            # neighboring atoms of the reference parent, and see if the name
+            # of this hydrogen atom matches with any of those neighbors. If so,
+            # we extend the match that way.
+            # It should be noted that in exceptional cases where atomnames are
+            # very wrong, this might cause a problem?
+            res_neighbor = list(residue[res_H_idx].keys())[0]
+            ref_neighbor = reverse_match[res_neighbor]
+            H_names = {reference.nodes[idx]['atomname']: idx for idx in reference[ref_neighbor]}
+            res_H_name = residue.nodes[res_H_idx]['atomname']
+            if res_H_name in H_names:
+                ref_H_idx = H_names[res_H_name]
+                if ref_H_idx not in match:
+                    reverse_match[res_H_idx] = ref_H_idx
+                    match[ref_H_idx] = res_H_idx
         GM_large = ElementGraphMatcher(reference, residue)
         # Put the knowledge from the heavy atom isomorphism back in. Note that
         # ElementGraphMatched is modified to enable this and is no longer
@@ -168,7 +186,7 @@ def isomorphism(reference, residue):
         # Indices in match do not have to be changed to account for interlaced
         # hydrogens: the node-indices in heavy_res and residue are the same.
         GM_large.core_1 = match
-        GM_large.core_2 = {v: k for k, v in match.items()}
+        GM_large.core_2 = reverse_match
         outcome = GM_large.subgraph_isomorphisms_iter()
         # Take just the first match found, otherwise it becomes a combinatorics
         # problem (consider an alkane chain). This is fine though, since
@@ -176,10 +194,14 @@ def isomorphism(reference, residue):
         # chiral atom with two hydrogens: It's not chiral. Let's now say one of
         # the two is a deuterium: in that case you should have a proper
         # 'element' header, and the subgraph will be matched correctly.
-        # TODO: test this
         # So worst case scenario we rename all hydrogens. This is acceptable
         # since they're equal.
         # And do islice since there may be none.
+        # This will fail for e.g. oxygens which have degree 1 in the reference,
+        # but are substituted with PTMs in the actual molecule. In that case
+        # the atomnames might be flipped, and make PTM identification
+        # troublesome. For example: C(=O)OH. That's why we extend the match to
+        # include degree-1 nodes above.
         matches.extend(itertools.islice(outcome, 1))
     matches = sorted(matches,
                      key=lambda m: rate_match(reference, residue, m),
