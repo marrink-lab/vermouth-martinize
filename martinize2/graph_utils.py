@@ -5,6 +5,7 @@ Created on Tue Oct 10 10:51:03 2017
 
 @author: peterkroon
 """
+from collections import defaultdict
 import itertools
 import networkx as nx
 
@@ -158,10 +159,16 @@ def isomorphism(reference, residue):
             # very wrong, this might cause a problem?
             res_neighbor = list(residue[res_H_idx].keys())[0]
             ref_neighbor = reverse_match[res_neighbor]
-            H_names = {reference.nodes[idx]['atomname']: idx for idx in reference[ref_neighbor]}
+            H_names = defaultdict(list)
+            for idx in reference[ref_neighbor]:
+                if reference.degree(idx) == 1:
+                    H_names[reference.nodes[idx]['atomname']].append(idx)
+            H_names = dict(H_names)
             res_H_name = residue.nodes[res_H_idx]['atomname']
             if res_H_name in H_names:
-                ref_H_idx = H_names[res_H_name]
+                if len(H_names[res_H_name]) != 1:
+                    continue
+                ref_H_idx = H_names[res_H_name][0]
                 if ref_H_idx not in match:
                     reverse_match[res_H_idx] = ref_H_idx
                     match[ref_H_idx] = res_H_idx
