@@ -178,7 +178,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
 
         # XXX Jonathan beware!
         match = matches[0]
-        rev_match = {v: k for k, v in rev_match.items()}  # TODO remove me. See above.
+        rev_match = {v: k for k, v in match.items()}  # TODO remove me. See above.
 
         mapped_match = {}
         for to_idx, from_idxs in mapping.mapping.items():

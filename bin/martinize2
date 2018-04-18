@@ -73,7 +73,7 @@ def pdb_to_universal(system, delete_unknown=False,
     canonicalized.force_field = force_field
     vermouth.MakeBonds().run_system(canonicalized)
     vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
-    vermouth.CanonizePTMs().run_system(canonicalized)
+    vermouth.CanonicalizeModifications().run_system(canonicalized)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
     return canonicalized
 
