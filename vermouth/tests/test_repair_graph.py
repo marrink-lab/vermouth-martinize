@@ -35,6 +35,14 @@ def forcefield_with_mods():
     ))
     nter.add_edges_from([[0, 1], [1, 2], [1, 3]])
 
+    cter = nx.Graph(name='C-ter')
+    cter.add_nodes_from((
+        (0, {'atomname': 'C', 'PTM_atom': False, 'element': 'C'}),
+        (1, {'atomname': 'O', 'PTM_atom': False, 'element': 'O'}),
+        (2, {'atomname': 'OXT', 'PTM_atom': True, 'element': 'O'}),
+    ))
+    cter.add_edges_from([[0, 1], [0, 2]])
+
     gluh = nx.Graph(name='GLU-H')
     gluh.add_nodes_from((
         (0, {'atomname': 'CD', 'PTM_atom': False, 'element': 'C'}),
@@ -43,15 +51,20 @@ def forcefield_with_mods():
         (3, {'atomname': 'HE1', 'PTM_atom': True, 'element': 'H'}),
     ))
     gluh.add_edges_from([[0, 1], [0, 2], [1, 3]])
+
     forcefield = copy.copy(vermouth.forcefield.FORCE_FIELDS['universal'])
-    forcefield.modifications = [nter, gluh]
+    forcefield.modifications = [nter, gluh, cter]
     return forcefield
 
 
 @pytest.fixture
 def system_mod(forcefield_with_mods):
     molecule = vermouth.molecule.Molecule()
+    # When the name must be fixed, the expected name is stored under 'expected'.
+    # If more than one value is acceptable, then 'expected' is a tuple.
     molecule.add_nodes_from((
+        # Residue 1 is a N-terminus (atom 14, H) and has a protonated
+        # side chain (atom 13, HE1)
         (0, {'resid': 1, 'resname': 'GLU', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
         (1, {'resid': 1, 'resname': 'GLU', 'atomname': 'CA', 'chain': 'A', 'element': 'C'}),
         (2, {'resid': 1, 'resname': 'GLU', 'atomname': 'C', 'chain': 'A', 'element': 'C'}),
@@ -69,10 +82,43 @@ def system_mod(forcefield_with_mods):
         (14, {'resid': 1, 'resname': 'GLU', 'atomname': 'H', 'chain': 'A', 'element': 'H'}),
         (15, {'resid': 1, 'resname': 'GLU', 'atomname': 'HA', 'chain': 'A', 'element': 'H'}),
         (16, {'resid': 1, 'resname': 'GLU', 'atomname': 'HN', 'chain': 'A', 'element': 'H'}),
+        # Residue 2 has missing atoms (HA1 and HA2, the hydrogen of the C
+        # alpha; HN the hydrogen on the N-ter nitrogen and O, the oxygen at the
+        # C-ter)
+        (17, {'resid': 2, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
+        (18, {'resid': 2, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'C'}),
+        (19, {'resid': 2, 'resname': 'GLY', 'atomname': 'C', 'chain': 'A', 'element': 'C'}),
+        # Residue 3 has only N and C specified, everything else is missing.
+        (20, {'resid': 3, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
+        (21, {'resid': 3, 'resname': 'GLY', 'atomname': 'O', 'chain': 'A', 'element': 'O'}),
+        # Residue 4 has shuffled and missing names
+        (22, {'resid': 4, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'N', 'expected': 'N'}),
+        (23, {'resid': 4, 'resname': 'GLY', 'chain': 'A', 'element': 'C', 'expected': 'CA'}),
+        (24, {'resid': 4, 'resname': 'GLY', 'atomname': 'HA1', 'chain': 'A', 'element': 'C', 'expected': 'C'}),
+        (25, {'resid': 4, 'resname': 'GLY', 'atomname': 'HN', 'chain': 'A', 'element': 'O', 'expected': 'O'}),
+        (26, {'resid': 4, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'H', 'expected': ('HA1', 'HA2')}),
+        (27, {'resid': 4, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'H', 'expected': ('HA1', 'HA2')}),
+        (28, {'resid': 4, 'resname': 'GLY', 'atomname': '', 'chain': 'A', 'element': 'H', 'expected': 'N'}),
+        # Residue 5 has a wrong name in a modification, and a wrong name for
+        # the anchor.
+        (29, {'resid': 5, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
+        (30, {'resid': 5, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'C'}),
+        # Should be C
+        (31, {'resid': 5, 'resname': 'GLY', 'atomname': 'WRONG', 'chain': 'A', 'element': 'C', 'expected': 'C'}),
+        (32, {'resid': 5, 'resname': 'GLY', 'atomname': 'O', 'chain': 'A', 'element': 'O'}),
+        (33, {'resid': 5, 'resname': 'GLY', 'atomname': 'HN', 'chain': 'A', 'element': 'H'}),
+        (34, {'resid': 5, 'resname': 'GLY', 'atomname': 'HA1', 'chain': 'A', 'element': 'H'}),
+        (35, {'resid': 5, 'resname': 'GLY', 'atomname': 'HA2', 'chain': 'A', 'element': 'H'}),
+        # Should be OXT
+        (36, {'resid': 5, 'resname': 'GLY', 'atomname': 'O2', 'chain': 'A', 'element': 'O', 'expected': 'OXT'}),
     ))
     molecule.add_edges_from([
         [0, 1], [1, 2], [2, 3], [1, 4], [4, 5], [4, 6], [4, 7], [7, 8],
         [7, 9], [7, 10], [10, 11], [10, 12], [12, 13], [14, 0], [15, 1], [16, 0],
+        [2, 17], [17, 18], [18, 19],
+        [19, 20], [21, 22], [22, 23], [23, 24], [24, 25],
+        [22, 28], [23, 26], [23, 27], [24, 29], [29, 30], [30, 31], [31, 32],
+        [31, 36], [29, 33], [30, 34], [30, 35],
     ])
     system = vermouth.System()
     system.molecules = [molecule]
@@ -92,7 +138,7 @@ def canonicalized_graph(repaired_graph):
     return repaired_graph
 
 
-@pytest.mark.parametrize('node_key', (13,  14))
+@pytest.mark.parametrize('node_key', (13,  14, 36))
 def test_PTM_atom_true(repaired_graph, node_key):
     assert repaired_graph[node_key].get('PTM_atom', False)
 
@@ -121,3 +167,28 @@ def test_uniq_names_canonicalize(canonicalized_graph):
              for node in molecule.nodes.values()]
     deduplicated = set(atoms)
     assert len(atoms) == len(deduplicated)
+
+def _list_expected_names():
+    molecule = system_mod(forcefield_with_mods()).molecules[0]
+    for key, node in molecule.nodes.items():
+        if 'expected' in node:
+            expected = node['expected']
+        else:
+            expected = node['atomname']
+        if not isinstance(expected, tuple):
+            expected = (expected, )
+        yield key, expected
+
+
+@pytest.mark.parametrize('key, expected_names', _list_expected_names())
+def test_name_repaired(repaired_graph, key, expected_names):
+    molecule = repaired_graph.molecules[0]
+    if not molecule.nodes[key].get('PTM_atom', False):
+        print(key, molecule.nodes[key])
+        assert molecule.nodes[key]['atomname'] in expected_names
+
+
+@pytest.mark.parametrize('key, expected_names', _list_expected_names())
+def test_name_canonicalized(canonicalized_graph, key, expected_names):
+    molecule = canonicalized_graph.molecules[0]
+    assert molecule.nodes[key]['atomname'] in expected_names

@@ -76,11 +76,13 @@ def first_alpha(string):
     -------
     str
         The first element of ``string`` for which ``str.isalpha`` returns ``True``.
+
+    Raises
+    ------
+    ValueError
+        No alpha character was found in 'string'.
     """
-    idx = 0
-    while True:
-        elem = string[idx]
+    for elem in string:
         if elem.isalpha():
-            break
-        idx += 1
-    return elem
+            return elem
+    raise ValueError('No alpha charecters in "{}".'.format(string))

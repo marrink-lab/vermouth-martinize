@@ -29,7 +29,18 @@ from .utils import maxes, first_alpha
 def add_element_attr(molecule):
     for node_idx in molecule:
         node = molecule.nodes[node_idx]
-        node['element'] = node.get('element', first_alpha(node['atomname']))
+        if 'element' not in node:
+            try:
+                element = first_alpha(node['atomname'])
+            except KeyError:
+                raise ValueError('Cannot guess the element of atom {}: '
+                                 'the node has no atom name.'
+                                 .fomat(node_idx))
+            except ValueError:
+                raise ValueError('Cannot guess the element of atom {}: '
+                                 'the atom name has no alphabetic charater.'
+                                 .fomat(node_idx))
+            node['element'] = element
 
 
 def categorical_cartesian_product(G, H, attributes=tuple()):
@@ -69,6 +80,8 @@ def categorical_maximum_common_subgraph(G, H, attributes=tuple()):
 
 
 def maximum_common_subgraph(reference, found, attributes=tuple()):
+    print([key for key, value in reference.nodes.items() if 'element' not in value])
+    print(list(reference.nodes.items()))
     G = reference
     H = found
     P = nx.Graph()
@@ -228,8 +241,8 @@ class ElementGraphMatcher(nx.isomorphism.GraphMatcher):
 
     def semantic_feasibility(self, node1, node2):
         # TODO: implement (partial) wildcards
-        elem1 = self.G1.node[node1].get('element', first_alpha(self.G1.node[node1]['atomname']))
-        elem2 = self.G2.node[node2].get('element', first_alpha(self.G2.node[node2]['atomname']))
+        elem1 = self.G1.node[node1]['element']
+        elem2 = self.G2.node[node2]['element']
         return elem1 == elem2
 
 
