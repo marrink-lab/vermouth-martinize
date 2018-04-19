@@ -98,7 +98,7 @@ def system_mod(forcefield_with_mods):
         (25, {'resid': 4, 'resname': 'GLY', 'atomname': 'HN', 'chain': 'A', 'element': 'O', 'expected': 'O'}),
         (26, {'resid': 4, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'H', 'expected': ('HA1', 'HA2')}),
         (27, {'resid': 4, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'H', 'expected': ('HA1', 'HA2')}),
-        (28, {'resid': 4, 'resname': 'GLY', 'atomname': '', 'chain': 'A', 'element': 'H', 'expected': 'N'}),
+        (28, {'resid': 4, 'resname': 'GLY', 'atomname': '', 'chain': 'A', 'element': 'H', 'expected': 'HN'}),
         # Residue 5 has a wrong name in a modification, and a wrong name for
         # the anchor.
         (29, {'resid': 5, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
