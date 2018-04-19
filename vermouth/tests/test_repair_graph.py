@@ -54,6 +54,7 @@ def forcefield_with_mods():
 
     forcefield = copy.copy(vermouth.forcefield.FORCE_FIELDS['universal'])
     forcefield.modifications = [nter, gluh, cter]
+    forcefield.renamed_residues[('GLU', ('GLU-H', 'N-ter'))] = 'GLU0'
     return forcefield
 
 
@@ -138,6 +139,12 @@ def canonicalized_graph(repaired_graph):
     return repaired_graph
 
 
+@pytest.fixture
+def renamed_graph(canonicalized_graph):
+    vermouth.RenameModifiedResidues().run_system(canonicalized_graph)
+    return canonicalized_graph
+
+
 @pytest.mark.parametrize('node_key', (13,  14, 36))
 def test_PTM_atom_true(repaired_graph, node_key):
     assert repaired_graph[node_key].get('PTM_atom', False)
@@ -192,3 +199,11 @@ def test_name_repaired(repaired_graph, key, expected_names):
 def test_name_canonicalized(canonicalized_graph, key, expected_names):
     molecule = canonicalized_graph.molecules[0]
     assert molecule.nodes[key]['atomname'] in expected_names
+
+
+def test_renaming(renamed_graph):
+    for node in renamed_graph.molecules[0].nodes.values():
+        if node['resid'] == 1:
+            assert node['resname'] == 'GLU0'
+        else:
+            assert node['resname'] == 'GLY'
