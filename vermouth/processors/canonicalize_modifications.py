@@ -256,7 +256,8 @@ def fix_ptm(molecule):
                 if ptm_node['PTM_atom'] or 'replace' in ptm_node:
                     mol_node['graph'] = molecule.subgraph([mol_idx]).copy()
                     to_replace = ptm_node.copy()
-                    del to_replace['replace']
+                    if 'replace' in to_replace:
+                        del to_replace['replace']
                     to_replace.update(ptm_node.get('replace', dict()))
                     for attr_name, val in to_replace.items():
                         if attr_name == 'atomname' and val is None:
