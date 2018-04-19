@@ -172,6 +172,8 @@ def isomorphism(reference, residue):
             # It should be noted that in exceptional cases where atomnames are
             # very wrong, this might cause a problem?
             res_neighbor = list(residue[res_H_idx].keys())[0]
+            if res_neighbor not in reverse_match:
+                continue
             ref_neighbor = reverse_match[res_neighbor]
             H_names = defaultdict(list)
             for idx in reference[ref_neighbor]:
