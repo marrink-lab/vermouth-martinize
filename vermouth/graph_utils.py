@@ -323,7 +323,7 @@ def rate_match(residue, bead, match):
         The number of entries in match where the atomname in ``residue`` matches
         the atomname in ``bead``.
     """
-    return sum(residue.node[rdx]['atomname'] == bead.node[bdx]['atomname']
+    return sum(residue.node[rdx].get('atomname') == bead.node[bdx].get('atomname')
                for rdx, bdx in match.items())
 
 
