@@ -4,7 +4,7 @@ C-ter
 CA {"element": "C"}
 C {"element": "C"}
 O {"element": "O"}
-OXT {"element": "O", "PTM_atom": true}
+OXT {"element": "O", "PTM_atom": true, "replace": {"atomname": null}}
 [ edges ]
 CA C
 C O
@@ -16,7 +16,7 @@ N-ter
 CA {"element": "CA"}
 N {"element": "N"}
 HN {"element": "H"}
-H {"element": "H", "PTM_atom": true}
+H {"element": "H", "PTM_atom": true, "replace": {"atomname": null}}
 [ edges ]
 N CA
 N HN
