@@ -263,7 +263,7 @@ def fix_ptm(molecule):
                         if attr_name == 'atomname' and val is None:
                             # DEBUG output
                             print('Removing node {}, {}'.format(mol_idx, mol_node['atomname']))
-                            mol_node.remove_node(mol_idx)
+                            molecule.remove_node(mol_idx)
                             n_idxs.remove(mol_idx)
                             break
                         if mol_node[attr_name] != val:
