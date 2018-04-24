@@ -19,9 +19,9 @@ Created on Tue Oct 10 10:51:03 2017
 
 @author: peterkroon
 """
+from collections import defaultdict
 import itertools
 import networkx as nx
-from networkx.algorithms.approximation import max_clique
 
 from .utils import maxes, first_alpha
 
@@ -29,7 +29,18 @@ from .utils import maxes, first_alpha
 def add_element_attr(molecule):
     for node_idx in molecule:
         node = molecule.nodes[node_idx]
-        node['element'] = node.get('element', first_alpha(node['atomname']))
+        if 'element' not in node:
+            try:
+                element = first_alpha(node['atomname'])
+            except KeyError:
+                raise ValueError('Cannot guess the element of atom {}: '
+                                 'the node has no atom name.'
+                                 .fomat(node_idx))
+            except ValueError:
+                raise ValueError('Cannot guess the element of atom {}: '
+                                 'the atom name has no alphabetic charater.'
+                                 .fomat(node_idx))
+            node['element'] = element
 
 
 def categorical_cartesian_product(G, H, attributes=tuple()):
@@ -69,6 +80,8 @@ def categorical_maximum_common_subgraph(G, H, attributes=tuple()):
 
 
 def maximum_common_subgraph(reference, found, attributes=tuple()):
+    print([key for key, value in reference.nodes.items() if 'element' not in value])
+    print(list(reference.nodes.items()))
     G = reference
     H = found
     P = nx.Graph()
@@ -162,6 +175,32 @@ def isomorphism(reference, residue):
     GM = ElementGraphMatcher(reference, heavy_res)
     first_matches = list(GM.subgraph_isomorphisms_iter())
     for match in first_matches:
+        reverse_match = {v: k for k, v in match.items()}
+        for res_H_idx in H_idxs:
+            # We know which parent atom this hydrogen is bound to, and we know
+            # how it matches to the reference. We're going to find all the
+            # neighboring atoms of the reference parent, and see if the name
+            # of this hydrogen atom matches with any of those neighbors. If so,
+            # we extend the match that way.
+            # It should be noted that in exceptional cases where atomnames are
+            # very wrong, this might cause a problem?
+            res_neighbor = list(residue[res_H_idx].keys())[0]
+            if res_neighbor not in reverse_match:
+                continue
+            ref_neighbor = reverse_match[res_neighbor]
+            H_names = defaultdict(list)
+            for idx in reference[ref_neighbor]:
+                if reference.degree(idx) == 1:
+                    H_names[reference.nodes[idx]['atomname']].append(idx)
+            H_names = dict(H_names)
+            res_H_name = residue.nodes[res_H_idx]['atomname']
+            if res_H_name in H_names:
+                if len(H_names[res_H_name]) != 1:
+                    continue
+                ref_H_idx = H_names[res_H_name][0]
+                if ref_H_idx not in match:
+                    reverse_match[res_H_idx] = ref_H_idx
+                    match[ref_H_idx] = res_H_idx
         GM_large = ElementGraphMatcher(reference, residue)
         # Put the knowledge from the heavy atom isomorphism back in. Note that
         # ElementGraphMatched is modified to enable this and is no longer
@@ -169,7 +208,7 @@ def isomorphism(reference, residue):
         # Indices in match do not have to be changed to account for interlaced
         # hydrogens: the node-indices in heavy_res and residue are the same.
         GM_large.core_1 = match
-        GM_large.core_2 = {v: k for k, v in match.items()}
+        GM_large.core_2 = reverse_match
         outcome = GM_large.subgraph_isomorphisms_iter()
         # Take just the first match found, otherwise it becomes a combinatorics
         # problem (consider an alkane chain). This is fine though, since
@@ -177,10 +216,14 @@ def isomorphism(reference, residue):
         # chiral atom with two hydrogens: It's not chiral. Let's now say one of
         # the two is a deuterium: in that case you should have a proper
         # 'element' header, and the subgraph will be matched correctly.
-        # TODO: test this
         # So worst case scenario we rename all hydrogens. This is acceptable
         # since they're equal.
         # And do islice since there may be none.
+        # This will fail for e.g. oxygens which have degree 1 in the reference,
+        # but are substituted with PTMs in the actual molecule. In that case
+        # the atomnames might be flipped, and make PTM identification
+        # troublesome. For example: C(=O)OH. That's why we extend the match to
+        # include degree-1 nodes above.
         matches.extend(itertools.islice(outcome, 1))
     matches = sorted(matches,
                      key=lambda m: rate_match(reference, residue, m),
@@ -198,22 +241,21 @@ class ElementGraphMatcher(nx.isomorphism.GraphMatcher):
 
     def semantic_feasibility(self, node1, node2):
         # TODO: implement (partial) wildcards
-        elem1 = self.G1.node[node1].get('element', first_alpha(self.G1.node[node1]['atomname']))
-        elem2 = self.G2.node[node2].get('element', first_alpha(self.G2.node[node2]['atomname']))
+        elem1 = self.G1.node[node1]['element']
+        elem2 = self.G2.node[node2]['element']
         return elem1 == elem2
 
 
 def blockmodel(G, partitions, **attrs):
     """
     Analogous to networkx.blockmodel, but can deal with incomplete partitions,
-    assigns ``attrs`` to nodes, and calculates the new ``position`` attribute as
-    center of geometry.
+    and assigns ``attrs`` to nodes.
 
     Parameters
     ----------
     G: networkx.Graph
         The graph to partition
-    partitions: iterable of iterables
+    parititions: iterable of iterables
         Each element contains the node indices that construct the new node.
     **attrs: dict of str: iterable
         Attributes to assign to new nodes. Attribute values are assigned to the
@@ -226,7 +268,6 @@ def blockmodel(G, partitions, **attrs):
         Node attributes:
 
             :graph: Subgraph of constructing nodes.
-            :position: Center of geometry of the ``position`` of nodes in ``graph``.
             :nnodes: Number of nodes in ``graph``.
             :nedges: Number of edges in ``graph``.
             :density: Density of ``graph``.
@@ -297,7 +338,7 @@ def rate_match(residue, bead, match):
         The number of entries in match where the atomname in ``residue`` matches
         the atomname in ``bead``.
     """
-    return sum(residue.node[rdx]['atomname'] == bead.node[bdx]['atomname']
+    return sum(residue.node[rdx].get('atomname') == bead.node[bdx].get('atomname')
                for rdx, bdx in match.items())
 
 
@@ -325,8 +366,6 @@ def make_residue_graph(mol):
             :density: The density of ``graph``.
             :nedges: The number of edges in ``graph``.
             :nnodes: The number of nodes in ``graph``.
-            :position: The center of geometry of the ``position`` of the nodes in
-                       ``graph``.
             :resid: The residue index.
             :resname: The residue name.
             :atomname: The residue name.

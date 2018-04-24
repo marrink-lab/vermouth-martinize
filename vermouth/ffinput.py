@@ -31,6 +31,8 @@ from .molecule import (
     Choice, NotDefinedOrNot,
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
+import networkx as nx
+import copy
 
 VALUE_PREDICATES = {
     'not': NotDefinedOrNot,
@@ -478,14 +480,20 @@ def _parse_block_atom(tokens, context):
     context.add_atom(dict(collections.ChainMap(attributes, atom)))
 
 
-def _parse_link_atom(tokens, context):
+def _parse_link_atom(tokens, context, defaults=None, treat_prefix=True):
     if len(tokens) > 2:
         raise IOError('Unexpected column in link atom definition.')
     elif len(tokens) < 2:
         raise IOError('Missing column in link atom definition.')
     reference = tokens[0]
+    if defaults is None:
+        defaults = {}
     attributes = _parse_atom_attributes(tokens[1])
-    prefixed_reference, _, attributes = _treat_atom_prefix(reference, attributes)
+    if treat_prefix:
+        prefixed_reference, _, attributes = _treat_atom_prefix(reference, attributes)
+    else:
+        prefixed_reference = reference
+        attributes['atomname'] = reference
     attributes = dict(collections.ChainMap(attributes, context._apply_to_all_nodes))
     node_attributes = context.nodes.get(prefixed_reference, {})
     for attr, value in attributes.items():
@@ -495,7 +503,8 @@ def _parse_link_atom(tokens, context):
                    'to "{}" because it is already defined as "{}".')
             raise IOError(msg.format(attr, reference, value,
                                      node_attributes[node_attributes[attr]]))
-    full_attributes = dict(collections.ChainMap(attributes, node_attributes))
+    full_attributes = dict(collections.ChainMap(attributes, node_attributes, defaults))
+
     if prefixed_reference in context.nodes:
         context.nodes[prefixed_reference] = full_attributes
     else:
@@ -602,6 +611,7 @@ def read_ff(lines, force_field):
     macros = {}
     blocks = {}
     links = []
+    modifications = []
     context_type = None
     context = None
     section = None
@@ -629,6 +639,10 @@ def read_ff(lines, force_field):
                     context_type = 'link'
                     context = Link()
                     links.append(context)
+                elif section == 'modification':
+                    context_type = 'modifications'
+                    context = Link()
+                    modifications.append(context)
             # We read a line within a section.
             elif section == 'moleculetype':
                 context_type = 'block'
@@ -637,6 +651,8 @@ def read_ff(lines, force_field):
                 context.name = name
                 context.nrexcl = int(nrexcl)
                 blocks[name] = context
+            elif section == 'modification':
+                context.name = cleaned
             elif section == 'macros':
                 context = None
                 context_type = None
@@ -650,6 +666,10 @@ def read_ff(lines, force_field):
                     _parse_block_atom(tokens, context)
                 elif context_type == 'link':
                     _parse_link_atom(tokens, context)
+                elif context_type == 'modifications':
+                    _parse_link_atom(tokens, context,
+                                     defaults={'PTM_atom': False},
+                                     treat_prefix=False)
             elif section == 'non-edges':
                 _parse_edges(tokens, context, context_type, negate=True)
             elif section == 'edges':
@@ -697,3 +717,4 @@ def read_ff(lines, force_field):
 
     force_field.blocks.update(blocks)
     force_field.links.extend(links)
+    force_field.modifications.extend(modifications)

@@ -34,3 +34,5 @@ from .locate_charge_dummies import LocateChargeDummies
 from .attach_mass import AttachMass
 from .apply_rubber_band import ApplyRubberBand
 from .merge_chains import MergeChains
+from .canonicalize_modifications import CanonicalizeModifications
+from .rename_modified_residues import RenameModifiedResidues
