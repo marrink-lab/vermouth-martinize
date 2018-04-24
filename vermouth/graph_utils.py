@@ -255,6 +255,8 @@ def blockmodel(G, partitions, **attrs):
     ----------
     G: networkx.Graph
         The graph to partition
+    parititions: iterable of iterables
+        Each element contains the node indices that construct the new node.
     **attrs: dict of str: iterable
         Attributes to assign to new nodes. Attribute values are assigned to the
         new nodes in order.

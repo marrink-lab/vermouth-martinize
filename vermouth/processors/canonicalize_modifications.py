@@ -266,7 +266,7 @@ def fix_ptm(molecule):
                             molecule.remove_node(mol_idx)
                             n_idxs.remove(mol_idx)
                             break
-                        if mol_node[attr_name] != val:
+                        if mol_node.get(attr_name) != val:
                             # DEBUG output
                             fmt = 'Changing attribute {} from {} to {}'
                             print(fmt.format(attr_name, mol_node[attr_name], val))
