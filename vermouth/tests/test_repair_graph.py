@@ -147,13 +147,14 @@ def renamed_graph(canonicalized_graph):
 
 @pytest.mark.parametrize('node_key', (13,  14, 36))
 def test_PTM_atom_true(repaired_graph, node_key):
-    assert repaired_graph[node_key].get('PTM_atom', False)
+    molecule = repaired_graph.molecules[0]
+    assert molecule.nodes[node_key].get('PTM_atom', False)
 
 
 @pytest.mark.parametrize('node_key', (
     node_key for node_key in range(16) if node_key not in (13,  14)
 ))
-def test_PTM_atom_true(repaired_graph, node_key):
+def test_PTM_atom_false(repaired_graph, node_key):
     molecule = repaired_graph.molecules[0]
     assert not molecule.nodes[node_key].get('PTM_atom', False)
 
@@ -174,6 +175,7 @@ def test_uniq_names_canonicalize(canonicalized_graph):
              for node in molecule.nodes.values()]
     deduplicated = set(atoms)
     assert len(atoms) == len(deduplicated)
+
 
 def _list_expected_names():
     molecule = system_mod(forcefield_with_mods()).molecules[0]
