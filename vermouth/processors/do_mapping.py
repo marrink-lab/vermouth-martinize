@@ -23,7 +23,7 @@ Created on Tue Oct 10 11:11:54 2017
 from ..gmx import read_rtp
 from ..molecule import Molecule
 from .processor import Processor
-from ..graph_utils import make_residue_graph, add_subgraph
+from ..graph_utils import make_residue_graph
 
 from collections import defaultdict
 from itertools import product, combinations
