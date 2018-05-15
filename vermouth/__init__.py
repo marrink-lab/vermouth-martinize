@@ -34,4 +34,5 @@ import pbr.version
 __version__ = pbr.version.VersionInfo('vermouth').release_string()
 del pbr
 
-from .vermouth import *
+from .processors import *
+from .system import System
