@@ -463,6 +463,23 @@ class Molecule(nx.Graph):
         return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
 
     def edges_between(self, n_bunch1, n_bunch2):
+        """
+        Returns all edges in this molecule between nodes in `n_bunch1` and
+        `n_bunch2`.
+
+        Parameters
+        ----------
+        n_bunch1: :class:`~collections.abc.Iterable`
+            The first bunch of node indices.
+        n_bunch2: :class:`~collections.abc.Iterable`
+            The second bunch of node indices.
+
+        Returns
+        -------
+        :class:`list`
+            A list of tuples of edges in this molecule. The first element of
+            the tuple will be in `n_bunch1`, the second element in `n_bunch2`.
+        """
         return [(node1, node2)
                 for node1, node2 in itertools.product(n_bunch1, n_bunch2)
                 if self.has_edge(node1, node2)]
