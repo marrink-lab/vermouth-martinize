@@ -449,8 +449,9 @@ class Molecule(nx.Graph):
             for interaction in interactions:
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
                 self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
-        for edge in molecule.edges:
-            self.add_edge(*(correspondence[node] for node in edge))
+        for node1, node2 in molecule.edges:
+            if correspondence[node1] != correspondence[node2]:
+                self.add_edge(correspondence[node1], correspondence[node2])
         return correspondence
 
     def share_moltype_with(self, other):

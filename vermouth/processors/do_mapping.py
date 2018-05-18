@@ -25,10 +25,10 @@ from .processor import Processor
 from ..utils import are_all_equal
 
 from collections import defaultdict
+from functools import partial
 from itertools import product, combinations
 
 import networkx as nx
-import networkx.algorithms.isomorphism as iso
 
 
 class GraphMapping:
@@ -153,6 +153,55 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     return graph_mapping_collection
 
 
+class MappingGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
+    def __init__(self, *args, edge_match=None, node_match=None, **kwargs):
+        self.edge_match = edge_match
+        self.node_match = node_match
+        super().__init__(*args, **kwargs)
+
+    def semantic_feasibility(self, G1_node, G2_node):
+        """
+        Returns True if mapping G1_node to G2_node is semantically feasible.
+        Adapted from networkx.algorithms.isomorphism.vf2userfunc._semantic_feasibility.
+        """
+        # Make sure the nodes match
+        if self.node_match is not None:
+            nm = self.node_match(self.G1.nodes[G1_node], self.G2.nodes[G2_node])
+            if not nm:
+                return False
+
+        # Make sure the edges match
+        if self.edge_match is not None:
+
+            # Cached lookups
+            core_1 = self.core_1
+            edge_match = self.edge_match
+
+            for neighbor in self.G1.adj[G1_node]:
+                # G1_node is not in core_1, so we must handle R_self separately
+                if neighbor == G1_node:
+                    if not edge_match(G1_node, G1_node, G2_node, G2_node):
+                        return False
+                elif neighbor in core_1:
+                    if not edge_match(G1_node, neighbor, G2_node, core_1[neighbor]):
+                        return False
+            # syntactic check has already verified that neighbors are symmetric
+        return True
+
+
+def edge_matcher(graph1, graph2, node11, node12, node21, node22):
+    """
+    Checks whether the resids for node11 and node12 in graph1 are the same, and
+    whether that's also true for node21 and node22 in graph2.
+    """
+    node11 = graph1.nodes[node11]
+    node12 = graph1.nodes[node12]
+    node21 = graph2.nodes[node21]
+    node22 = graph2.nodes[node22]
+    return (node11.get('resid') == node12.get('resid')) ==\
+           (node21.get('resid') == node22.get('resid'))
+
+
 def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
     """
     Creates a new :class:`~vermouth.molecule.Molecule` in force field `to_ff`
@@ -190,9 +239,14 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
     all_matches = []
     for resname, mapping in pair_mapping.items():
         # TODO: add PTMs as a matching criterion here.
-        node_match = iso.categorical_node_match(['atomname', 'resname'], ['', ''])
+        # Make sure the atomname and resname match
+        node_match = nx.isomorphism.categorical_node_match(['atomname', 'resname'], ['', ''])
+        # And make sure that we don't accidentally cross a residue boundary,
+        # unless that's allowed by the mapping.
+        edge_match = partial(edge_matcher, molecule, mapping.block_from)
         # We're going to find *every* way block fits on molecule.
-        graphmatcher = iso.GraphMatcher(molecule, mapping.block_from, node_match=node_match)
+        graphmatcher = MappingGraphMatcher(molecule, mapping.block_from,
+                                           node_match=node_match, edge_match=edge_match)
         matches = graphmatcher.subgraph_isomorphisms_iter()
         for match in matches:
             for atom in match:
@@ -210,6 +264,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             # merge_molecule will return a dict mapping the node keys of the
             # added block to the ones in graph_out
             block_to_out = graph_out.merge_molecule(mapping.block_to)
+
         except ValueError as err:
             # This probably means the nrexcl of the block is different from the
             # others. This means the user messed up their data. Or there are
@@ -243,7 +298,6 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                     # No nodes hat the attribute `name`. And
                     # nx.get_ndoe_attributes doesn't take a default.
                     graph_out.nodes[out_idx][name] = None
-
     mol_to_out = dict(mol_to_out)
 
     # We need to add edges between residues. Within residues comes from the
@@ -257,15 +311,17 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             out_idxs = mol_to_out[mol_idx]
             out_jdxs = mol_to_out[mol_jdx]
             for out_idx, out_jdx in product(out_idxs, out_jdxs):
-                graph_out.add_edge(out_idx, out_jdx)
+                if out_idx != out_jdx:
+                    graph_out.add_edge(out_idx, out_jdx)
         shared_atoms = set(match1.keys()) & set(match2.keys())
         shared_out_atoms = [mol_to_out[mol_idx] for mol_idx in shared_atoms]
         for out_atoms in shared_out_atoms:
-            if len(out_atoms) < 1:
+            if len(out_atoms) < 2:
                 raise ValueError("This atom is shared between blocks, but only"
                                  " mapped once?")
             for out_idx, out_jdx in combinations(out_atoms, 2):
-                graph_out.add_edge(out_idx, out_jdx)
+                if out_idx != out_jdx:
+                    graph_out.add_edge(out_idx, out_jdx)
         if shared_atoms:
             print("You have a shared atom between blocks. This may mean you"
                   " have too  particles in your output and/or erroneous bonds.")
