@@ -79,7 +79,11 @@ class GraphMapping:
         self._purge_forbidden(self.block_to)
 
         # Since we merged blocks, there may be edges missing in both (between
-        # the provided blocks). Add from eachother.
+        # the provided blocks). This is bad. We should add that info to the
+        # mapping, somehow.
+
+        # One option is to add from eachother, but this tends to introduce
+        # issues.
         # Example:
         #   from_blocks: a0-b0-c0 a1-b1-c1
         #   to_blocks:   A0-B0 C1-A1 B2-C2
@@ -88,29 +92,29 @@ class GraphMapping:
         # There are edges missing in both from_blocks and to_blocks (c0-a1, and
         # B0-C1 and A1-B2; respectively). There's enough information in the
         # "other" block to create those, so that's what we do.
-        for to_idx, to_jdx in self.block_to.edges():
-            try:
-                self.block_from.add_edges_from(product(self.mapping[to_idx],
-                                                       self.mapping[to_jdx]))
-            except KeyError:
-                # Either to_idx or to_jdx don't actually contribute to the
-                # mapping
-                pass
-            # e.g. for edge B0-C1 this is:
-            # add_edges_from(product([(0, b)], [(0, c)])); which is the same as
-            # add_edges_from(((0, b), (0, c)))
+#        for to_idx, to_jdx in self.block_to.edges():
+#            try:
+#                self.block_from.add_edges_from(product(self.mapping[to_idx],
+#                                                       self.mapping[to_jdx]))
+#            except KeyError:
+#                # Either to_idx or to_jdx don't actually contribute to the
+#                # mapping
+#                pass
+#            # e.g. for edge B0-C1 this is:
+#            # add_edges_from(product([(0, b)], [(0, c)])); which is the same as
+#            # add_edges_from(((0, b), (0, c)))
         # Cache the reverse map for a while. Maybe that means it shouldn't be
         # a property...
-        reverse_map = self.reverse_mapping
-        # This loop does the same as the one above, but in the other direction.
-        for from_idx, from_jdx in self.block_from.edges():
-            try:
-                self.block_to.add_edges_from(product(reverse_map[from_idx],
-                                                     reverse_map[from_jdx]))
-            except KeyError:
-                # Either from_idx or from_jdx don't actually contribute to the
-                # mapping
-                pass
+#        reverse_map = self.reverse_mapping
+#        # This loop does the same as the one above, but in the other direction.
+#        for from_idx, from_jdx in self.block_from.edges():
+#            try:
+#                self.block_to.add_edges_from(product(reverse_map[from_idx],
+#                                                     reverse_map[from_jdx]))
+#            except KeyError:
+#                # Either from_idx or from_jdx don't actually contribute to the
+#                # mapping
+#                pass
 
     @classmethod
     def _merge(cls, blocks):
@@ -235,7 +239,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
     # We want to keep the 'chain' property from the original molecule.
     attribute_keep = ['chain'] + list(attribute_keep)
     pair_mapping = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
-    covered = defaultdict(int)  # Keeps track of how often every node is mapped
+
     all_matches = []
     for resname, mapping in pair_mapping.items():
         # TODO: add PTMs as a matching criterion here.
@@ -249,10 +253,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                                            node_match=node_match, edge_match=edge_match)
         matches = graphmatcher.subgraph_isomorphisms_iter()
         for match in matches:
-            for atom in match:
-                covered[atom] += 1
             all_matches.append((match, resname, mapping))
-    covered = dict(covered)
 
     mol_to_out = defaultdict(list)
     # Sort by lowest node key per residue. We need to do this, since
@@ -264,7 +265,6 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             # merge_molecule will return a dict mapping the node keys of the
             # added block to the ones in graph_out
             block_to_out = graph_out.merge_molecule(mapping.block_to)
-
         except ValueError as err:
             # This probably means the nrexcl of the block is different from the
             # others. This means the user messed up their data. Or there are
@@ -326,8 +326,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             print("You have a shared atom between blocks. This may mean you"
                   " have too  particles in your output and/or erroneous bonds.")
     # TODO: These should be turned into warnings.
-    # print('double covered:', {k: v for k, v in covered.items() if v > 1})
-    # print('uncovered:', set(covered.keys()) - set(molecule.nodes))
+    print('double covered:', {k: len(v) for k, v in mol_to_out.items() if len(v) > 1})
+    print('uncovered:', set(molecule.nodes.keys()) - set(mol_to_out.keys()))
     return graph_out
 
 
