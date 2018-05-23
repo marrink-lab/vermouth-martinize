@@ -282,7 +282,9 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             # Keep track of what bead comes from where
             subgraph = molecule.subgraph(mol_idxs)
             graph_out.nodes[out_idx]['graph'] = subgraph
-
+            weights = {block_to_mol[from_idx]: mapping.weights[to_idx][from_idx]
+                       for from_idx in from_idxs}
+            graph_out.nodes[out_idx]['mapping_weights'] = weights
             # We drop the node keys, since those are not super relevant. We are
             # just interested in values of the node attributes, and whether
             # they're all equal.
@@ -328,6 +330,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
     # TODO: These should be turned into warnings.
     print('double covered:', {k: len(v) for k, v in mol_to_out.items() if len(v) > 1})
     print('uncovered:', set(molecule.nodes.keys()) - set(mol_to_out.keys()))
+    print(len(set(molecule.nodes.keys()) - set(mol_to_out.keys())))
     return graph_out
 
 
@@ -356,6 +359,7 @@ class DoMapping(Processor):
                 if not self.delete_unknown:
                     raise err
                 else:
+                    raise
                     # TODO: raise a loud warning here
                     pass
             else:
