@@ -772,7 +772,7 @@ def read_ff(lines, force_field):
             # We read a line within a section.
             elif section == 'moleculetype':
                 context_type = 'block'
-                context = Block()
+                context = Block(force_field=force_field)
                 name, nrexcl = cleaned.split()
                 context.name = name
                 context.nrexcl = int(nrexcl)

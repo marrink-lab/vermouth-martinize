@@ -305,9 +305,9 @@ class Molecule(nx.Graph):
     def __init__(self, *args, **kwargs):
         self.meta = kwargs.pop('meta', {})
         self._force_field = kwargs.pop('force_field', None)
+        self.nrexcl = kwargs.pop('nrexcl', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
-        self.nrexcl = None
 
     @property
     def force_field(self):
@@ -421,6 +421,8 @@ class Molecule(nx.Graph):
             raise ValueError(
                 'Cannot merge molecules with different force fields.'
             )
+        if self.nrexcl is None and not self:
+            self.nrexcl = molecule.nrexcl
         if self.nrexcl != molecule.nrexcl:
             raise ValueError(
                 'Cannot merge molecules with different nrexcl. '
@@ -430,19 +432,19 @@ class Molecule(nx.Graph):
         if len(self.nodes()):
             # We assume that the last id is always the largest.
             last_node_idx = max(self) 
-            offset = last_node_idx + 1
-            residue_offset = self.nodes[last_node_idx]['resid'] + 1
-            offset_charge_group = self.nodes[last_node_idx].get('charge_group', -1) + 1
+            offset = last_node_idx
+            residue_offset = self.nodes[last_node_idx]['resid']
+            offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
         else:
             offset = 0
-            residue_offset = 1
-            offset_charge_group = 1
+            residue_offset = 0
+            offset_charge_group = 0
         correspondence = {}
-        for idx, node in enumerate(molecule.nodes(), start=offset):
+        for idx, node in enumerate(molecule.nodes(), start=offset + 1):
             correspondence[node] = idx
             new_atom = copy.copy(molecule.nodes[node])
-            new_atom['resid'] = (new_atom.get('resid', 0) + residue_offset)
-            new_atom['charge_group'] = (new_atom.get('charge_group', 0)
+            new_atom['resid'] = (new_atom.get('resid', 1) + residue_offset)
+            new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
             self.add_node(idx, **new_atom)
         for name, interactions in molecule.interactions.items():
@@ -486,7 +488,7 @@ class Molecule(nx.Graph):
                 if self.has_edge(node1, node2)]
 
 
-class Block(nx.Graph):
+class Block(Molecule):
     """
     Residue topology template
 
@@ -653,15 +655,19 @@ class Block(nx.Graph):
                        for dih in self.interactions.get('impropers', [])]
         return tuple(center) in all_centers
 
-    def to_molecule(self, atom_offset=0, resid=1, offset_charge_group=1):
+    def to_molecule(self, atom_offset=0, offset_resid=0, offset_charge_group=0,
+                    force_field=None):
+        if force_field is None:
+            force_field = self.force_field
         name_to_idx = {}
-        mol = Molecule()
-        for idx, atom in enumerate(self.atoms, start=atom_offset):
-            name_to_idx[atom['atomname']] = idx
+        mol = Molecule(force_field=force_field)
+        for idx, node in enumerate(self.nodes, start=atom_offset):
+            name_to_idx[node] = idx
+            atom = self.nodes[node]
             new_atom = copy.copy(atom)
-            new_atom['resid'] = resid
-            new_atom['resname'] = self.name
-            new_atom['charge_group'] = (new_atom.get('charge_group', 0)
+            new_atom['resid'] = (new_atom.get('resid', 1) + offset_resid)
+            new_atom['resname'] = atom.get('resname', self.name)
+            new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
             mol.add_node(idx, **new_atom)
         for name, interactions in self.interactions.items():

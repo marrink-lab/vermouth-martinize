@@ -35,11 +35,11 @@ def add_element_attr(molecule):
             except KeyError:
                 raise ValueError('Cannot guess the element of atom {}: '
                                  'the node has no atom name.'
-                                 .fomat(node_idx))
+                                 .format(node_idx))
             except ValueError:
                 raise ValueError('Cannot guess the element of atom {}: '
                                  'the atom name has no alphabetic charater.'
-                                 .fomat(node_idx))
+                                 .format(node_idx))
             node['element'] = element
 
 

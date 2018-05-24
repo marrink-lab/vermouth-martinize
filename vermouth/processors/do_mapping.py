@@ -33,7 +33,7 @@ import networkx as nx
 
 class GraphMapping:
     # Attributes to be removed from the blocks.
-    forbidden = ['resid', 'charge_group']
+    forbidden = ['charge_group']
 
     # TODO: Add __getitem__, __iter__, __len__, __contains__, keys, values and
     #       items methods to emulate a Mapping?
@@ -50,7 +50,6 @@ class GraphMapping:
         """
         if weights is None:
             weights = {}
-        
         self.block_from = self._merge(blocks_from)
         self.block_to = self._merge(blocks_to)
         self.mapping = defaultdict(set)
@@ -58,6 +57,8 @@ class GraphMapping:
         # Translate atomnames in mapping to node keys.
         for from_, to in mapping.items():
             res_from, name_from = from_
+            # +1 here (and below), because the blockidxs in mapping are start
+            # at 0, while resids start at 1.
             from_idxs = list(self.block_from.find_atoms(atomname=name_from, resid=res_from+1))
             for res_to, name_to in to:
                 to_idxs = self.block_to.find_atoms(atomname=name_to, resid=res_to+1)
@@ -235,11 +236,10 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
         A new molecule, created by transforming `molecule` to `to_ff` according
         to `mappings`.
     """
-    graph_out = Molecule(forcefield=to_ff)
+    graph_out = Molecule(force_field=to_ff)
     # We want to keep the 'chain' property from the original molecule.
     attribute_keep = ['chain'] + list(attribute_keep)
     pair_mapping = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
-
     all_matches = []
     for resname, mapping in pair_mapping.items():
         # TODO: add PTMs as a matching criterion here.
@@ -254,7 +254,6 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
         matches = graphmatcher.subgraph_isomorphisms_iter()
         for match in matches:
             all_matches.append((match, resname, mapping))
-
     mol_to_out = defaultdict(list)
     # Sort by lowest node key per residue. We need to do this, since
     # merge_molecule creates new resid's in order.
@@ -301,7 +300,6 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                     # nx.get_ndoe_attributes doesn't take a default.
                     graph_out.nodes[out_idx][name] = None
     mol_to_out = dict(mol_to_out)
-
     # We need to add edges between residues. Within residues comes from the
     # blocks.
     # TODO: backmapping needs some magic here.
