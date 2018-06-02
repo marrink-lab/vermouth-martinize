@@ -332,7 +332,7 @@ def _get_order_and_prefix_from_attributes(attributes):
                 prefix_char = '+'
             else:
                 prefix_char = '-'
-            prefix_from_attributes = prefix_char * int(math.fabs(order))
+            prefix_from_attributes = prefix_char * int(abs(order))
         elif (isinstance(order, Sequence)  # We can do the following operations
               and len(set(order)) == 1     # It is homogeneous
               and order[0] in '><*'):      # The character is an expected one
@@ -346,18 +346,22 @@ def _get_order_and_prefix_from_attributes(attributes):
 
 
 def _get_order_and_prefix_from_prefix(prefix):
+    """
+    Convert a prefix into a numerical value.
+    """
     prefix_from_prefix = None
     order_from_prefix = 0
-    if prefix:
-        # It is already validated.
-        prefix_from_prefix = prefix
-        if prefix[0] == '+':
-            order_from_prefix = len(prefix)
-        elif prefix[0] == '-':
-            order_from_prefix = -len(prefix)
-        else:
-            order_from_prefix = prefix
+    if not prefix:
+        return prefix_from_prefix, order_from_prefix
 
+    # It is already validated.
+    prefix_from_prefix = prefix
+    if prefix[0] == '+':
+        order_from_prefix = len(prefix)
+    elif prefix[0] == '-':
+        order_from_prefix = -len(prefix)
+    else:
+        order_from_prefix = prefix
     return prefix_from_prefix, order_from_prefix
 
 

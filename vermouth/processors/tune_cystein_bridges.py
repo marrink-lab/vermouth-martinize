@@ -26,6 +26,16 @@ from .processor import Processor
 UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG'}
 
 
+def _edge_is_between_selections(edge, selection_a, selection_b):
+    """
+    Returs ``True`` is the edge has one end in each selection.
+    """
+    return (
+        (edge[0] in selection_a and edge[1] in selection_b)
+        or (edge[1] in selection_a and edge[0] in selection_b)
+    )
+
+
 def prune_edges_between_selections(molecule, selection_a, selection_b):
     """
     Remove edges which have their ends part of given selections.
@@ -51,8 +61,7 @@ def prune_edges_between_selections(molecule, selection_a, selection_b):
     # iterate.
     to_prune = [
         edge for edge in molecule.edges
-        if ((edge[0] in selection_a and edge[1] in selection_b)
-                or (edge[1] in selection_a and edge[0] in selection_b))
+        if _edge_is_between_selections(edge, selection_a, selection_b)
     ]
     molecule.remove_edges_from(to_prune)
 
@@ -122,10 +131,10 @@ def add_edges_at_distance(molecule, threshold,
 
     Create edges within a molecule between nodes that have an end part of
     'selection_a', the other end part of 'selection_b', and a distance between
-    the ends that is letter than the given threshold.
+    the ends that is lesser than the given threshold.
 
     All nodes that are part of 'selection_a' or 'selection_b' must have a
-    position store under the attribute which key is given with the 'attribute'
+    position stored under the attribute which key is given with the 'attribute'
     argument. That key is 'position' by default. If at least one node is
     missing a :exc:`KeyError` is raised.
 
@@ -149,18 +158,14 @@ def add_edges_at_distance(molecule, threshold,
     """
     selection_a = set(selection_a)
     selection_b = set(selection_b)
-    coordinates_a = np.stack([
-        node[attribute]
-        for key, node in molecule.nodes.items()
-        if key in selection_a
-    ])
-    coordinates_b = np.stack([
-        node[attribute]
-        for key, node in molecule.nodes.items()
-        if key in selection_b
-    ])
     keys_a = np.array([key for key in molecule.nodes.keys() if key in selection_a])
     keys_b = np.array([key for key in molecule.nodes.keys() if key in selection_b])
+    coordinates_a = np.stack([
+        molecule.nodes[key][attribute] for key in keys_a
+    ])
+    coordinates_b = np.stack([
+        molecule.nodes[key][attribute] for key in keys_b
+    ])
 
     distance_matrix = geometry.distance_matrix(coordinates_a, coordinates_b)
     index_a, index_b = np.where(distance_matrix < threshold)
@@ -193,7 +198,7 @@ def add_inter_molecule_edges(molecules, edges):
     molecules: list
         List of molecules to link.
     edges: list
-        List of edges in a ``(molecule_incex, node_key)`` format as described
+        List of edges in a ``(molecule_index, node_key)`` format as described
         above.
 
     Returns
@@ -221,14 +226,12 @@ def add_inter_molecule_edges(molecules, edges):
         new_molecules.append(base_molecule)
         for key in base_molecule:
             correspondance[(base_index, key)] = (new_index, key)
-        offset = max(base_molecule.nodes)
 
         for other_index in component[1:]:
             other_molecule = molecules[other_index]
             mol_correspondance = base_molecule.merge_molecule(other_molecule)
             for before, after in mol_correspondance.items():
                 correspondance[(other_index, before)] = (new_index, after)
-            offset = max(base_molecule.nodes)
 
     # Create the edges
     for edge in edges:
@@ -315,8 +318,32 @@ def select_nodes_multi(molecules, selector):
 def add_cystein_bridge_threshold(molecules, threshold,
                                  template=UNIVERSAL_BRIDGE_TEMPLATE,
                                  attribute='position'):
-    selector = functools.partial(attributes_match, template=template)
-    selection = select_nodes_multi(molecules, selector)
+    """
+    Add edges corresponding to cystein bridges based on a distance threshold.
+
+    Edges are added within and between the molecules and connect nodes that
+    match the given template. Molecules that get connected by an edge are
+    merged and the new list f molecules is retureturned.
+
+    Parameters
+    ----------
+    molecule: list
+        A list of molecules.
+    threshold: float
+        The distance threshold in nanometers under which an edge is created.
+    template: dict (optional)
+        A template that selected atom must match.
+    attribute: str (optional)
+        Name of the key in the node dictionaries under which the coordinates
+        are stored.
+
+    Returns
+    -------
+    list
+        A new list of molecules.
+    """
+    selector = functools.partial(attributes_match, template_attributes=template)
+    selection = list(select_nodes_multi(molecules, selector))
     edges = pairs_under_threshold(molecules, threshold, selection, attribute)
     new_molecules = add_inter_molecule_edges(molecules, edges)
     return new_molecules
@@ -338,7 +365,7 @@ class AddCysteinBridgesThreshold(Processor):
         self.template = UNIVERSAL_BRIDGE_TEMPLATE
         self.attribute = attribute
 
-    def run_system(system):
+    def run_system(self, system):
         system.molecules = add_cystein_bridge_threshold(
             system.molecules, self.threshold,
             template=self.template,

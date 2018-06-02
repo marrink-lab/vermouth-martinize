@@ -138,7 +138,7 @@ def _match_order(order1, resid1, order2, resid2):
     The comparison matrix can be sumerized as follow, with 0 being the
     reference residue, n being an integer. In the matrix, a ? means that the
     result depends on the comparison of the actual numbers, a ! means that the
-    comparison should ne be considere, and / means that the resids must be
+    comparison should not be considered, and / means that the resids must be
     different. The rows correspond to the order at the left of the comparison
     (order1 argument), while the columns correspond to the order at the right
     of it (order2 argument).
@@ -187,7 +187,7 @@ def _match_order(order1, resid1, order2, resid2):
     # Validate the order arguments, and format it for what comes next.
     orders = []
     order_types = []
-    for i, order in enumerate((order1, order2), start=1):
+    for order in (order1, order2):
         order_type, order_value = _interpret_order(order)
         order_types.append(order_type)
         orders.append(order_value)

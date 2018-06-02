@@ -178,7 +178,7 @@ def test_match_order(orders, resids, answer):
 ))
 def test_order_errors(order):
     with pytest.raises(ValueError):
-        _, _ = do_links._interpret_order(order)
+        do_links._interpret_order(order)
 
 
 @pytest.mark.parametrize("order, ref_order_type, ref_order_value", (
