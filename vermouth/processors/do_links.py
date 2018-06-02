@@ -113,7 +113,7 @@ def _interpret_order(order):
     return order_type, order_value
 
 
-def _match_order(order1, resid1, order2, resid2):
+def match_order(order1, resid1, order2, resid2):
     """
     Check if two residues match the order constraints.
 
@@ -256,7 +256,7 @@ def match_link(molecule, link):
             for ((order1, resid1), (order2, resid2)) in combinations(order_match.items(), 2):
                 # Assert the differences between resids correspond to what
                 # the orders require.
-                if not _match_order(order1, resid1, order2, resid2):
+                if not match_order(order1, resid1, order2, resid2):
                     break
             else:  # No break
                 # raw_match is molecule -> link. The other way around is more

@@ -168,7 +168,7 @@ from vermouth.processors import do_links
 def test_match_order(orders, resids, answer):
     order1, order2 = orders
     resid1, resid2 = resids
-    match = do_links._match_order(order1, resid1, order2, resid2)
+    match = do_links.match_order(order1, resid1, order2, resid2)
     assert match == answer
 
 
