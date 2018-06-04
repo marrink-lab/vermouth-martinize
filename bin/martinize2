@@ -158,6 +158,43 @@ def write_gmx_topology(system, top_path, deduplicate=True):
         )
 
 
+def _cys_argument(value):
+    """
+    Convert and validate the value of the cys option for argparse.
+
+    Parameters
+    ----------
+    value: str
+        The value given to the command line.
+
+    Return
+    ------
+    str or float
+        A value understood by the main function. This value can be either
+        'auto' to detect cystein bridges automatically based on a default
+        distance, 'none' to not have cystein bridges, or a float value to set
+        cystein bridges based on a distance threshold.
+
+    Raises
+    ------
+    argparse.ArgumentError
+        Raised when the value cannot be converted.
+    """
+    try:
+        result = float(value)
+    except ValueError:
+        lowered = value.lower()
+        if lowered in ('auto', 'none'):
+            return lowered
+        raise argparse.ArgumentError(
+            argument='-cys',
+            message=('The value of the "cys" option must be "auto", "none", '
+                     'or a distance in nanometers.'),
+        )
+    else:
+        return result
+
+
 def entry():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -227,6 +264,9 @@ def entry():
     prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,
                             help='Set neutral termini (charged is default)')
+    prot_group.add_argument('-cys', dest='cystein_bridge',
+                            type=_cys_argument,
+                            default='none', help='Cystein bonds')
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -291,6 +331,11 @@ def entry():
                         'parameters for neutral termini (-nt).'
                         .format(target_ff.name))
     vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
+
+    if args.cystein_bridge == 'none':
+        vermouth.RemoveCysteinBridgeEdges().run_system(system)
+    elif args.cystein_bridge != 'auto':
+        vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
     # Run martinize on the system.
     system = martinize(

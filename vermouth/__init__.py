@@ -34,5 +34,11 @@ import pbr.version
 __version__ = pbr.version.VersionInfo('vermouth').release_string()
 del pbr
 
+try:
+    from scipy.spatial import cKDTree as KDTree
+except ImportError:
+    print('Using redistributed KDTree')
+    from .redistributed.kdtree import KDTree
+
 from .processors import *
 from .system import System

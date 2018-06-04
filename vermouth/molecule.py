@@ -410,6 +410,11 @@ class Molecule(nx.Graph):
 
         Atom and residue index of the new atoms are offset to follow the last
         atom of this molecule.
+
+        Parameters
+        ----------
+        molecule: Molecule
+            The molecule to merge at the end.
         """
         if self.force_field != molecule.force_field:
             raise ValueError(
@@ -448,6 +453,8 @@ class Molecule(nx.Graph):
 
         for edge in molecule.edges:
             self.add_edge(*(correspondence[node] for node in edge))
+        
+        return correspondence
 
     def share_moltype_with(self, other):
         # TODO: Test the node attributes, the molecule attributes, and

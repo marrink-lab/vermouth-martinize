@@ -831,6 +831,15 @@ BB ++BB 1 0.640 2500
 +BB +++BB 1 0.640 2500
 BB +++BB 1 0.970 2500
 
+;; Cystein bridge
+[ link ]
+resname "CYS"
+[ constraints ]
+SC1 >SC1 0.24 {"comment": "Disulfide bridge"}
+;[ features ]
+;disulfide
+
+
 ;; Protein terminii. These links should be applied last.
 [ link ]
 [ molmeta ]
@@ -851,4 +860,3 @@ neutral_termini
 BB {"replace": {"atype": "Qa", "charge": -1}}
 [ non-edges ]
 BB +BB
-

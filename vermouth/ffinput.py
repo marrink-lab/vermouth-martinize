@@ -23,7 +23,9 @@ is done in the same way an ITP file describes a molecule.
 """
 
 import collections
+import copy
 import math
+import numbers
 import json
 from .molecule import (
     Block, Link,
@@ -286,53 +288,176 @@ def _treat_block_interaction_atoms(atoms, context, section):
                 raise IOError(msg.format(reference, section, block.name))
 
 
-def _treat_atom_prefix(reference, attributes):
-    # If the atom name is prefixed, we can get the order.
-    for prefix_end, char in enumerate(reference):
-        if char not in '+-':
-            break
-    prefix = reference[:prefix_end]
-    if len(set(prefix)) > 1:
-        msg = ('Atom name prefix cannot mix + and -. Atom name "{}" '
-               'is not a valid name in section "{}" of a link.')
-        raise IOError(msg.format(reference, section))
-    
-    factors = {'+': +1, '-': -1}
-    # If there is no prefix, then `prefix[0]` does not exist. There
-    # should, however, always be a `reference[0]` that will be the
-    # same as `prefix[0]` is there is a prefix, and not an existing
-    # key in `factors` if there is none. So order is 0 * 0 if there
-    # is no prefix, which is what we expect.
-    order_prefix = factors.get(reference[0], 0) * len(prefix)
+def _split_node_key(key):
+    """
+    Split a node key into a prefix and a base and validate the key validity.
+    """
+    if not key:
+        raise IOError('A node key cannot be empty.')
 
-    try:
-        order_attribute = attributes.get('order', 0)
-    except AttributeError as e:
-        raise e
-    # If the order read from the prefix is 0, then it may just be that
-    # the order was not specified by prefix, but only by atom attribute.
-    # If the order is not defined in the attributes, it is assumed to
-    # be as set by the prefix.
-    # If the order is defined in both places, it has to match.
-    if (order_prefix and 'order' in attributes) and order_prefix != order_attribute:
-        msg = ('The sequence order for atom "{}" in section "{}" of a '
+    # If the atom name is prefixed, we can get the order.
+    for prefix_end, char in enumerate(key):
+        if char not in '+-><*':
+            break
+    else:  # no break
+        # This branch could also be taken if 'key' was empty. However, we
+        # tested already that it was not the case.
+        msg = ('The atom key "{}" is not valid. There must be a name '
+               'following prefix.')
+        raise IOError(msg.format(key))
+
+    prefix = key[:prefix_end]
+    if len(set(prefix)) > 1:
+        msg = ('Atom name prefix cannot mix characters. Atom name "{}" '
+               'is not a valid key.')
+        raise IOError(msg.format(key))
+
+    base = key[prefix_end:]
+
+    return prefix, base
+
+
+def _get_order_and_prefix_from_attributes(attributes):
+    prefix_from_attributes = ''
+    order_from_attributes = None
+    Sequence = collections.Sequence
+    if attributes.get('order') is not None:
+        order = attributes['order']
+        order_from_attributes = order
+        if isinstance(order, numbers.Integral) and not isinstance(order, bool):
+            # Boolean as abstract subclasses of number.Integral as they can be
+            # considered as 0 and 1. Yet, they yield unexpected results and
+            # should not be accepted as valid values for 'order'.
+            if order > 0:
+                prefix_char = '+'
+            else:
+                prefix_char = '-'
+            prefix_from_attributes = prefix_char * int(abs(order))
+        elif (isinstance(order, Sequence)  # We can do the following operations
+              and len(set(order)) == 1     # It is homogeneous
+              and order[0] in '><*'):      # The character is an expected one
+            prefix_from_attributes = order
+        else:
+            raise IOError('The order given in attribute ("{}") is not valid. '
+                          'It must be am integer or a homogeneous series '
+                          'of ">", "<", or "*".'
+                          .format(order))
+    return prefix_from_attributes, order_from_attributes
+
+
+def _get_order_and_prefix_from_prefix(prefix):
+    """
+    Convert a prefix into a numerical value.
+    """
+    prefix_from_prefix = None
+    order_from_prefix = 0
+    if not prefix:
+        return prefix_from_prefix, order_from_prefix
+
+    # It is already validated.
+    prefix_from_prefix = prefix
+    if prefix[0] == '+':
+        order_from_prefix = len(prefix)
+    elif prefix[0] == '-':
+        order_from_prefix = -len(prefix)
+    else:
+        order_from_prefix = prefix
+    return prefix_from_prefix, order_from_prefix
+
+
+def _treat_atom_prefix(reference, attributes):
+    """
+    Connect graph keys, order, and atom names.
+
+    In a link, the graph keys, the order attribute of the atoms, and the atom
+    names are interconnected. In most cases, the graph key is the atom name
+    prefixed in a way that represent the order attribute. It is possible to
+    define the order and the atom name from the graph key, or to set the graph
+    key to represent the order, depending on what is explicitly specified in
+    the file.
+
+    In a link node, the order can be an integer, a series of '>' (*e.g.* '>',
+    '>>', '>>>', ...), a series of '<', or a series of '*'. The series of '>',
+    '<', and '*' translate directly from the key prefix to the order attribute,
+    and *vice versa*. Numerical values of the order attribute, however, are
+    converted into series of '+' or '-' for the key prefix; there, the number
+    of '+' or '-' in the prefix corresponds to the value of the order
+    attribute.
+
+    The order can be specified either by the key prefix, or by the attribute.
+    If it is specified in the two places, then they have to match each other or
+    a :exc:`IOError` is raised.
+
+    If the atom name is explicitly specified, then it is not modified. If it is
+    not specified, then it is set from the node key. The base of the node key
+    (*i.e.* what follows the prefix) is not modified, but a prefix can be added
+    if there is none. The base of the node key and the atom name *can* differ.
+    The atom name is what will be use for the graph isomorphism. The base of
+    the key cannot be empty (*i.e.* '+++' or '*' are not valid keys); if it is,
+    then an :exc:`IOError` is raised.
+
+    Parameters
+    ----------
+    reference: str
+        A node key for a link, as written in the file.
+    attributes: dict
+        The node attributes read fro the file.
+
+    Returns
+    -------
+    prefixed_reference: str
+        The node key with the appropriate prefix.
+    attributes: dict
+        A shalow copy of the node attribute dictionary with the 'order' and the
+        'atomname' attributes set as appropriate.
+
+    Raises
+    ------
+    IOError
+        The node key, or an attribute value is invalid.
+
+    Examples
+    --------
+
+    >>> _treat_atom_prefix('+BB', {})
+    ('+BB', {'order': 1, 'atomname': 'BB'})
+    >>> _treat_atom_prefix('BB', {'order': 1})
+    ('+BB', {'order': 1, 'atomname': 'BB'})
+    >>> _treat_atom_prefix('--XX', {'atomname': 'BB'})
+    ('+BB', {'order': -2, 'atomname': 'BB'})
+    >>> _treat_atom_prefix('>>BB', {})
+    ('>>BB', {'order': '>>', 'atomname': 'BB'})
+
+    """
+    prefix, base = _split_node_key(reference)
+
+    # Is the order specified in the attributes?
+    (prefix_from_attributes,
+     order_from_attributes) = _get_order_and_prefix_from_attributes(attributes)
+    # Is there a specified prefix?
+    (prefix_from_prefix,
+     order_from_prefix) = _get_order_and_prefix_from_prefix(prefix)
+
+    # If the order is defined twice, is it consistent?
+    if (order_from_attributes is not None
+            and prefix_from_prefix is not None
+            and order_from_attributes != order_from_prefix):
+        msg = ('The sequence order for atom "{}" of a '
                'link is not consistent between the name prefix '
                '(order={}) and the atom attributes (order={}).')
-        raise IOError(msg.format(reference, section,
-                                 order_prefix, order_attribute))
-    if 'order' not in attributes:
-        order_attribute = order_prefix
-        attributes['order'] = order_attribute
+        raise IOError(msg.format(reference, order_from_prefix, order_from_attributes))
 
-    # When possible, we favor the prefixed name for references to nodes
-    prefix_symbol = '+'
-    if order_attribute < 0:
-        prefix_symbol = '-'
-    atom_name = reference[prefix_end:]
-    attributes['atomname'] = attributes.get('atomname', atom_name)
-    prefixed_reference = prefix_symbol * int(math.fabs(order_attribute)) + atom_name
+    return_attributes = copy.copy(attributes)
+    if order_from_attributes is None:
+        return_attributes['order'] = order_from_prefix
+    if 'atomname' not in return_attributes:
+        return_attributes['atomname'] = base
+    if prefix_from_prefix is None:
+        prefixed = prefix_from_attributes + base
+    else:
+        prefixed = reference
 
-    return prefixed_reference, atom_name, attributes
+    return prefixed, return_attributes
 
 
 def _treat_link_interaction_atoms(atoms, context, section):
@@ -342,7 +467,7 @@ def _treat_link_interaction_atoms(atoms, context, section):
             intermediate.update(attributes)
             attributes = intermediate
 
-        prefixed_reference, atom_name, attributes = _treat_atom_prefix(reference, attributes)
+        prefixed_reference, attributes = _treat_atom_prefix(reference, attributes)
 
         if prefixed_reference in context:
             context_atom = context.nodes[prefixed_reference]
@@ -490,7 +615,7 @@ def _parse_link_atom(tokens, context, defaults=None, treat_prefix=True):
         defaults = {}
     attributes = _parse_atom_attributes(tokens[1])
     if treat_prefix:
-        prefixed_reference, _, attributes = _treat_atom_prefix(reference, attributes)
+        prefixed_reference, attributes = _treat_atom_prefix(reference, attributes)
     else:
         prefixed_reference = reference
         attributes['atomname'] = reference
@@ -561,7 +686,7 @@ def _parse_edges(tokens, context, context_type, negate):
     atoms = _get_atoms(tokens, natoms=2)
     prefixed_atoms = []
     for atom in atoms:
-        prefixed_reference, _, attributes = _treat_atom_prefix(*atom)
+        prefixed_reference, attributes = _treat_atom_prefix(*atom)
         try:
             apply_to_all_nodes = context._apply_to_all_nodes
         except AttributeError:

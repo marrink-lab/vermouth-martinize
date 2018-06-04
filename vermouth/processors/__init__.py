@@ -36,3 +36,7 @@ from .apply_rubber_band import ApplyRubberBand
 from .merge_chains import MergeChains
 from .canonicalize_modifications import CanonicalizeModifications
 from .rename_modified_residues import RenameModifiedResidues
+from .tune_cystein_bridges import (
+    RemoveCysteinBridgeEdges,
+    AddCysteinBridgesThreshold,
+)
