@@ -391,11 +391,11 @@ TRP                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
 1   $prot_default_bb_type       1     TRP     BB     1    0
-2   TC4      1     TRP     SC1    2    0    0   36
-3   TNd2     1     TRP     SC2    3    0    0   36
-4   TC4      1     TRP     SC3    4    0    0    0
-5   TC4      1     TRP     SC4    5    0    0   36
-6   TC4      1     TRP     SC5    6    0    0   36
+2   TC4      1     TRP     SC1    2    0       36
+3   TNd2     1     TRP     SC2    3    0       36
+4   TC4      1     TRP     SC3    4    0        0
+5   TC4      1     TRP     SC4    5    0       36
+6   TC4      1     TRP     SC5    6    0       36
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -435,7 +435,7 @@ BB +BB 1 0.350 1250 {"group": "Backbone bonds"}
 resname $protein_resnames
 [ dihedrals ]
 #meta {"group": "SC-BB-BB-SC scFix"}
-SC1 BB +BB +SC1 1 dihleft(SC1,BB,+BB,+SC1|.0f) 75 1
+SC1 BB +BB +SC1 1 dihphase(SC1,BB,+BB,+SC1|.0f) 75 1
 
 [ link ]
 resname $protein_resnames
