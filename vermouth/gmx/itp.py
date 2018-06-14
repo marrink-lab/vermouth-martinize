@@ -166,11 +166,12 @@ def write_molecule_itp(molecule, outfile):
                 parameters = ' '.join(str(x) for x in interaction.parameters)
                 comment = ''
                 if 'comment' in interaction.meta:
-                    comment = '; ' + interaction.meta['comment']
+                    comment = ' ; ' + interaction.meta['comment']
                 if name == 'virtual_sitesn':
-                    outfile.write(' '.join((atoms[0], *parameters, *atoms[1:])) + '\n')
+                    to_join = [atoms[0], parameters] + atoms[1:]
                 else:
-                    outfile.write(' '.join((*atoms, parameters, comment)) + '\n')
+                    to_join = atoms + [parameters]
+                outfile.write(' '.join(to_join) + comment + '\n')
             if conditional:
                 outfile.write('#endif\n')
             outfile.write('\n')
