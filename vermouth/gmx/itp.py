@@ -159,15 +159,19 @@ def write_molecule_itp(molecule, outfile):
             if group:
                 outfile.write('; {}\n'.format(group))
             for interaction in interactions_in_group:
-                atoms = ' '.join('{atom_idx:>{max_length[idx]}}'
-                                 .format(atom_idx=correspondence[x],
-                                         max_length=max_length)
-                                 for x in interaction.atoms)
+                atoms = ['{atom_idx:>{max_length[idx]}}'
+                         .format(atom_idx=correspondence[x],
+                                 max_length=max_length)
+                         for x in interaction.atoms]
                 parameters = ' '.join(str(x) for x in interaction.parameters)
                 comment = ''
                 if 'comment' in interaction.meta:
-                    comment = '; ' + interaction.meta['comment']
-                outfile.write(' '.join((atoms, parameters, comment)) + '\n')
+                    comment = ' ; ' + interaction.meta['comment']
+                if name == 'virtual_sitesn':
+                    to_join = [atoms[0], parameters] + atoms[1:]
+                else:
+                    to_join = atoms + [parameters]
+                outfile.write(' '.join(to_join) + comment + '\n')
             if conditional:
                 outfile.write('#endif\n')
             outfile.write('\n')
