@@ -20,22 +20,20 @@ Created on Tue Oct 10 11:11:54 2017
 @author: peterkroon
 """
 
-from ..gmx import read_rtp
 from ..molecule import Molecule
 from .processor import Processor
-from ..graph_utils import make_residue_graph
+from ..utils import are_all_equal
 
 from collections import defaultdict
-from itertools import product
-import os
+from functools import partial
+from itertools import product, combinations
 
-import networkx.algorithms.isomorphism as iso
-import numpy as np
+import networkx as nx
 
 
 class GraphMapping:
     # Attributes to be removed from the blocks.
-    forbidden = ['resid']
+    forbidden = ['charge_group']
 
     # TODO: Add __getitem__, __iter__, __len__, __contains__, keys, values and
     #       items methods to emulate a Mapping?
@@ -43,11 +41,6 @@ class GraphMapping:
     # TODO: Different methods of initializing the mapping? It might be nice to
     #       also provide the option to provide two molecules (instead) of lists
     #       of blocks and a mapping of {node_idx: [node_idx, ...], ...}
-
-    # TODO: renumber output residues. Needs information about the entire system
-    #       or we need to at least the garantee we run it all in order. Which we
-    #       can't unless we do run_system instead of run_molecule. We should
-    #       maybe also move this class to a different file, but we'll see.
     def __init__(self, blocks_from, blocks_to, mapping, weights=None, extra=()):
         """
         blocks_from and blocks_to are sequences of Blocks.
@@ -59,15 +52,16 @@ class GraphMapping:
             weights = {}
         self.block_from = self._merge(blocks_from)
         self.block_to = self._merge(blocks_to)
-
         self.mapping = defaultdict(set)
         self.weights = defaultdict(dict)
         # Translate atomnames in mapping to node keys.
         for from_, to in mapping.items():
             res_from, name_from = from_
-            from_idxs = list(self.block_from.find_atoms(atomname=name_from, resid=res_from))
+            # +1 here (and below), because the blockidxs in mapping are start
+            # at 0, while resids start at 1.
+            from_idxs = list(self.block_from.find_atoms(atomname=name_from, resid=res_from+1))
             for res_to, name_to in to:
-                to_idxs = self.block_to.find_atoms(atomname=name_to, resid=res_to)
+                to_idxs = self.block_to.find_atoms(atomname=name_to, resid=res_to+1)
                 for to_idx in to_idxs:
                     self.mapping[to_idx].update(from_idxs)
                     if from_idxs:
@@ -86,32 +80,46 @@ class GraphMapping:
         self._purge_forbidden(self.block_to)
 
         # Since we merged blocks, there may be edges missing in both (between
-        # the provided blocks). Add from eachother.
-        # Example: 
+        # the provided blocks). This is bad. We should add that info to the
+        # mapping, somehow.
+
+        # One option is to add from eachother, but this tends to introduce
+        # issues.
+        # Example:
         #   from_blocks: a0-b0-c0 a1-b1-c1
         #   to_blocks:   A0-B0 C1-A1 B2-C2
         #   Mapping: {(0, A): [(0, a)], (0, B): [(0, b)], (1, C): [(0, c)],
         #             (1, A): [(1, a)], (2, B): [(1, b)], (2, C): [(1, c)]}
-        # There are edges missing in both from_blocks and to_blocks (c0-A1, and
+        # There are edges missing in both from_blocks and to_blocks (c0-a1, and
         # B0-C1 and A1-B2; respectively). There's enough information in the
-        # "other" block to create those, so that's what we do.        
-        #for to_idx, to_jdx in self.block_to.edges():
-        #    self.block_from.add_edges_from(product(self.mapping[to_idx],
-        #                                           self.mapping[to_jdx]))
-            # e.g. for edge B0-C1 this is:
-            # add_edges_from(product([(0, b)], [(0, c)])); which is the same as
-            # add_edges_from(((0, b), (0, c)))
+        # "other" block to create those, so that's what we do.
+#        for to_idx, to_jdx in self.block_to.edges():
+#            try:
+#                self.block_from.add_edges_from(product(self.mapping[to_idx],
+#                                                       self.mapping[to_jdx]))
+#            except KeyError:
+#                # Either to_idx or to_jdx don't actually contribute to the
+#                # mapping
+#                pass
+#            # e.g. for edge B0-C1 this is:
+#            # add_edges_from(product([(0, b)], [(0, c)])); which is the same as
+#            # add_edges_from(((0, b), (0, c)))
         # Cache the reverse map for a while. Maybe that means it shouldn't be
         # a property...
-        #reverse_map = self.reverse_mapping
-        # This loop does the same as the one above, but in the other direction.
-        #for from_idx, from_jdx in self.block_from.edges():
-        #    self.block_to.add_edges_from(product(reverse_map[from_idx],
-        #                                         reverse_map[from_jdx]))
+#        reverse_map = self.reverse_mapping
+#        # This loop does the same as the one above, but in the other direction.
+#        for from_idx, from_jdx in self.block_from.edges():
+#            try:
+#                self.block_to.add_edges_from(product(reverse_map[from_idx],
+#                                                     reverse_map[from_jdx]))
+#            except KeyError:
+#                # Either from_idx or from_jdx don't actually contribute to the
+#                # mapping
+#                pass
 
     @classmethod
     def _merge(cls, blocks):
-        out = blocks[0].to_molecule(resid=0)
+        out = blocks[0].to_molecule()
         for block in blocks[1:]:
             out.merge_molecule(block)
         return out
@@ -150,108 +158,177 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     return graph_mapping_collection
 
 
+class MappingGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
+    def __init__(self, *args, edge_match=None, node_match=None, **kwargs):
+        self.edge_match = edge_match
+        self.node_match = node_match
+        super().__init__(*args, **kwargs)
+
+    def semantic_feasibility(self, G1_node, G2_node):
+        """
+        Returns True if mapping G1_node to G2_node is semantically feasible.
+        Adapted from networkx.algorithms.isomorphism.vf2userfunc._semantic_feasibility.
+        """
+        # Make sure the nodes match
+        if self.node_match is not None:
+            nm = self.node_match(self.G1.nodes[G1_node], self.G2.nodes[G2_node])
+            if not nm:
+                return False
+
+        # Make sure the edges match
+        if self.edge_match is not None:
+
+            # Cached lookups
+            core_1 = self.core_1
+            edge_match = self.edge_match
+
+            for neighbor in self.G1.adj[G1_node]:
+                # G1_node is not in core_1, so we must handle R_self separately
+                if neighbor == G1_node:
+                    if not edge_match(G1_node, G1_node, G2_node, G2_node):
+                        return False
+                elif neighbor in core_1:
+                    if not edge_match(G1_node, neighbor, G2_node, core_1[neighbor]):
+                        return False
+            # syntactic check has already verified that neighbors are symmetric
+        return True
+
+
+def edge_matcher(graph1, graph2, node11, node12, node21, node22):
+    """
+    Checks whether the resids for node11 and node12 in graph1 are the same, and
+    whether that's also true for node21 and node22 in graph2.
+    """
+    node11 = graph1.nodes[node11]
+    node12 = graph1.nodes[node12]
+    node21 = graph2.nodes[node21]
+    node22 = graph2.nodes[node22]
+    return (node11.get('resid') == node12.get('resid')) ==\
+           (node21.get('resid') == node22.get('resid'))
+
+
 def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
-    # We always keep the chain, the resid, and the resname from the original
-    # molecule.
-    attribute_keep = ['chain', 'resname', 'resid'] + list(attribute_keep)
+    """
+    Creates a new :class:`~vermouth.molecule.Molecule` in force field `to_ff`
+    from `molecule`, based on `mappings`. It does this by doing a subgraph
+    isomorphism of all blocks in `mappings` and `molecule`. Will issue warnings
+    if there's atoms not contibuting to the new molecule, or if there's
+    overlapping blocks.
+    Node attributes in the new molecule will come from the blocks constructing
+    it, except for those in `attribute_keep`, which lists the attributes that
+    will be kept from `molecule`.
+
+    Parameters
+    ----------
+    molecule: :class:`~vermouth.molecule.Molecule`
+        The molecule to transform.
+    mappings: {ff_name: {ff_name: {block_name: (mapping, weights, extra)}}}
+        A collection of mappings, as returned by e.g.
+        :func:`~vermouth.map_input.read_mapping_directory`.
+    to_ff: :class:`~vermouth.forcefield.ForceField`
+        The force field to transform to.
+    attribute_keep: :class:`~collections.abc.Iterable`
+        The attributes to keep from `molecule`
+
+    Returns
+    -------
+    :class:`~vermouth.molecule.Molecule`
+        A new molecule, created by transforming `molecule` to `to_ff` according
+        to `mappings`.
+    """
+    graph_out = Molecule(force_field=to_ff)
+    # We want to keep the 'chain' property from the original molecule.
+    attribute_keep = ['chain'] + list(attribute_keep)
     pair_mapping = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
-
-    residue_graph = make_residue_graph(molecule)
-    graph_out = Molecule()
-    bead_idx = 0
-    residx_to_beads = defaultdict(set)
-
-    for res_node_idx in residue_graph:
-        residue = residue_graph.nodes[res_node_idx]
-        graph = residue['graph']
-        mapping = pair_mapping[residue['resname']]
-
-        # Atomnames must match
-        node_match = iso.categorical_node_match('atomname', '')
-        graphmatcher = iso.GraphMatcher(mapping.block_from, graph, node_match=node_match)
-
-        matches = list(graphmatcher.isomorphisms_iter())
-        if len(matches) != 1:
-            msg = ('Not one match ({}) for residue {}:{}.'
-                   .format(len(matches), residue['resname'], res_node_idx))
-            raise KeyError(msg)
-
-        # XXX Jonathan beware!
-        match = matches[0]
-        rev_match = {v: k for k, v in match.items()}  # TODO remove me. See above.
-
-        mapped_match = {}
+    all_matches = []
+    for resname, mapping in pair_mapping.items():
+        # TODO: add PTMs as a matching criterion here.
+        # Make sure the atomname and resname match
+        node_match = nx.isomorphism.categorical_node_match(['atomname', 'resname'], ['', ''])
+        # And make sure that we don't accidentally cross a residue boundary,
+        # unless that's allowed by the mapping.
+        edge_match = partial(edge_matcher, molecule, mapping.block_from)
+        # We're going to find *every* way block fits on molecule.
+        graphmatcher = MappingGraphMatcher(molecule, mapping.block_from,
+                                           node_match=node_match, edge_match=edge_match)
+        matches = graphmatcher.subgraph_isomorphisms_iter()
+        for match in matches:
+            all_matches.append((match, resname, mapping))
+    mol_to_out = defaultdict(list)
+    # Sort by lowest node key per residue. We need to do this, since
+    # merge_molecule creates new resid's in order.
+    for match, name, mapping in sorted(all_matches, key=lambda x: min(x[0].keys())):
+        if graph_out.nrexcl is None:
+            graph_out.nrexcl = mapping.block_to.nrexcl
+        try:
+            # merge_molecule will return a dict mapping the node keys of the
+            # added block to the ones in graph_out
+            block_to_out = graph_out.merge_molecule(mapping.block_to)
+        except ValueError as err:
+            # This probably means the nrexcl of the block is different from the
+            # others. This means the user messed up their data. Or there are
+            # different forcefields in the same forcefield folder...
+            raise ValueError('Residue {} is not compatible with the'
+                             ' others'.format(resname)) from err
+        block_to_mol = {v: k for k, v in match.items()}
         for to_idx, from_idxs in mapping.mapping.items():
-            mapped_match[to_idx] = [match[idx] for idx in from_idxs]
-        # What we have now is a dict of {block_to_idx: [constructing_node_idxs]}
+            # Some bookkeeping with indices.
+            out_idx = block_to_out[to_idx]
+            mol_idxs = [block_to_mol[from_idx] for from_idx in from_idxs]
+            for mol_idx in mol_idxs:
+                mol_to_out[mol_idx].append(out_idx)
 
-        block_to_bead_idx = {}
-        for block_to_idx, from_idxs in mapped_match.items():
-            # Needed for intra residue bonds
-            block_to_bead_idx[block_to_idx] = bead_idx
-            # Needed for inter residue bonds
-            residx_to_beads[res_node_idx].add(bead_idx)
-            bead = {}
-
-            # Bead properties are taken from the last (!) atom, overwritten by
-            # the block, and given a 'graph'
-            # Only the properties that are listed in the attribute_keep
-            # argument and those required to identify the residue (chain,
-            # resid, and resname) are kept.
-            # TODO: nx.quotient_graph?
-            # FIXME: properties take from last bead instead of chosen 
-            #        intellegently
-            bead['mapping_weights'] = {}
-            for n_idx in from_idxs:
-                bead['mapping_weights'][n_idx] = mapping.weights[block_to_idx][rev_match[n_idx]]
-            for attribute_key in attribute_keep:
-                bead[attribute_key] = graph.nodes[from_idxs[-1]].get(attribute_key)
-            bead.update(mapping.block_to.nodes[block_to_idx])
-            bead['graph'] = graph.subgraph(from_idxs)
-            assert bead_idx not in graph_out
-            graph_out.add_node(bead_idx, **bead)
-
-            bead_idx += 1
-        for extra in mapping.extra:
-            block_to_idx += 1
-            # We fill the chain and the residue name/id from the last bead we
-            # actually mapped.
-            extra_bead = {
-                'atomname': extra,
-                'resid': bead['resid'],
-                'resname': bead['resname'],
-                'chain': bead['chain'],
-            }
-            block_to_bead_idx[block_to_idx] = bead_idx
-            graph_out.add_node(bead_idx, **extra_bead)
-            bead_idx += 1
-
-        # Make bonds within residue. We're not going to add interactions, we'll
-        # leave that to the do_blocks processor since we might need to do
-        # several mapping steps before we arive at the resolution we want.
-        for block_idx, block_jdx in mapping.block_to.edges():
-            bead_jdx = block_to_bead_idx[block_idx]
-            bead_kdx = block_to_bead_idx[block_jdx]
-            graph_out.add_edge(bead_jdx, bead_kdx)
-    residx_to_beads = dict(residx_to_beads)
-
-    # This makes edges between residues. We need to do this, since they can't
-    # come from the mapping files and we need them to find the links locations.
-    for res_idx, res_jdx in residue_graph.edges:
-        for bd_idx, bd_jdx in product(residx_to_beads[res_idx],
-                                      residx_to_beads[res_jdx]):
-            if graph_out.has_edge(bd_idx, bd_jdx):
-                # Continue, since their might be more bonds between these
-                # residues
-                continue
-            for at_idx, at_jdx in product(graph_out.nodes[bd_idx]['graph'],
-                                          graph_out.nodes[bd_jdx]['graph']):
-                if molecule.has_edge(at_idx, at_jdx):
-                    graph_out.add_edge(bd_idx, bd_jdx)
-                    break  # On to the combination of beads
-
-    graph_out._force_field = to_ff
-    graph_out.meta = molecule.meta.copy()
+            # Keep track of what bead comes from where
+            subgraph = molecule.subgraph(mol_idxs)
+            graph_out.nodes[out_idx]['graph'] = subgraph
+            weights = {block_to_mol[from_idx]: mapping.weights[to_idx][from_idx]
+                       for from_idx in from_idxs}
+            graph_out.nodes[out_idx]['mapping_weights'] = weights
+            # We drop the node keys, since those are not super relevant. We are
+            # just interested in values of the node attributes, and whether
+            # they're all equal.
+            attrs = {name: list(nx.get_node_attributes(subgraph, name).values())
+                     for name in attribute_keep}
+            for name, vals in attrs.items():
+                if not are_all_equal(vals):
+                    print('The attribute {} for atom {} is going to be'
+                          ' garbage.'.format(name, graph_out.nodes[out_idx]))
+                if vals:
+                    graph_out.nodes[out_idx][name] = vals[0]
+                else:
+                    # No nodes hat the attribute `name`. And
+                    # nx.get_ndoe_attributes doesn't take a default.
+                    graph_out.nodes[out_idx][name] = None
+    mol_to_out = dict(mol_to_out)
+    # We need to add edges between residues. Within residues comes from the
+    # blocks.
+    # TODO: backmapping needs some magic here.
+    for match1, match2 in combinations(all_matches, 2):
+        match1 = match1[0]
+        match2 = match2[0]
+        edges = molecule.edges_between(match1.keys(), match2.keys())
+        for mol_idx, mol_jdx in edges:
+            out_idxs = mol_to_out[mol_idx]
+            out_jdxs = mol_to_out[mol_jdx]
+            for out_idx, out_jdx in product(out_idxs, out_jdxs):
+                if out_idx != out_jdx:
+                    graph_out.add_edge(out_idx, out_jdx)
+        shared_atoms = set(match1.keys()) & set(match2.keys())
+        shared_out_atoms = [mol_to_out[mol_idx] for mol_idx in shared_atoms]
+        for out_atoms in shared_out_atoms:
+            if len(out_atoms) < 2:
+                raise ValueError("This atom is shared between blocks, but only"
+                                 " mapped once?")
+            for out_idx, out_jdx in combinations(out_atoms, 2):
+                if out_idx != out_jdx:
+                    graph_out.add_edge(out_idx, out_jdx)
+        if shared_atoms:
+            print("You have a shared atom between blocks. This may mean you"
+                  " have too  particles in your output and/or erroneous bonds.")
+    # TODO: These should be turned into warnings.
+    print('double covered:', {k: len(v) for k, v in mol_to_out.items() if len(v) > 1})
+    print('uncovered:', set(molecule.nodes.keys()) - set(mol_to_out.keys()))
+    print(len(set(molecule.nodes.keys()) - set(mol_to_out.keys())))
     return graph_out
 
 
@@ -280,10 +357,12 @@ class DoMapping(Processor):
                 if not self.delete_unknown:
                     raise err
                 else:
+                    raise
                     # TODO: raise a loud warning here
                     pass
             else:
-                mols.append(new_molecule)
+                if new_molecule:
+                    mols.append(new_molecule)
         system.molecules = mols
         system.force_field = self.to_ff
 

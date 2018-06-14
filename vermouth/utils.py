@@ -86,3 +86,24 @@ def first_alpha(string):
         if elem.isalpha():
             return elem
     raise ValueError('No alpha charecters in "{}".'.format(string))
+
+
+def are_all_equal(iterable):
+    """
+    Returns ``True`` if and only if all elements in `iterable` are equal; and
+    ``False`` otherwise.
+
+    Parameters
+    ----------
+    iterable: collections.abc.Iterable
+        The container whose elements will be checked.
+
+    Returns
+    -------
+    bool
+        ``True`` iff all elements in `iterable` compare equal, ``False``
+        otherwise.
+    """
+    iterator = iter(iterable)
+    first = next(iterator, None)
+    return all(item == first for item in iterator)

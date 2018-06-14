@@ -351,7 +351,7 @@ def _split_block_and_link(pre_block):
     link: Link
         All the inter-residues information.
     """
-    block = Block()
+    block = Block(force_field=pre_block.force_field)
     link = Link()
 
     # It is easier to fill the interactions using a defaultdict,
@@ -497,7 +497,7 @@ def read_rtp(lines, force_field):
         if section_name == 'bondedtypes':
             bondedtypes = _parse_bondedtypes(section)
             continue
-        block = Block()
+        block = Block(force_field=force_field)
         pre_blocks[section_name] = block
         block.name = section_name
 

@@ -30,7 +30,7 @@ import networkx as nx
 from numpy import sign
 
 
-class LinkGraphMatcher(nx.isomorphism.GraphMatcher):
+class LinkGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
     def semantic_feasibility(self, node1_name, node2_name):
         # TODO: implement (partial) wildcards
         # Node2 is the link

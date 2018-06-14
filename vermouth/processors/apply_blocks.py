@@ -30,11 +30,11 @@ from itertools import product
 
 
 def apply_blocks(molecule, blocks):
-    residue_graph = make_residue_graph(molecule)
     graph_out = Molecule(
         force_field=molecule.force_field,
         meta=molecule.meta.copy()
     )
+    residue_graph = make_residue_graph(molecule)
 
     # nrexcl may not be defined, but if it is we probably want to keep it
     try:
@@ -71,6 +71,7 @@ def apply_blocks(molecule, blocks):
             graph_out.add_node(at_idx, **ChainMap(block.nodes[atname], attrs))
             graph_out.nodes[at_idx]['graph'] = molecule.subgraph(atom)
             graph_out.nodes[at_idx]['charge_group'] += charge_group_offset
+            graph_out.nodes[at_idx]['resid'] = attrs['resid']
             at_idx += 1
         charge_group_offset = graph_out.nodes[at_idx - 1]['charge_group']
         for idx, jdx, data in block.edges(data=True):
