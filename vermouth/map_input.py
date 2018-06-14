@@ -177,7 +177,7 @@ def read_mapping_directory(directory):
         raise NotADirectoryError('"{}" is not a directory.'.format(directory))
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
     for path in directory.glob('**/*.map'):
-        with open(path) as infile:
+        with open(str(path)) as infile:
             try:
                 name, all_from_ff, all_to_ff, mapping, weights, extra = read_mapping(infile)
             except IOError:
