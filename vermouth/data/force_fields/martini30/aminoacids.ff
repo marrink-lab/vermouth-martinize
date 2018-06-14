@@ -392,7 +392,7 @@ TRP                1
 ;id type resnr residu atom cgnr   charge
 1   $prot_default_bb_type       1     TRP     BB     1    0
 2   TC4      1     TRP     SC1    2    0       36
-3   TNd2     1     TRP     SC2    3    0       36
+3   TN3d     1     TRP     SC2    3    0       36
 4   TC4      1     TRP     SC3    4    0        0
 5   TC4      1     TRP     SC4    5    0       36
 6   TC4      1     TRP     SC5    6    0       36
