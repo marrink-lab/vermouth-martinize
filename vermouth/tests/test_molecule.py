@@ -92,6 +92,7 @@ def test_copy_edge_mod(molecule, molecule_copy):
     assert molecule_copy.edges[(0, 1)]['attribute'] == 1
     assert 'attribute' not in molecule.edges[(0, 1)]
 
+
 @pytest.mark.xfail(reason='issue #61')
 def test_copy_interactions_mod(molecule, molecule_copy):
     molecule_copy.add_interaction(
@@ -122,6 +123,12 @@ def test_subgraph_base(molecule_subgraph):
 
 @pytest.mark.xfail(reason='issue #61')
 def test_subgraph_interactions(molecule_subgraph):
-    bond_atoms = [bond.atoms for bon in molecule_subgraph.interactions['bonds']]
+    bond_atoms = [bond.atoms for bond in molecule_subgraph.interactions['bonds']]
     assert (0, 2) in bond_atoms
     assert (0, 1) not in bond_atoms
+
+
+def test_link_predicate_match():
+    lp = vermouth.molecule.LinkPredicate(None)
+    with pytest.raises(NotImplementedError):
+        lp.match(1, 2)
