@@ -4,7 +4,7 @@ test.pdb
 **.bak
 
 .eggs/**
-**.swp
+*.swp
 .pytest_cache
 *.egg-info
 .coverage
