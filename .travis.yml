@@ -19,10 +19,12 @@ addons:
 env:
     - VERMOUTH_TEST_DSSP=mkdssp
 install:
-    - pip install pylint
+    - pip install --upgrade pylint codecov pytest-cov
     - pip install --upgrade .
 script:
-    - pytest -vv vermouth
+    - pytest -vv --cov=vermouth vermouth 
 after_script:
     - pylint vermouth
     - pylint bin/martinize2
+after_success:
+    - codecov

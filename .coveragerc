@@ -1,0 +1,5 @@
+[run]
+branch = True
+omit = 
+    vermouth/tests/*
+    vermouth/redistributed/*
