@@ -27,6 +27,4 @@ after_script:
     - pylint vermouth
     - pylint bin/martinize2
 after_success:
-    - if [[ $TRAVIS_PYTHON_VERSION == "3.5" ]]; then
-      codecov;
-      fi
+    - codecov
