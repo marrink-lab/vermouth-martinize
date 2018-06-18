@@ -7,8 +7,25 @@ coverage:
             default:
                 target: 80
                 threshold: 1
+                base: auto
+                branches: null
+                if_no_uploads: error
+                if_not_found: success
+                if_ci_failed: error
+                only_pulls: false
+                flags: null
+                paths: null
         patch:
             default:
                 target: 90
+                threshold: 1
+                base: auto
+                branches: null
+                if_no_uploads: error
+                if_not_found: success
+                if_ci_failed: error
+                only_pulls: false
+                flags: null
+                paths: null
 comment: off
 
