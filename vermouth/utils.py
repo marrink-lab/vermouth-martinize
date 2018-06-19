@@ -13,22 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Aug 22 11:38:17 2017
-
-@author: Peter Kroon
-"""
-
 import numpy as np
 
 try:
-    from scipy.spatial.distance import euclidean as distance
+    from scipy.spatial.distance import euclidean as distance  # pylint: disable=unused-import
 except ImportError:
-    def distance(p1, p2):
+    def distance(point_1, point_2):
         """
         .. autofunction:: scipy.spatial.distance.euclidean
         """
-        return np.sqrt(np.sum((p1 - p2)**2))
+        return np.sqrt(np.sum((point_1 - point_2)**2))
 
 
 def maxes(iterable, key=lambda x: x):

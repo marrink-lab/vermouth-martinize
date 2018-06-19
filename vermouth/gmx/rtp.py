@@ -64,7 +64,7 @@ class _IterRTPSubsectionLines(object):
         """
         Move the iterator after the last line of the subsection.
         """
-        for line in self:
+        for _ in self:
             pass
 
 
@@ -115,7 +115,7 @@ class _IterRTPSubsections(object):
         """
         Move the iterator after the last subsection of the section.
         """
-        for line in self:
+        for _ in self:
             pass
 
 

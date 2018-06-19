@@ -50,7 +50,7 @@ def distance_matrix(coordinates_a, coordinates_b):
     )
 
 
-def angle(vectorBA, vectorBC):
+def angle(vector_ba, vector_bc):
     """
     Calculate the angle in radians between two vectors.
 
@@ -62,8 +62,8 @@ def angle(vectorBA, vectorBC):
 
     It returns the angle between BA and BC.
     """
-    nominator = np.dot(vectorBA, vectorBC)
-    denominator = np.linalg.norm(vectorBA) * np.linalg.norm(vectorBC)
+    nominator = np.dot(vector_ba, vector_bc)
+    denominator = np.linalg.norm(vector_ba) * np.linalg.norm(vector_bc)
     cosine = nominator / denominator
     # Floating errors at the limits may cause issues.
     cosine = np.clip(cosine, -1, 1)
@@ -85,13 +85,13 @@ def dihedral(coordinates):
     float
         The calculated angle between -pi and +pi.
     """
-    vectorAB = coordinates[1, :] - coordinates[0, :]
-    vectorBC = coordinates[2, :] - coordinates[1, :]
-    vectorCD = coordinates[3, :] - coordinates[2, :]
-    normalABC = np.cross(vectorAB, vectorBC)
-    normalBCD = np.cross(vectorBC, vectorCD)
-    psin = np.dot(normalABC, vectorCD) * np.linalg.norm(vectorBC)
-    pcos = np.dot(normalABC, normalBCD)
+    vector_ab = coordinates[1, :] - coordinates[0, :]
+    vector_bc = coordinates[2, :] - coordinates[1, :]
+    vector_cd = coordinates[3, :] - coordinates[2, :]
+    normal_abc = np.cross(vector_ab, vector_bc)
+    normal_bcd = np.cross(vector_bc, vector_cd)
+    psin = np.dot(normal_abc, vector_cd) * np.linalg.norm(vector_bc)
+    pcos = np.dot(normal_abc, normal_bcd)
     return np.arctan2(psin, pcos)
 
 
@@ -115,10 +115,10 @@ def dihedral_phase(coordinates):
     dihedral
         Calculate a dihedral angle.
     """
-    angle = dihedral(coordinates)
-    angle -= np.pi
-    if angle > np.pi:
-        angle -= 2 * np.pi
-    if angle < -np.pi:
-        angle += 2 * np.pi
-    return angle
+    dihedral_angle = dihedral(coordinates)
+    dihedral_angle -= np.pi
+    if dihedral_angle > np.pi:
+        dihedral_angle -= 2 * np.pi
+    if dihedral_angle < -np.pi:
+        dihedral_angle += 2 * np.pi
+    return dihedral_angle

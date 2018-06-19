@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Thu Sep 14 10:58:04 2017
-
-@author: Peter Kroon
-"""
-
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
 from functools import partial
@@ -83,7 +77,7 @@ class LinkPredicate:
         -------
         bool
         """
-        
+
         raise NotImplementedError
 
     def __repr__(self):
@@ -146,7 +140,7 @@ class LinkParameterEffector:
     is expected to be ``{link key: molecule key}``.
 
     An instance can also have a format defined. If defined, that format will be
-    applied to the value computed by the :meth:`apply` method causing the
+    applied to the value computed by the :meth:`_apply` method causing the
     output to be a string. The format is given as a 'format_spec' from the
     python format string syntax. This format spec corresponds to what follows
     the column the column in string templates. For instance, formating a
@@ -155,7 +149,7 @@ class LinkParameterEffector:
     modified.
 
     This is a base class; it needs to be subclassed. A subclass must define an
-    :meth:`apply` method that takes a molecule and a list of node keys from
+    :meth:`_apply` method that takes a molecule and a list of node keys from
     that molecule as arguments. This method is not called directly by the user,
     instead it is called by the :meth:`__call__` method when the user calls the
     instance as a function. A subclass can also set the :attr:`n_keys_asked`
@@ -165,10 +159,11 @@ class LinkParameterEffector:
     arbitrary number of keys without validation.
 
     .. automethod:: __call__
+    .. automethod:: _apply
     """
     n_keys_asked = None
 
-    def __init__(self, keys, format=None):
+    def __init__(self, keys, format_spec=None):
         """
         Parameters
         ----------
@@ -176,7 +171,7 @@ class LinkParameterEffector:
             A list of node keys from the link. If the :attr:`n_keys_asked`
             class argument is set, the number of keys must correspond to the
             value of the attribute.
-        format: str
+        format_spec: str
             Format specification.
 
         Raises
@@ -190,9 +185,9 @@ class LinkParameterEffector:
             raise ValueError(
                 'Unexpected number of keys provided in {}: '
                 '{} were expected, but {} were provided.'
-                .format(self.__class__.name, self.n_keys_asked, len(keys))
+                .format(self.__class__.__name__, self.n_keys_asked, len(keys))
             )
-        self.format = format
+        self.format_spec = format
 
     def __call__(self, molecule, match):
         """
@@ -215,7 +210,7 @@ class LinkParameterEffector:
             result = '{value:{format}}'.format(value=result, format=self.format)
         return result
 
-    def apply(self, molecule, keys):
+    def _apply(self, molecule, keys):
         """
         Calculate the parameter value from the molecule.
 
@@ -261,13 +256,14 @@ class ParamAngle(LinkParameterEffector):
     """
     n_keys_asked = 3
 
-    def _apply(self, molecule, keys):
+    @staticmethod
+    def _apply(molecule, keys):
         # This will raise a ValueError if an atom is missing, or if an
         # atom does not have position.
         positions = np.stack([molecule.nodes[key]['position'] for key in keys])
-        vectorBA = positions[0, :] - positions[1, :]
-        vectorBC = positions[2, :] - positions[1, :]
-        angle = geometry.angle(vectorBA, vectorBC)
+        vector_ba = positions[0, :] - positions[1, :]
+        vector_bc = positions[2, :] - positions[1, :]
+        angle = geometry.angle(vector_ba, vector_bc)
         return np.degrees(angle)
 
 
@@ -277,7 +273,8 @@ class ParamDihedral(LinkParameterEffector):
     """
     n_keys_asked = 4
 
-    def _apply(self, molecule, keys):
+    @staticmethod
+    def _apply(molecule, keys):
         # This will raise a ValueError if an atom is missing, or if an
         # atom does not have position.
         positions = np.stack([molecule.nodes[key]['position'] for key in keys])
@@ -291,7 +288,8 @@ class ParamDihedralPhase(LinkParameterEffector):
     """
     n_keys_asked = 4
 
-    def _apply(self, molecule, keys):
+    @staticmethod
+    def _apply(molecule, keys):
         # This will raise a ValueError if an atom is missing, or if an
         # atom does not have position.
         positions = np.stack([molecule.nodes[key]['position'] for key in keys])
@@ -317,7 +315,7 @@ class Molecule(nx.Graph):
         The force field the molecule is described for.
 
         The force field is assumed to be consistent for all the molecules of
-        a system. While it is possible to reassign attribute 
+        a system. While it is possible to reassign attribute
         `Molecule._force_field`, it is recommended to assign the force
         field at the system level as reassigning :attr:`~vermouth.system.System.force_field`
         will propagate the change to all the molecules in that system.
@@ -384,6 +382,7 @@ class Molecule(nx.Graph):
         return self.interactions[type_]
 
     def remove_interaction(self, type_, atoms, version=0):
+        idx = 0
         for idx, interaction in enumerate(self.interactions[type_]):
             if interaction.atoms == atoms and interaction.meta.get('version', 0):
                 break
@@ -445,9 +444,9 @@ class Molecule(nx.Graph):
                 'This molecule has nrexcl={}, while the other has nrexcl={}.'
                 .format(self.nrexcl, molecule.nrexcl)
             )
-        if len(self.nodes()):
+        if self.nodes():
             # We assume that the last id is always the largest.
-            last_node_idx = max(self) 
+            last_node_idx = max(self)
             offset = last_node_idx
             residue_offset = self.nodes[last_node_idx]['resid']
             offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
@@ -523,7 +522,7 @@ class Block(Molecule):
         The atoms in the residue. Each atom is a dict with *a minima* a key
         'name' for the name of the atom, and a key 'atype' for the atom type.
         An atom can also have a key 'charge', 'charge_group', 'comment', or any
-        arbitrary key. 
+        arbitrary key.
     interactions: dict
         All the known interactions. Each item of the dictionary is a type of
         interaction, with the key being the name of the kind of interaction
@@ -561,7 +560,7 @@ class Block(Molecule):
         if name is None:
             name = 'Unnamed'
         return '<{} "{}" at 0x{:x}>'.format(self.__class__.__name__,
-                                          name, id(self))
+                                            name, id(self))
 
     def add_atom(self, atom):
         try:
@@ -817,20 +816,20 @@ def interaction_match(molecule, interaction, template_interaction):
     return False
 
 
-if __name__ == '__main__':
-    mol = Molecule()
-    mol.add_edge(0, 1)
-    mol.add_edge(1, 2)
-    nx.subgraph(mol, (0, 1))
-
-    mol.add_interaction('bond', (0, 1), tuple((1, 2)))
-    mol.add_interaction('bond', (1, 2), tuple((10, 20)))
-    mol.add_angle((0, 1, 2), tuple([10, 2, 3]))
-
-    print(mol.interactions)
-    print(mol.get_interaction('bond'))
-    print(mol.get_bonds())
-    print(mol.get_angles())
-
-    mol.remove_interaction('bond', (0, 3))
-    print(mol.get_bonds())
+# if __name__ == '__main__':
+#     mol = Molecule()
+#     mol.add_edge(0, 1)
+#     mol.add_edge(1, 2)
+#     nx.subgraph(mol, (0, 1))
+#
+#     mol.add_interaction('bond', (0, 1), tuple((1, 2)))
+#     mol.add_interaction('bond', (1, 2), tuple((10, 20)))
+#     mol.add_angle((0, 1, 2), tuple([10, 2, 3]))
+#
+#     print(mol.interactions)
+#     print(mol.get_interaction('bond'))
+#     print(mol.get_bonds())
+#     print(mol.get_angles())
+#
+#     mol.remove_interaction('bond', (0, 3))
+#     print(mol.get_bonds())

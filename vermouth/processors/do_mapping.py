@@ -14,21 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Oct 10 11:11:54 2017
-
-@author: peterkroon
-"""
-
-from ..molecule import Molecule
-from .processor import Processor
-from ..utils import are_all_equal
-
 from collections import defaultdict
 from functools import partial
 from itertools import product, combinations
 
 import networkx as nx
+
+from ..molecule import Molecule
+from .processor import Processor
+from ..utils import are_all_equal
 
 
 class GraphMapping:
@@ -270,7 +264,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             # others. This means the user messed up their data. Or there are
             # different forcefields in the same forcefield folder...
             raise ValueError('Residue {} is not compatible with the'
-                             ' others'.format(resname)) from err
+                             ' others'.format(name)) from err
         block_to_mol = {v: k for k, v in match.items()}
         for to_idx, from_idxs in mapping.mapping.items():
             # Some bookkeeping with indices.
@@ -290,16 +284,16 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             # they're all equal.
             attrs = {name: list(nx.get_node_attributes(subgraph, name).values())
                      for name in attribute_keep}
-            for name, vals in attrs.items():
+            for attr, vals in attrs.items():
                 if not are_all_equal(vals):
                     print('The attribute {} for atom {} is going to be'
                           ' garbage.'.format(name, graph_out.nodes[out_idx]))
                 if vals:
-                    graph_out.nodes[out_idx][name] = vals[0]
+                    graph_out.nodes[out_idx][attr] = vals[0]
                 else:
                     # No nodes hat the attribute `name`. And
                     # nx.get_ndoe_attributes doesn't take a default.
-                    graph_out.nodes[out_idx][name] = None
+                    graph_out.nodes[out_idx][attr] = None
     mol_to_out = dict(mol_to_out)
     # We need to add edges between residues. Within residues comes from the
     # blocks.
@@ -360,7 +354,6 @@ class DoMapping(Processor):
                 else:
                     raise
                     # TODO: raise a loud warning here
-                    pass
             else:
                 if new_molecule:
                     mols.append(new_molecule)

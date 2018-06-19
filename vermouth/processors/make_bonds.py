@@ -14,19 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct  4 10:48:58 2017
-
-@author: peterkroon
-"""
+import networkx as nx
+import numpy as np
 
 from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import distance
-
-import networkx as nx
-import numpy as np
 
 COVALENT_RADII = {'H': 0.031, 'C': 0.076, 'N': 0.071, 'O': 0.066, 'S': 0.105}
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}

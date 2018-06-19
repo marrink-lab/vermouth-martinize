@@ -17,14 +17,12 @@ Assign protein secondary structures using DSSP.
 """
 
 import collections
-import itertools
 import os
 import subprocess
 import logging
 
 from ..pdb import pdb
 from ..system import System
-from ..molecule import Molecule
 from ..processors.processor import Processor
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 
@@ -258,7 +256,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     run_dssp, read_dssp2
     """
     if not is_protein(molecule):
-        return molecule
+        return
 
     clean_pos = molecule.subgraph(
         filter_minimal(molecule, selector=selector_has_position)
@@ -266,7 +264,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
 
     # We ignore empty molecule, there is no point at running DSSP on them.
     if not clean_pos:
-        return molecule
+        return
 
     savefile = _savefile_path(molecule, savedir)
 
@@ -352,7 +350,7 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
         raise ValueError(msg.format(len(sequence), len(residues)))
     for residue_nodes, value in zip(residues, sequence):
         for node_name in residue_nodes:
-            node = molecule.nodes[node_name][attribute] = value
+            molecule.nodes[node_name][attribute] = value
 
 
 def convert_dssp_annotation_to_martini(
@@ -391,7 +389,8 @@ class AnnotateDSSP(Processor):
 class AnnotateMartiniSecondaryStructures(Processor):
     name = 'AnnotateMartiniSecondaryStructures'
 
-    def run_molecule(self, molecule):
+    @staticmethod
+    def run_molecule(molecule):
         convert_dssp_annotation_to_martini(molecule)
         return molecule
 
@@ -403,7 +402,7 @@ class AnnotateResidues(Processor):
                  molecule_selector=select_all):
         self.attribute = attribute
         self.sequence = sequence
-        self.molecule_selector=molecule_selector
+        self.molecule_selector = molecule_selector
 
     def run_molecule(self, molecule):
         if self.molecule_selector(molecule):

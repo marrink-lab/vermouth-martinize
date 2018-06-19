@@ -19,11 +19,14 @@ High level API for Martinize2
 """
 
 import argparse
+import functools
+import logging
+import itertools
+import textwrap
 from pathlib import Path
-import os
-import numpy as np
+
 import vermouth
-from vermouth.forcefield import find_force_fields, FORCE_FIELDS
+from vermouth.forcefield import FORCE_FIELDS
 from vermouth import DATA_PATH
 from vermouth.dssp.dssp import (
     AnnotateDSSP,
@@ -36,11 +39,7 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings
 )
-import itertools
-import operator
-import textwrap
-import functools
-import logging
+
 
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
 
@@ -94,6 +93,9 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
 
 
 def write_gmx_topology(system, top_path, deduplicate=True):
+    """
+    Writes a Gromacs .top file for the specified system.
+    """
     if not system.molecules:
         raise ValueError('No molecule in the system. Nothing to write.')
     if deduplicate:
@@ -196,6 +198,9 @@ def _cys_argument(value):
 
 
 def entry():
+    """
+    Parses commandline arguments and performs the logic.
+    """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -288,7 +293,7 @@ def entry():
             msg = '"{}" given to the -map-dir option should be a directory.'
             raise ValueError(msg.format(directory))
         combine_mappings(known_mappings, partial_mapping)
-        
+
     # Build self mappings
     partial_mapping = generate_all_self_mappings(known_force_fields)
     combine_mappings(known_mappings, partial_mapping)

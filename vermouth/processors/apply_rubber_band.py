@@ -13,8 +13,10 @@
 # limitations under the License.
 
 import itertools
+
 import numpy as np
 import networkx as nx
+
 from .processor import Processor
 from .. import selectors
 
@@ -47,7 +49,7 @@ def self_distance_matrix(coordinates):
 
 
 def compute_decay(distance, shift, rate, power):
-    """
+    r"""
     Compute the decay function of the force constant as function to the distance.
 
     The decay function for the force constant is defined as:
@@ -131,17 +133,17 @@ def build_connectivity_matrix(graph, separation, selection=None):
         return nx.to_numpy_matrix(graph, nodelist=selection).astype(bool)
     subgraph = graph.subgraph(selection)
     connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
-    for (i, key_i), (j, key_j) in itertools.combinations(enumerate(subgraph.nodes), 2):
+    for (idx, key_idx), (jdx, key_jdx) in itertools.combinations(enumerate(subgraph.nodes), 2):
         try:
-            shortest_path = len(nx.shortest_path(subgraph, key_i, key_j))
+            shortest_path = len(nx.shortest_path(subgraph, key_idx, key_jdx))
         except nx.NetworkXNoPath:
             # There is no path between key_i and key_j so they are not
             # connected; which is the default.
             pass
         else:
             # The source and the target are counted in the shortest path
-            connectivity[i, j] = shortest_path <= separation + 2
-            connectivity[j, i] = connectivity[i, j]
+            connectivity[idx, jdx] = shortest_path <= separation + 2
+            connectivity[jdx, idx] = connectivity[idx, jdx]
     return connectivity
 
 

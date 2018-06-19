@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import functools
+
 import numpy as np
 import networkx as nx
+
 from .. import KDTree
 from ..molecule import attributes_match
 from .. import selectors
@@ -101,7 +103,7 @@ def prune_edges_with_selectors(molecule, selector_a, selector_b=None):
     prune_edges_between_selections(molecule, selection_a, selection_b)
 
 
-def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):
+def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
     """
     Remove all the edges that correspond to cystein bridges from a molecule.
 
@@ -288,8 +290,8 @@ def pairs_under_threshold(molecules, threshold, selection, attribute='position')
     for key in selection:
         coordinates.append(molecules[key[0]].nodes[key[1]][attribute])
     kdtree = KDTree(coordinates)
-    for i, j in kdtree.query_pairs(threshold):
-        yield (selection[i], selection[j])
+    for idx, jdx in kdtree.query_pairs(threshold):
+        yield (selection[idx], selection[jdx])
 
 
 def select_nodes_multi(molecules, selector):
@@ -319,7 +321,7 @@ def select_nodes_multi(molecules, selector):
                 yield (molecule_idx, key)
 
 
-def add_cystein_bridge_threshold(molecules, threshold,
+def add_cystein_bridge_threshold(molecules, threshold,  # pylint: disable=dangerous-default-value
                                  template=UNIVERSAL_BRIDGE_TEMPLATE,
                                  attribute='position'):
     """
@@ -354,8 +356,8 @@ def add_cystein_bridge_threshold(molecules, threshold,
 
 
 class RemoveCysteinBridgeEdges(Processor):
-    def __init__(self, template=UNIVERSAL_BRIDGE_TEMPLATE):
-        self.template = UNIVERSAL_BRIDGE_TEMPLATE
+    def __init__(self, template=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
+        self.template = template
 
     def run_molecule(self, molecule):
         remove_cystein_bridge_edges(molecule, self.template)
@@ -363,10 +365,10 @@ class RemoveCysteinBridgeEdges(Processor):
 
 
 class AddCysteinBridgesThreshold(Processor):
-    def __init__(self, threshold,
+    def __init__(self, threshold,  # pylint: disable=dangerous-default-value
                  template=UNIVERSAL_BRIDGE_TEMPLATE, attribute='position'):
         self.threshold = threshold
-        self.template = UNIVERSAL_BRIDGE_TEMPLATE
+        self.template = template
         self.attribute = attribute
 
     def run_system(self, system):

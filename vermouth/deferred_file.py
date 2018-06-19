@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Mon Oct  9 10:04:01 2017
-
-@author: Peter Kroon
-"""
-
 import os
 import sys
 import tempfile
@@ -26,16 +20,16 @@ import tempfile
 # TODO: replace with pathlib.replace, and add pathlib2 to requirements for py2.7.
 # from https://stupidpythonideas.blogspot.nl/2014/07/getting-atomic-writes-right.html
 try:
-    replace = os.replace
+    replace = os.replace  # pylint: disable=invalid-name
 except AttributeError:
     if sys.platform == 'win32':
-        import win32api
-        import win32con
+        import win32api  # pylint: disable=import-error
+        import win32con  # pylint: disable=import-error
 
         def replace(src, dst):
             win32api.MoveFileEx(src, dst, win32con.MOVEFILE_REPLACE_EXISTING)
     else:
-        replace = os.rename
+        replace = os.rename  # pylint: disable=invalid-name
 
 
 def find_next_filename(basename, suffix='bak'):
@@ -67,24 +61,25 @@ class DeferredFile:
     def __init__(self, filename):
         self.filename = filename
         self.approved = False
+        self._tempfile = None
 
     def open(self):
-        self.tempfile = tempfile.NamedTemporaryFile(mode='w', delete=False)
+        self._tempfile = tempfile.NamedTemporaryFile(mode='w', delete=False)
 
     def approve(self):
         self.approved = True
 
     def close(self):
-        self.tempfile.close()
+        self._tempfile.close()
         if self.approved:
-            replace_with_backup(self.tempfile.name, self.filename)
+            replace_with_backup(self._tempfile.name, self.filename)
         else:
-            os.remove(self.tempfile.name)
+            os.remove(self._tempfile.name)
 
     # For some reason tempfile.NamedTemporaryFile is a function, not a class.
     # And to top it off, the object it returns has a magic getattr method...
     def write(self, *args, **kwargs):
-        self.tempfile.write(*args, **kwargs)
+        self._tempfile.write(*args, **kwargs)
 
     def __enter__(self):
         self.open()
@@ -97,15 +92,15 @@ class DeferredFile:
         return False  # re-raise any exceptions
 
 
-if __name__ == '__main__':
-    df = DeferredFile('flup1.txt')
-    df.open()
-    df.write('boe')
-    df.close()
-
-    with DeferredFile('flup.txt') as df:
-        df.write('Hello!')
-
-    with DeferredFile('flup2.txt') as df:
-        df.write('World!')
-        df.approve()
+# if __name__ == '__main__':
+#     dfile = DeferredFile('flup1.txt')
+#     dfile.open()
+#     dfile.write('boe')
+#     dfile.close()
+#
+#     with DeferredFile('flup.txt') as df:
+#         df.write('Hello!')
+#
+#     with DeferredFile('flup2.txt') as df:
+#         df.write('World!')
+#         df.approve()

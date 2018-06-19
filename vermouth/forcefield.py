@@ -14,7 +14,6 @@
 
 import itertools
 from glob import glob
-from pathlib import Path
 import os
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
@@ -24,6 +23,19 @@ FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
 
 
 class ForceField(object):
+    """
+    Description of a force field.
+
+    Attributes
+    ----------
+    blocks: dict
+    links: list
+    modifications: list
+    renamed_residues: dict
+    name: str
+    variables: dict
+    reference_graphs: dict
+    """
     def __init__(self, directory):
         self.blocks = {}
         self.links = []
@@ -34,6 +46,12 @@ class ForceField(object):
         self.read_from(directory)
 
     def read_from(self, directory):
+        """
+        Populate or update the force field from a directory.
+
+        The provided directory must contain a subdirectory with the same name
+        as the force field.
+        """
         source_files = iter_force_field_files(directory)
         for source in source_files:
             extension = os.path.splitext(source)[-1]
@@ -69,14 +87,35 @@ class ForceField(object):
         bool
         """
         return feature in self.features
-        
+
 
 def find_force_fields(directory, force_fields=None):
     """
-    Find all the force fields in the given directory.
+    Read all the force fields in the given directory.
 
     A force field is defined as a directory that contains at least one RTP
     file. The name of the force field is the base name of the directory.
+
+    If the force field argument is not ``None``, then it must be a dictionary
+    with force field names as keys and instances of :class:`ForceField` as
+    values. The force fields in the dictionary will be updated if force fields
+    with the same names are found in the directory.
+
+    Parameters
+    ----------
+    directory: pathlib.Path or str
+        The path to the directory containing the force fields.
+    force_fields: dict
+        A dictionary of force fields to update.
+
+    Returns
+    -------
+    dict
+        A dictionary of force fields read or updated. Keys are force field
+        names as strings, and values are instances of :class:`ForceField`. If a
+        dictionary was provided as the "force_fields" argument, then the
+        returned dictionary is the same instance as the one provided but with
+        updated content.
     """
     if force_fields is None:
         force_fields = {}
@@ -99,10 +138,13 @@ def find_force_fields(directory, force_fields=None):
     return force_fields
 
 
-def iter_force_field_files(directory, parsers=FORCE_FIELD_PARSERS):
+def iter_force_field_files(directory, extensions=FORCE_FIELD_PARSERS.keys()):
+    """
+    Returns a generator over the path of all the force field files in the directory.
+    """
     return itertools.chain(*(
         glob(os.path.join(directory, '*' + extension))
-        for extension in parsers
+        for extension in extensions
     ))
 
 

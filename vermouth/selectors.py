@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import numpy as np
-from .molecule import Molecule
 
 
 # TODO: Make that list part of the force fields

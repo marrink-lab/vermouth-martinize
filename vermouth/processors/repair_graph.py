@@ -14,17 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Thu Oct  5 10:43:19 2017
-
-@author: peterkroon
-"""
+import networkx as nx
 
 from .processor import Processor
 from ..graph_utils import *
-
-
-import networkx as nx
 
 
 def make_reference(mol):
@@ -205,7 +198,8 @@ def repair_residue(molecule, ref_residue):
         for ref_idx in missing:
             # WARNING?
             print('Could not reconstruct atom {}{}:{}'.format(reference.nodes[ref_idx]['resname'],
-                  reference.nodes[ref_idx]['resid'], reference.nodes[ref_idx]['atomname']))
+                                                              reference.nodes[ref_idx]['resid'],
+                                                              reference.nodes[ref_idx]['atomname']))
 
 
 def repair_graph(molecule, reference_graph):

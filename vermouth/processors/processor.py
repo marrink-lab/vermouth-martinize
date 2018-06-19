@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct  4 13:03:50 2017
-
-@author: peterkroon
-"""
 
 class Processor:
     def run_system(self, system):
@@ -26,3 +21,6 @@ class Processor:
         for molecule in system.molecules:
             mols.append(self.run_molecule(molecule))
         system.molecules = mols
+
+    def run_molecule(self, molecule):
+        return

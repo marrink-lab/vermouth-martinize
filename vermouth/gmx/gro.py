@@ -13,19 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Aug 22 11:34:12 2017
-
-@author: Peter Kroon
-"""
-from ..molecule import Molecule
-from ..utils import first_alpha
-from ..truncating_formatter import TruncFormatter
-
 from functools import partial
 from itertools import chain
 
 import numpy as np
+
+from ..molecule import Molecule
+from ..truncating_formatter import TruncFormatter
+from ..utils import first_alpha
 
 
 def read_gro(file_name, exclude=('SOL',), ignh=False):
@@ -122,12 +117,12 @@ def write_gro(system, file_name, precision=7):
                 atomname = node['atomname']
                 resname = node['resname']
                 resid = node['resid']
-                x, y, z = node['position']
+                x, y, z = node['position']  # pylint: disable=invalid-name
 
                 line = formatter.format(format_string, resid, resname, atomname,
                                         atomid, x, y, z)
                 if has_vel:
-                    vx, vy, vz = node['velocity']/10  # A to nm
+                    vx, vy, vz = node['velocity']/10  # A to nm  # pylint: disable=invalid-name
                     line += formatter.format(vel_format_string, vx, vy, vz)
                 atomid += 1
                 out.write(line + '\n')
