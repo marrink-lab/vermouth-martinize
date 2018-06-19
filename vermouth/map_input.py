@@ -183,9 +183,13 @@ def read_mapping_directory(directory):
             except IOError:
                 raise IOError('An error occured while reading "{}".'.format(path))
         for from_ff in all_from_ff:
+            to_ff = None
             for to_ff in all_to_ff:
                 mappings[from_ff][to_ff][name] = (mapping, weights, extra)
-            mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
+            if to_ff is not None:
+                # If all_to_ff is empty, then to_ff will not be redefined by
+                # the above for loop.
+                mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
     return dict(mappings)
 
 
