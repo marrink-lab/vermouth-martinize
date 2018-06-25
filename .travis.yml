@@ -1,30 +1,67 @@
 language: python
 cache: pip
 python:
-    - "2.7"
-    - "3.4"
-    - "3.5"
-    - "3.5-dev"
-    - "3.6"
-    - "3.6-dev"
-    - "3.7-dev"
+  - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.5-dev"
+  - "3.6"
+  - "3.6-dev"
+  - "3.7-dev"
 matrix:
-    allow_failures:
-        - python: "2.7"
-        - python: "3.7-dev"
+  allow_failures:
+    - python: "2.7"
+    - python: "3.7-dev"
+  fast_finish: true
+
 addons:
-    apt:
-        packages:
-            - dssp
+  apt:
+    packages:
+     - dssp
 env:
+  global:
     - VERMOUTH_TEST_DSSP=mkdssp
+    - SKIP_GENERATE_AUTHORS=1
+    - SKIP_WRITE_GIT_CHANGELOG=1
 install:
-    - pip install --upgrade pylint codecov pytest-cov
-    - pip install --upgrade .
+  - pip install --upgrade codecov pytest-cov
+  - pip install --upgrade .
 script:
-    - pytest -vv --cov=vermouth vermouth 
-after_script:
-    - pylint vermouth
-    - pylint bin/martinize2
+  - pytest -vv --cov=vermouth vermouth 
 after_success:
-    - codecov
+  - codecov
+
+jobs:
+  include:
+    - stage: docs
+      python: "3.5"
+      addons: skip
+      install:
+        - pip install --upgrade -r requirements-docs.txt
+        - pip install --upgrade .[full]
+      script: python setup.py build_sphinx
+      after_success: skip
+    - stage: pylint
+      python: "3.5"
+      addons: skip
+      install:
+        - pip install pylint
+      script: 
+        - pylint vermouth
+        - pylint bin/martinize2
+      after_success: skip
+#   - stage: deploy
+#     python: "3.5"
+#     addons: skip
+#     env:
+#     script: skip
+#     after_success: skip
+#     deploy:
+#         user: ...
+#         password:
+#             # travis encrypt --add deploy.password
+#             secure: ...
+#         provider: pypi
+#         on:
+#             tags: true
+
