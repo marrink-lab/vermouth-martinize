@@ -68,7 +68,8 @@ def find_PTM_atoms(molecule):
         # Traverse in molecule.
         for orig, succ in nx.bfs_successors(molecule, first):
             # We've seen orig, so remove it
-            to_see.remove(orig)
+            if orig in to_see:
+                to_see.remove(orig)
             if orig in extra_atoms:
                 # If this is a PTM atom, we want to see it's neighbours as
                 # well.
