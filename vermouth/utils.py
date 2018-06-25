@@ -25,6 +25,9 @@ try:
     from scipy.spatial.distance import euclidean as distance
 except ImportError:
     def distance(p1, p2):
+        """
+        .. autofunction:: scipy.spatial.distance.euclidean
+        """
         return np.sqrt(np.sum((p1 - p2)**2))
 
 

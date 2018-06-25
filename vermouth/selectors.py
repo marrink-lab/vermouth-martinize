@@ -81,7 +81,7 @@ def proto_select_attribute_in(node, attribute, values):
 
     To be used as a selector, the function must be wrapped in a way that it can
     be called without the need to explicitly specify the 'attribute' and
-    'values' arguments. This can be done using :fun:`functools.partial`:
+    'values' arguments. This can be done using :func:`functools.partial`:
 
     >>> # select an atom if its name is in a given list
     >>> to_keep = ['BB', 'SC1']
@@ -119,7 +119,8 @@ def filter_minimal(molecule, selector):
     The function can be used to build a subgraph that only contains the
     selection:
 
-    .. code:: python
+    .. code-block:: python
+
         selection = molecule.subgraph(
              filter_minimal(molecule, selector_function)
         )

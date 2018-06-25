@@ -10,3 +10,4 @@ test.pdb
 .coverage
 
 doc/build
+doc/source/api

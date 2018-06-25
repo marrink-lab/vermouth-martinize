@@ -33,6 +33,25 @@ COVALENT_RADII = {'H': 0.031, 'C': 0.076, 'N': 0.071, 'O': 0.066, 'S': 0.105}
 
 
 def bonds_from_distance(system, fudge=1.1):
+    """
+    Creates edges between nodes of molecules in system based on a distance
+    criterion. Nodes in system must have `position` and `element` attributes.
+    The possible distance between nodes is determined by values in
+    :attr:`COVALENT_RADII`.
+
+    Parameters
+    ----------
+    system: :class:`~vermouth.System`
+        The system in which to add edges.
+    fudge: :class:`~numbers.Number`
+        Increase the allowed distance by this factor.
+
+    Returns
+    -------
+    :class:`networkx.Graph`
+        A new graph where edges are added between nodes that are within a
+        certain distance from each other. It is probably disconnected.
+    """
     system = nx.compose_all(system.molecules)
     idx_to_nodenum = {idx: n for idx, n in enumerate(system)}
     max_dist = max(COVALENT_RADII.values())

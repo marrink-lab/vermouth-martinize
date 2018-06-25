@@ -53,10 +53,10 @@ def angle(vectorBA, vectorBC):
     """
     Calculate the angle in radians between two vectors.
 
-    The function assumes the following situation:
+    The function assumes the following situation::
 
           B
-         / \
+         / \\
         A   C
 
     It returns the angle between BA and BC.

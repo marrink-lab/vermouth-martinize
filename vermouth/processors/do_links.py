@@ -119,18 +119,18 @@ def match_order(order1, resid1, order2, resid2):
 
     The order can be:
 
-    :an integer:
+    an integer
         It is then the expected distance in resid with a reference residue.
-    :a series of >:
+    a series of >
         This indicates that the residue must have a larger resid than a
         reference residue. Multiple atoms with the same number of > are
         expected to be part of the same residue. The more > are in the serie,
         the further away the residue is expected to be from the reference, so a
         residue with >> is expected to have a greater resid than a residue with
         >.
-    :a series of <:
+    a series of <
         Same as a series of >, but for smaller resid.
-    :a series of *:
+    a series of *
         This indicates a different residue than the reference, but without a
         specified order. As for the > or the <, atoms with the same number of *
         are expected to be part of the same residue.
@@ -143,25 +143,25 @@ def match_order(order1, resid1, order2, resid2):
     (order1 argument), while the columns correspond to the order at the right
     of it (order2 argument).
 
-    +----+---+----+---+----+---+---+---+----+
-    |    | > | >> | < | << | n | 0 | * | ** |
-    +----+---+----+---+----+---+---+---+----+
-    | >  | = | <  | > | >  | ! | > | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | >> | > | =  | > | >  | ! | > | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | <  | < | <  | = | >  | ! | < | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | << | < | <  | < | =  | ! | < | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | n  | ! | !  | ! | !  | ? | ? | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | 0  | < | <  | > | >  | ? | = | / | /  |
-    +----+---+----+---+----+---+---+---+----+
-    | *  | ! | !  | ! | !  | ! | / | = | /  |
-    +----+---+----+---+----+---+---+---+----+
-    | ** | ! | !  | ! | !  | ! | / | / | =  |
-    +----+---+----+---+----+---+---+---+----+
+    +-----+---+----+---+----+---+---+----+-----+
+    |     | > | >> | < | << | n | 0 | \* | \** |
+    +-----+---+----+---+----+---+---+----+-----+
+    | >   | = | <  | > | >  | ! | > | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | >>  | > | =  | > | >  | ! | > | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | <   | < | <  | = | >  | ! | < | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | <<  | < | <  | < | =  | ! | < | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | n   | ! | !  | ! | !  | ? | ? | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | 0   | < | <  | > | >  | ? | = | /  | /   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | \*  | ! | !  | ! | !  | ! | / | =  | /   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | \** | ! | !  | ! | !  | ! | / | /  | =   |
+    +-----+---+----+---+----+---+---+----+-----+
 
     Parameters
     ----------

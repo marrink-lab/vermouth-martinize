@@ -157,7 +157,7 @@ def run_dssp(system, executable='dssp', savefile=None):
     However, the molecules do not require the edges to be defined.
 
     DSSP is assumed to be in version 2. The secondary structure codes are
-    described in :fun:`read_dssp2`.
+    described in :func:`read_dssp2`.
 
     If "savefile" is set to a path, then the output of DSSP is written in
     that file.

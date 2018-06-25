@@ -13,9 +13,11 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 from pkg_resources import get_distribution
-# import os
+import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
+# Do not generate APIdocs for members missing docstrings (undoc-members)
+os.environ['APIDOC_OPTIONS'] = 'members,show-inheritence'
 
 # -- Project information -----------------------------------------------------
 
@@ -164,10 +166,13 @@ texinfo_documents = [
 # -- Extension configuration -------------------------------------------------
 apidoc_module_dir = '../../vermouth'
 apidoc_output_dir = 'api'
+apidoc_separate_modules = True
 apidoc_excluded_paths = ['tests', 'redistributed']
-
 
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+                       'https://docs.python.org/': None,
+                       'https://networkx.github.io/documentation/latest': None,
+                      }
