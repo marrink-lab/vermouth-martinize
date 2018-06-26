@@ -27,19 +27,17 @@ def self_distance_matrix(coordinates):
 
     Notes
     -----
-
     This function does **not** account for periodic boundary conditions.
 
     Parameters
     ----------
-
-    coordinates: np.ndarray
+    coordinates: numpy.ndarray
         Coordinates of the points in the selection. Each row must correspond
         to a point and each column to a dimension.
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
     """
     return np.sqrt(
         np.sum(
@@ -110,18 +108,18 @@ def build_connectivity_matrix(graph, separation, selection=None):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         The graph/molecule to work on.
-    separation: int >= 0
+    separation: int
         The maximum number of nodes in the shortest path between two nodes of
-        interest for these two nodes to be considered connected.
-    selection: Iterable
+        interest for these two nodes to be considered connected. Must be >= 0.
+    selection: collections.abc.Iterable
         A list of node keys to work on. If this argument is set, then the
         matrix corresponds to the subgraph containing these keys.
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
         A boolean matrix.
     """
     if separation < 0:
@@ -181,13 +179,18 @@ def apply_rubber_band(molecule, selector,
     molecule: Molecule
         The molecule to which apply the elastic network. The molecule is
         modified in-place.
-    selector: callback
+    selector: collections.abc.Callable
         Selection function.
-    lower_bound, upper_bound: float
-        The minimum and maximum length for a bond to be added, expressed in
+    lower_bound: float
+        The minimum length for a bond to be added, expressed in
         nanometers.
-    decay_factor, decay_power: float
-        Parameters for the decay function.
+    upper_bound: float
+        The maximum length for a bond to be added, expressed in
+        nanometers.
+    decay_factor: float
+        Parameter for the decay function.
+    decay_power: float
+        Parameter for the decay function.
     base_constant: float
         The base force constant for the bonds in :math:`kJ.mol^{-1}.nm^{-2}`.
         If 'decay_factor' or 'decay_power' is set to 0, then it will be the

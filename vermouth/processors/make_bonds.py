@@ -37,11 +37,11 @@ def bonds_from_distance(system, fudge=1.1):
     Creates edges between nodes of molecules in system based on a distance
     criterion. Nodes in system must have `position` and `element` attributes.
     The possible distance between nodes is determined by values in
-    :attr:`COVALENT_RADII`.
+    `COVALENT_RADII`.
 
     Parameters
     ----------
-    system: :class:`~vermouth.System`
+    system: :class:`~vermouth.system.System`
         The system in which to add edges.
     fudge: :class:`~numbers.Number`
         Increase the allowed distance by this factor.

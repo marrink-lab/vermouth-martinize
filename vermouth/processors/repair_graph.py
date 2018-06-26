@@ -215,6 +215,10 @@ def repair_graph(molecule, reference_graph):
     names will be canonicalized. Atoms not present in ``reference_graph`` will
     have the attribute ``PTM_atom`` set to ``True``.
 
+    `molecule` is modified in place. Missing atoms (as per `reference_graph`)
+    are added, atom and residue names are canonicalized, and PTM atoms are
+    marked.
+
     Parameters
     ----------
     molecule : molecule.Molecule
@@ -236,13 +240,6 @@ def repair_graph(molecule, reference_graph):
         :match: A dictionary describing how the reference corresponds
             with the provided graph. Keys are node indices of the
             reference, values are node indices of the provided graph.
-
-    Returns
-    -------
-    None
-        ``molecule`` is modified in place. Missing atoms (as per
-        ``reference_graph``) are added, atom and residue names are
-        canonicalized, and PTM atoms are marked.
     """
     for residx in reference_graph:
         residue = reference_graph.nodes[residx]

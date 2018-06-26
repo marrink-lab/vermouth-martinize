@@ -128,7 +128,7 @@ def filter_minimal(molecule, selector):
     Parameters
     ----------
     molecule: Molecule
-    selector: callback
+    selector: collections.abc.Callable
 
     Yields
     ------

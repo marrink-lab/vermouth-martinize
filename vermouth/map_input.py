@@ -40,18 +40,18 @@ def read_mapping(lines):
 
     Parameters
     ----------
-    lines: iterable of str
+    lines: collections.abc.Iterable[str]
         Collection of lines to read.
 
     Returns
     -------
     name: str
         The name of the fragment as read in the "molecule" field.
-    from_ff: list of str
+    from_ff: list[str]
         A list of force field origins. Each force field is referred by name.
-    to_ff: list of str
+    to_ff: list[str]
         A list of force field destinations. Each force field is referred by name.
-    mapping: dict
+    mapping: dict[tuple[int, str], list[tuple[int, str]]]
         The mapping. The keys of the dictionary are pairs of residue indices
         and the atom names in the origin force field as tupples (resid,
         atomname); the values are lists of resid, and atom names pairs
@@ -163,7 +163,7 @@ def read_mapping_directory(directory):
 
     Parameters
     ----------
-    directory: str or Path
+    directory: str
         The path to the directory to search. Files with a '.map' extension will
         be read. There is no recursive search.
 
@@ -198,14 +198,14 @@ def generate_self_mappings(blocks):
 
     Parameters
     ----------
-    blocks: dict
+    blocks: dict[str, networkx.Graph]
         A dictionary of blocks with block names as keys and the blocks
-        themselves as values. The blocks must be instances of :class:`nx.Graph`
+        themselves as values. The blocks must be instances of :class:`networkx.Graph`
         with each node having an 'atomname' attribute.
 
     Returns
     -------
-    mappings: dict
+    mappings: dict[str, tuple]
         A dictionary of mappings where the keys are the names of the blocks,
         and the values are tuples like (mapping, weights, extra). The elements
         of these tuples are formatted as the corresponding output of the
@@ -244,8 +244,8 @@ def generate_all_self_mappings(force_fields):
 
     Parameters
     ----------
-    force_fields: Iterable
-        List of instances of :class:`ForceField`.
+    force_fields: collections.abc.Iterable
+        List of instances of :class:`~vermouth.forcefield.ForceField`.
 
     Returns
     -------

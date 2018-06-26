@@ -45,10 +45,12 @@ def prune_edges_between_selections(molecule, selection_a, selection_b):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to prune in-place.
-    selection_a, selection_b: list
-        Lists of node keys from the molecule.
+    selection_a: list
+        List of node keys from the molecule.
+    selection_b: list
+        List of node keys from the molecule.
 
     See Also
     --------
@@ -80,11 +82,11 @@ def prune_edges_with_selectors(molecule, selector_a, selector_b=None):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to prune in-place.
-    selector_a: function
+    selector_a: collections.abc.Callable
         A selector for one end of the edges.
-    selector_b: function (optional)
+    selector_b: collections.abc.Callable
         A selector for the second end of the edges. If set to ``None``, then
         'selector_a' is used for both ends.
 
@@ -111,13 +113,13 @@ def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):
 
     A template is a dictionary that defines the key:value pairs that must be
     matched in the atoms. Values can be instances of
-    :class:`molecule.LinkPredicate`.
+    :class:`~vermouth.molecule.LinkPredicate`.
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to modify in-place.
-    template: dict (optional)
+    template: dict
         A template that selected atom must match.
     """
     selector = functools.partial(attributes_match, template_attributes=template)
@@ -140,14 +142,16 @@ def add_edges_at_distance(molecule, threshold,
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to modify in-place.
     threshold: float
         The distance threshold under which edges will be created. The distance
         is expressed in nm.
-    selection_a, selection_b: list
-        Lists of node keys from the molecule.
-    attribute: str (optional)
+    selection_a: list
+        List of node keys from the molecule.
+    selection_b: list
+        List of node keys from the molecule.
+    attribute: str
         Name of the key in the node dictionaries under which the coordinates
         are stored.
 
@@ -299,9 +303,9 @@ def select_nodes_multi(molecules, selector):
 
     Parameters
     ----------
-    molecule: list
+    molecule: list[Molecule]
         A list of molecules.
-    selector: function
+    selector: collections.abc.Callable
         A selector function.
 
     Yields
@@ -331,9 +335,9 @@ def add_cystein_bridge_threshold(molecules, threshold,
         A list of molecules.
     threshold: float
         The distance threshold in nanometers under which an edge is created.
-    template: dict (optional)
+    template: dict
         A template that selected atom must match.
-    attribute: str (optional)
+    attribute: str
         Name of the key in the node dictionaries under which the coordinates
         are stored.
 

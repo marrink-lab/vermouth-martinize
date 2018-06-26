@@ -146,7 +146,7 @@ class LinkParameterEffector:
     is expected to be ``{link key: molecule key}``.
 
     An instance can also have a format defined. If defined, that format will be
-    applied to the value computed by the :meth:`_apply` method causing the
+    applied to the value computed by the :meth:`apply` method causing the
     output to be a string. The format is given as a 'format_spec' from the
     python format string syntax. This format spec corresponds to what follows
     the column the column in string templates. For instance, formating a
@@ -155,7 +155,7 @@ class LinkParameterEffector:
     modified.
 
     This is a base class; it needs to be subclassed. A subclass must define an
-    :meth:`_apply` method that takes a molecule and a list of node keys from
+    :meth:`apply` method that takes a molecule and a list of node keys from
     that molecule as arguments. This method is not called directly by the user,
     instead it is called by the :meth:`__call__` method when the user calls the
     instance as a function. A subclass can also set the :attr:`n_keys_asked`
@@ -213,7 +213,7 @@ class LinkParameterEffector:
             result = '{value:{format}}'.format(value=result, format=self.format)
         return result
 
-    def _apply(self, molecule, keys):
+    def apply(self, molecule, keys):
         """
         Calculate the parameter value from the molecule.
 
@@ -230,7 +230,7 @@ class LinkParameterEffector:
 
         Returns
         -------
-        value:
+        float:
             The value for the parameter.
         """
         msg = 'The method need to be implemented by the children class.'
@@ -317,7 +317,7 @@ class Molecule(nx.Graph):
         The force field is assumed to be consistent for all the molecules of
         a system. While it is possible to reassign
         :attr:`Molecule._force_field`, it is recommended to assign the force
-        field at the system level as reassigning :attr:`System.force_field`
+        field at the system level as reassigning :attr:`vermouth.system.System.force_field`
         will propagate the change to all the molecules in that system.
         """
         return self._force_field
@@ -768,7 +768,7 @@ def interaction_match(molecule, interaction, template_interaction):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         The molecule that contains the interaction.
     interaction: Interaction
         The interaction in the molecule.

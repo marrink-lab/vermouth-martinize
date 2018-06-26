@@ -70,7 +70,7 @@ def read_dssp2(lines):
 
     Returns
     -------
-    secstructs: list of str
+    secstructs: list[str]
         The secondary structure assigned by DSSP as a list of one-letter
         secondary structure code.
 
@@ -167,7 +167,7 @@ def run_dssp(system, executable='dssp', savefile=None):
     system: System
     executable: str
         Where to find the DSSP executable.
-    savefile: None or path
+    savefile: None or str
         If set to a path, the output of DSSP is written in that file.
 
     Returns

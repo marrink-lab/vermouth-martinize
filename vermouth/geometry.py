@@ -26,21 +26,22 @@ def distance_matrix(coordinates_a, coordinates_b):
 
     Notes
     -----
-
     This function does **not** account for periodic boundary conditions.
 
     Parameters
     ----------
-
-    coordinates_a, coordinates_b: np.ndarray
+    coordinates_a: numpy.ndarray
+        Coordinates of the points in the selections. Each row must correspond
+        to a point and each column to a dimension.
+    coordinates_b: numpy.ndarray
         Coordinates of the points in the selections. Each row must correspond
         to a point and each column to a dimension.
 
     Returns
     -------
-    np.ndarray
-        Rows correspond to the points from 'coordinates_a', columns correspond
-        from 'coordinates_b'.
+    numpy.ndarray
+        Rows correspond to the points from `coordinates_a`, columns correspond
+        from `coordinates_b`.
     """
     return np.sqrt(
         np.sum(
@@ -75,7 +76,7 @@ def dihedral(coordinates):
 
     Parameters
     ----------
-    coordinates: np.ndarray
+    coordinates: numpy.ndarray
         The coordinates of 4 points defining the dihedral angle. Each row
         corresponds to a point, and each column to a dimension.
 
@@ -100,7 +101,7 @@ def dihedral_phase(coordinates):
 
     Parameters
     ----------
-    coordinates: np.ndarray
+    coordinates: numpy.ndarray
         The coordinates of 4 points defining the dihedral angle. Each row
         corresponds to a point, and each column to a dimension.
 

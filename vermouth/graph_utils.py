@@ -160,7 +160,7 @@ def isomorphism(reference, residue):
         The graph to match to ``reference``.
     Returns
     -------
-    matches : list of dictionaries
+    matches : list[dict]
         The matches found. The dictionaries have node indices of ``reference`` as
         keys and node indices of ``residue`` as values. Is an empty list if
         ``residue`` is not a subgraph of ``reference``.
@@ -255,9 +255,9 @@ def blockmodel(G, partitions, **attrs):
     ----------
     G: networkx.Graph
         The graph to partition
-    parititions: iterable of iterables
+    parititions: collections.abc.Iterable[collections.abc.Iterable]
         Each element contains the node indices that construct the new node.
-    **attrs: dict of str: iterable
+    **attrs: dict[str, collections.abc.Iterable]
         Attributes to assign to new nodes. Attribute values are assigned to the
         new nodes in order.
 

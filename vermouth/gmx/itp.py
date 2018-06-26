@@ -69,7 +69,7 @@ def write_molecule_itp(molecule, outfile):
     molecule: Molecule
         The molecule to write. See above for the minimal information the
         molecule must contain.
-    outfile: file handler or file-like
+    outfile: io.TextIOBase
         The file in which to write.
 
     Raises

@@ -46,7 +46,7 @@ def find_PTM_atoms(molecule):
 
     Returns
     -------
-    list of tuples of two sets of node indices
+    list[tuple[set, set]]
         ``[({ptm atom indices}, {anchor indices}), ...]``. Ptm atom indices are
         connected, and are connected to the rest of molecule via anchor
         indices.
@@ -99,11 +99,11 @@ def identify_ptms(residue, residue_ptms, known_PTMs):
     residue : networkx.Graph
         The residues involved with these PTMs. Need not be connected.
 
-    residue_ptms : list of tuples of two sets of node indices
+    residue_ptms : list[tuple[set, set]]
         As returned by ``find_PTM_atoms``, but only those relevant for
         ``residue``.
 
-    known_PTMs : sequence of tuples of (networkx.Graph, PTMGraphMatcher)
+    known_PTMs : collections.abc.Sequence[tuple[networkx.Graph, PTMGraphMatcher]]
         The nodes in the graph must have the `PTM_atom` attribute (True or
         False). It should be True for atoms that are not part of the PTM
         itself, but describe where it is attached to the molecule.
@@ -117,7 +117,7 @@ def identify_ptms(residue, residue_ptms, known_PTMs):
 
     Returns
     -------
-    list of tuples of (networkx.Graph, dict)
+    list[tuple[networkx.Graph, dict]]
         All PTMs from ``known_PTMs`` needed to describe the PTM atoms in
         ``residue`` along with a ``dict`` of node correspondences. The order of
         ``known_PTMs`` is preserved.
@@ -166,15 +166,15 @@ def allowed_ptms(residue, res_ptms, known_ptms):
     ----------
     residue : networkx.Graph
 
-    res_ptms : list of tuples of two sets of node indices
+    res_ptms : list[tuple[set, set]]
         As returned by ``find_PTM_atoms``.
         Currently not used.
 
-    known_ptms : iterable of networkx.Graphs
+    known_ptms : collections.abc.Iterable[networkx.Graph]
 
     Yields
     ------
-    tuple of (networkx.Graph, PTMGraphMatcher)
+    tuple[networkx.Graph, PTMGraphMatcher]
         All graphs in known_ptms which are subgraphs of residue.
     """
     # TODO: filter by element count first
@@ -187,6 +187,8 @@ def allowed_ptms(residue, res_ptms, known_ptms):
 def fix_ptm(molecule):
     '''
     Canonizes all PTM atoms in molecule, and labels the relevant residues with
+    which PTMs were recognized. Modifies ``molecule`` such that atomnames of
+    PTM atoms are corrected, and the relevant residues have been labeled with
     which PTMs were recognized.
 
     Parameters
@@ -195,13 +197,6 @@ def fix_ptm(molecule):
         Must not have missing atoms, and atomnames must be correct. Atoms which
         could not be recognized must be labeled with the attribute
         PTM_atom=True.
-
-    Returns
-    -------
-    None
-        Modifies ``molecule`` such that atomnames of PTM atoms are corrected,
-        and the relevant residues have been labeled with which PTMs were
-        recognized.
     '''
     PTM_atoms = find_PTM_atoms(molecule)
 

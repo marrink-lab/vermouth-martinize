@@ -469,10 +469,10 @@ def read_rtp(lines, force_field):
 
     Parameters
     ----------
-    lines
+    lines: collections.abc.Iterator
         An iterator over the lines of a RTP file (e.g. a file handle, or a
         list of string).
-    force_field: vermouth.forcefield.Forcefield
+    force_field: vermouth.forcefield.ForceField
         The force field to populate in place.
 
     Raises

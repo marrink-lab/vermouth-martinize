@@ -175,4 +175,6 @@ apidoc_excluded_paths = ['tests', 'redistributed']
 intersphinx_mapping = {
                        'https://docs.python.org/': None,
                        'https://networkx.github.io/documentation/latest': None,
+                       'http://docs.scipy.org/doc/numpy/': None,
+                       'http://docs.scipy.org/doc/scipy/reference': None,
                       }

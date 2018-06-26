@@ -34,7 +34,7 @@ def fibonacci_sphere(n_samples):
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
         3D coordinates of the points.
     """
     offset = 2 / n_samples
@@ -69,7 +69,7 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
     Parameters
     ----------
-    molecule: nx.Groph
+    molecule: networkx.Graph
         The molecule to work on.
     node_key:
         The node key of the charge dummy.
@@ -78,7 +78,7 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
     Returns
     -------
-    anchor_key:
+    collections.abc.Hashable:
         The node key of the anchor in the molecule graph.
 
     Raises
@@ -121,11 +121,11 @@ def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_A
 
     Parameters
     ----------
-    molecule: vermouth.Molecule
+    molecule: vermouth.molecule.Molecule
         The molecule to work on.
     anchor_key:
         The key of the non-dummy anchor all the charge dummies are connected to.
-    dummy_keys: iterable
+    dummy_keys: collections.abc.Iterable
         A collection of atom keys for charge dummies to position.
     attribute_tag: str
         Name of the atom attribute that describe charge dummies.
@@ -171,7 +171,7 @@ def locate_all_dummies(molecule, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
     Parameters
     ----------
-    molecule: vermouth.Molecule
+    molecule: vermouth.molecule.Molecule
         The molecule to work on.
     attribute_tag: str
         Name of the atom attribute that describe charge dummies.

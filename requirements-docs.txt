@@ -1,3 +1,2 @@
 sphinx
-sphinxcontrib-napoleon
 sphinxcontrib-apidoc

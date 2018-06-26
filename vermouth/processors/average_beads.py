@@ -36,13 +36,13 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
 
     Parameters
     ----------
-    molecule: vermouth.Molecule
-        The molecule to update. The attribute :attr:`position` of the particles
+    molecule: vermouth.molecule.Molecule
+        The molecule to update. The attribute `position` of the particles
         is updated on place. The nodes of the molecule must have an attribute
-        :attr:`graph` that contains the subgraph of the initial molecule.
+        `graph` that contains the subgraph of the initial molecule.
     ignore_missing_graphs: bool
-        If `True`, skip the atoms that do not have a 'graph' attribute; else
-        fail if not all the atoms in the molecule have a 'graph' attribute.
+        If `True`, skip the atoms that do not have a `graph` attribute; else
+        fail if not all the atoms in the molecule have a `graph` attribute.
     """
     # Make sure the molecule fullfill the requirements.
     missing = []

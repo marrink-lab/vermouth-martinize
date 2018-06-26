@@ -40,9 +40,9 @@ def maxes(iterable, key=lambda x: x):
 
     Parameters
     ----------
-    iterable
+    iterable: collections.abc.Iterable
         The iterable for which to find all maxima.
-    key: callable
+    key: collections.abc.Callable
         This callable will be called on each element of ``iterable`` to evaluate
         it to a value. Return values must support ``>`` and ``==``.
 

@@ -222,7 +222,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
     ----------
     molecule: :class:`~vermouth.molecule.Molecule`
         The molecule to transform.
-    mappings: {ff_name: {ff_name: {block_name: (mapping, weights, extra)}}}
+    mappings: dict[str, dict[str, dict[str, tuple]]]
+        ``{ff_name: {ff_name: {block_name: (mapping, weights, extra)}}}``
         A collection of mappings, as returned by e.g.
         :func:`~vermouth.map_input.read_mapping_directory`.
     to_ff: :class:`~vermouth.forcefield.ForceField`
