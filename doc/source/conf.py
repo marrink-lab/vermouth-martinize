@@ -12,6 +12,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from pkg_resources import get_distribution
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
@@ -22,10 +23,10 @@ project = 'VerMoUTH'
 copyright = '2018, University of Groningen'
 author = 'Peter C Kroon, Jonathan Barnoud, Tsjerk A Wassenaar, Siewert-Jan Marrink'
 
-# The short X.Y version
-version = ''
 # The full version, including alpha/beta/rc tags
-release = ''
+release = get_distribution('vermouth').version
+# The short X.Y version
+version = '.'.join(release.split('.')[:2])
 
 
 # -- General configuration ---------------------------------------------------
