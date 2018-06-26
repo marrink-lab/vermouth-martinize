@@ -19,6 +19,10 @@ import os
 # Do not generate APIdocs for members missing docstrings (undoc-members)
 os.environ['APIDOC_OPTIONS'] = 'members,show-inheritence'
 
+# Set APIDOC options
+#os.environ['SPHINX_APIDOC_OPTIONS'] = 'members,undoc-members,show-inheritance,special-members'
+os.environ['SPHINX_APIDOC_OPTIONS'] = 'members'
+
 # -- Project information -----------------------------------------------------
 
 project = 'VerMoUTH'
@@ -76,6 +80,12 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+
+nitpick_ignore = [
+        ('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'),
+        ('py:class', 'networkx.algorithms.isomorphism.isomorphvf2.GraphMatcher'),
+        ('py:class', 'networkx.classes.graph.Graph'),
+        ]
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -169,12 +179,14 @@ apidoc_output_dir = 'api'
 apidoc_separate_modules = True
 apidoc_excluded_paths = ['tests', 'redistributed']
 
-# -- Options for intersphinx extension ---------------------------------------
+autoclass_content = 'both'
+autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
 
+# -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-                       'https://docs.python.org/': None,
-                       'https://networkx.github.io/documentation/latest': None,
-                       'http://docs.scipy.org/doc/numpy/': None,
-                       'http://docs.scipy.org/doc/scipy/reference': None,
+                       'python': ('https://docs.python.org/', None),
+                       'networkx': ('https://networkx.github.io/documentation/latest', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                       'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
                       }

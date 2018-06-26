@@ -163,6 +163,8 @@ class LinkParameterEffector:
     attribute is set, then the number of keys provided when initializing a new
     instance will be validated against that number; else, the user can pass an
     arbitrary number of keys without validation.
+
+    .. automethod:: __call__
     """
     n_keys_asked = None
 
@@ -204,7 +206,7 @@ class LinkParameterEffector:
 
         Returns
         -------
-        value:
+        float:
             The calculated parameter value, formatted if required.
         """
         keys = [match[key] for key in self.keys]
@@ -315,9 +317,9 @@ class Molecule(nx.Graph):
         The force field the molecule is described for.
 
         The force field is assumed to be consistent for all the molecules of
-        a system. While it is possible to reassign
-        :attr:`Molecule._force_field`, it is recommended to assign the force
-        field at the system level as reassigning :attr:`vermouth.system.System.force_field`
+        a system. While it is possible to reassign attribute 
+        `Molecule._force_field`, it is recommended to assign the force
+        field at the system level as reassigning :attr:`~vermouth.system.System.force_field`
         will propagate the change to all the molecules in that system.
         """
         return self._force_field
@@ -329,6 +331,13 @@ class Molecule(nx.Graph):
             yield node, node_attr
 
     def copy(self, as_view=False):
+        '''
+        Creates a copy of the molecule.
+
+        See Also
+        --------
+        :meth:`networkx.Graph.copy`
+        '''
         copy = super().copy(as_view)
         if not as_view:
             copy = self.__class__(copy)
@@ -337,6 +346,13 @@ class Molecule(nx.Graph):
         return copy
 
     def subgraph(self, *args, **kwargs):
+        '''
+        Creates a subgraph from the molecule.
+
+        See Also
+        --------
+        :meth:`networkx.Graph.subgraph`
+        '''
         return self.__class__(super().subgraph(*args, **kwargs))
 
     def add_interaction(self, type_, atoms, parameters, meta=None):

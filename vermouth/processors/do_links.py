@@ -31,6 +31,13 @@ from numpy import sign
 
 
 class LinkGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
+    '''
+    '''
+    def __init__(self, *args, **kwargs):
+        '''
+        '''
+        super().__init__(*args, **kwargs)
+
     def semantic_feasibility(self, node1_name, node2_name):
         # TODO: implement (partial) wildcards
         # Node2 is the link
