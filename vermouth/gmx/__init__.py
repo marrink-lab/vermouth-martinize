@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Aug 22 11:42:17 2017
-
-@author: Peter Kroon
-"""
-
 from .gro import read_gro, write_gro
 from .itp import write_molecule_itp
 from .rtp import read_rtp

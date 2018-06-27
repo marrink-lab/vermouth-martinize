@@ -14,12 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Oct 10 11:11:54 2017
-
-@author: peterkroon
-"""
-
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import are_all_equal

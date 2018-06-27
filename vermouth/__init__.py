@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Aug 22 11:41:47 2017
-
-@author: Peter Kroon
-"""
-
 # Find the data directory once.
 try:
     import pkg_resources

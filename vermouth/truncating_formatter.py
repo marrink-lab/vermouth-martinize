@@ -14,12 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Fri Oct 20 13:53:45 2017
-
-@author: peterkroon
-"""
-
 import string
 import re
 from collections import namedtuple

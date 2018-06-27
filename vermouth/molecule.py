@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Thu Sep 14 10:58:04 2017
-
-@author: Peter Kroon
-"""
-
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
 from functools import partial

@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Mon Oct  9 10:04:01 2017
-
-@author: Peter Kroon
-"""
-
 import os
 import sys
 import tempfile

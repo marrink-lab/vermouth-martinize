@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Oct 10 10:51:03 2017
-
-@author: peterkroon
-"""
 from collections import defaultdict
 import itertools
 import networkx as nx

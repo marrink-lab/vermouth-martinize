@@ -14,12 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Thu Oct  5 10:43:19 2017
-
-@author: peterkroon
-"""
-
 from .processor import Processor
 from ..graph_utils import *
 

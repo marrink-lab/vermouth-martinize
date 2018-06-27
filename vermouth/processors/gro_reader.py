@@ -14,12 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct  4 10:41:10 2017
-
-@author: peterkroon
-"""
-
 from ..gmx import gro
 from .processor import Processor
 
