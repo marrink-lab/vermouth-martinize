@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Aug 22 11:33:07 2017
-
-@author: Peter Kroon
-"""
 from ..molecule import Molecule
 from ..utils import first_alpha, distance
 from ..truncating_formatter import TruncFormatter

@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Aug 22 11:38:17 2017
-
-@author: Peter Kroon
-"""
-
 import numpy as np
 
 try:

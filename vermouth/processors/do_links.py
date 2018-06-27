@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct 25 16:00:02 2017
-
-@author: peterkroon
-"""
 from ..molecule import LinkPredicate, attributes_match, NotDefinedOrNot
 from .processor import Processor
 from ..gmx import read_rtp

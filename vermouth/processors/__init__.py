@@ -14,12 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct  4 10:45:54 2017
-
-@author: peterkroon
-"""
-
 from .gro_reader import GROInput
 from .make_bonds import MakeBonds
 from .pdb_reader import PDBInput

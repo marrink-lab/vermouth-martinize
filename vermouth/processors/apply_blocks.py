@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Fri Oct 27 14:39:20 2017
-
-@author: peterkroon
-"""
 from ..gmx import read_rtp
 
 from .processor import Processor

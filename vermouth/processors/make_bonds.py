@@ -14,12 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct  4 10:48:58 2017
-
-@author: peterkroon
-"""
-
 from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
