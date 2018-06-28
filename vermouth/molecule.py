@@ -187,7 +187,7 @@ class LinkParameterEffector:
                 '{} were expected, but {} were provided.'
                 .format(self.__class__.__name__, self.n_keys_asked, len(keys))
             )
-        self.format_spec = format
+        self.format = format_spec
 
     def __call__(self, molecule, match):
         """

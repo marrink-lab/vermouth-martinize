@@ -12,6 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides functionality to read and write Gromacs specific files.
+"""
+
 
 from .gro import read_gro, write_gro
 from .itp import write_molecule_itp

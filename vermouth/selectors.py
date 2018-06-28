@@ -11,6 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides helper function for selecting part of a system, e.g. all proteins, or
+protein backbones.
+"""
+
 
 import numpy as np
 
@@ -44,12 +49,18 @@ def is_protein(molecule):
     )
 
 
-def select_all(node):
+def select_all(_):
+    """
+    Returns True for all particles.
+    """
     return True
 
 
 # TODO: Have the backbone definition be force field specific.
 def select_backbone(node):
+    """
+    Returns True if `node` is in a protein backbone.
+    """
     return node.get('atomname') == 'BB'
 
 

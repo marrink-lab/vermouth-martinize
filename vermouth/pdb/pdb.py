@@ -12,6 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides functions for reading and writing PDB files.
+"""
+
 
 from functools import partial
 
@@ -23,6 +27,24 @@ from ..truncating_formatter import TruncFormatter
 
 
 def get_not_none(node, attr, default):
+    """
+    Returns ``node[attr]``. If it doesn't exists or is ``None``, return
+    `default`.
+
+    Parameters
+    ----------
+    node: collections.abc.Mapping
+    attr: collections.abc.Hashable
+    default
+        The value to return if ``node[attr]`` is either ``None``, or does not
+        exist.
+
+    Returns
+    -------
+    object
+        The value of ``node[attr]`` if it exists and is not ``None``, else
+        `default`.
+    """
     value = node.get(attr)
     if value is None:
         value = default
@@ -30,7 +52,28 @@ def get_not_none(node, attr, default):
 
 
 def write_pdb_string(system, conect=True, omit_charges=True):
+    """
+    Describes `system` as a PDB formatted string.
+
+    Parameters
+    ----------
+    system: vermouth.system.System
+        The system to write.
+    conect: bool
+        Whether to write CONECT records for the edges.
+    omit_charges: bool
+        Whether charges should be omitted. This is usually a good idea since
+        the PDB format can only deal with integer charges.
+
+    Returns
+    -------
+    str
+        The system as PDB formatted string.
+    """
     def keyfunc(graph, node_idx):
+        """
+        Used for sorting nodes
+        """
         # TODO add something like idx_in_residue
         return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
 
@@ -94,12 +137,39 @@ def write_pdb_string(system, conect=True, omit_charges=True):
 
 
 def write_pdb(system, path, conect=True, omit_charges=True):
+    """
+    Writes `system` to `path` as a PDB formatted string.
+
+    Parameters
+    ----------
+    system: vermouth.system.System
+        The system to write.
+    path: str
+        The file to write to.
+    conect: bool
+        Whether to write CONECT records for the edges.
+    omit_charges: bool
+        Whether charges should be omitted. This is usually a good idea since
+        the PDB format can only deal with integer charges.
+
+    See Also
+    --------
+    :func:write_pdb_string
+    """
     with open(path, 'w') as out:
         out.write(write_pdb_string(system, conect, omit_charges))
 
 
 def do_conect(mol, conectlist):
-    """Apply connections to molecule based on CONECT records read from PDB file"""
+    """Apply connections to molecule based on CONECT records read from PDB file
+
+    Parameters
+    ----------
+    mol: networkx.Graph
+        The graph to add edges to.
+    conectlist: collections.abc.Iterable[str]
+        An iterable of CONECT records as found in a PDB file.
+    """
     atidx2nodeidx = {node_data['atomid']: node_idx
                      for node_idx, node_data in mol.node.items()}
 
@@ -126,6 +196,26 @@ def do_conect(mol, conectlist):
 
 
 def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
+    """
+    Parse a PDB file to create a molecule.
+
+    Parameters
+    ----------
+    filename: str
+        The file to read.
+    exclude: collections.abc.Container[str]
+        Atoms that have one of these residue names will not be included.
+    ignh: bool
+        Whether hydrogen atoms should be ignored.
+    model: int
+        If the PDB file contains multiple models, which one to select.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        The parsed molecules. Will only contain edges if the PDB file has
+        CONECT records. Either way, might be disconnected.
+    """
     models = [Molecule()]
     conect = []
     idx = 0

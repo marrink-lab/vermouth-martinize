@@ -12,6 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides functionality to read and write GRO96 files.
+"""
+
 
 from functools import partial
 from itertools import chain
@@ -24,6 +28,23 @@ from ..utils import first_alpha
 
 
 def read_gro(file_name, exclude=('SOL',), ignh=False):
+    """
+    Parse a gro file to create a molecule.
+
+    Parameters
+    ----------
+    filename: str
+        The file to read.
+    exclude: collections.abc.Container[str]
+        Atoms that have one of these residue names will not be included.
+    ignh: bool
+        Whether hydrogen atoms should be ignored.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        The parsed molecules. Will not contain edges.
+    """
     molecule = Molecule()
     idx = 0
     field_types = [int, str, str, int, float, float, float]
@@ -91,7 +112,20 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
 
 
 def write_gro(system, file_name, precision=7):
+    """
+    Write `system` to `file_name`, which will be a GRO96 file.
+
+    Parameters
+    ----------
+    system: vermouth.system.System
+        The system to write.
+    file_name: str
+        The file to write to.
+    precision: int
+        The desired precision for coordinates and (optionally) velocities.
+    """
     def keyfunc(graph, node_idx):
+        """Key function for sorting nodes."""
         # TODO add something like idx_in_residue
         return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
 

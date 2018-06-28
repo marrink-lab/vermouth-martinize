@@ -7,11 +7,16 @@ python:
   - "3.5-dev"
   - "3.6"
   - "3.6-dev"
+  - "3.7"
   - "3.7-dev"
+  - "3.8-dev"
 matrix:
   allow_failures:
     - python: "2.7"
+    - python: "3.5-dev"
+    - python: "3.6-dev"
     - python: "3.7-dev"
+    - python: "3.8-dev"
   fast_finish: true
 
 addons:
@@ -52,8 +57,8 @@ jobs:
         # extract the score. Compare the score to 9.5 ("\1>9.5"). Fail if
         # lower, success if higher. There's probably also a way to get the
         # output on screen as well. But meh.
-        - test $(bc -l <<< $(pylint vermouth | sed -re "s_.* ([0-9\.]+)/10.*_\1>9.5_;t;d")) -eq 1
-        - test $(bc -l <<< $(pylint bin/martinize2 | sed -re 's_.* ([0-9\.]+)/10.*_\1>9.5_;t;d')) -eq 1
+        - test $(bc -l <<< $(pylint --disable=fixme vermouth | sed -re "s_.* ([0-9\.]+)/10.*_\1>9.5_;t;d")) -eq 1
+        - test $(bc -l <<< $(pylint --disable=fixme bin/martinize2 | sed -re 's_.* ([0-9\.]+)/10.*_\1>9.5_;t;d')) -eq 1
         # - pylint vermouth
         # - pylint bin/martinize2
       after_success: skip

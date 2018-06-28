@@ -13,6 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides a string formatter that can not only pad strings to a specified
+length if they're too short, but also truncate them if they're too long.
+"""
+
 
 import string
 import re
@@ -22,11 +27,31 @@ FormatSpec = namedtuple('FormatSpec', 'fill align sign alt zero_padding width co
 
 
 class TruncFormatter(string.Formatter):
+    """
+    Adds the 't' option to the format specification mini-language at the end of
+    the format string. If provided, the produced formatted string will be
+    truncated to the specified length.
+    """
     # https://stackoverflow.com/questions/44551535/access-the-cpython-string-format-specification-mini-language-parser
     format_spec_re = r'(([\s\S])?([<>=\^]))?([\+\- ])?(#)?(0)?(\d*)?(,)?((\.)(\d*))?([sbcdoxXneEfFgGn%])?'
     format_spec_re = re.compile(format_spec_re)
 
     def format_field(self, value, format_spec):
+        """
+        Implements the 't' option to truncate strings that are too long to the
+        required width.
+        
+        Parameters
+        ----------
+        value
+            The object to format.
+        format_spec: str
+            The format_spec describing how `value` should be formatted
+        
+        Returns
+        str
+            `value` formatted as per `format_spec`
+        """
         if format_spec.endswith('t'):
             truncate = True
             format_spec = format_spec[:-1]

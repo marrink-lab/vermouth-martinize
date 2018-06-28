@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides a class used to describe a forcefield and all associated data.
+"""
+
 
 import itertools
 from glob import glob
@@ -60,6 +64,13 @@ class ForceField(object):
 
     @property
     def reference_graphs(self):
+        """
+        Returns all known blocks.
+
+        Returns
+        -------
+        dict
+        """
         return self.blocks
 
     @property
