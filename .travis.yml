@@ -48,12 +48,12 @@ jobs:
       install:
         - pip install pylint
       script:
-          # Run Pylint, extract the line that looks like " 9.53/10", and
-          # extract the score. Compare the score to 9.5 ("\1>9.5"). Fail if
-          # lower, success if higher. There's probably also a way to get the
-          # output on screen as well. But meh.
-        - [ $(bc -l <<< $(pylint vermouth | sed -re 's_.* ([0-9\.]+)/10.*_\1>9.5_;t;d')) -eq 1 ] 
-        - [ $(bc -l <<< $(pylint bin/martinize2 | sed -re 's_.* ([0-9\.]+)/10.*_\1>9.5_;t;d')) -eq 1 ] 
+        # Run Pylint, extract the line that looks like " 9.53/10", and
+        # extract the score. Compare the score to 9.5 ("\1>9.5"). Fail if
+        # lower, success if higher. There's probably also a way to get the
+        # output on screen as well. But meh.
+        - test $(bc -l <<< $(pylint vermouth | sed -re "s_.* ([0-9\.]+)/10.*_\1>9.5_;t;d")) -eq 1
+        - test $(bc -l <<< $(pylint bin/martinize2 | sed -re 's_.* ([0-9\.]+)/10.*_\1>9.5_;t;d')) -eq 1
         # - pylint vermouth
         # - pylint bin/martinize2
       after_success: skip
