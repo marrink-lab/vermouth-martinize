@@ -333,7 +333,25 @@ def convert_dssp_to_martini(sequence):
 
 
 def sequence_from_residues(molecule, attribute, default=None):
+    """
+    Generates a sequence of `attribute`, one per residue in `molecule`.
+
+    Parameters
+    ----------
+    molecule: vermouth.molecule.Molecule
+        The molecule to process.
+    attribute: collections.abc.Hashable
+        The attribute of interest.
+    default: object
+        Yielded if the first node of a residue has no attribute `attribute`.
+
+    Yields
+    ------
+    object
+        The value of `attribute` for every residue in `molecule`.
+    """
     for residue_nodes in molecule.iter_residues():
+        # TODO: Make sure they're the same for every node in residue.
         first_name = residue_nodes[0]
         first_node = molecule.nodes[first_name]
         value = first_node.get(attribute, default)
@@ -341,6 +359,26 @@ def sequence_from_residues(molecule, attribute, default=None):
 
 
 def annotate_residues_from_sequence(molecule, attribute, sequence):
+    """
+    Sets the attribute `attribute` to a value from `sequence` for every node in
+    `molecule`. Nodes in the n'th residue of `molecule` are given the n'th
+    value of `sequence`.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        The molecule to annotate. Is modified in-place.
+    attribute: collections.abc.Hashable
+        The attribute to set.
+    sequence: collections.abc.Sequence
+        The values assigned.
+
+    Raises
+    ------
+    ValueError
+        If the length of `sequence` is different from the number of residues in
+        `molecule`.
+    """
     residues = list(molecule.iter_residues())
     if len(sequence) == 1:
         sequence = sequence * len(residues)
@@ -355,6 +393,25 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
 
 def convert_dssp_annotation_to_martini(
         molecule, from_attribute='secstruct', to_attribute='cgsecstruct'):
+    """
+    For every node in `molecule`, translate the `from_attribute` with
+    :func:`convert_dssp_to_martini`, and assign it to the attribute
+    `to_attribute`.
+    
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        The molecule to process. Is modified in-place.
+    from_attribute: collections.abc.Hashable
+        The attribute to read.
+    to_attribute: collections.abc.Hashable
+        The attribute to set.
+    
+    Raises
+    ------
+    ValueError
+        If not all nodes have a `from_attribute`.
+    """
     dssp_sequence = list(sequence_from_residues(molecule, from_attribute))
     if None not in dssp_sequence:
         cg_sequence = list(convert_dssp_to_martini(dssp_sequence))

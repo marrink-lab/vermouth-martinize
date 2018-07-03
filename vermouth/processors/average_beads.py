@@ -11,6 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides a processor that generates positions for nodes based on the weighted
+average of the positions of the atoms they are constructed from.
+"""
+
 
 import numpy as np
 from .processor import Processor

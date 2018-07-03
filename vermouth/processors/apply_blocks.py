@@ -13,7 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Provides a processor that adds interactions from blocks to molecules.
+"""
+# TODO: Move all this functionality to do_mapping?
 from collections import ChainMap
 from itertools import product
 
@@ -23,6 +26,23 @@ from ..molecule import Molecule
 
 
 def apply_blocks(molecule, blocks):
+    """
+    Generate a new :class:`~vermouth.molecule.Molecule` based on the residue
+    names and other attributes of `molecule` from `blocks`.
+
+    Parameters
+    ----------
+    molecule: vermouth.molecule.Molecule
+        The molecule to process.
+    blocks: dict[str, vermouth.molecule.Block]
+        The blocks known.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        A new molecule with attributes from the old `molecule`, as well as all
+        interactions described by `blocks`.
+    """
     graph_out = Molecule(
         force_field=molecule.force_field,
         meta=molecule.meta.copy()

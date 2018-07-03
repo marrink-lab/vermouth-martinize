@@ -13,7 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Provides a processor that can perform a resolution transformation on a
+molecule.
+"""
 from collections import defaultdict
 from functools import partial
 from itertools import product, combinations
@@ -359,4 +362,3 @@ class DoMapping(Processor):
                     mols.append(new_molecule)
         system.molecules = mols
         system.force_field = self.to_ff
-
