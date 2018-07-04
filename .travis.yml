@@ -53,14 +53,8 @@ jobs:
       install:
         - pip install pylint
       script:
-        # Run Pylint, extract the line that looks like " 9.53/10", and
-        # extract the score. Compare the score to 9.5 ("\1>9.5"). Fail if
-        # lower, success if higher. There's probably also a way to get the
-        # output on screen as well. But meh.
-        - test $(bc -l <<< $(pylint --disable=fixme vermouth | sed -re "s_.* ([0-9\.]+)/10.*_\1>9.5_;t;d")) -eq 1
-        - test $(bc -l <<< $(pylint --disable=fixme bin/martinize2 | sed -re 's_.* ([0-9\.]+)/10.*_\1>9.5_;t;d')) -eq 1
-        # - pylint vermouth
-        # - pylint bin/martinize2
+        - python run_pylint.py --disable=fixme --fail-under=8.5 vermouth 
+        - python run_pylint.py --disable=fixme --fail-under=9.5 bin/martinize2
       after_success: skip
 #   - stage: deploy
 #     python: "3.5"
