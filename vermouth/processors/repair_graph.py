@@ -13,7 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Provides a processor that repairs a graph based on a reference.
+"""
 import networkx as nx
 
 from .processor import Processor

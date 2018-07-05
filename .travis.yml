@@ -1,29 +1,8 @@
 language: python
+dist: xenial
 cache: pip
-python:
-  - "2.7"
-  - "3.4"
-  - "3.5"
-  - "3.5-dev"
-  - "3.6"
-  - "3.6-dev"
-  - "3.7"
-  - "3.7-dev"
-  - "3.8-dev"
-matrix:
-  allow_failures:
-    - python: "2.7"
-    - python: "3.7"
-    - python: "3.5-dev"
-    - python: "3.6-dev"
-    - python: "3.7-dev"
-    - python: "3.8-dev"
-  fast_finish: true
 
-addons:
-  apt:
-    packages:
-     - dssp
+
 env:
   global:
     - VERMOUTH_TEST_DSSP=mkdssp
@@ -36,9 +15,33 @@ script:
   - pytest -vv --cov=vermouth vermouth 
 after_success:
   - codecov
+addons:
+  apt:
+    packages:
+     - dssp
 
 jobs:
+  fast_finish: true
+  allow_failures:
+    - python: "2.7"
+    - python: "3.5-dev"
+    - python: "3.6-dev"
+    - python: "3.7-dev"
+    - python: "3.8-dev"
   include:
+    - python: "2.7"
+    - python: "3.4"
+    - python: "3.5"
+    - python: "3.6"
+    - python: "3.7"
+      sudo: true
+    - python: "3.5-dev"
+    - python: "3.6-dev"
+    - python: "3.7-dev"
+      sudo: true
+    - python: "3.8-dev"
+      sudo: true
+
     - stage: docs
       python: "3.5"
       addons: skip
@@ -48,6 +51,7 @@ jobs:
       # script: python setup.py build_sphinx
       script: mkdir -p doc/source/_static; sphinx-build -EnW -b html doc/source/ doc/build/html
       after_success: skip
+
     - stage: pylint
       python: "3.5"
       addons: skip
