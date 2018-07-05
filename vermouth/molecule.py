@@ -284,7 +284,8 @@ class ParamDihedral(LinkParameterEffector):
 
 class ParamDihedralPhase(LinkParameterEffector):
     """
-    Calculate the dihedral angle in degrees defined by four nodes shifted by -180 degrees.
+    Calculate the dihedral angle in degrees defined by four nodes shifted by
+    -180 degrees.
     """
     n_keys_asked = 4
 
@@ -298,6 +299,10 @@ class ParamDihedralPhase(LinkParameterEffector):
 
 
 class Molecule(nx.Graph):
+    """
+    Represents a molecule as per a specific force field. Consists of atoms
+    (nodes), bonds (edges) and interactions such as angle potentials.
+    """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
     node_dict_factory = OrderedDict
@@ -324,6 +329,15 @@ class Molecule(nx.Graph):
 
     @property
     def atoms(self):
+        """
+        All atoms in this molecule. Alias for `nodes`.
+        
+        See Also
+        --------
+        :attr:`networkx.Graph.nodes`
+        """
+        # TODO: should just be an alias for nodes. If you need the attributes,
+        #       do g.nodes(data=<attr>) or g.nodes(data=True)
         for node in self.nodes():
             node_attr = self.node[node]
             yield node, node_attr
@@ -354,17 +368,61 @@ class Molecule(nx.Graph):
         return self.__class__(super().subgraph(*args, **kwargs))
 
     def add_interaction(self, type_, atoms, parameters, meta=None):
+        """
+        Add an interaction of the specified type with the specified parameters
+        involving the specified atoms.
+
+        Parameters
+        ----------
+        type_: str
+            The type of interaction, such as 'bonds' or 'angles'.
+        atoms: collections.abc.Sequence
+            The atoms that are involved in this interaction. Must be in this
+            molecule
+        parameters: collections.abc.Iterable
+            The parameters for this interaction.
+        meta: collections.abc.Mapping
+            Metadata for this interaction, such as comments to be written to
+            the output.
+
+        Raises
+        ------
+        KeyError
+            If one of the atoms is not in this molecule.
+        """
         if meta is None:
             meta = {}
         for atom in atoms:
             if atom not in self:
-                # KeyError?
-                raise ValueError('Unknown atom {}'.format(atom))
+                raise KeyError('Unknown atom {}'.format(atom))
         self.interactions[type_].append(
             Interaction(atoms=tuple(atoms), parameters=parameters, meta=meta)
         )
 
     def add_or_replace_interaction(self, type_, atoms, parameters, meta=None):
+        """
+        Adds a new interaction if it doesn't exists yet, and replaces it
+        otherwise. Interactions are deemed the same if they're the same type,
+        and they involve the same atoms, and their ``meta['version']`` is the
+        same.
+
+        Parameters
+        ----------
+        type_: str
+            The type of interaction, such as 'bonds' or 'angles'.
+        atoms: collections.abc.Sequence
+            The atoms that are involved in this interaction. Must be in this
+            molecule
+        parameters: collections.abc.Iterable
+            The parameters for this interaction.
+        meta: collections.abc.Mapping
+            Metadata for this interaction, such as comments to be written to
+            the output.
+
+        See Also
+        --------
+        :meth:`add_interaction`
+        """
         if meta is None:
             meta = {}
         for idx, interaction in enumerate(self.interactions[type_]):
@@ -379,9 +437,41 @@ class Molecule(nx.Graph):
             self.add_interaction(type_, atoms, parameters, meta)
 
     def get_interaction(self, type_):
+        """
+        Returns all interactions of `type_`
+
+        Parameters
+        ----------
+        type_: collections.abc.Hashable
+            The type which interactions should be found.
+
+        Returns
+        -------
+        list[Interaction]
+            The interactions of the specified type.
+        """
         return self.interactions[type_]
 
     def remove_interaction(self, type_, atoms, version=0):
+        """
+        Removes the specified interaction.
+
+        Parameters
+        ----------
+        type_: str
+            The type of interaction, such as 'bonds' or 'angles'.
+        atoms: collections.abc.Sequence
+            The atoms that are involved in this interaction.
+        version: int
+            Sometimes there can be multiple distinct interactions between the
+            same group of atoms. This is reflected with their `version` meta
+            attribute.
+
+        Raises
+        ------
+        KeyError
+            If the specified interaction could not be found
+        """
         idx = 0
         for idx, interaction in enumerate(self.interactions[type_]):
             if interaction.atoms == atoms and interaction.meta.get('version', 0):
@@ -393,6 +483,19 @@ class Molecule(nx.Graph):
         del self.interactions[type_][idx]
 
     def remove_matching_interaction(self, type_, template_interaction):
+        """
+        Removes any interactions that match the template.
+
+        Parameters
+        ----------
+        type_: collections.abc.Hashable
+            The type of interaction to look for.
+        template_interaction: Interaction
+
+        See Also
+        --------
+        :func:`interaction_match`
+        """
         for idx, interaction in enumerate(self.interactions[type_]):
             if interaction_match(self, interaction, template_interaction):
                 del self.interactions[type_][idx]
@@ -401,6 +504,19 @@ class Molecule(nx.Graph):
             raise ValueError('Cannot find a matching interaction.')
 
     def find_atoms(self, **attrs):
+        """
+        Yields all indices of atoms that match `attrs`
+
+        Parameters
+        ----------
+        **attrs: collections.abc.Mapping
+            The attributes and their desired values.
+
+        Yields
+        ------
+        collections.abc.Hashable
+            All atom indices that match the specified `attrs`
+        """
         for node_idx in self:
             node = self.nodes[node_idx]
             if all(node.get(attr, None) == val for attr, val in attrs.items()):
@@ -422,7 +538,8 @@ class Molecule(nx.Graph):
 
     def merge_molecule(self, molecule):
         """
-        Add the atoms and the interactions of a molecule at the end of this one.
+        Add the atoms and the interactions of a molecule at the end of this
+        one.
 
         Atom and residue index of the new atoms are offset to follow the last
         atom of this molecule.
@@ -431,6 +548,12 @@ class Molecule(nx.Graph):
         ----------
         molecule: Molecule
             The molecule to merge at the end.
+
+        Returns
+        -------
+        dict
+            A dict mapping the node indices of the added `molecule` to their
+            new indices in this molecule.
         """
         if self.force_field != molecule.force_field:
             raise ValueError(
@@ -472,11 +595,30 @@ class Molecule(nx.Graph):
         return correspondence
 
     def share_moltype_with(self, other):
+        """
+        Checks whether `other` has the same shape as this molecule.
+
+        Parameters
+        ----------
+        other: Molecule
+
+        Returns
+        -------
+        bool
+            True iff other has the same shape as this molecule.
+        """
         # TODO: Test the node attributes, the molecule attributes, and
         # the interactions.
         return nx.is_isomorphic(self, other)
 
     def iter_residues(self):
+        """
+        Returns a generator over the nodes of this molecules residues.
+
+        Returns
+        -------
+        collections.abc.Generator
+        """
         residue_graph = graph_utils.make_residue_graph(self)
         return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
 
@@ -563,6 +705,20 @@ class Block(Molecule):
                                             name, id(self))
 
     def add_atom(self, atom):
+        """
+        Add an atom. `atom` must contain an 'atomname'. This value will be this
+        atom's index.
+
+        Parameters
+        ----------
+        atom: collections.abc.Mapping
+            The attributes of the atom to add. Must contain 'atomname'
+
+        Raises
+        ------
+        ValueError
+            If `atom` does not contain 'atomname'
+        """
         try:
             name = atom['atomname']
         except KeyError:
@@ -620,6 +776,15 @@ class Block(Molecule):
             self.make_edges_from_interaction_type(type_)
 
     def guess_angles(self):
+        """
+        Generates all possible triplets of node indices that correspond to
+        angles.
+
+        Yields
+        ------
+        tuple[collections.abc.Hashable, collections.abc.Hashable, collections.abc.Hashable]
+            All possible angles.
+        """
         for a in self.nodes():
             for b in self.neighbors(a):
                 for c in self.neighbors(b):
@@ -628,6 +793,21 @@ class Block(Molecule):
                     yield (a, b, c)
 
     def guess_dihedrals(self, angles=None):
+        """
+        Generates all possible quadruplets of node indices that correspond to
+        torsion angles.
+
+        Parameters
+        ----------
+        angles: collections.abc.Iterable
+            All possible angles from which to start looking for torsion angles.
+            Generated from :meth:`guess_angles` if not provided.
+
+        Yields
+        ------
+        tuple[collections.abc.Hashable, collections.abc.Hashable, collections.abc.Hashable, collections.abc.Hashable]
+            All possible torsion angles.
+        """
         angles = angles if angles is not None else self.guess_angles()
         for a, b, c in angles:
             for d in self.neighbors(c):
@@ -672,6 +852,24 @@ class Block(Molecule):
 
     def to_molecule(self, atom_offset=0, offset_resid=0, offset_charge_group=0,
                     force_field=None):
+        """
+        Converts this block to a :class:`Molecule`.
+
+        Parameters
+        ----------
+        atom_offset: int
+            The number at which to start numbering the node indices.
+        offset_resid: int
+            The offset for the `resid` attributes.
+        offset_charge_group: int
+            The offset for the `charge_group` attributes.
+        force_field: None or vermouth.forcefield.ForceField
+
+        Returns
+        -------
+        Molecule
+            This block as a molecule.        
+        """
         if force_field is None:
             force_field = self.force_field
         name_to_idx = {}

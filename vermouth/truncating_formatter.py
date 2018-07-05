@@ -40,14 +40,14 @@ class TruncFormatter(string.Formatter):
         """
         Implements the 't' option to truncate strings that are too long to the
         required width.
-        
+
         Parameters
         ----------
         value
             The object to format.
         format_spec: str
             The format_spec describing how `value` should be formatted
-        
+
         Returns
         str
             `value` formatted as per `format_spec`
