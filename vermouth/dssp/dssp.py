@@ -165,7 +165,7 @@ def run_dssp(system, executable='dssp', savefile=None):
     system: System
     executable: str
         Where to find the DSSP executable.
-    savefile: None or str
+    savefile: None or str or pathlib.Path
         If set to a path, the output of DSSP is written in that file.
 
     Returns

@@ -82,7 +82,7 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
     Returns
     -------
-    collections.abc.Hashable:
+    collections.abc.Hashable
         The node key of the anchor in the molecule graph.
 
     Raises

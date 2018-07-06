@@ -53,7 +53,8 @@ def get_not_none(node, attr, default):
 
 def write_pdb_string(system, conect=True, omit_charges=True):
     """
-    Describes `system` as a PDB formatted string.
+    Describes `system` as a PDB formatted string. Will create CONECT records
+    from the edges in the molecules in `system` iff `conect` is True.
 
     Parameters
     ----------

@@ -24,11 +24,7 @@ from .processor import Processor
 
 
 class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
-    '''
-    '''
     def __init__(self, *args, **kwargs):
-        '''
-        '''
         super().__init__(*args, **kwargs)
 
     # G1 >= G2; G1 is the found residue; G2 the PTM reference

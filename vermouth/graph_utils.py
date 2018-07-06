@@ -98,7 +98,7 @@ def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
     cliques = nx.find_cliques(product)
     largest = maxes(cliques, key=len)
 
-    # Now, for every MCS we graph2, look at the nodes of degree 1. The
+    # Now, for every MCS we found, look at the nodes of degree 1. The
     # attributes still need to match. In addition, they need to have the same
     # (mapped) neighbour, or the neighbour must be missing from the graph2 graph
     all_cliques = []

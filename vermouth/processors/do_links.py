@@ -25,11 +25,7 @@ from .processor import Processor
 
 
 class LinkGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
-    '''
-    '''
     def __init__(self, *args, **kwargs):
-        '''
-        '''
         super().__init__(*args, **kwargs)
 
     def semantic_feasibility(self, node1_name, node2_name):
