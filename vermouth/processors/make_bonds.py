@@ -13,26 +13,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Wed Oct  4 10:48:58 2017
-
-@author: peterkroon
+Provides a processor that can add edges to a graph based on geometric criteria.
 """
+
+
+
+import networkx as nx
+import numpy as np
 
 from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import distance
 
-import networkx as nx
-import numpy as np
-
 COVALENT_RADII = {'H': 0.031, 'C': 0.076, 'N': 0.071, 'O': 0.066, 'S': 0.105}
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
 
 
 def bonds_from_distance(system, fudge=1.1):
+    """
+    Creates edges between nodes of molecules in system based on a distance
+    criterion. Nodes in system must have `position` and `element` attributes.
+    The possible distance between nodes is determined by values in
+    `COVALENT_RADII`.
+
+    Parameters
+    ----------
+    system: :class:`~vermouth.system.System`
+        The system in which to add edges.
+    fudge: :class:`~numbers.Number`
+        Increase the allowed distance by this factor.
+
+    Returns
+    -------
+    :class:`networkx.Graph`
+        A new graph where edges are added between nodes that are within a
+        certain distance from each other. It is probably disconnected.
+    """
     system = nx.compose_all(system.molecules)
     idx_to_nodenum = {idx: n for idx, n in enumerate(system)}
     max_dist = max(COVALENT_RADII.values())

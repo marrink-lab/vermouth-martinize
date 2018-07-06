@@ -1,30 +1,78 @@
 language: python
+dist: xenial
 cache: pip
-python:
-    - "2.7"
-    - "3.4"
-    - "3.5"
-    - "3.5-dev"
-    - "3.6"
-    - "3.6-dev"
-    - "3.7-dev"
-matrix:
-    allow_failures:
-        - python: "2.7"
-        - python: "3.7-dev"
-addons:
-    apt:
-        packages:
-            - dssp
+
+
 env:
+  global:
     - VERMOUTH_TEST_DSSP=mkdssp
+    - SKIP_GENERATE_AUTHORS=1
+    - SKIP_WRITE_GIT_CHANGELOG=1
 install:
-    - pip install --upgrade pylint codecov pytest-cov
-    - pip install --upgrade .
+  - pip install --upgrade codecov pytest-cov
+  - pip install --upgrade .
 script:
-    - pytest -vv --cov=vermouth vermouth 
-after_script:
-    - pylint vermouth
-    - pylint bin/martinize2
+  - pytest -vv --cov=vermouth vermouth 
 after_success:
-    - codecov
+  - codecov
+addons:
+  apt:
+    packages:
+     - dssp
+
+jobs:
+  fast_finish: true
+  allow_failures:
+    - python: "2.7"
+    - python: "3.5-dev"
+    - python: "3.6-dev"
+    - python: "3.7-dev"
+    - python: "3.8-dev"
+  include:
+    - python: "2.7"
+    - python: "3.4"
+    - python: "3.5"
+    - python: "3.6"
+    - python: "3.7"
+      sudo: true
+    - python: "3.5-dev"
+    - python: "3.6-dev"
+    - python: "3.7-dev"
+      sudo: true
+    - python: "3.8-dev"
+      sudo: true
+
+    - stage: docs
+      python: "3.5"
+      addons: skip
+      install:
+        - pip install --upgrade -r requirements-docs.txt
+        - pip install --upgrade .[full]
+      # script: python setup.py build_sphinx
+      script: mkdir -p doc/source/_static; sphinx-build -EnW -b html doc/source/ doc/build/html
+      after_success: skip
+
+    - stage: pylint
+      python: "3.5"
+      addons: skip
+      install:
+        - pip install pylint
+      script:
+        - python run_pylint.py --disable=fixme --fail-under=8.5 vermouth 
+        - python run_pylint.py --disable=fixme --fail-under=9.5 bin/martinize2
+      after_success: skip
+#   - stage: deploy
+#     python: "3.5"
+#     addons: skip
+#     env:
+#     script: skip
+#     after_success: skip
+#     deploy:
+#         user: ...
+#         password:
+#             # travis encrypt --add deploy.password
+#             secure: ...
+#         provider: pypi
+#         on:
+#             tags: true
+

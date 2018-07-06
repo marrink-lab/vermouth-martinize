@@ -40,18 +40,18 @@ def read_mapping(lines):
 
     Parameters
     ----------
-    lines: iterable of str
+    lines: collections.abc.Iterable[str]
         Collection of lines to read.
 
     Returns
     -------
     name: str
         The name of the fragment as read in the "molecule" field.
-    from_ff: list of str
+    from_ff: list[str]
         A list of force field origins. Each force field is referred by name.
-    to_ff: list of str
+    to_ff: list[str]
         A list of force field destinations. Each force field is referred by name.
-    mapping: dict
+    mapping: dict[tuple[int, str], list[tuple[int, str]]]
         The mapping. The keys of the dictionary are pairs of residue indices
         and the atom names in the origin force field as tupples (resid,
         atomname); the values are lists of resid, and atom names pairs
@@ -163,7 +163,7 @@ def read_mapping_directory(directory):
 
     Parameters
     ----------
-    directory: str or Path
+    directory: str
         The path to the directory to search. Files with a '.map' extension will
         be read. There is no recursive search.
 
@@ -183,9 +183,13 @@ def read_mapping_directory(directory):
             except IOError:
                 raise IOError('An error occured while reading "{}".'.format(path))
         for from_ff in all_from_ff:
+            to_ff = None
             for to_ff in all_to_ff:
                 mappings[from_ff][to_ff][name] = (mapping, weights, extra)
-            mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
+            if to_ff is not None:
+                # If all_to_ff is empty, then to_ff will not be redefined by
+                # the above for loop.
+                mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
     return dict(mappings)
 
 
@@ -198,18 +202,18 @@ def generate_self_mappings(blocks):
 
     Parameters
     ----------
-    blocks: dict
+    blocks: dict[str, networkx.Graph]
         A dictionary of blocks with block names as keys and the blocks
-        themselves as values. The blocks must be instances of :class:`nx.Graph`
+        themselves as values. The blocks must be instances of :class:`networkx.Graph`
         with each node having an 'atomname' attribute.
 
     Returns
     -------
-    mappings: dict
+    mappings: dict[str, tuple]
         A dictionary of mappings where the keys are the names of the blocks,
         and the values are tuples like (mapping, weights, extra). The elements
         of these tuples are formatted as the corresponding output of the
-        :fun:`read_mapping` function.
+        :func:`read_mapping` function.
 
     Raises
     ------
@@ -244,14 +248,14 @@ def generate_all_self_mappings(force_fields):
 
     Parameters
     ----------
-    force_fields: Iterable
-        List of instances of :class:`ForceField`.
+    force_fields: collections.abc.Iterable
+        List of instances of :class:`~vermouth.forcefield.ForceField`.
 
     Returns
     -------
     dict
         A collection of mappings formatted as the output of the
-        :fun:`read_mapping_directory` function.
+        :func:`read_mapping_directory` function.
     """
     mappings = collections.defaultdict(dict)
     for name, force_field in force_fields.items():
@@ -265,11 +269,11 @@ def combine_mappings(known_mappings, partial_mapping):
 
     Add the mappings from the 'partial_mapping' argument into the
     'known_mappings' collection. Both arguments are collections of mappings
-    similar to the output of the :fun:`read_mapping_directory` function. They
+    similar to the output of the :func:`read_mapping_directory` function. They
     are dictionary with 3 levels of keys: the name of the initial force field,
     the name of the target force field, and the name of the block. The values
     in the third level dictionary are tuples of (mapping, weights, extra) as
-    described in the :fun:`read_mapping`.
+    described in the :func:`read_mapping`.
 
     If a force field appears in 'partial_mapping' that is not in
     'known_mappings', then it is added. For existing pairs of initial and

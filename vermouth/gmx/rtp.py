@@ -64,7 +64,7 @@ class _IterRTPSubsectionLines(object):
         """
         Move the iterator after the last line of the subsection.
         """
-        for line in self:
+        for _ in self:
             pass
 
 
@@ -115,7 +115,7 @@ class _IterRTPSubsections(object):
         """
         Move the iterator after the last subsection of the section.
         """
-        for line in self:
+        for _ in self:
             pass
 
 
@@ -469,10 +469,10 @@ def read_rtp(lines, force_field):
 
     Parameters
     ----------
-    lines
+    lines: collections.abc.Iterator
         An iterator over the lines of a RTP file (e.g. a file handle, or a
         list of string).
-    force_field: vermouth.forcefield.Forcefield
+    force_field: vermouth.forcefield.ForceField
         The force field to populate in place.
 
     Raises

@@ -13,12 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Wed Oct  4 10:45:54 2017
-
-@author: peterkroon
+Provides Processors, VerMoUTH's work horses.
 """
+
 
 from .gro_reader import GROInput
 from .make_bonds import MakeBonds

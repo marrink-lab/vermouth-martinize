@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Tue Oct 10 10:51:03 2017
-
-@author: peterkroon
-"""
 from collections import defaultdict
 import itertools
 import networkx as nx
@@ -43,35 +38,42 @@ def add_element_attr(molecule):
             node['element'] = element
 
 
-def categorical_cartesian_product(G, H, attributes=tuple()):
-    P = nx.Graph()  # FIXME graphtype?
-    for u, v in itertools.product(G, H):
-        if all(G.node[u][attr] == H.node[v][attr] for attr in attributes):
+def categorical_cartesian_product(graph1, graph2, attributes=tuple()):
+    product = nx.Graph()  # FIXME graphtype?
+    for node1, node2 in itertools.product(graph1, graph2):
+        if all(graph1.node[node1][attr] == graph2.node[node2][attr] for attr in attributes):
             attrs = {}
-            for attr in set(G.node[u].keys()) | set(H.node[v].keys()):
-                attrs[attr] = (G.node[u].get(attr, None), H.node[v].get(attr, None))
-            P.add_node((u, v), **attrs)
-    return P
+            for attr in set(graph1.node[node1].keys()) | set(graph2.node[node2].keys()):
+                attrs[attr] = (graph1.node[node1].get(attr, None), graph2.node[node2].get(attr, None))
+            product.add_node((node1, node2), **attrs)
+    return product
 
 
-def categorical_modular_product(G, H, attributes=tuple()):
-    P = categorical_cartesian_product(G, H, attributes)
-    for (u1, v1), (u2, v2) in itertools.combinations(P.nodes(), 2):
-        both_edge = G.has_edge(u1, u2) and H.has_edge(v1, v2)
-        neither_edge = not G.has_edge(u1, u2) and not H.has_edge(v1, v2)
-        # Effectively: not (G.has_edge(u1, u2) xor H.has_edge(v1, v2))
-        if u1 != u2 and v1 != v2 and (both_edge or neither_edge):
+def categorical_modular_product(graph1, graph2, attributes=tuple()):
+    product = categorical_cartesian_product(graph1, graph2, attributes)
+    for (graph1_node1, graph2_node1), (graph1_node2, graph2_node2) in itertools.combinations(product.nodes(), 2):
+        graph1_nodes = graph1_node1, graph1_node2
+        graph2_nodes = graph2_node1, graph2_node2
+        both_edge = graph1.has_edge(*graph1_nodes) and graph2.has_edge(*graph2_nodes)
+        neither_edge = not graph1.has_edge(*graph1_nodes) and\
+                       not graph2.has_edge(*graph2_nodes)
+        # Effectively: not (graph1.has_edge(graph1_node1, graph1_node2) xor graph2.has_edge(graph2_node1, graph2_node2))
+        if graph1_node1 != graph1_node2 and graph2_node1 != graph2_node2 and\
+                (both_edge or neither_edge):
             attrs = {}
             if both_edge:
-                for attr in set(G.edges[u1, u2].keys()) | set(H.edges[v1, v2].keys()):
-                    attrs[attr] = (G.edges[u1, u2].get(attr, None), H.edges[v1, v2].get(attr, None))
-            P.add_edge((u1, v1), (u2, v2), **attrs)
-    return P
+                g1_edge_keys = set(graph1.edges[graph1_nodes].keys())
+                g2_edge_keys = set(graph2.edges[graph1_nodes].keys())
+                for attr in g1_edge_keys | g2_edge_keys:
+                    attrs[attr] = (graph1.edges[graph1_nodes].get(attr, None),
+                                   graph2.edges[graph1_nodes].get(attr, None))
+            product.add_edge((graph1_node1, graph2_node1), (graph1_node2, graph2_node2), **attrs)
+    return product
 
 
-def categorical_maximum_common_subgraph(G, H, attributes=tuple()):
-    P = categorical_modular_product(G, H, attributes)
-    cliques = nx.find_cliques(P)
+def categorical_maximum_common_subgraph(graph1, graph2, attributes=tuple()):
+    product = categorical_modular_product(graph1, graph2, attributes)
+    cliques = nx.find_cliques(product)
     # cliques is an iterator which will return a *lot* of items. So make sure
     # we never turn it into a full list.
     largest = maxes(cliques, key=len)
@@ -79,52 +81,48 @@ def categorical_maximum_common_subgraph(G, H, attributes=tuple()):
     return matches
 
 
-def maximum_common_subgraph(reference, found, attributes=tuple()):
-    print([key for key, value in reference.nodes.items() if 'element' not in value])
-    print(list(reference.nodes.items()))
-    G = reference
-    H = found
-    P = nx.Graph()
+def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
+    product = nx.Graph()
     # First, find the MCS between all nodes of degree != 1, such as the carbons
     # Nothing new or exciting here.
-    for u, v in itertools.product(G, H):
-        if all(G.node[u][attr] == H.node[v][attr] for attr in attributes):
-            if G.degree(u) != 1 and H.degree(v) != 1:
-                P.add_node((u, v))
-    for (u1, v1), (u2, v2) in itertools.combinations(P.nodes(), 2):
-        both_edge = G.has_edge(u1, u2) and H.has_edge(v1, v2)
-        neither_edge = not G.has_edge(u1, u2) and not H.has_edge(v1, v2)
-        # Effectively: not (G.has_edge(u1, u2) xor H.has_edge(v1, v2))
-        if u1 != u2 and v1 != v2 and (both_edge or neither_edge):
-            P.add_edge((u1, v1), (u2, v2))
-    cliques = nx.find_cliques(P)
+    for g1_node, g2_node in itertools.product(graph1, graph2):
+        if all(graph1.node[g1_node][attr] == graph2.node[g2_node][attr] for attr in attributes):
+            if graph1.degree(g1_node) != 1 and graph2.degree(g2_node) != 1:
+                product.add_node((g1_node, g2_node))
+    for (g1_node1, g2_node1), (g1_node2, g2_node2) in itertools.combinations(product.nodes(), 2):
+        both_edge = graph1.has_edge(g1_node1, g1_node2) and graph2.has_edge(g2_node1, g2_node2)
+        neither_edge = not graph1.has_edge(g1_node1, g1_node2) and not graph2.has_edge(g2_node1, g2_node2)
+        # Effectively: not (graph1.has_edge(g1_node1, g1_node2) xor graph2.has_edge(g2_node1, g2_node2))
+        if g1_node1 != g1_node2 and g2_node1 != g2_node2 and (both_edge or neither_edge):
+            product.add_edge((g1_node1, g2_node1), (g1_node2, g2_node2))
+    cliques = nx.find_cliques(product)
     largest = maxes(cliques, key=len)
 
     # Now, for every MCS we found, look at the nodes of degree 1. The
     # attributes still need to match. In addition, they need to have the same
-    # (mapped) neighbour, or the neighbour must be missing from the found graph
+    # (mapped) neighbour, or the neighbour must be missing from the graph2 graph
     all_cliques = []
     for clique in largest:
         match = dict(clique)
-        P = nx.Graph()
-        P.add_nodes_from(clique)
-        for u, v in itertools.product(G, H):
+        product = nx.Graph()
+        product.add_nodes_from(clique)
+        for g1_node, g2_node in itertools.product(graph1, graph2):
             # We can't do this above, because we need the match to translate
-            # nodes from graph G to graph H to see whether their neighbours
+            # nodes from graph graph1 to graph graph2 to see whether their neighbours
             # correspond.
-            if (G.degree(u) == 1 or H.degree(v) == 1) and\
-                    all(G.node[u][attr] == H.node[v][attr] for attr in attributes):
-                G_neighbors = [match.get(n, None) for n in G.neighbors(u)]
-                if None in G_neighbors or any(n in G_neighbors for n in H.neighbors(v)):
-                    P.add_node((u, v))
-        for (u1, v1), (u2, v2) in itertools.combinations(P.nodes(), 2):
-            both_edge = G.has_edge(u1, u2) and H.has_edge(v1, v2)
-            neither_edge = not G.has_edge(u1, u2) and not H.has_edge(v1, v2)
-            # Effectively: not (G.has_edge(u1, u2) xor H.has_edge(v1, v2))
-            if u1 != u2 and v1 != v2 and (both_edge or neither_edge):
-                P.add_edge((u1, v1), (u2, v2))
-        all_cliques.append(nx.find_cliques(P))
-    # And finally, find the largest MCS in all cliques found.
+            if (graph1.degree(g1_node) == 1 or graph2.degree(g2_node) == 1) and\
+                    all(graph1.node[g1_node][attr] == graph2.node[g2_node][attr] for attr in attributes):
+                g1_neighbors = [match.get(n, None) for n in graph1.neighbors(g1_node)]
+                if None in g1_neighbors or any(n in g1_neighbors for n in graph2.neighbors(g2_node)):
+                    product.add_node((g1_node, g2_node))
+        for (g1_node1, g2_node1), (g1_node2, g2_node2) in itertools.combinations(product.nodes(), 2):
+            both_edge = graph1.has_edge(g1_node1, g1_node2) and graph2.has_edge(g2_node1, g2_node2)
+            neither_edge = not graph1.has_edge(g1_node1, g1_node2) and not graph2.has_edge(g2_node1, g2_node2)
+            # Effectively: not (graph1.has_edge(g1_node1, g1_node2) xor graph2.has_edge(g2_node1, g2_node2))
+            if g1_node1 != g1_node2 and g2_node1 != g2_node2 and (both_edge or neither_edge):
+                product.add_edge((g1_node1, g2_node1), (g1_node2, g2_node2))
+        all_cliques.append(nx.find_cliques(product))
+    # And finally, find the largest MCS in all cliques graph2.
     largest = maxes(itertools.chain(*all_cliques), key=len)
     matches = [dict(clique) for clique in largest]
 
@@ -160,11 +158,12 @@ def isomorphism(reference, residue):
         The graph to match to ``reference``.
     Returns
     -------
-    matches : list of dictionaries
+    matches : list[dict]
         The matches found. The dictionaries have node indices of ``reference`` as
         keys and node indices of ``residue`` as values. Is an empty list if
         ``residue`` is not a subgraph of ``reference``.
     """
+    # TODO: refactor this thing to accept node and edge compatibility checkers
     matches = []
 #    H_idxs = [idx for idx in residue if residue.node[idx]['element'] == 'H']
     H_idxs = [idx for idx in residue if residue.degree(idx) == 1]
@@ -207,8 +206,8 @@ def isomorphism(reference, residue):
         # re-entrant.
         # Indices in match do not have to be changed to account for interlaced
         # hydrogens: the node-indices in heavy_res and residue are the same.
-        GM_large.core_1 = match
-        GM_large.core_2 = reverse_match
+        GM_large.core_1 = match  # pylint: disable=attribute-defined-outside-init
+        GM_large.core_2 = reverse_match  # pylint: disable=attribute-defined-outside-init
         outcome = GM_large.subgraph_isomorphisms_iter()
         # Take just the first match found, otherwise it becomes a combinatorics
         # problem (consider an alkane chain). This is fine though, since
@@ -255,9 +254,9 @@ def blockmodel(G, partitions, **attrs):
     ----------
     G: networkx.Graph
         The graph to partition
-    parititions: iterable of iterables
+    parititions: collections.abc.Iterable[collections.abc.Iterable]
         Each element contains the node indices that construct the new node.
-    **attrs: dict of str: iterable
+    **attrs: dict[str, collections.abc.Iterable]
         Attributes to assign to new nodes. Attribute values are assigned to the
         new nodes in order.
 
@@ -382,4 +381,3 @@ def make_residue_graph(mol):
     res_graph = blockmodel(mol, grps, chain=chain, resid=resids,
                            resname=resnames, atomname=resnames)
     return res_graph
-

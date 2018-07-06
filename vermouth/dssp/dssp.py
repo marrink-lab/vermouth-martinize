@@ -17,14 +17,12 @@ Assign protein secondary structures using DSSP.
 """
 
 import collections
-import itertools
 import os
 import subprocess
 import logging
 
 from ..pdb import pdb
 from ..system import System
-from ..molecule import Molecule
 from ..processors.processor import Processor
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 
@@ -70,7 +68,7 @@ def read_dssp2(lines):
 
     Returns
     -------
-    secstructs: list of str
+    secstructs: list[str]
         The secondary structure assigned by DSSP as a list of one-letter
         secondary structure code.
 
@@ -157,7 +155,7 @@ def run_dssp(system, executable='dssp', savefile=None):
     However, the molecules do not require the edges to be defined.
 
     DSSP is assumed to be in version 2. The secondary structure codes are
-    described in :fun:`read_dssp2`.
+    described in :func:`read_dssp2`.
 
     If "savefile" is set to a path, then the output of DSSP is written in
     that file.
@@ -167,7 +165,7 @@ def run_dssp(system, executable='dssp', savefile=None):
     system: System
     executable: str
         Where to find the DSSP executable.
-    savefile: None or path
+    savefile: None or str or pathlib.Path
         If set to a path, the output of DSSP is written in that file.
 
     Returns
@@ -258,7 +256,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
     run_dssp, read_dssp2
     """
     if not is_protein(molecule):
-        return molecule
+        return
 
     clean_pos = molecule.subgraph(
         filter_minimal(molecule, selector=selector_has_position)
@@ -266,7 +264,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
 
     # We ignore empty molecule, there is no point at running DSSP on them.
     if not clean_pos:
-        return molecule
+        return
 
     savefile = _savefile_path(molecule, savedir)
 
@@ -335,7 +333,25 @@ def convert_dssp_to_martini(sequence):
 
 
 def sequence_from_residues(molecule, attribute, default=None):
+    """
+    Generates a sequence of `attribute`, one per residue in `molecule`.
+
+    Parameters
+    ----------
+    molecule: vermouth.molecule.Molecule
+        The molecule to process.
+    attribute: collections.abc.Hashable
+        The attribute of interest.
+    default: object
+        Yielded if the first node of a residue has no attribute `attribute`.
+
+    Yields
+    ------
+    object
+        The value of `attribute` for every residue in `molecule`.
+    """
     for residue_nodes in molecule.iter_residues():
+        # TODO: Make sure they're the same for every node in residue.
         first_name = residue_nodes[0]
         first_node = molecule.nodes[first_name]
         value = first_node.get(attribute, default)
@@ -343,6 +359,26 @@ def sequence_from_residues(molecule, attribute, default=None):
 
 
 def annotate_residues_from_sequence(molecule, attribute, sequence):
+    """
+    Sets the attribute `attribute` to a value from `sequence` for every node in
+    `molecule`. Nodes in the n'th residue of `molecule` are given the n'th
+    value of `sequence`.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        The molecule to annotate. Is modified in-place.
+    attribute: collections.abc.Hashable
+        The attribute to set.
+    sequence: collections.abc.Sequence
+        The values assigned.
+
+    Raises
+    ------
+    ValueError
+        If the length of `sequence` is different from the number of residues in
+        `molecule`.
+    """
     residues = list(molecule.iter_residues())
     if len(sequence) == 1:
         sequence = sequence * len(residues)
@@ -352,11 +388,30 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
         raise ValueError(msg.format(len(sequence), len(residues)))
     for residue_nodes, value in zip(residues, sequence):
         for node_name in residue_nodes:
-            node = molecule.nodes[node_name][attribute] = value
+            molecule.nodes[node_name][attribute] = value
 
 
 def convert_dssp_annotation_to_martini(
         molecule, from_attribute='secstruct', to_attribute='cgsecstruct'):
+    """
+    For every node in `molecule`, translate the `from_attribute` with
+    :func:`convert_dssp_to_martini`, and assign it to the attribute
+    `to_attribute`.
+    
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        The molecule to process. Is modified in-place.
+    from_attribute: collections.abc.Hashable
+        The attribute to read.
+    to_attribute: collections.abc.Hashable
+        The attribute to set.
+    
+    Raises
+    ------
+    ValueError
+        If not all nodes have a `from_attribute`.
+    """
     dssp_sequence = list(sequence_from_residues(molecule, from_attribute))
     if None not in dssp_sequence:
         cg_sequence = list(convert_dssp_to_martini(dssp_sequence))
@@ -391,7 +446,8 @@ class AnnotateDSSP(Processor):
 class AnnotateMartiniSecondaryStructures(Processor):
     name = 'AnnotateMartiniSecondaryStructures'
 
-    def run_molecule(self, molecule):
+    @staticmethod
+    def run_molecule(molecule):
         convert_dssp_annotation_to_martini(molecule)
         return molecule
 
@@ -403,7 +459,7 @@ class AnnotateResidues(Processor):
                  molecule_selector=select_all):
         self.attribute = attribute
         self.sequence = sequence
-        self.molecule_selector=molecule_selector
+        self.molecule_selector = molecule_selector
 
     def run_molecule(self, molecule):
         if self.molecule_selector(molecule):

@@ -8,3 +8,6 @@ test.pdb
 .pytest_cache
 *.egg-info
 .coverage
+
+doc/build
+doc/source/api

@@ -12,11 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Tue Aug 22 11:42:42 2017
-
-@author: Peter Kroon
+Provides functionality to read and write PDB files.
 """
 
 from .pdb import read_pdb, write_pdb

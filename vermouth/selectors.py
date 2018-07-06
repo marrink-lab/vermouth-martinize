@@ -11,9 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides helper function for selecting part of a system, e.g. all proteins, or
+protein backbones.
+"""
+
 
 import numpy as np
-from .molecule import Molecule
 
 
 # TODO: Make that list part of the force fields
@@ -45,12 +49,18 @@ def is_protein(molecule):
     )
 
 
-def select_all(node):
+def select_all(_):
+    """
+    Returns True for all particles.
+    """
     return True
 
 
 # TODO: Have the backbone definition be force field specific.
 def select_backbone(node):
+    """
+    Returns True if `node` is in a protein backbone.
+    """
     return node.get('atomname') == 'BB'
 
 
@@ -81,7 +91,7 @@ def proto_select_attribute_in(node, attribute, values):
 
     To be used as a selector, the function must be wrapped in a way that it can
     be called without the need to explicitly specify the 'attribute' and
-    'values' arguments. This can be done using :fun:`functools.partial`:
+    'values' arguments. This can be done using :func:`functools.partial`:
 
     >>> # select an atom if its name is in a given list
     >>> to_keep = ['BB', 'SC1']
@@ -119,7 +129,8 @@ def filter_minimal(molecule, selector):
     The function can be used to build a subgraph that only contains the
     selection:
 
-    .. code:: python
+    .. code-block:: python
+
         selection = molecule.subgraph(
              filter_minimal(molecule, selector_function)
         )
@@ -127,7 +138,7 @@ def filter_minimal(molecule, selector):
     Parameters
     ----------
     molecule: Molecule
-    selector: callback
+    selector: collections.abc.Callable
 
     Yields
     ------

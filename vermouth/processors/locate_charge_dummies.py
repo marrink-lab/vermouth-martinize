@@ -11,10 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Provides a processor that generates positions for every charge dummy.
+"""
 import itertools
 import operator
+
 import numpy as np
+
 from .processor import Processor
 
 DEFAULT_DUMMY_ATTRIBUTE = 'charge_dummy'
@@ -34,17 +38,17 @@ def fibonacci_sphere(n_samples):
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
         3D coordinates of the points.
     """
     offset = 2 / n_samples
     increment = np.pi * (3 - np.sqrt(5))
     sample_idx = np.arange(n_samples)
-    y = (sample_idx * offset - 1) + offset / 2
-    r = np.sqrt(1 - y * y)
+    y = (sample_idx * offset - 1) + offset / 2  # pylint: disable=invalid-name
+    r = np.sqrt(1 - y * y)  # pylint: disable=invalid-name
     phi = (sample_idx % n_samples) * increment
-    x = np.cos(phi) * r
-    z = np.sin(phi) * r
+    x = np.cos(phi) * r  # pylint: disable=invalid-name
+    z = np.sin(phi) * r  # pylint: disable=invalid-name
     return np.stack([x, y, z]).T
 
 
@@ -69,7 +73,7 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
     Parameters
     ----------
-    molecule: nx.Groph
+    molecule: networkx.Graph
         The molecule to work on.
     node_key:
         The node key of the charge dummy.
@@ -78,7 +82,7 @@ def find_anchor(molecule, node_key, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
 
     Returns
     -------
-    anchor_key:
+    collections.abc.Hashable
         The node key of the anchor in the molecule graph.
 
     Raises
@@ -114,18 +118,18 @@ def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_A
     Set the position of a group of charge dummies around a non-dummy anchor.
 
     The molecule is modified in-place.
-    
+
     The charge dummies are placed at a distance to the anchor defined in nm by
     their charge dummy attribute, the name of which is given in the
     'attribute_tag' argument.
 
     Parameters
     ----------
-    molecule: vermouth.Molecule
+    molecule: vermouth.molecule.Molecule
         The molecule to work on.
     anchor_key:
         The key of the non-dummy anchor all the charge dummies are connected to.
-    dummy_keys: iterable
+    dummy_keys: collections.abc.Iterable
         A collection of atom keys for charge dummies to position.
     attribute_tag: str
         Name of the atom attribute that describe charge dummies.
@@ -133,7 +137,7 @@ def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_A
     anchor_position = molecule.nodes[anchor_key].get('position')
     if anchor_position is None:
         msg = 'The anchor of the "{}" dummy ("{}") does not have a position.'
-        raise ValueError(msg.format(node_key, anchor_position[0]))
+        raise ValueError(msg.format(anchor_key, anchor_position[0]))
 
     distances = []
     distance_error_keys = []
@@ -143,9 +147,9 @@ def locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag=DEFAULT_DUMMY_A
         except ValueError:
             distance_error_keys.append(dummy_key)
     if distance_error_keys:
-        msg = ('The following charge dummies have an invalid for their {} ',
+        msg = ('The following charge dummies have an invalid for their {} '
                'attribute: {}. The values have to be numbers.'
-                .format(attribute_tag, ', '.join(distance_error_keys)))
+               .format(attribute_tag, ', '.join(distance_error_keys)))
         raise ValueError(msg)
     distances = np.array(distances)
 
@@ -164,14 +168,14 @@ def locate_all_dummies(molecule, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
     Set the position of all charge dummies of a molecule.
 
     The molecule is modified in-place.
-    
+
     The charge dummies are placed at a distance to the anchor defined in nm by
     their charge dummy attribute, the name of which is given in the
     'attribute_tag' argument.
 
     Parameters
     ----------
-    molecule: vermouth.Molecule
+    molecule: vermouth.molecule.Molecule
         The molecule to work on.
     attribute_tag: str
         Name of the atom attribute that describe charge dummies.

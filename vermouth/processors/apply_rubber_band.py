@@ -11,10 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Provides a processor that adds a rubber band elastic network.
+"""
 import itertools
+
 import numpy as np
 import networkx as nx
+
 from .processor import Processor
 from .. import selectors
 
@@ -27,19 +31,17 @@ def self_distance_matrix(coordinates):
 
     Notes
     -----
-
     This function does **not** account for periodic boundary conditions.
 
     Parameters
     ----------
-
-    coordinates: np.ndarray
+    coordinates: numpy.ndarray
         Coordinates of the points in the selection. Each row must correspond
         to a point and each column to a dimension.
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
     """
     return np.sqrt(
         np.sum(
@@ -49,7 +51,7 @@ def self_distance_matrix(coordinates):
 
 
 def compute_decay(distance, shift, rate, power):
-    """
+    r"""
     Compute the decay function of the force constant as function to the distance.
 
     The decay function for the force constant is defined as:
@@ -110,18 +112,18 @@ def build_connectivity_matrix(graph, separation, selection=None):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         The graph/molecule to work on.
-    separation: int >= 0
+    separation: int
         The maximum number of nodes in the shortest path between two nodes of
-        interest for these two nodes to be considered connected.
-    selection: Iterable
+        interest for these two nodes to be considered connected. Must be >= 0.
+    selection: collections.abc.Iterable
         A list of node keys to work on. If this argument is set, then the
         matrix corresponds to the subgraph containing these keys.
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
         A boolean matrix.
     """
     if separation < 0:
@@ -133,17 +135,17 @@ def build_connectivity_matrix(graph, separation, selection=None):
         return nx.to_numpy_matrix(graph, nodelist=selection).astype(bool)
     subgraph = graph.subgraph(selection)
     connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
-    for (i, key_i), (j, key_j) in itertools.combinations(enumerate(subgraph.nodes), 2):
+    for (idx, key_idx), (jdx, key_jdx) in itertools.combinations(enumerate(subgraph.nodes), 2):
         try:
-            shortest_path = len(nx.shortest_path(subgraph, key_i, key_j))
+            shortest_path = len(nx.shortest_path(subgraph, key_idx, key_jdx))
         except nx.NetworkXNoPath:
             # There is no path between key_i and key_j so they are not
             # connected; which is the default.
             pass
         else:
             # The source and the target are counted in the shortest path
-            connectivity[i, j] = shortest_path <= separation + 2
-            connectivity[j, i] = connectivity[i, j]
+            connectivity[idx, jdx] = shortest_path <= separation + 2
+            connectivity[jdx, idx] = connectivity[idx, jdx]
     return connectivity
 
 
@@ -181,13 +183,18 @@ def apply_rubber_band(molecule, selector,
     molecule: Molecule
         The molecule to which apply the elastic network. The molecule is
         modified in-place.
-    selector: callback
+    selector: collections.abc.Callable
         Selection function.
-    lower_bound, upper_bound: float
-        The minimum and maximum length for a bond to be added, expressed in
+    lower_bound: float
+        The minimum length for a bond to be added, expressed in
         nanometers.
-    decay_factor, decay_power: float
-        Parameters for the decay function.
+    upper_bound: float
+        The maximum length for a bond to be added, expressed in
+        nanometers.
+    decay_factor: float
+        Parameter for the decay function.
+    decay_power: float
+        Parameter for the decay function.
     base_constant: float
         The base force constant for the bonds in :math:`kJ.mol^{-1}.nm^{-2}`.
         If 'decay_factor' or 'decay_power' is set to 0, then it will be the

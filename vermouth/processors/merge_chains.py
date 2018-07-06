@@ -38,9 +38,9 @@ def merge_chains(system, chains):
 
     Parameters
     ----------
-    system: vermouth.System
+    system: vermouth.system.System
         The system to modify.
-    chains: list of str
+    chains: list[str]
         A container of chain identifier.
     """
     chains = set(chains)

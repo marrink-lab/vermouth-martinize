@@ -12,22 +12,39 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Tue Aug 22 11:33:07 2017
-
-@author: Peter Kroon
+Provides functions for reading and writing PDB files.
 """
-from ..molecule import Molecule
-from ..utils import first_alpha, distance
-from ..truncating_formatter import TruncFormatter
+
 
 from functools import partial
 
 import numpy as np
 
+from ..molecule import Molecule
+from ..utils import first_alpha, distance
+from ..truncating_formatter import TruncFormatter
+
 
 def get_not_none(node, attr, default):
+    """
+    Returns ``node[attr]``. If it doesn't exists or is ``None``, return
+    `default`.
+
+    Parameters
+    ----------
+    node: collections.abc.Mapping
+    attr: collections.abc.Hashable
+    default
+        The value to return if ``node[attr]`` is either ``None``, or does not
+        exist.
+
+    Returns
+    -------
+    object
+        The value of ``node[attr]`` if it exists and is not ``None``, else
+        `default`.
+    """
     value = node.get(attr)
     if value is None:
         value = default
@@ -35,7 +52,29 @@ def get_not_none(node, attr, default):
 
 
 def write_pdb_string(system, conect=True, omit_charges=True):
+    """
+    Describes `system` as a PDB formatted string. Will create CONECT records
+    from the edges in the molecules in `system` iff `conect` is True.
+
+    Parameters
+    ----------
+    system: vermouth.system.System
+        The system to write.
+    conect: bool
+        Whether to write CONECT records for the edges.
+    omit_charges: bool
+        Whether charges should be omitted. This is usually a good idea since
+        the PDB format can only deal with integer charges.
+
+    Returns
+    -------
+    str
+        The system as PDB formatted string.
+    """
     def keyfunc(graph, node_idx):
+        """
+        Used for sorting nodes
+        """
         # TODO add something like idx_in_residue
         return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
 
@@ -44,7 +83,7 @@ def write_pdb_string(system, conect=True, omit_charges=True):
     formatter = TruncFormatter()
 #    format_string = 'ATOM  {: >5.5d} {:4.4s}{:1.1s}{:3.3s} {:1.1s}{:4.4d}{:1.1s}   {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:2.2s}{:2.2s}'
     format_string = 'ATOM  {: >5dt} {:4st}{:1st}{:3st} {:1st}{:>4dt}{:1st}   {:8.3ft}{:8.3ft}{:8.3ft}{:6.2ft}{:6.2ft}          {:2st}{:2st}'
-    
+
     # FIXME Here we make the assumption that node indices are unique across
     # molecules in a system. Probably not a good idea
     nodeidx2atomid = {}
@@ -61,7 +100,7 @@ def write_pdb_string(system, conect=True, omit_charges=True):
             chain = node['chain']
             resid = node['resid']
             insertion_code = get_not_none(node, 'insertioncode', '')
-            x, y, z = node['position'] * 10  # converting from nm to A
+            x, y, z = node['position'] * 10  # converting from nm to A  # pylint: disable=invalid-name
             occupancy = get_not_none(node, 'occupancy', 1)
             temp_factor = get_not_none(node, 'temp_factor', 0)
             element = get_not_none(node, 'element', '')
@@ -99,12 +138,39 @@ def write_pdb_string(system, conect=True, omit_charges=True):
 
 
 def write_pdb(system, path, conect=True, omit_charges=True):
+    """
+    Writes `system` to `path` as a PDB formatted string.
+
+    Parameters
+    ----------
+    system: vermouth.system.System
+        The system to write.
+    path: str
+        The file to write to.
+    conect: bool
+        Whether to write CONECT records for the edges.
+    omit_charges: bool
+        Whether charges should be omitted. This is usually a good idea since
+        the PDB format can only deal with integer charges.
+
+    See Also
+    --------
+    :func:write_pdb_string
+    """
     with open(path, 'w') as out:
         out.write(write_pdb_string(system, conect, omit_charges))
 
 
 def do_conect(mol, conectlist):
-    """Apply connections to molecule based on CONECT records read from PDB file"""
+    """Apply connections to molecule based on CONECT records read from PDB file
+
+    Parameters
+    ----------
+    mol: networkx.Graph
+        The graph to add edges to.
+    conectlist: collections.abc.Iterable[str]
+        An iterable of CONECT records as found in a PDB file.
+    """
     atidx2nodeidx = {node_data['atomid']: node_idx
                      for node_idx, node_data in mol.node.items()}
 
@@ -113,28 +179,48 @@ def do_conect(mol, conectlist):
         width = 5
         ats = []
         for num in range(start, len(line.rstrip()), width):
-            at = int(line[num:num + width])
-            ats.append(at)
+            atom = int(line[num:num + width])
+            ats.append(atom)
             try:
                 at0 = atidx2nodeidx[ats[0]]
             except KeyError:
                 continue
-            for at in ats[1:]:
+            for atom in ats[1:]:
                 try:
-                    at = atidx2nodeidx[at]
+                    atom = atidx2nodeidx[atom]
                 except KeyError:
                     continue
-                dist = distance(mol.node[at0]['position'], mol.node[at]['position'])
-                mol.add_edge(at0, at, distance=dist)
+                dist = distance(mol.node[at0]['position'], mol.node[atom]['position'])
+                mol.add_edge(at0, atom, distance=dist)
 
     return
 
-                    
+
 def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
+    """
+    Parse a PDB file to create a molecule.
+
+    Parameters
+    ----------
+    filename: str
+        The file to read.
+    exclude: collections.abc.Container[str]
+        Atoms that have one of these residue names will not be included.
+    ignh: bool
+        Whether hydrogen atoms should be ignored.
+    model: int
+        If the PDB file contains multiple models, which one to select.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        The parsed molecules. Will only contain edges if the PDB file has
+        CONECT records. Either way, might be disconnected.
+    """
     models = [Molecule()]
     conect = []
     idx = 0
-    
+
     field_widths = (-6, 5, -1, 4, 1, 4, 1, 4, 1, -3, 8, 8, 8, 6, 6, -10, 2, 2)
     field_types = (int, str, str, str, str, int, str, float, float, float, float, float, str, str)
     field_names = ('atomid', 'atomname', 'altloc', 'resname', 'chain', 'resid',
@@ -147,7 +233,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
         if width > 0:
             slices.append(slice(start, start + width))
         start = start + abs(width)
-    
+
     with open(file_name) as pdb:
         for line in pdb:
             record = line[:6]
@@ -172,12 +258,12 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
             elif record == 'CONECT':
                 conect.append(line)
 
-    if not len(models[-1]):
+    if not models[-1]:
         models.pop()
-        
+
     for molecule in models:
         do_conect(molecule, conect)
-                
+
     molecule = models[model]
 
 #    if molecule.number_of_edges() == 0:

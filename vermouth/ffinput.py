@@ -24,7 +24,6 @@ is done in the same way an ITP file describes a molecule.
 
 import collections
 import copy
-import math
 import numbers
 import json
 from .molecule import (
@@ -33,8 +32,6 @@ from .molecule import (
     Choice, NotDefinedOrNot,
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
-import networkx as nx
-import copy
 
 VALUE_PREDICATES = {
     'not': NotDefinedOrNot,
@@ -55,7 +52,7 @@ def _tokenize(line):
     An interaction line is any uncommented and non empty line that follows a
     section header about an interaction type. Such a line is composed of the
     following parts:
-    
+
     * a list of atoms involved in the interaction,
     * an optional delimiter that indicates the end of the atom list,
     * a list of parameters for the interaction.
@@ -218,7 +215,7 @@ def _substitute_macros(line, macros):
         end = start + len(macro_value)
     return line
 
-        
+
 def _some_atoms_left(tokens, atoms, natoms):
     if tokens and tokens[0] == '--':
         tokens.popleft()
@@ -285,7 +282,7 @@ def _treat_block_interaction_atoms(atoms, context, section):
                 msg = ('Atom names in blocks cannot be prefixed with + or -. '
                        'The name "{}", used in section "{}" of the block "{}" '
                        'is not valid in a block.')
-                raise IOError(msg.format(reference, section, block.name))
+                raise IOError(msg.format(reference, section, context.name))
 
 
 def _split_node_key(key):
@@ -296,6 +293,7 @@ def _split_node_key(key):
         raise IOError('A node key cannot be empty.')
 
     # If the atom name is prefixed, we can get the order.
+    prefix_end = 0  # Make sure prefix_end is defined even if key is empty
     for prefix_end, char in enumerate(key):
         if char not in '+-><*':
             break
@@ -320,7 +318,7 @@ def _split_node_key(key):
 def _get_order_and_prefix_from_attributes(attributes):
     prefix_from_attributes = ''
     order_from_attributes = None
-    Sequence = collections.Sequence
+    Sequence = collections.Sequence  # pylint: disable=invalid-name
     if attributes.get('order') is not None:
         order = attributes['order']
         order_from_attributes = order
@@ -500,7 +498,7 @@ def _parse_interaction_parameters(tokens):
             else:
                 effector_format = None
             effector_param = [elem.strip() for elem in effector_param_str.split(',')]
-            parameter = effector_class(effector_param, format=effector_format)
+            parameter = effector_class(effector_param, format_spec=effector_format)
         else:
             parameter = token
         parameters.append(parameter)
@@ -707,7 +705,7 @@ def _parse_patterns(tokens, context, context_type):
     context.patterns.append(atoms)
 
 
-def _parse_variables(tokens, force_field):
+def _parse_variables(tokens, force_field, section):
     if len(tokens) > 2:
         raise IOError('Unexpected column in section "{}".'.format(section))
     elif len(tokens) < 2:
@@ -724,6 +722,16 @@ def _parse_features(tokens, context, context_type):
 
 
 def read_ff(lines, force_field):
+    """
+    Read a .ff file and update the force field with its content.
+
+    Parameters
+    ----------
+    lines
+        Iterable on the file lines to read.
+    force_field: vermouth.forcefield.ForceField
+        The force field to update.
+    """
     interactions_natoms = {
         'bonds': 2,
         'angles': 3,
@@ -808,7 +816,7 @@ def read_ff(lines, force_field):
                 if context is not None:
                     raise IOError('The [variables] section must be defined '
                                   'before the blocks and the links.')
-                _parse_variables(tokens, force_field)
+                _parse_variables(tokens, force_field, section)
             elif tokens[0] == '#meta':
                 _parse_meta(tokens, context, context_type, section)
             else:

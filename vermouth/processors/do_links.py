@@ -14,23 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Created on Wed Oct 25 16:00:02 2017
-
-@author: peterkroon
-"""
-from ..molecule import LinkPredicate, attributes_match, NotDefinedOrNot
-from .processor import Processor
-from ..gmx import read_rtp
-
 from itertools import combinations
 import numbers
 
 import networkx as nx
 from numpy import sign
 
+from ..molecule import attributes_match
+from .processor import Processor
+
 
 class LinkGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def semantic_feasibility(self, node1_name, node2_name):
         # TODO: implement (partial) wildcards
         # Node2 is the link
@@ -49,9 +46,9 @@ def _is_valid_non_edges(molecule, link, rev_raw_match):
             continue
         from_mol_node_name = rev_raw_match[from_node]
         from_mol = molecule.nodes[from_mol_node_name]
-        from_link = link.nodes[from_node]
+        # from_link = link.nodes[from_node]
         from_resid = from_mol['resid']
-        from_order = from_link.get('order', 0)
+        # from_order = from_link.get('order', 0)
         for neighbor in molecule.neighbors(from_mol_node_name):
             to_mol = molecule.nodes[neighbor]
             to_link = to_node_attrs
@@ -114,23 +111,23 @@ def _interpret_order(order):
 
 
 def match_order(order1, resid1, order2, resid2):
-    """
+    r"""
     Check if two residues match the order constraints.
 
     The order can be:
 
-    :an integer:
+    an integer
         It is then the expected distance in resid with a reference residue.
-    :a series of >:
+    a series of >
         This indicates that the residue must have a larger resid than a
         reference residue. Multiple atoms with the same number of > are
         expected to be part of the same residue. The more > are in the serie,
         the further away the residue is expected to be from the reference, so a
         residue with >> is expected to have a greater resid than a residue with
         >.
-    :a series of <:
+    a series of <
         Same as a series of >, but for smaller resid.
-    :a series of *:
+    a series of *
         This indicates a different residue than the reference, but without a
         specified order. As for the > or the <, atoms with the same number of *
         are expected to be part of the same residue.
@@ -143,25 +140,25 @@ def match_order(order1, resid1, order2, resid2):
     (order1 argument), while the columns correspond to the order at the right
     of it (order2 argument).
 
-    +----+---+----+---+----+---+---+---+----+
-    |    | > | >> | < | << | n | 0 | * | ** |
-    +----+---+----+---+----+---+---+---+----+
-    | >  | = | <  | > | >  | ! | > | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | >> | > | =  | > | >  | ! | > | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | <  | < | <  | = | >  | ! | < | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | << | < | <  | < | =  | ! | < | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | n  | ! | !  | ! | !  | ? | ? | ! | !  |
-    +----+---+----+---+----+---+---+---+----+
-    | 0  | < | <  | > | >  | ? | = | / | /  |
-    +----+---+----+---+----+---+---+---+----+
-    | *  | ! | !  | ! | !  | ! | / | = | /  |
-    +----+---+----+---+----+---+---+---+----+
-    | ** | ! | !  | ! | !  | ! | / | / | =  |
-    +----+---+----+---+----+---+---+---+----+
+    +-----+---+----+---+----+---+---+----+-----+
+    |     | > | >> | < | << | n | 0 | \* | \** |
+    +-----+---+----+---+----+---+---+----+-----+
+    | >   | = | <  | > | >  | ! | > | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | >>  | > | =  | > | >  | ! | > | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | <   | < | <  | = | >  | ! | < | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | <<  | < | <  | < | =  | ! | < | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | n   | ! | !  | ! | !  | ? | ? | !  | !   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | 0   | < | <  | > | >  | ? | = | /  | /   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | \*  | ! | !  | ! | !  | ! | / | =  | /   |
+    +-----+---+----+---+----+---+---+----+-----+
+    | \** | ! | !  | ! | !  | ! | / | /  | =   |
+    +-----+---+----+---+----+---+---+----+-----+
 
     Parameters
     ----------
@@ -223,7 +220,7 @@ def match_order(order1, resid1, order2, resid2):
 
     return True
 
-        
+
 def match_link(molecule, link):
     if not attributes_match(molecule.meta, link.molecule_meta):
         return

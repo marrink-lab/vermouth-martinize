@@ -13,23 +13,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Fri Oct 27 14:39:20 2017
-
-@author: peterkroon
+Provides a processor that adds interactions from blocks to molecules.
 """
-from ..gmx import read_rtp
+# TODO: Move all this functionality to do_mapping?
+from collections import ChainMap
+from itertools import product
 
 from .processor import Processor
 from ..graph_utils import make_residue_graph
 from ..molecule import Molecule
 
-from collections import ChainMap
-from itertools import product
-
 
 def apply_blocks(molecule, blocks):
+    """
+    Generate a new :class:`~vermouth.molecule.Molecule` based on the residue
+    names and other attributes of `molecule` from `blocks`.
+
+    Parameters
+    ----------
+    molecule: vermouth.molecule.Molecule
+        The molecule to process.
+    blocks: dict[str, vermouth.molecule.Block]
+        The blocks known.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        A new molecule with attributes from the old `molecule`, as well as all
+        interactions described by `blocks`.
+    """
     graph_out = Molecule(
         force_field=molecule.force_field,
         meta=molecule.meta.copy()
@@ -97,6 +110,8 @@ def apply_blocks(molecule, blocks):
 
     # This makes edges between residues. We need to do this, since they can't
     # come from the blocks and we need them to find the links locations.
+    # TODO This should not be done here, but by do_mapping, which might *also*
+    #      do it at the moment
     for res_idx, res_jdx in residue_graph.edges():
         for old_idx, old_jdx in product(residue_graph.nodes[res_idx]['graph'],
                                         residue_graph.nodes[res_jdx]['graph']):
@@ -104,7 +119,7 @@ def apply_blocks(molecule, blocks):
                 # Usually termini, PTMs, etc
                 idx = old_to_new_idxs[old_idx]
                 jdx = old_to_new_idxs[old_jdx]
-            except:
+            except KeyError:
                 continue
             if molecule.has_edge(old_idx, old_jdx):
                 graph_out.add_edge(idx, jdx)

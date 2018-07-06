@@ -12,20 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Tue Aug 22 11:38:17 2017
-
-@author: Peter Kroon
+Provides several generic utility functions
 """
 
 import numpy as np
 
 try:
-    from scipy.spatial.distance import euclidean as distance
+    from scipy.spatial.distance import euclidean as distance  # pylint: disable=unused-import
 except ImportError:
-    def distance(p1, p2):
-        return np.sqrt(np.sum((p1 - p2)**2))
+    def distance(point_1, point_2):
+        """
+        .. autofunction:: scipy.spatial.distance.euclidean
+        """
+        return np.sqrt(np.sum((point_1 - point_2)**2))
 
 
 def maxes(iterable, key=lambda x: x):
@@ -37,9 +37,9 @@ def maxes(iterable, key=lambda x: x):
 
     Parameters
     ----------
-    iterable
+    iterable: collections.abc.Iterable
         The iterable for which to find all maxima.
-    key: callable
+    key: collections.abc.Callable
         This callable will be called on each element of ``iterable`` to evaluate
         it to a value. Return values must support ``>`` and ``==``.
 

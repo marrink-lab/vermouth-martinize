@@ -13,12 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Wed Oct  4 10:41:10 2017
+Provides a processor that reads a GRO file.
 
-@author: peterkroon
+See also
+--------
+:mod:`vermouth.gmx.gro`
 """
+
 
 from ..gmx import gro
 from .processor import Processor

@@ -12,23 +12,39 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Tue Aug 22 11:34:12 2017
-
-@author: Peter Kroon
+Provides functionality to read and write GRO96 files.
 """
-from ..molecule import Molecule
-from ..utils import first_alpha
-from ..truncating_formatter import TruncFormatter
+
 
 from functools import partial
 from itertools import chain
 
 import numpy as np
 
+from ..molecule import Molecule
+from ..truncating_formatter import TruncFormatter
+from ..utils import first_alpha
+
 
 def read_gro(file_name, exclude=('SOL',), ignh=False):
+    """
+    Parse a gro file to create a molecule.
+
+    Parameters
+    ----------
+    filename: str
+        The file to read.
+    exclude: collections.abc.Container[str]
+        Atoms that have one of these residue names will not be included.
+    ignh: bool
+        Whether hydrogen atoms should be ignored.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        The parsed molecules. Will not contain edges.
+    """
     molecule = Molecule()
     idx = 0
     field_types = [int, str, str, int, float, float, float]
@@ -96,7 +112,20 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
 
 
 def write_gro(system, file_name, precision=7):
+    """
+    Write `system` to `file_name`, which will be a GRO96 file.
+
+    Parameters
+    ----------
+    system: vermouth.system.System
+        The system to write.
+    file_name: str
+        The file to write to.
+    precision: int
+        The desired precision for coordinates and (optionally) velocities.
+    """
     def keyfunc(graph, node_idx):
+        """Key function for sorting nodes."""
         # TODO add something like idx_in_residue
         return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
 
@@ -122,12 +151,12 @@ def write_gro(system, file_name, precision=7):
                 atomname = node['atomname']
                 resname = node['resname']
                 resid = node['resid']
-                x, y, z = node['position']
+                x, y, z = node['position']  # pylint: disable=invalid-name
 
                 line = formatter.format(format_string, resid, resname, atomname,
                                         atomid, x, y, z)
                 if has_vel:
-                    vx, vy, vz = node['velocity']/10  # A to nm
+                    vx, vy, vz = node['velocity']/10  # A to nm  # pylint: disable=invalid-name
                     line += formatter.format(vel_format_string, vx, vy, vz)
                 atomid += 1
                 out.write(line + '\n')

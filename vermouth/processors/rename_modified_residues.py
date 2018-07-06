@@ -12,6 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides a processor that renames residues based on their current residue names
+and identified modifications, such as PTMs.
+"""
 
 from .processor import Processor
 
@@ -20,7 +24,7 @@ def rename_modified_residues(mol):
     """
     Renames residue names based on the current residue name, and the found
     modifications. The new names are found in
-    :attr:`force_field.renamed_residues`, which should be a mapping of
+    `force_field.renamed_residues`, which should be a mapping of
     ``{(rename, [modification_name, ...]): new_name}``.
 
     Parameters
@@ -28,10 +32,6 @@ def rename_modified_residues(mol):
     mol : Molecule
         The molecule whose residue names should be changed. Is modified
         in-place.
-
-    Returns
-    -------
-    None
     """
     rename_map_ff = mol.force_field.renamed_residues
     rename_map = {}

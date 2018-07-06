@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Tue Aug 22 11:41:47 2017
+VerMoUTH: The Very Modular Universal Transformation Helper
 
-@author: Peter Kroon
+Provides functionality for creating MD topologies from coordinate files. Powers
+the CLI tool martinize2.
 """
 
 # Find the data directory once.

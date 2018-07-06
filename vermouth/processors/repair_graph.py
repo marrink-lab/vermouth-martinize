@@ -13,18 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Created on Thu Oct  5 10:43:19 2017
-
-@author: peterkroon
+Provides a processor that repairs a graph based on a reference.
 """
+import networkx as nx
 
 from .processor import Processor
 from ..graph_utils import *
-
-
-import networkx as nx
 
 
 def make_reference(mol):
@@ -205,7 +200,8 @@ def repair_residue(molecule, ref_residue):
         for ref_idx in missing:
             # WARNING?
             print('Could not reconstruct atom {}{}:{}'.format(reference.nodes[ref_idx]['resname'],
-                  reference.nodes[ref_idx]['resid'], reference.nodes[ref_idx]['atomname']))
+                                                              reference.nodes[ref_idx]['resid'],
+                                                              reference.nodes[ref_idx]['atomname']))
 
 
 def repair_graph(molecule, reference_graph):
@@ -214,6 +210,10 @@ def repair_graph(molecule, reference_graph):
     ``reference_graph``. Missing atoms will be added and atom- and residue-
     names will be canonicalized. Atoms not present in ``reference_graph`` will
     have the attribute ``PTM_atom`` set to ``True``.
+
+    `molecule` is modified in place. Missing atoms (as per `reference_graph`)
+    are added, atom and residue names are canonicalized, and PTM atoms are
+    marked.
 
     Parameters
     ----------
@@ -236,13 +236,6 @@ def repair_graph(molecule, reference_graph):
         :match: A dictionary describing how the reference corresponds
             with the provided graph. Keys are node indices of the
             reference, values are node indices of the provided graph.
-
-    Returns
-    -------
-    None
-        ``molecule`` is modified in place. Missing atoms (as per
-        ``reference_graph``) are added, atom and residue names are
-        canonicalized, and PTM atoms are marked.
     """
     for residx in reference_graph:
         residue = reference_graph.nodes[residx]

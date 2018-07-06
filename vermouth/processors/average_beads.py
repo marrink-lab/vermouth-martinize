@@ -11,6 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides a processor that generates positions for nodes based on the weighted
+average of the positions of the atoms they are constructed from.
+"""
+
 
 import numpy as np
 from .processor import Processor
@@ -29,20 +34,20 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
     The average is weighted using the 'mapping_weights' atom attribute. If the
     'mapping_weights' attribute is set, it has to be a dictionary with the
     atomname from the underlying graph as keys, and the weights as values.
-    Atoms without a weight set use a default weight of 1. 
+    Atoms without a weight set use a default weight of 1.
 
     The atoms in the underlying graph must have a position. If they do not,
     they are ignored from the average.
 
     Parameters
     ----------
-    molecule: vermouth.Molecule
-        The molecule to update. The attribute :attr:`position` of the particles
+    molecule: vermouth.molecule.Molecule
+        The molecule to update. The attribute `position` of the particles
         is updated on place. The nodes of the molecule must have an attribute
-        :attr:`graph` that contains the subgraph of the initial molecule.
+        `graph` that contains the subgraph of the initial molecule.
     ignore_missing_graphs: bool
-        If `True`, skip the atoms that do not have a 'graph' attribute; else
-        fail if not all the atoms in the molecule have a 'graph' attribute.
+        If `True`, skip the atoms that do not have a `graph` attribute; else
+        fail if not all the atoms in the molecule have a `graph` attribute.
     """
     # Make sure the molecule fullfill the requirements.
     missing = []

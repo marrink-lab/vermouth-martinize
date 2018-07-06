@@ -13,10 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Provides processors that can add and remove cystein bridges.
+"""
 
 import functools
+
 import numpy as np
 import networkx as nx
+
 from .. import KDTree
 from ..molecule import attributes_match
 from .. import selectors
@@ -45,10 +50,12 @@ def prune_edges_between_selections(molecule, selection_a, selection_b):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to prune in-place.
-    selection_a, selection_b: list
-        Lists of node keys from the molecule.
+    selection_a: list
+        List of node keys from the molecule.
+    selection_b: list
+        List of node keys from the molecule.
 
     See Also
     --------
@@ -80,11 +87,11 @@ def prune_edges_with_selectors(molecule, selector_a, selector_b=None):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to prune in-place.
-    selector_a: function
+    selector_a: collections.abc.Callable
         A selector for one end of the edges.
-    selector_b: function (optional)
+    selector_b: collections.abc.Callable
         A selector for the second end of the edges. If set to ``None``, then
         'selector_a' is used for both ends.
 
@@ -99,7 +106,7 @@ def prune_edges_with_selectors(molecule, selector_a, selector_b=None):
     prune_edges_between_selections(molecule, selection_a, selection_b)
 
 
-def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):
+def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
     """
     Remove all the edges that correspond to cystein bridges from a molecule.
 
@@ -111,13 +118,13 @@ def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):
 
     A template is a dictionary that defines the key:value pairs that must be
     matched in the atoms. Values can be instances of
-    :class:`molecule.LinkPredicate`.
+    :class:`~vermouth.molecule.LinkPredicate`.
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to modify in-place.
-    template: dict (optional)
+    template: dict
         A template that selected atom must match.
     """
     selector = functools.partial(attributes_match, template_attributes=template)
@@ -140,14 +147,16 @@ def add_edges_at_distance(molecule, threshold,
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         Molecule to modify in-place.
     threshold: float
         The distance threshold under which edges will be created. The distance
         is expressed in nm.
-    selection_a, selection_b: list
-        Lists of node keys from the molecule.
-    attribute: str (optional)
+    selection_a: list
+        List of node keys from the molecule.
+    selection_b: list
+        List of node keys from the molecule.
+    attribute: str
         Name of the key in the node dictionaries under which the coordinates
         are stored.
 
@@ -284,8 +293,8 @@ def pairs_under_threshold(molecules, threshold, selection, attribute='position')
     for key in selection:
         coordinates.append(molecules[key[0]].nodes[key[1]][attribute])
     kdtree = KDTree(coordinates)
-    for i, j in kdtree.query_pairs(threshold):
-        yield (selection[i], selection[j])
+    for idx, jdx in kdtree.query_pairs(threshold):
+        yield (selection[idx], selection[jdx])
 
 
 def select_nodes_multi(molecules, selector):
@@ -299,9 +308,9 @@ def select_nodes_multi(molecules, selector):
 
     Parameters
     ----------
-    molecule: list
+    molecule: list[Molecule]
         A list of molecules.
-    selector: function
+    selector: collections.abc.Callable
         A selector function.
 
     Yields
@@ -315,7 +324,7 @@ def select_nodes_multi(molecules, selector):
                 yield (molecule_idx, key)
 
 
-def add_cystein_bridge_threshold(molecules, threshold,
+def add_cystein_bridge_threshold(molecules, threshold,  # pylint: disable=dangerous-default-value
                                  template=UNIVERSAL_BRIDGE_TEMPLATE,
                                  attribute='position'):
     """
@@ -331,9 +340,9 @@ def add_cystein_bridge_threshold(molecules, threshold,
         A list of molecules.
     threshold: float
         The distance threshold in nanometers under which an edge is created.
-    template: dict (optional)
+    template: dict
         A template that selected atom must match.
-    attribute: str (optional)
+    attribute: str
         Name of the key in the node dictionaries under which the coordinates
         are stored.
 
@@ -350,8 +359,8 @@ def add_cystein_bridge_threshold(molecules, threshold,
 
 
 class RemoveCysteinBridgeEdges(Processor):
-    def __init__(self, template=UNIVERSAL_BRIDGE_TEMPLATE):
-        self.template = UNIVERSAL_BRIDGE_TEMPLATE
+    def __init__(self, template=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
+        self.template = template
 
     def run_molecule(self, molecule):
         remove_cystein_bridge_edges(molecule, self.template)
@@ -359,10 +368,10 @@ class RemoveCysteinBridgeEdges(Processor):
 
 
 class AddCysteinBridgesThreshold(Processor):
-    def __init__(self, threshold,
+    def __init__(self, threshold,  # pylint: disable=dangerous-default-value
                  template=UNIVERSAL_BRIDGE_TEMPLATE, attribute='position'):
         self.threshold = threshold
-        self.template = UNIVERSAL_BRIDGE_TEMPLATE
+        self.template = template
         self.attribute = attribute
 
     def run_system(self, system):
