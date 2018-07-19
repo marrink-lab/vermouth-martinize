@@ -28,7 +28,7 @@ args, remaining_args = parser.parse_known_args()
 
 threshold = args.threshold
 
-run = lint.Run(remaining_args, exit=False)
+run = lint.Run(remaining_args, do_exit=False)
 score = run.linter.stats['global_note'] # Yes this is a terrible name for the score
 
 if score < threshold:
