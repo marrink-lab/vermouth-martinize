@@ -40,5 +40,6 @@ except ImportError:
     print('Using redistributed KDTree')
     from .redistributed.kdtree import KDTree
 
+from .molecule import Molecule
 from .processors import *
 from .system import System
