@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.import pytest
 
+from pprint import pprint
+
+from .helper_functions import expand_isomorphism
+
+import networkx as nx
 import pytest
 import vermouth
 
@@ -127,7 +132,6 @@ def test_categorical_maximum_common_subgraph(node_data1, edges1, node_data2,
     assert set(frozenset(f.items()) for f in found) == set(frozenset(e.items()) for e in expected)
 
 
-from pprint import pprint
 @pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,attrs',
     [
      ([], {}, [], {}, ['id']),
@@ -161,4 +165,31 @@ def test_maximum_common_subgraph(node_data1, edges1, node_data2, edges2, attrs):
     pprint(expected)
     
     pprint(expected - found)
+    assert found == expected
+
+
+@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2',
+    [
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, ),
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, ),
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, ),
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}, (1, 3): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, ),
+    ]
+   )
+def test_isomorphism(node_data1, edges1, node_data2, edges2):
+    reference = basic_molecule(node_data1, edges1)
+    graph = basic_molecule(node_data2, edges2)
+    matcher = nx.isomorphism.GraphMatcher(reference, graph, node_match=nx.isomorphism.categorical_node_match('atomname', None))
+    expected = set(frozenset(match.items()) for match in matcher.subgraph_isomorphisms_iter())
+    found = list(vermouth.graph_utils.isomorphism(reference, graph))
+    found = expand_isomorphism(reference, graph, found)
+
+    found = set(frozenset(match.items()) for match in found)
+    print(found)
+    print(expected)
+    print(expected - found)
     assert found == expected

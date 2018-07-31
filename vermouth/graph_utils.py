@@ -196,11 +196,15 @@ def isomorphism(reference, residue):
     matches = []
 #    H_idxs = [idx for idx in residue if residue.node[idx]['element'] == 'H']
     H_idxs = [idx for idx in residue if residue.degree(idx) == 1]
-    heavy_res = residue.copy()
+    heavy_res = nx.Graph(residue).copy()
     heavy_res.remove_nodes_from(H_idxs)
+
+    ref_H_idxs = [idx for idx in reference if reference.degree(idx) == 1]
+    heavy_ref = nx.Graph(reference).copy()
+    heavy_ref.remove_nodes_from(ref_H_idxs)
     # First, generate all the isomorphisms on heavy atoms. For each of these
     # we'll find *something* where the hydrogens match.
-    GM = ElementGraphMatcher(reference, heavy_res)
+    GM = ElementGraphMatcher(heavy_ref, heavy_res)
     first_matches = list(GM.subgraph_isomorphisms_iter())
     for match in first_matches:
         reverse_match = {v: k for k, v in match.items()}
@@ -226,7 +230,7 @@ def isomorphism(reference, residue):
                 if len(H_names[res_H_name]) != 1:
                     continue
                 ref_H_idx = H_names[res_H_name][0]
-                if ref_H_idx not in match:
+                if ref_H_idx not in match and reference.nodes[ref_H_idx]['element'] == residue.nodes[res_H_idx]['element']:
                     reverse_match[res_H_idx] = ref_H_idx
                     match[ref_H_idx] = res_H_idx
         GM_large = ElementGraphMatcher(reference, residue)
@@ -252,7 +256,10 @@ def isomorphism(reference, residue):
         # the atomnames might be flipped, and make PTM identification
         # troublesome. For example: C(=O)OH. That's why we extend the match to
         # include degree-1 nodes above.
-        matches.extend(itertools.islice(outcome, 1))
+        if match:
+            matches.extend(itertools.islice(outcome, 1))
+        else:
+            matches.extend(outcome)
     matches = sorted(matches,
                      key=lambda m: rate_match(reference, residue, m),
                      reverse=True)

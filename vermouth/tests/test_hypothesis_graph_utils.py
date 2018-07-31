@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.import pytest
 
-from time import perf_counter
+import itertools
+
+import networkx as nx
 
 import hypothesis.strategies as st
 from hypothesis import given, note, settings
@@ -20,16 +22,19 @@ from hypothesis import given, note, settings
 from hypothesis_networkx import graph_builder
 import vermouth
 
+from .helper_functions import expand_isomorphism
+
+
 attrnames = ['attr1', 'attr2']
 node_data = st.dictionaries(keys=st.sampled_from(attrnames), values=st.integers(min_value=-10, max_value=10))
 
 attrs = st.lists(st.sampled_from(attrnames), unique=True, min_size=0, max_size=2)
 
-builder = graph_builder(node_data=node_data, min_nodes=0, max_nodes=25, node_keys=st.integers(max_value=10, min_value=0))
+MCS_builder = graph_builder(node_data=node_data, min_nodes=0, max_nodes=25, node_keys=st.integers(max_value=25, min_value=0))
 
 
-@settings(max_examples=500)
-@given(graph1=builder, graph2=builder, attrs=attrs)
+@settings(max_examples=50)
+@given(graph1=MCS_builder, graph2=MCS_builder, attrs=attrs)
 def test_maximum_common_subgraph(graph1, graph2, attrs):
     expected = vermouth.graph_utils.categorical_maximum_common_subgraph(graph1, graph2, attrs)
     
@@ -41,3 +46,52 @@ def test_maximum_common_subgraph(graph1, graph2, attrs):
     note(graph2.nodes(data=True))
     note(graph2.edges)
     assert set(frozenset(f.items()) for f in found) == set(frozenset(e.items()) for e in expected)
+
+
+iso_data = st.fixed_dictionaries({'atomname': st.integers(max_value=10, min_value=0),
+                                  'element': st.integers(max_value=10, min_value=0)})
+iso_builder = graph_builder(node_data=iso_data, min_nodes=0, max_nodes=25, node_keys=st.integers(max_value=25, min_value=0))
+
+@settings(max_examples=500)
+@given(reference=iso_builder, graph=iso_builder)
+def test_isomorphism_nonmatch(reference, graph):
+    
+    note(reference.nodes(data=True))
+    note(reference.edges)
+    note(graph.nodes(data=True))
+    note(graph.edges)
+    
+    matcher = nx.isomorphism.GraphMatcher(reference, graph, node_match=nx.isomorphism.categorical_node_match('element', None))
+    expected = set(frozenset(match.items()) for match in matcher.subgraph_isomorphisms_iter())
+    found = list(vermouth.graph_utils.isomorphism(reference, graph))
+    found = expand_isomorphism(reference, graph, found)
+    found = set(frozenset(match.items()) for match in found)
+    note(found)
+    note(expected)
+
+    assert found == expected
+
+
+@settings(max_examples=500)
+@given(st.data())
+def test_isomorphism_match(data):
+    
+    reference = data.draw(iso_builder)
+    nodes = data.draw(st.sets(st.sampled_from(list(reference.nodes)), max_size=len(reference)))
+    graph = reference.subgraph(nodes)
+    
+    note(reference.nodes(data=True))
+    note(reference.edges)
+    note(graph.nodes(data=True))
+    note(graph.edges)
+    
+    matcher = nx.isomorphism.GraphMatcher(reference, graph, node_match=nx.isomorphism.categorical_node_match('element', None))
+    expected = set(frozenset(match.items()) for match in matcher.subgraph_isomorphisms_iter())
+    found = list(vermouth.graph_utils.isomorphism(reference, graph))
+    
+    found = expand_isomorphism(reference, graph, found)
+
+    found = set(frozenset(match.items()) for match in found)
+    note(found)
+    note(expected)
+    assert found == expected
