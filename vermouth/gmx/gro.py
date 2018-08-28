@@ -16,7 +16,6 @@
 Provides functionality to read and write GRO96 files.
 """
 
-
 from functools import partial
 from itertools import chain
 
