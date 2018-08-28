@@ -105,8 +105,8 @@ def test_are_all_equal_not_implemented():
         utils.are_all_equal(value)
 
 
-@strategies.builds
-def vector_with_random_distance():
+@strategies.composite
+def vector_with_random_distance(draw):
     """
     Generate a vector with a random length and orientation.
 
@@ -120,17 +120,22 @@ def vector_with_random_distance():
     """
     # Generate random polar coordinates and convert them to euclidean
     # coordinates.
-    distance = np.random.uniform(0, 100)
-    theta, phi = np.random.uniform(0, 2* np.pi, (2,))
-    shift = np.random.uniform(0, 100, (3,))
+    length = strategies.floats(min_value=0, max_value=100,
+                               allow_nan=False, allow_infinity=False)
+    angle = strategies.floats(min_value=0, max_value=2 * np.pi,
+                              allow_nan=False, allow_infinity=False)
+    distance = draw(length)
+    theta = draw(angle)
+    phi = draw(angle)
+    shift = np.array([draw(length), draw(length), draw(length)])
     x = distance * np.sin(theta) * np.cos(phi)
     y = distance * np.sin(theta) * np.sin(phi)
     z = distance * np.cos(theta)
     return shift, np.array([x, y, z]) + shift, distance
 
 
-@given(vector_with_random_distance)
-@example((np.zeros((3,)), np.zeros((3,)), 0))
+@strategies.composite
 def test_distance(vec_and_dist):
+    vec_and_dist = draw(vector_with_random_distance)
     point1, point2, distance = vec_and_dist
     assert_allclose(utils.distance(point1, point2), distance)
