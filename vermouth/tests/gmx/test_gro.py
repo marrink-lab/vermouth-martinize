@@ -172,7 +172,7 @@ def write_gro(outfile, velocities=False, box='10.0 10.0 10.0'):
     outfile.write(str(len(COORDINATES)) + '\n')
     for atom, coords, vels in zip(GRO_CONTENT, COORDINATES, VELOCITIES):
         outfile.write(('{}{:8.3f}{:8.3f}{:8.3f}' + velocity_fmt + '\n')
-                      .format(atom, *coords, *vels))
+                      .format(atom, *itertools.chain(coords, vels)))
     outfile.write(box)
 
 

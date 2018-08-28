@@ -139,7 +139,7 @@ def write_gro(system, file_name, precision=7):
         vel_format_string = '{{:{ntx}.4ft}}'*3
         vel_format_string = vel_format_string.format(ntx=precision+1)
 
-    with open(file_name, 'w') as out:
+    with open(str(file_name), 'w') as out:
         out.write('Martinized!\n')  # Title
         out.write(formatter.format('{:5dt}\n', system.num_particles))  # number of atoms
         atomid = 1
