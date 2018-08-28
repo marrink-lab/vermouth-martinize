@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.import pytest
 
-import itertools
-
 import networkx as nx
+import pytest
 
 import hypothesis.strategies as st
 from hypothesis import given, note, settings
@@ -22,18 +21,17 @@ from hypothesis import given, note, settings
 from hypothesis_networkx import graph_builder
 import vermouth
 
-from .helper_functions import expand_isomorphism
 
-
+max_nodes = 10
 attrnames = ['attr1', 'attr2']
-node_data = st.dictionaries(keys=st.sampled_from(attrnames), values=st.integers(min_value=-10, max_value=10))
+node_data = st.dictionaries(keys=st.sampled_from(attrnames), values=st.integers(min_value=0, max_value=max_nodes))
 
 attrs = st.lists(st.sampled_from(attrnames), unique=True, min_size=0, max_size=2)
 
-MCS_builder = graph_builder(node_data=node_data, min_nodes=0, max_nodes=25, node_keys=st.integers(max_value=25, min_value=0))
+MCS_builder = graph_builder(node_data=node_data, min_nodes=0, max_nodes=max_nodes, node_keys=st.integers(max_value=max_nodes, min_value=0))
 
 
-@settings(max_examples=50)
+@settings(max_examples=500)
 @given(graph1=MCS_builder, graph2=MCS_builder, attrs=attrs)
 def test_maximum_common_subgraph(graph1, graph2, attrs):
     expected = vermouth.graph_utils.categorical_maximum_common_subgraph(graph1, graph2, attrs)
@@ -45,12 +43,13 @@ def test_maximum_common_subgraph(graph1, graph2, attrs):
     note(graph1.edges)
     note(graph2.nodes(data=True))
     note(graph2.edges)
-    assert set(frozenset(f.items()) for f in found) == set(frozenset(e.items()) for e in expected)
+    # We don't find all MCS'es. See comment in vermouth.graph_utils.maximum_common_subgraph
+    assert set(frozenset(f.items()) for f in found) <= set(frozenset(e.items()) for e in expected)
 
 
-iso_data = st.fixed_dictionaries({'atomname': st.integers(max_value=10, min_value=0),
-                                  'element': st.integers(max_value=10, min_value=0)})
-iso_builder = graph_builder(node_data=iso_data, min_nodes=0, max_nodes=25, node_keys=st.integers(max_value=25, min_value=0))
+iso_data = st.fixed_dictionaries({'atomname': st.integers(max_value=max_nodes, min_value=0),
+                                  'element': st.integers(max_value=max_nodes, min_value=0)})
+iso_builder = graph_builder(node_data=iso_data, min_nodes=0, max_nodes=max_nodes, node_keys=st.integers(max_value=max_nodes, min_value=0))
 
 @settings(max_examples=500)
 @given(reference=iso_builder, graph=iso_builder)
@@ -64,12 +63,11 @@ def test_isomorphism_nonmatch(reference, graph):
     matcher = nx.isomorphism.GraphMatcher(reference, graph, node_match=nx.isomorphism.categorical_node_match('element', None))
     expected = set(frozenset(match.items()) for match in matcher.subgraph_isomorphisms_iter())
     found = list(vermouth.graph_utils.isomorphism(reference, graph))
-    found = expand_isomorphism(reference, graph, found)
     found = set(frozenset(match.items()) for match in found)
     note(found)
     note(expected)
 
-    assert found == expected
+    assert found <= expected
 
 
 @settings(max_examples=500)
@@ -89,9 +87,7 @@ def test_isomorphism_match(data):
     expected = set(frozenset(match.items()) for match in matcher.subgraph_isomorphisms_iter())
     found = list(vermouth.graph_utils.isomorphism(reference, graph))
     
-    found = expand_isomorphism(reference, graph, found)
-
     found = set(frozenset(match.items()) for match in found)
     note(found)
     note(expected)
-    assert found == expected
+    assert found <= expected

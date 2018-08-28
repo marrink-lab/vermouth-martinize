@@ -14,8 +14,6 @@
 
 from pprint import pprint
 
-from .helper_functions import expand_isomorphism
-
 import networkx as nx
 import pytest
 import vermouth
@@ -146,15 +144,48 @@ def test_categorical_maximum_common_subgraph(node_data1, edges1, node_data2,
      ([{}, {}, {}, {}, {}], {(0, 1): {}, (0, 2): {}, (0, 4): {}, (0, 3): {}, (1, 2): {}, (1, 4): {}},
       [{}, {}, {}, {}], {(0, 2): {}, (0, 3): {}, (1, 2): {}, (1, 3): {}},
       []),
-     pytest.param([{}, {}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (2, 4): {}},
+     ([{}, {}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (2, 4): {}},
       [{}, {}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (3, 4): {}},
-      [], marks=pytest.mark.xfail),
+      []),
      ]
     )
 def test_maximum_common_subgraph(node_data1, edges1, node_data2, edges2, attrs):
     graph1 = basic_molecule(node_data1, edges1)
     graph2 = basic_molecule(node_data2, edges2)
     expected = vermouth.graph_utils.categorical_maximum_common_subgraph(graph1, graph2, attrs)
+    found = vermouth.graph_utils.maximum_common_subgraph(graph1, graph2, attrs)
+    found = set(frozenset(m.items()) for m in found)
+    expected = set(frozenset(m.items()) for m in expected)
+    print(len(found))
+    print(len(expected))
+    
+    pprint(found)
+    pprint(expected)
+    
+    pprint(expected - found)
+    # We don't find all MCS'es. See comment in vermouth.graph_utils.maximum_common_subgraph
+    assert found <= expected
+
+
+@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,attrs,expected',
+    [
+     ([], {}, [], {}, ['id'], []),
+     ([{'id': 1}], {}, [{'id': 1}], {}, ['id'], [{0:0}]),
+     ([{'id': 1}, {'id': 2}], {}, [{'id': 1}, {'id': 2}], {}, ['id'], [{0:0, 1:1}]),
+     ([{'id': 1}, {'id': 2}], {(0, 1): {}}, [{'id': 1}, {'id': 2}], {}, ['id'], [{0:0}, {1:1}]),
+     ([{'id': 1}], {}, [{'id': 1}, {'id': 1}], {(0, 1): {}}, ['id'], [{0:0}, {0:1}]),
+     ([{'id': 1}, {'id': 1}], {(0, 1): {}}, [{'id': 1}], {}, ['id'], [{0:0}, {1:0}]),
+     ([{'id': 0}, {'id': 1}, {'id': 2}, {'id': 3}, {'id': 2}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (3, 4): {}},
+      [{'id': 1}, {'id': 2}, {'id': 3}, {'id': 4}, {'id': 5}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (1, 4): {}},
+      ['id'], [{1:0, 2:1, 3:2}]),
+     ([{}, {}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (2, 4): {}},
+      [{}, {}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (3, 4): {}},
+      [], [{0: 3, 1: 2, 2: 1, 4: 0}, {0: 4, 1: 3, 2: 2, 3: 1}, {0: 1, 1: 2, 2: 3, 3: 4}, {0: 4, 1: 3, 2: 2, 4: 1}, {0: 3, 1: 2, 2: 1, 3: 0}, {0: 1, 1: 2, 2: 3, 4: 4}, {0: 0, 1: 1, 2: 2, 4: 3}, {0: 0, 1: 1, 2: 2, 3: 3}]),
+     ]
+    )
+def test_maximum_common_subgraph_known_outcome(node_data1, edges1, node_data2, edges2, attrs, expected):
+    graph1 = basic_molecule(node_data1, edges1)
+    graph2 = basic_molecule(node_data2, edges2)
     found = vermouth.graph_utils.maximum_common_subgraph(graph1, graph2, attrs)
     found = set(frozenset(m.items()) for m in found)
     expected = set(frozenset(m.items()) for m in expected)
@@ -186,10 +217,26 @@ def test_isomorphism(node_data1, edges1, node_data2, edges2):
     matcher = nx.isomorphism.GraphMatcher(reference, graph, node_match=nx.isomorphism.categorical_node_match('atomname', None))
     expected = set(frozenset(match.items()) for match in matcher.subgraph_isomorphisms_iter())
     found = list(vermouth.graph_utils.isomorphism(reference, graph))
-    found = expand_isomorphism(reference, graph, found)
-
     found = set(frozenset(match.items()) for match in found)
-    print(found)
-    print(expected)
-    print(expected - found)
+    assert found <= expected
+
+
+@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,expected',
+    [
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, [{0:0, 1:1}, {0:1, 1:0}]),
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, [{0:0, 1:1, 2:2}]),
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, [{0:0, 1:1}, {0:1, 1:0}, {1:0, 2:1}, {1:1, 2:0}]),
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}, (1, 3): {}}, 
+      [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, [{0:0, 1:1, 2:2}]),
+    ]
+   )
+def test_isomorphism_known_outcome(node_data1, edges1, node_data2, edges2, expected):
+    reference = basic_molecule(node_data1, edges1)
+    graph = basic_molecule(node_data2, edges2)
+    found = list(vermouth.graph_utils.isomorphism(reference, graph))
+    found = set(frozenset(match.items()) for match in found)
+    expected = set(frozenset(match.items()) for match in expected)
     assert found == expected
