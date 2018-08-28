@@ -13,7 +13,6 @@
 # limitations under the License.import pytest
 
 import networkx as nx
-import pytest
 
 import hypothesis.strategies as st
 from hypothesis import given, note, settings

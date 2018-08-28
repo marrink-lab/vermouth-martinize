@@ -413,7 +413,10 @@ def make_residue_graph(mol):
     for key, grp in itertools.groupby(nodes, keyfunc):
         keys.append(key)
         grps.append(list(grp))
-    chain, resids, resnames = map(list, zip(*keys))
+    if keys:
+        chain, resids, resnames = map(list, zip(*keys))
+    else:
+        chain, resids, resnames = [], [], []
     res_graph = blockmodel(mol, grps, chain=chain, resid=resids,
                            resname=resnames, atomname=resnames)
     return res_graph

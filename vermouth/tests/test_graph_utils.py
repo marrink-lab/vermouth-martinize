@@ -57,7 +57,7 @@ def test_add_element_attr_errors(node_data_in, exception):
         vermouth.graph_utils.add_element_attr(mol)
 
 
-@pytest.mark.parametrize('node_data1,node_data2,attrs,expected', 
+@pytest.mark.parametrize('node_data1,node_data2,attrs,expected',
                          [
                           ([], [], [], {}),
                           ([{}], [{}], [], {(0, 0): {}}),
@@ -158,10 +158,10 @@ def test_maximum_common_subgraph(node_data1, edges1, node_data2, edges2, attrs):
     expected = set(frozenset(m.items()) for m in expected)
     print(len(found))
     print(len(expected))
-    
+
     pprint(found)
     pprint(expected)
-    
+
     pprint(expected - found)
     # We don't find all MCS'es. See comment in vermouth.graph_utils.maximum_common_subgraph
     assert found <= expected
@@ -191,23 +191,23 @@ def test_maximum_common_subgraph_known_outcome(node_data1, edges1, node_data2, e
     expected = set(frozenset(m.items()) for m in expected)
     print(len(found))
     print(len(expected))
-    
+
     pprint(found)
     pprint(expected)
-    
+
     pprint(expected - found)
     assert found == expected
 
 
 @pytest.mark.parametrize('node_data1,edges1,node_data2,edges2',
     [
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, ),
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, ),
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, ),
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}, (1, 3): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}, (1, 3): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, ),
     ]
    )
@@ -223,13 +223,13 @@ def test_isomorphism(node_data1, edges1, node_data2, edges2):
 
 @pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,expected',
     [
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, [{0:0, 1:1}, {0:1, 1:0}]),
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, [{0:0, 1:1, 2:2}]),
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}}, [{0:0, 1:1}, {0:1, 1:0}, {1:0, 2:1}, {1:1, 2:0}]),
-     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}, (1, 3): {}}, 
+     ([{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}, (1, 3): {}},
       [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}], {(0, 1): {}, (1, 2): {}}, [{0:0, 1:1, 2:2}]),
     ]
    )
@@ -240,3 +240,145 @@ def test_isomorphism_known_outcome(node_data1, edges1, node_data2, edges2, expec
     found = set(frozenset(match.items()) for match in found)
     expected = set(frozenset(match.items()) for match in expected)
     assert found == expected
+
+
+@pytest.mark.parametrize('node_data,edges,partitions,attrs,expected_nodes,expected_edges',
+    [
+     ([], {}, [], {}, [], {}),
+     ([{}], {}, [[0]], {}, [{}], {}),
+     ([{}, {}], {}, [[0, 1]], {}, [{}], {}),
+     ([{}, {}], {(0, 1):{}}, [[0, 1]], {}, [{}], {}),
+     ([{}, {}], {(0, 1):{}}, [[0, 1]], {'id': [0]}, [{'id': 0}], {}),
+     ([{}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}}, [[0, 1], [2, 3]],
+      {'id': [0, 1]},
+      [{'id': 0}, {'id': 1}], {(0, 1): {'weight': 1.0}}),
+     ([{}, {}, {}, {}], {(0, 1): {}, (1, 2): {'weight': 0.5}, (2, 3): {}}, [[0, 1], [2, 3]],
+      {'id': [0, 1]},
+      [{'id': 0}, {'id': 1}], {(0, 1): {'weight': 0.5}}),
+     ([{}, {}, {}, {}], {(0, 1): {}, (2, 3): {}}, [[0, 1], [2, 3]],
+      {'id': [0, 1]},
+      [{'id': 0}, {'id': 1}], {}),
+     ([{}, {}, {}, {}], {(0, 1): {}, (2, 3): {}}, [[0, 1], [2]],
+      {'id': [0, 1]},
+      [{'id': 0}, {'id': 1}], {}),
+     ([{}, {}, {}, {}], {(0, 1): {}, (2, 3): {}}, [[0, 1]],
+      {'id': [0]},
+      [{'id': 0}], {}),
+     ([{}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}, (3, 0): {'weight': 0.5}}, [[0, 1], [2, 3]],
+      {'id': [0, 1]},
+      [{'id': 0}, {'id': 1}], {(0, 1): {'weight': 1.5}}),
+     ([{}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}}, [[0, 1], [2, 3]],
+      {'id': [0, 1], 'attr': ['a', 'b']},
+      [{'id': 0, 'attr': 'a'}, {'id': 1, 'attr': 'b'}], {(0, 1): {'weight': 1.0}}),
+     pytest.param([{}, {}, {}, {}], {(0, 1): {}, (1, 2): {}, (2, 3): {}}, [[0, 1], [2, 3]],
+      {'id': [1], 'attr': ['a', 'b']},
+      [{'id': 0, 'attr': 'a'}, {'id': 1, 'attr': 'b'}], {(0, 1): {'weight': 1.0}},
+      marks=pytest.mark.xfail(raises=IndexError)),
+
+    ]
+   )
+def test_blockmodel(node_data, edges, partitions, attrs, expected_nodes, expected_edges):
+    graph = basic_molecule(node_data, edges)
+    found = vermouth.graph_utils.blockmodel(graph, partitions, **attrs)
+    expected = basic_molecule(expected_nodes, expected_edges)
+    pprint(found.nodes(data=True))
+    pprint(expected.nodes(data=True))
+
+    for node in found:
+        data = found.nodes[node]
+        subgraph = data['graph']
+        assert len(subgraph.nodes) == data['nnodes']
+        assert len(subgraph.edges) == data['nedges']
+        assert nx.density(subgraph) == data['density']
+        del found.nodes[node]['graph']
+        del found.nodes[node]['nnodes']
+        del found.nodes[node]['nedges']
+        del found.nodes[node]['density']
+
+    assert found.nodes(data=True) == expected.nodes(data=True)
+    edges_seen = set()
+    for idx, jdx, data in found.edges(data=True):
+        assert expected.has_edge(idx, jdx) and expected.edges[idx, jdx] == data
+        edges_seen.add((idx, jdx))
+    assert not expected.edges - edges_seen
+
+
+def test_blockmodel_graph_attr():
+    graph = basic_molecule([{}, {}, {}], {(0, 1): {}, (1, 2): {}})
+    found = vermouth.graph_utils.blockmodel(graph, [[0], [1, 2]])
+    assert found.nodes[0]['nnodes'] == len(found.nodes[0]['graph'].nodes) == 1
+    assert found.nodes[1]['nnodes'] == len(found.nodes[1]['graph'].nodes) == 2
+    assert found.nodes[0]['nedges'] == len(found.nodes[0]['graph'].edges) == 0
+    assert found.nodes[1]['nedges'] == len(found.nodes[1]['graph'].edges) == 1
+
+
+@pytest.mark.parametrize('nodes1, nodes2, match, expected',
+        [
+         ([], [], {}, 0),
+         ([{'atomname': 0}], [{'atomname': 1}], {0:0}, 0),
+         ([{'atomname': 0}], [{'atomname': 1}], {}, 0),
+         ([{'atomname': 0}], [{'atomname': 0}], {}, 0),
+         ([{'atomname': 0}], [{'atomname': 0}], {0:0}, 1),
+         ([{'atomname': 0}, {'atomname': 0}], [{'atomname': 0}, {'atomname': 0}], {0:0}, 1),
+         ([{'atomname': 0}, {'atomname': 0}], [{'atomname': 0}, {'atomname': 0}], {0:0, 1:1}, 2),
+         ([{'atomname': 0}, {'atomname': 0}], [{'atomname': 0}, {'atomname': 1}], {0:0, 1:1}, 1),
+         ([{'atomname': 0}, {'atomname': 1}], [{'atomname': 0}, {'atomname': 1}], {0:0, 1:1}, 2),
+        ]
+        )
+def test_rate_match(nodes1, nodes2, match, expected):
+    mol1 = basic_molecule(nodes1)
+    mol2 = basic_molecule(nodes2)
+    found = vermouth.graph_utils.rate_match(mol1, mol2, match)
+    assert found == expected
+
+
+@pytest.mark.parametrize('nodes1, edges1, nodes2, edges2',
+        [
+         ([], {}, [], {}),
+         ([{'chain': 0, 'resid': 0, 'resname': 0}], {}, [{'chain': 0, 'resid': 0, 'resname': 0, 'atomname': 0}], {}),
+         ([{'chain': 0, 'resid': 0, 'resname': 1}], {}, [{'chain': 0, 'resid': 0, 'resname': 1, 'atomname': 1}], {}),
+         ([{'chain': 0, 'resid': 2, 'resname': 1}], {}, [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1}], {}),
+         ([{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5}], {}, [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1}], {}),
+         ([{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
+           {'chain': 0, 'resid': 2, 'resname': 1, 'attr': 7}], {}, 
+          [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1}], {}),
+         ([{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
+           {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}], {}, 
+          [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
+           {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}], {}),
+         ([{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
+           {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}], {(0, 1): {}}, 
+          [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
+           {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}], {(0, 1): {'weight': 1}}),
+         ([{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
+           {'chain': 0, 'resid': 2, 'resname': 1, 'attr': 6},
+           {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}], {(2, 1): {}}, 
+          [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
+           {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}], {(0, 1): {'weight': 1}}),
+
+        ]
+        )
+def test_make_residue_graph(nodes1, edges1, nodes2, edges2):
+    mol1 = basic_molecule(nodes1, edges1)
+    found = vermouth.graph_utils.make_residue_graph(mol1)
+    expected = basic_molecule(nodes2, edges2)
+
+    for node in found:
+        data = found.nodes[node]
+        subgraph = data['graph']
+        assert len(subgraph.nodes) == data['nnodes']
+        assert len(subgraph.edges) == data['nedges']
+        assert nx.density(subgraph) == data['density']
+        del found.nodes[node]['graph']
+        del found.nodes[node]['nnodes']
+        del found.nodes[node]['nedges']
+        del found.nodes[node]['density']
+    pprint(found.nodes(data=True))
+    pprint(expected.nodes(data=True))
+
+    assert found.nodes(data=True) == expected.nodes(data=True)
+    edges_seen = set()
+    for idx, jdx, data in found.edges(data=True):
+        assert expected.has_edge(idx, jdx) and expected.edges[idx, jdx] == data
+        edges_seen.add((idx, jdx))
+    assert not expected.edges - edges_seen
