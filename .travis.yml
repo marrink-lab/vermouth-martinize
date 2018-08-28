@@ -9,7 +9,7 @@ env:
     - SKIP_GENERATE_AUTHORS=1
     - SKIP_WRITE_GIT_CHANGELOG=1
 install:
-  - pip install --upgrade codecov pytest-cov
+  - pip install --upgrade -r requirements-tests.txt
   - pip install --upgrade .
 script:
   - pytest -vv --cov=vermouth vermouth 
