@@ -108,8 +108,8 @@ def test_categorical_modular_product(node_data1, edges1, node_data2, edges2,
     edges_seen = set()
     for idx, jdx, data in found.edges(data=True):
         assert expected_mol.edges[idx, jdx] == data
-        edges_seen.add((idx, jdx))
-    assert not expected_mol.edges - edges_seen
+        edges_seen.add(frozenset((idx, jdx)))
+    assert set(frozenset(edge) for edge in expected_mol.edges) == edges_seen
 
 
 @pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,attrs,expected',
@@ -299,8 +299,8 @@ def test_blockmodel(node_data, edges, partitions, attrs, expected_nodes, expecte
     edges_seen = set()
     for idx, jdx, data in found.edges(data=True):
         assert expected.has_edge(idx, jdx) and expected.edges[idx, jdx] == data
-        edges_seen.add((idx, jdx))
-    assert not expected.edges - edges_seen
+        edges_seen.add(frozenset((idx, jdx)))
+    assert set(frozenset(edge) for edge in expected.edges) == edges_seen
 
 
 def test_blockmodel_graph_attr():
@@ -380,5 +380,5 @@ def test_make_residue_graph(nodes1, edges1, nodes2, edges2):
     edges_seen = set()
     for idx, jdx, data in found.edges(data=True):
         assert expected.has_edge(idx, jdx) and expected.edges[idx, jdx] == data
-        edges_seen.add((idx, jdx))
-    assert not expected.edges - edges_seen
+        edges_seen.add(frozenset((idx, jdx)))
+    assert set(frozenset(edge) for edge in expected.edges) == edges_seen
