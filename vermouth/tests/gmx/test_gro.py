@@ -312,7 +312,7 @@ def filter_molecule(molecule, exclude, ignh):
     nx.relabel_nodes(molecule, mapping, copy=False)
     # Networkx mangles the order of the nodes, but we want the nodes sorted.
     new_nodes = sorted(molecule.nodes.items())
-    molecule.remove_nodes_from(range(len(molecule.nodes)))
+    molecule.clear()  # Remove all the nodes
     molecule.add_nodes_from(new_nodes)
 
 
@@ -435,31 +435,10 @@ def are_different(left, right):
     if left.shape != right.shape:
         return True
 
-    # NaN compares different from NaN, yet we want to consider it equal for the
-    # purpose of that function.
-    try:
-        if np.any(np.isnan(left) != np.isnan(right)):
-            return True
-        if np.any(np.isfinite(left) != np.isfinite(right)):
-            return True
-    except TypeError:
-        # Not everything is accepted by isnan and isfinite.
-        pass
-    else:
-        if isinstance(left, np.ndarray) and isinstance(right, np.ndarray):
-            # We still have to compare the other values, those that are not
-            # NaNs or infinite. We already took care of the NaNs anf infs so
-            # we can remove them from the comparison and let the comparison
-            # happen normally. Note: NaN is not finite.
-            infs_left = np.isfinite(left)
-            infs_right = np.isfinite(right)
-            left = left[infs_left]
-            right = right[infs_right]
-
     # For numbers, we want an approximate comparison to account for rounding
     # errors; it only works for numbers, though.
     try:
-        return not np.all(np.isclose(left, right))
+        return not np.all(np.isclose(left, right, equal_nan=True))
     except TypeError:
         return np.any(left != right)
 
