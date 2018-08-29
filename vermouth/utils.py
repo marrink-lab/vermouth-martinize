@@ -16,16 +16,22 @@
 Provides several generic utility functions
 """
 
+import string
 import numpy as np
+
+
+# Do not define in the except so the function can be tested.
+def _distance(point_1, point_2):
+    """
+    .. autofunction:: scipy.spatial.distance.euclidean
+    """
+    return np.sqrt(np.sum((point_1 - point_2)**2))
+
 
 try:
     from scipy.spatial.distance import euclidean as distance  # pylint: disable=unused-import
 except ImportError:
-    def distance(point_1, point_2):
-        """
-        .. autofunction:: scipy.spatial.distance.euclidean
-        """
-        return np.sqrt(np.sum((point_1 - point_2)**2))
+    distance = _distance
 
 
 def maxes(iterable, key=lambda x: x):
@@ -61,31 +67,30 @@ def maxes(iterable, key=lambda x: x):
     return out
 
 
-def first_alpha(string):
+def first_alpha(search_string):
     """
-    Returns the first character in ``string`` for which ``str.isalpha`` returns
-    ``True``. If this is ``False`` for all characters in ``string``, returns the last
-    character.
+    Returns the first ASCII letter.
 
     Parameters
     ----------
     string: str
-        The string in which to look for the first alpha character.
+        The string in which to look for the first ASCII letter.
 
     Returns
     -------
     str
-        The first element of ``string`` for which ``str.isalpha`` returns ``True``.
 
     Raises
     ------
     ValueError
-        No alpha character was found in 'string'.
+        No ASCII letter was found in 'search_string'.
     """
-    for elem in string:
-        if elem.isalpha():
+    for elem in search_string:
+        # str.isalpha catches all unicode charaters tagged as "letter"; it is a
+        # very broad set of characters.
+        if elem in string.ascii_letters:
             return elem
-    raise ValueError('No alpha charecters in "{}".'.format(string))
+    raise ValueError('No alpha charecters in "{}".'.format(search_string))
 
 
 def are_all_equal(iterable):
@@ -104,6 +109,15 @@ def are_all_equal(iterable):
         ``True`` iff all elements in `iterable` compare equal, ``False``
         otherwise.
     """
+    try:
+        shape = iterable.shape
+    except AttributeError:
+        pass
+    else:
+        if len(shape) > 1:
+            message = 'The function does not works on multidimension arrays.'
+            raise NotImplementedError(message) from None
+
     iterator = iter(iterable)
     first = next(iterator, None)
     return all(item == first for item in iterator)
