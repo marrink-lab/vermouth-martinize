@@ -580,7 +580,7 @@ def test_read_gro(gro_reference, exclude, ignh):  # pylint: disable=redefined-ou
 
 def test_read_gro_wrong_atom_number(gro_wrong_length):  # pylint: disable=redefined-outer-name
     """
-    Test that the GRO reader raises an exception is the number of atoms is not
+    Test that the GRO reader raises an exception if the number of atoms is not
     consistent.
     """
     with pytest.raises(ValueError):
