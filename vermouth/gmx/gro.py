@@ -126,7 +126,9 @@ def write_gro(system, file_name, precision=7):
     def keyfunc(graph, node_idx):
         """Key function for sorting nodes."""
         # TODO add something like idx_in_residue
-        return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
+        return (graph.node[node_idx]['chain'],
+                graph.node[node_idx]['resid'],
+                graph.node[node_idx]['resname'])
 
     formatter = TruncFormatter()
     pos_format_string = '{{:{ntx}.3ft}}'.format(ntx=precision+1)
@@ -153,9 +155,10 @@ def write_gro(system, file_name, precision=7):
                 x, y, z = node['position']  # pylint: disable=invalid-name
 
                 line = formatter.format(format_string, resid, resname, atomname,
-                                        atomid, x, y, z)
+                                        atomid, x, y, z)  
                 if has_vel:
-                    vx, vy, vz = node['velocity']/10  # A to nm  # pylint: disable=invalid-name
+                    # A to nm
+                    vx, vy, vz = node['velocity'] / 10  # pylint: disable=invalid-name
                     line += formatter.format(vel_format_string, vx, vy, vz)
                 atomid += 1
                 out.write(line + '\n')

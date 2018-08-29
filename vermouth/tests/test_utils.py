@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Tests for the `test_utils.py` module.
+"""
+
 import string
 import pytest
-from hypothesis import given, strategies, example
+from hypothesis import strategies, given, example
 import numpy as np
 from numpy.testing import assert_allclose
 from vermouth import utils
@@ -37,6 +41,9 @@ from vermouth import utils
     (['z', 'aaa', 'bbb', 'z', 'z'], ['z'] * 3),
 ))
 def test_maxes_simple_no_key(values, ref, iter_type):
+    """
+    Test that :func:`utils.maxes` works in the simplest case.
+    """
     assert utils.maxes(iter_type(values)) == ref
 
 
@@ -55,7 +62,10 @@ def test_maxes_simple_no_key(values, ref, iter_type):
     ([0.1, 0.4, 3.4, 0.1, 3.4], [0.1] * 2),
 ))
 def test_maxes_key(values, ref, iter_type):
-       assert utils.maxes(iter_type(values), key=lambda x: -x) == ref
+    """
+    Test that :func:`utils.maxes` works when provided with a key.
+    """
+    assert utils.maxes(iter_type(values), key=lambda x: -x) == ref
 
 
 @pytest.mark.parametrize('alpha', string.ascii_letters)
@@ -63,12 +73,18 @@ def test_maxes_key(values, ref, iter_type):
     '{}bc', ' {}bc', '123{}WS', '@#$%{}*&^', '\U0001F62E{}',
 ))
 def test_first_alpha(template, alpha):
+    """
+    Test that :func:`utils.first_alpha` works as expected.
+    """
     value = template.format(alpha)
     assert utils.first_alpha(value) == alpha
 
 
 @pytest.mark.parametrize('value', ('', '0123', '\U0001F62E'))
 def test_first_alpha_value_error(value):
+    """
+    Make sure :func:`utils.first_alpha` raise a ValueError when expected to.
+    """
     with pytest.raises(ValueError):
         utils.first_alpha(value)
 
@@ -77,7 +93,7 @@ def test_first_alpha_value_error(value):
 @pytest.mark.parametrize('values, ref', (
     # All equal
     ([0] * 5, True), ([True] * 4, True),
-    ([None] * 5, True), ([1e-3] * 4, True), 
+    ([None] * 5, True), ([1e-3] * 4, True),
     # Not all equal
     ([0, 1] * 4, False), (['a', 'b', 'c'], False),
     # Empty
@@ -88,18 +104,28 @@ def test_first_alpha_value_error(value):
     ([0, False] * 3, True),
 ))
 def test_are_all_equal(values, ref, iter_type):
+    """
+    Make sure that :func:`utils.are_all_equal` works as expected.
+    """
     assert utils.are_all_equal(iter_type(values)) is ref
 
 
 @pytest.mark.parametrize('values, ref', (
-    ([list([0, 1, 2]) for _ in range(3)], True),   
+    ([list([0, 1, 2]) for _ in range(3)], True),
     ([[0, 1, 2], [3, 4, 5], [6, 7, 8]], False),
 ))
 def test_are_all_equal_multidim_list(values, ref):
+    """
+    Test :func:`utils.are_all_equal` works on nested lists.
+    """
     assert utils.are_all_equal(values) is ref
 
 
 def test_are_all_equal_not_implemented():
+    """
+    Test that :func:`utils.are_all_equal` raises an exception on
+    multidimensional arrays.
+    """
     value = np.zeros((3, 4))
     with pytest.raises(NotImplementedError):
         utils.are_all_equal(value)
@@ -128,14 +154,17 @@ def vector_with_random_distance(draw):
     theta = draw(angle)
     phi = draw(angle)
     shift = np.array([draw(length), draw(length), draw(length)])
-    x = distance * np.sin(theta) * np.cos(phi)
-    y = distance * np.sin(theta) * np.sin(phi)
-    z = distance * np.cos(theta)
+    x = distance * np.sin(theta) * np.cos(phi)  # pylint: disable=invalid-name
+    y = distance * np.sin(theta) * np.sin(phi)  # pylint: disable=invalid-name
+    z = distance * np.cos(theta)  # pylint: disable=invalid-name
     return shift, np.array([x, y, z]) + shift, distance
 
 
-@strategies.composite
+@given(vector_with_random_distance())
+@example((np.zeros((3,)), np.zeros((3,)), 0))
 def test_distance(vec_and_dist):
-    vec_and_dist = draw(vector_with_random_distance)
+    """
+    Test the results of :func:`utils.distance`.
+    """
     point1, point2, distance = vec_and_dist
     assert_allclose(utils.distance(point1, point2), distance)

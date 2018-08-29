@@ -13,18 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Unit tests for the GRO reader.
+"""
+# Pylint complains about hypothesis strategies not receiving a value for the
+# `draw` parameter. This is because the `draw` parameter is implicitly filled
+# by hypothesis. The pylint warning is disabled for the file instead of being
+# disabled at every call of a strategy.
+# pylint: disable=no-value-for-parameter
+
 from pprint import pprint
 import copy
 import collections
+import itertools
+
+import numpy as np
+import networkx as nx
+
 import pytest
 from hypothesis import given, assume
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
-import numpy as np
-import networkx as nx
+
 from vermouth.molecule import Molecule
 from vermouth.gmx import gro
-import itertools
 
 
 # The data comes from residues 3 to 5 of 1BTA.pdb. The atoms from ILE 5 are
@@ -145,6 +157,9 @@ DIFFERENCE_USE_CASE = (
 
 @pytest.fixture(params=[True, False])
 def gro_reference(request, tmpdir_factory):
+    """
+    Generate a GRO file and the corresponding molecule.
+    """
     filename = tmpdir_factory.mktemp("data").join("tmp.gro")
     with open(str(filename), 'w') as outfile:
         write_gro(outfile, velocities=request.param, box='10.0 11.1 12.2')
@@ -153,7 +168,10 @@ def gro_reference(request, tmpdir_factory):
 
 
 @pytest.fixture(params=[43, 45])
-def gro_wrong_length(request, gro_reference, tmpdir_factory):
+def gro_wrong_length(request, gro_reference, tmpdir_factory):  # pylint: disable=redefined-outer-name
+    """
+    Generate a GRO file with a wrong number of atoms on line 2.
+    """
     path_in, _ = gro_reference
     path_out = tmpdir_factory.mktemp("data").join("wrong.gro")
     with open(str(path_in)) as infile, open(str(path_out), 'w') as outfile:
@@ -165,6 +183,18 @@ def gro_wrong_length(request, gro_reference, tmpdir_factory):
 
 
 def write_gro(outfile, velocities=False, box='10.0 10.0 10.0'):
+    """
+    Write a GRO file from the reference data.
+
+    Parameters
+    ----------
+    outfile: file
+        The file in which to write.
+    velocities: bool
+        Set if velocities must be written.
+    box: str
+        The box string to write at the end of the file.
+    """
     velocity_fmt = ''
     if velocities:
         velocity_fmt = '{:8.4f}' * 3
@@ -177,6 +207,18 @@ def write_gro(outfile, velocities=False, box='10.0 10.0 10.0'):
 
 
 def build_ref_molecule(velocities=False):
+    """
+    Build the molecule graph corresponding to the reference data.
+
+    Parameters
+    ----------
+    velocities: bool
+        Set if velocities must be written.
+
+    Return
+    ------
+    Molecule
+    """
     nodes = (
         {'resid': 1, 'resname': 'ALA', 'atomname': 'N', 'atomid': 1, 'element': 'N'},
         {'resid': 1, 'resname': 'ALA', 'atomname': 'CA', 'atomid': 2, 'element': 'C'},
@@ -234,6 +276,26 @@ def build_ref_molecule(velocities=False):
 
 
 def filter_molecule(molecule, exclude, ignh):
+    """
+    Remove nodes from a graph based on some criteria.
+
+    Nodes are removed if their resname matches one from
+    the `exclude` argument, or of `ighn` is :bool:`True` and the node is a
+    hydrogen.
+
+    The atoms are renumbered after the filtered atoms are removed. This will
+    scramble the edges and the interactions! This function is meant to be used
+    on molecules with ONLY nodes.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        The molecule to filter. The molecule is modified in place.
+    exclude: list
+        List of residue name to exclude.
+    ighn: bool
+        If :bool:`True`, the hydrogens are excluded.
+    """
     to_remove = []
     exclusions = [('resname', value) for value in exclude]
     if ignh:
@@ -255,6 +317,9 @@ def filter_molecule(molecule, exclude, ignh):
 
 
 def compare_dicts(testee, reference):
+    """
+    Report differences between dictionaries.
+    """
     report = []
     dict_equals = testee.keys() == reference.keys()
     diff_keys = []
@@ -271,6 +336,9 @@ def compare_dicts(testee, reference):
 
 
 def assert_molecule_equal(molecule, reference):
+    """
+    Make a pytest test fail with a report if the molecules are not equal.
+    """
     report = []
     # Nodes
     if len(molecule.nodes) != len(reference.nodes):
@@ -280,7 +348,6 @@ def assert_molecule_equal(molecule, reference):
         )
     zipped_nodes = zip(molecule.nodes.items(), reference.nodes.items())
     for (key_mol, node_mol), (key_ref, node_ref) in zipped_nodes:
-        diff_keys = []
         partial_report = []
         failed = False
         if key_mol != key_ref:
@@ -316,9 +383,9 @@ def assert_molecule_equal(molecule, reference):
         report.append('{}'.format(extra_reference_edges))
     # Meta data
     report.extend(compare_dicts(molecule.meta, reference.meta))
-    if molecule._force_field is not reference._force_field:
+    if molecule._force_field is not reference._force_field:  # pylint: disable=protected-access
         report.append('Force fields do not match: {} != {}'
-                      .format(molecule._force_field, reference._force_field))
+                      .format(molecule._force_field, reference._force_field))  # pylint: disable=protected-access
     if molecule.nrexcl != reference.nrexcl:
         report.append('nrexcl: {} != {}'.format(molecule.nrexcl, reference.nrexcl))
     # Interactions
@@ -328,10 +395,13 @@ def assert_molecule_equal(molecule, reference):
 
 @st.composite
 def generate_dict(draw, min_size=None):
+    """
+    Strategy to generate an arbitrary dictionary.
+    """
     keys = st.one_of(st.text(), st.integers())
     values = st.one_of(
         st.text(), st.integers(), st.floats(),
-        hnp.arrays(hnp.scalar_dtypes(), hnp.array_shapes())
+        hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes())
     )
     dict_a = draw(st.dictionaries(keys, values, min_size=min_size))
     return dict_a
@@ -339,6 +409,9 @@ def generate_dict(draw, min_size=None):
 
 @st.composite
 def generate_equal_dict(draw):
+    """
+    Strategy to generate two equal dictionaries.
+    """
     dict_a = draw(generate_dict())
     dict_b = copy.deepcopy(dict_a)
     return dict_a, dict_b
@@ -361,7 +434,7 @@ def are_different(left, right):
 
     if left.shape != right.shape:
         return True
-    
+
     # NaN compares different from NaN, yet we want to consider it equal for the
     # purpose of that function.
     try:
@@ -393,13 +466,16 @@ def are_different(left, right):
 
 @st.composite
 def generate_diff_dict(draw):
+    """
+    Strategy to generate to similar but different dictionaries.
+    """
     dict_a = draw(generate_dict(min_size=1))
     dict_b = copy.deepcopy(dict_a)
     values = st.one_of(
         st.text(), st.integers(), st.floats(),
-        hnp.arrays(hnp.scalar_dtypes(), hnp.array_shapes())
+        hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes())
     )
-    for iteration in range(draw(st.integers(min_value=1, max_value=len(dict_b)))):
+    for _ in range(draw(st.integers(min_value=1, max_value=len(dict_b)))):
         key = draw(st.sampled_from(list(dict_b.keys())))
         new_val = draw(values)
         assume(are_different(new_val, dict_b[key]))
@@ -412,16 +488,22 @@ def generate_diff_dict(draw):
 
 @given(generate_equal_dict())
 def test_compare_dict_equal(dict_a_and_b):
+    """
+    Test that :func:`compare_dicts` identify equal dictionaries.
+    """
     dict_a = dict_a_and_b[0]
     dict_b = dict_a_and_b[1]
-    assert len(compare_dicts(dict_a, dict_b)) == 0
+    assert not compare_dicts(dict_a, dict_b)  # report is empty
 
 
 @given(generate_diff_dict())
 def test_compare_dict_diff(dict_a_and_b):
+    """
+    Test that :func:`compare_dicts` identify different dictionaries.
+    """
     dict_a = dict_a_and_b[0]
     dict_b = dict_a_and_b[1]
-    assert len(compare_dicts(dict_a, dict_b)) > 0
+    assert compare_dicts(dict_a, dict_b)  # report is not empty
 
 
 @pytest.mark.parametrize(
@@ -429,21 +511,33 @@ def test_compare_dict_diff(dict_a_and_b):
     itertools.combinations(DIFFERENCE_USE_CASE, 2)
 )
 def test_are_different(left, right):
+    """
+    Test that :func:`are_different` identify different values.
+    """
     assert are_different(left, right)
 
 
 @pytest.mark.parametrize('left', DIFFERENCE_USE_CASE)
 def test_not_are_different(left):
+    """
+    Test that :func:`are_different` returns False for equal values.
+    """
     assert not are_different(left, left)
 
 
-def test_filter_molecule_none(gro_reference):
+def test_filter_molecule_none(gro_reference):  # pylint: disable=redefined-outer-name
+    """
+    Test that :func:`filter_molecule` does not remove nodes when not asked for.
+    """
     _, molecule = gro_reference
     filter_molecule(molecule, exclude=(), ignh=False)
     assert len(molecule.nodes) == 44
 
 
-def test_filter_molecule_ignh(gro_reference):
+def test_filter_molecule_ignh(gro_reference):  # pylint: disable=redefined-outer-name
+    """
+    Test that :func:`filter_molecule` works with `ighn` argument.
+    """
     _, molecule = gro_reference
     filter_molecule(molecule, exclude=(), ignh=True)
     elements = [node['element'] for node in molecule.nodes.values()]
@@ -455,7 +549,10 @@ def test_filter_molecule_ignh(gro_reference):
     ('SOL', ), ('ALA', ), ('ALA', 'VAL'),
     ('ALA', 'VAL', 'SOL'), ('XXX', ), ('ALA', 'XXX'),
 ))
-def test_filter_molecule_exclude(gro_reference, exclude):
+def test_filter_molecule_exclude(gro_reference, exclude):  # pylint: disable=redefined-outer-name
+    """
+    Test that :func:`filter_molecule` works with `exclude` argument.
+    """
     _, molecule = gro_reference
     filter_molecule(molecule, exclude=exclude, ignh=False)
     resnames = [node['resname'] for node in molecule.nodes.values()]
@@ -465,14 +562,20 @@ def test_filter_molecule_exclude(gro_reference, exclude):
     assert not should_not_be_there
 
 
-def test_filter_molecule_identity(gro_reference):
+def test_filter_molecule_identity(gro_reference):  # pylint: disable=redefined-outer-name
+    """
+    Test that :func:`filter_molecule` modifies the molecule in place.
+    """
     _, molecule = gro_reference
     id_before = id(molecule)
     filter_molecule(molecule, exclude=('SOL', ), ignh=True)
     assert id(molecule) == id_before
 
 
-def test_filter_molecule_order(gro_reference):
+def test_filter_molecule_order(gro_reference):  # pylint: disable=redefined-outer-name
+    """
+    Test that :func:`filter_molecule` returns the nodes in order.
+    """
     _, molecule = gro_reference
     filter_molecule(molecule, exclude=('SOL', ), ignh=True)
     keys = list(molecule.nodes)
@@ -484,7 +587,10 @@ def test_filter_molecule_order(gro_reference):
     ('ALA', 'VAL', 'SOL'), ('XXX', ), ('ALA', 'XXX'),
 ))
 @pytest.mark.parametrize('ignh', (True, False))
-def test_read_gro(gro_reference, exclude, ignh):
+def test_read_gro(gro_reference, exclude, ignh):  # pylint: disable=redefined-outer-name
+    """
+    Test the GRO reader.
+    """
     filename, reference = gro_reference
     filter_molecule(reference, exclude=exclude, ignh=ignh)
     molecule = gro.read_gro(filename, exclude=exclude, ignh=ignh)
@@ -492,6 +598,10 @@ def test_read_gro(gro_reference, exclude, ignh):
     assert_molecule_equal(molecule, reference)
 
 
-def test_read_gro_wrong_atom_number(gro_wrong_length):
+def test_read_gro_wrong_atom_number(gro_wrong_length):  # pylint: disable=redefined-outer-name
+    """
+    Test that the GRO reader raises an exception is the number of atoms is not
+    consistent.
+    """
     with pytest.raises(ValueError):
         gro.read_gro(gro_wrong_length)
