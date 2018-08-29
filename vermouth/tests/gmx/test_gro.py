@@ -35,6 +35,7 @@ from hypothesis import given, assume
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 
+import vermouth
 from vermouth.molecule import Molecule
 from vermouth.gmx import gro
 
@@ -162,7 +163,7 @@ def gro_reference(request, tmpdir_factory):
     """
     filename = tmpdir_factory.mktemp("data").join("tmp.gro")
     with open(str(filename), 'w') as outfile:
-        write_gro(outfile, velocities=request.param, box='10.0 11.1 12.2')
+        write_ref_gro(outfile, velocities=request.param, box='10.0 11.1 12.2')
     molecule = build_ref_molecule(velocities=request.param)
     return filename, molecule
 
@@ -182,7 +183,7 @@ def gro_wrong_length(request, gro_reference, tmpdir_factory):  # pylint: disable
     return path_out
 
 
-def write_gro(outfile, velocities=False, box='10.0 10.0 10.0'):
+def write_ref_gro(outfile, velocities=False, box='10.0 10.0 10.0'):
     """
     Write a GRO file from the reference data.
 
@@ -584,3 +585,18 @@ def test_read_gro_wrong_atom_number(gro_wrong_length):  # pylint: disable=redefi
     """
     with pytest.raises(ValueError):
         gro.read_gro(gro_wrong_length)
+
+
+def test_write_gro(gro_reference, tmpdir):
+    filename, molecule = gro_reference
+    system = vermouth.System()
+    system.molecules.append(molecule)
+    outname = tmpdir / 'out_test.gro'
+    gro.write_gro(
+        system,
+        outname,
+        box=(10.0, 11.1, 12.2),
+        title='Just a title',
+    )
+    with open(str(filename)) as ref, open(str(outname)) as out:
+        assert out.read() == ref.read()

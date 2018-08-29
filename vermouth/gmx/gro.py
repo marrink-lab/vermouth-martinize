@@ -110,7 +110,7 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
     return molecule
 
 
-def write_gro(system, file_name, precision=7):
+def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)):
     """
     Write `system` to `file_name`, which will be a GRO96 file.
 
@@ -122,6 +122,10 @@ def write_gro(system, file_name, precision=7):
         The file to write to.
     precision: int
         The desired precision for coordinates and (optionally) velocities.
+    title: str
+        Title for the gro file.
+    box: tuple[float]
+        Box length and optionally angles.
     """
     def keyfunc(graph, node_idx):
         """Key function for sorting nodes."""
@@ -142,8 +146,8 @@ def write_gro(system, file_name, precision=7):
         vel_format_string = vel_format_string.format(ntx=precision+1)
 
     with open(str(file_name), 'w') as out:
-        out.write('Martinized!\n')  # Title
-        out.write(formatter.format('{:5dt}\n', system.num_particles))  # number of atoms
+        out.write(title + '\n')  # Title
+        out.write(formatter.format('{}\n', system.num_particles))  # number of atoms
         atomid = 1
         for molecule in system.molecules:
             node_order = sorted(molecule, key=partial(keyfunc, molecule))
@@ -157,11 +161,9 @@ def write_gro(system, file_name, precision=7):
                 line = formatter.format(format_string, resid, resname, atomname,
                                         atomid, x, y, z)  
                 if has_vel:
-                    # A to nm
-                    vx, vy, vz = node['velocity'] / 10  # pylint: disable=invalid-name
+                    vx, vy, vz = node['velocity']  # pylint: disable=invalid-name
                     line += formatter.format(vel_format_string, vx, vy, vz)
                 atomid += 1
                 out.write(line + '\n')
         # Box
-        box_fmt = '{:10.5f}'*3 + '\n'
-        out.write(box_fmt.format(0, 0, 0))
+        out.write(' '.join(str(value) for value in box))
