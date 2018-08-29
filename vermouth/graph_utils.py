@@ -199,12 +199,12 @@ def isomorphism(reference, residue):
     heavy_res = nx.Graph(residue).copy()
     heavy_res.remove_nodes_from(H_idxs)
 
-    ref_H_idxs = [idx for idx in reference if reference.degree(idx) == 1]
-    heavy_ref = nx.Graph(reference).copy()
-    heavy_ref.remove_nodes_from(ref_H_idxs)
+#    ref_H_idxs = [idx for idx in reference if reference.degree(idx) == 1]
+#    heavy_ref = nx.Graph(reference).copy()
+#    heavy_ref.remove_nodes_from(ref_H_idxs)
     # First, generate all the isomorphisms on heavy atoms. For each of these
     # we'll find *something* where the hydrogens match.
-    GM = ElementGraphMatcher(heavy_ref, heavy_res)
+    GM = ElementGraphMatcher(reference, heavy_res)
     first_matches = list(GM.subgraph_isomorphisms_iter())
     for match in first_matches:
         reverse_match = {v: k for k, v in match.items()}
