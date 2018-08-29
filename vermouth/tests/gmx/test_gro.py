@@ -588,6 +588,9 @@ def test_read_gro_wrong_atom_number(gro_wrong_length):  # pylint: disable=redefi
 
 
 def test_write_gro(gro_reference, tmpdir):
+    """
+    Test writing GRO file.
+    """
     filename, molecule = gro_reference
     system = vermouth.System()
     system.molecules.append(molecule)
