@@ -65,6 +65,8 @@ def read_mapping(lines):
     mapping = {}
     rev_mapping = collections.defaultdict(list)
     extra = []
+    context = None
+    name = None
 
     for line_number, line in enumerate(lines, start=1):
         cleaned = line.split(';', 1)[0].strip()
@@ -91,6 +93,15 @@ def read_mapping(lines):
             to_ff.extend(cleaned.split())
         elif context == 'extra':
             extra.extend(cleaned.split())
+
+    if context is None:
+        msg = ('No mapping defined. '
+               'A mapping must start with a [ molecule ] section.')
+        raise IOError(msg)
+    if name is None:
+        msg = ('The mapping is defined without a name. '
+               'The block name must follow the [ molecule ] section.')
+        raise IOError(msg)
 
     # Atoms can be mapped with a null weight by prefixing the target particle
     # with a "!". We first set the non-null weights.

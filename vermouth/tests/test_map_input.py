@@ -16,6 +16,9 @@
 
 import pytest
 import collections
+import itertools
+import textwrap
+from pathlib import Path
 import vermouth
 import vermouth.map_input
 
@@ -187,6 +190,117 @@ def test_read_mapping(case):
     assert to_ff == case.to_ff
     assert mapping == case.mapping
     assert extra == case.extra
+
+
+@pytest.mark.parametrize('content', (
+    """
+[ molecule ]
+dummy
+
+[ atoms ]
+0 X1 !A A B
+    """,  # Inconsistent bead weight
+    """
+[ molecule
+dummy
+    """,  # Incomplete section line
+    """
+[ molecule ]
+dummy
+
+[ atoms ]
+0 X1 A B
+1 X2 C D
+2 X1 Y U
+    """,  # Multiple difinitions for the same atom
+    """
+no initial context
+    """,
+    """
+[ molecule ]
+[ atoms ]
+0 A B
+    """,  # no molecule name
+))
+
+def test_read_mapping_errors(content):
+    with pytest.raises(IOError):
+        vermouth.map_input.read_mapping(content.split('\n'))
+
+
+@pytest.fixture(scope='session')
+def ref_mapping_directory(tmpdir_factory):
+    basedir = tmpdir_factory.mktemp('data')
+    mapdir = basedir.mkdir('mappings')
+
+    template = textwrap.dedent("""
+        [ molecule ]
+        dummy_{0}
+
+        [ from ]
+        {1}
+
+        [ to ]
+        {2}
+
+        [ atoms ]
+        0 X1{0} A{0} B{0}
+        1 X2{0} C{0} D{0}
+    """)
+
+    mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
+
+    force_fields_from = ['ff{}'.format(i) for i in range(4)]
+    force_fields_to = force_fields_from + ['only_to']
+    force_fields_from += ['only_from']
+    iterate_on = itertools.product(force_fields_from, force_fields_to, range(3))
+    for idx, (from_ff, to_ff, _) in enumerate(iterate_on):
+        mapfile = mapdir / 'file{}.map'.format(idx)
+        with open(str(mapfile), 'w') as outfile:
+            outfile.write(template.format(idx, from_ff, to_ff))
+
+        mapping = {
+            (0, 'X1{}'.format(idx)): [(0, 'A{}'.format(idx)), (0, 'B{}'.format(idx))],
+            (0, 'X2{}'.format(idx)): [(0, 'C{}'.format(idx)), (0, 'D{}'.format(idx))],
+        }
+        weights = {
+            (0, 'A{}'.format(idx)): {(0, 'X1{}'.format(idx)): 1},
+            (0, 'B{}'.format(idx)): {(0, 'X1{}'.format(idx)): 1},
+            (0, 'C{}'.format(idx)): {(0, 'X2{}'.format(idx)): 1},
+            (0, 'D{}'.format(idx)): {(0, 'X2{}'.format(idx)): 1},
+        }
+        extra = []
+        mappings[from_ff][to_ff]['dummy_{}'.format(idx)] = (mapping, weights, extra)
+
+    mappings = {from_ff: dict(to_ff) for from_ff, to_ff in mappings.items()}
+
+    return Path(basedir), mappings
+
+
+def test_read_mapping_directory(ref_mapping_directory):
+    dirpath, ref_mappings = ref_mapping_directory
+    mappings = vermouth.map_input.read_mapping_directory(dirpath)
+    assert mappings == ref_mappings
+
+
+def test_read_mapping_directory_not_dir():
+    with pytest.raises(NotADirectoryError):
+        vermouth.map_input.read_mapping_directory('not a directory')
+
+
+def test_read_mapping_directory_error(tmpdir):
+    mapdir = tmpdir.mkdir('mappings')
+    with open(str(mapdir / 'valid.map'), 'w') as outfile:
+        outfile.write(textwrap.dedent("""
+            [ molecule ]
+            valid
+            [ atoms ]
+            0 A B
+        """))
+    with open(str(mapdir / 'not_valid.map'), 'w') as outfile:
+        outfile.write('invalid content')
+    with pytest.raises(IOError):
+        vermouth.map_input.read_mapping_directory(mapdir)
 
 
 def test_generate_self_mapping():
