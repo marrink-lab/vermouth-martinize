@@ -270,7 +270,7 @@ def ref_mapping_directory(tmpdir_factory):
 
     force_fields_from = ['ff{}'.format(i) for i in range(4)]
     force_fields_to = force_fields_from + ['only_to']
-    force_fields_from += ['only_from']
+    force_fields_from = force_fields_from + ['only_from']
     iterate_on = itertools.product(force_fields_from, force_fields_to, range(3))
     for idx, (from_ff, to_ff, _) in enumerate(iterate_on):
         mapfile = mapdir / 'file{}.map'.format(idx)
@@ -398,7 +398,7 @@ def test_generate_all_self_mappings():
     found = [(from_ff, tuple(to_ff.keys())) for from_ff, to_ff in mappings.items()]
 
     # In python <= 3.5, dicts are not ordered.
-    assert sorted(found) == sorted(expected)
+    assert set(found) == set(expected)
 
 
 @pytest.fixture

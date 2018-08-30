@@ -113,8 +113,8 @@ def read_mapping(lines):
     }
     for atom_weights in pre_weights.values():
         total = sum(atom_weights.values())
-        for to_atom, count in atom_weights.items():
-            atom_weights[to_atom] = count / total
+        for to_atom in atom_weights:
+            atom_weights[to_atom] /= total
     weights = collections.defaultdict(dict)
     for from_atom, to_atoms in pre_weights.items():
         for to_atom, weight in to_atoms.items():
