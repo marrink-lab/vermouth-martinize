@@ -14,11 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
+"""
+Unit tests for the mapping file parser and its utilities.
+"""
+
 import collections
 import itertools
 import textwrap
 from pathlib import Path
+
+import pytest
+
 import vermouth
 import vermouth.map_input
 import vermouth.forcefield
@@ -185,12 +191,17 @@ to_ff_2 to_ff_3
     [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO]
 )
 def test_read_mapping(case):
-    name, from_ff, to_ff, mapping, weights, extra = vermouth.map_input.read_mapping(case.string.split('\n'))
+    """
+    Test that regular mapping files are read as expected.
+    """
+    full_mapping = vermouth.map_input.read_mapping(case.string.split('\n'))
+    name, from_ff, to_ff, mapping, weights, extra = full_mapping
     assert name == case.name
     assert from_ff == case.from_ff
     assert to_ff == case.to_ff
     assert mapping == case.mapping
     assert extra == case.extra
+    assert weights == case.weights
 
 
 @pytest.mark.parametrize('content', (
@@ -225,12 +236,18 @@ no initial context
 ))
 
 def test_read_mapping_errors(content):
+    """
+    Test that syntax error are caught when reading a mapping.
+    """
     with pytest.raises(IOError):
         vermouth.map_input.read_mapping(content.split('\n'))
 
 
 @pytest.fixture(scope='session')
 def ref_mapping_directory(tmpdir_factory):
+    """
+    Build a file tree with mapping files.
+    """
     basedir = tmpdir_factory.mktemp('data')
     mapdir = basedir.mkdir('mappings')
 
@@ -265,10 +282,10 @@ def ref_mapping_directory(tmpdir_factory):
             (0, 'X2{}'.format(idx)): [(0, 'C{}'.format(idx)), (0, 'D{}'.format(idx))],
         }
         weights = {
-            (0, 'A{}'.format(idx)): {(0, 'X1{}'.format(idx)): 1},
-            (0, 'B{}'.format(idx)): {(0, 'X1{}'.format(idx)): 1},
-            (0, 'C{}'.format(idx)): {(0, 'X2{}'.format(idx)): 1},
-            (0, 'D{}'.format(idx)): {(0, 'X2{}'.format(idx)): 1},
+            (0, 'A{}'.format(idx)): {(0, 'X1{}'.format(idx)): 0.5},
+            (0, 'B{}'.format(idx)): {(0, 'X1{}'.format(idx)): 0.5},
+            (0, 'C{}'.format(idx)): {(0, 'X2{}'.format(idx)): 0.5},
+            (0, 'D{}'.format(idx)): {(0, 'X2{}'.format(idx)): 0.5},
         }
         extra = []
         mappings[from_ff][to_ff]['dummy_{}'.format(idx)] = (mapping, weights, extra)
@@ -278,18 +295,29 @@ def ref_mapping_directory(tmpdir_factory):
     return Path(str(basedir)), mappings
 
 
-def test_read_mapping_directory(ref_mapping_directory):
+def test_read_mapping_directory(ref_mapping_directory):  # pylint: disable=redefined-outer-name
+    """
+    Test that mapping files from a directory are propely found and read.
+    """
     dirpath, ref_mappings = ref_mapping_directory
     mappings = vermouth.map_input.read_mapping_directory(dirpath)
     assert mappings == ref_mappings
 
 
 def test_read_mapping_directory_not_dir():
+    """
+    Test that :func:`vermouth.map_input.read_mapping_directory` fails when
+    the input is not a directory.
+    """
     with pytest.raises(NotADirectoryError):
         vermouth.map_input.read_mapping_directory('not a directory')
 
 
 def test_read_mapping_directory_error(tmpdir):
+    """
+    Test that :func:`vermouth.map_input.read_mapping_directory` raises an
+    exception when a file could not be read.
+    """
     mapdir = tmpdir.mkdir('mappings')
     with open(str(mapdir / 'valid.map'), 'w') as outfile:
         outfile.write(textwrap.dedent("""
@@ -305,6 +333,10 @@ def test_read_mapping_directory_error(tmpdir):
 
 
 def test_generate_self_mapping():
+    """
+    Test that :func:`vermouth.map_input.generate_self_mappings` works as
+    expected.
+    """
     # Build the input blocks
     blocks = {
         'A0': vermouth.molecule.Block([['AA', 'BBB'], ['BBB', 'CCCC']]),
@@ -336,36 +368,43 @@ def test_generate_self_mapping():
     # Actually test
     mappings = vermouth.map_input.generate_self_mappings(blocks)
     assert mappings.keys() == ref_mappings.keys()
-    assert ref_mappings == mappings
+    assert mappings == ref_mappings
 
 
 def test_generate_all_self_mappings():
+    """
+    Test that :func:`vermouth.map_input.generate_all_self_mappings` generate
+    the expected entries.
+    """
     force_fields = []
     expected = []
     for idx in range(3):
         idx_str = str(idx)
         ff_name = 'ff_' + idx_str
-        ff = vermouth.forcefield.ForceField(name=ff_name)
-        ff.blocks = {
+        force_field = vermouth.forcefield.ForceField(name=ff_name)
+        force_field.blocks = {
             'A' + idx_str: vermouth.molecule.Block([['AA', 'BBB'], ['BBB', 'CCCC']]),
             'B' + idx_str: vermouth.molecule.Block([['BBB', 'CCCC'], ['BBB', 'E']]),
         }
-        for name, block in ff.blocks.items():
+        for name, block in force_field.blocks.items():
             block.name = name
             for atomname, node in block.nodes.items():
                 node['atomname'] = atomname
-        force_fields.append(ff)
+        force_fields.append(force_field)
 
         expected.append((ff_name, (ff_name, )))
 
     mappings = vermouth.map_input.generate_all_self_mappings(force_fields)
-    found = [(from_ff,  tuple(to_ff.keys())) for from_ff, to_ff in mappings.items()]
+    found = [(from_ff, tuple(to_ff.keys())) for from_ff, to_ff in mappings.items()]
 
     assert found == expected
 
 
 @pytest.fixture
 def base_mappings():
+    """
+    Build a basic (empty) mapping collection to modify.
+    """
     return {
         'from_1': {
             'to_1': {
@@ -378,7 +417,7 @@ def base_mappings():
 
 @pytest.mark.parametrize('partial_mappings, expected', (
     (  # new force field from and to
-        # partial 
+        # partial
         {'from_2': {'to_2': {'mol_1': ({}, {}, [])}}},
         # expected
         {
@@ -417,6 +456,9 @@ def base_mappings():
         }}}
     ),
 ))
-def test_combine_mappings(base_mappings, partial_mappings, expected):
+def test_combine_mappings(base_mappings, partial_mappings, expected):  # pylint: disable=redefined-outer-name
+    """
+    Test that :func:`vermouth.map_input.combine_mappings` works as expected.
+    """
     vermouth.map_input.combine_mappings(base_mappings, partial_mappings)
     assert base_mappings == expected
