@@ -38,7 +38,6 @@ Reference = collections.namedtuple('Reference',
 # to:     A     B
 SYSTEM_BASIC = Reference(
     string="""\
-[molecule]
 system1
 
 [atoms]
@@ -75,7 +74,6 @@ system1
 # c has a greater weight in A, while d has a greater weight in B
 SYSTEM_SHARED = Reference(
     string="""\
-[molecule]
 system2
 
 [atoms]
@@ -128,7 +126,6 @@ D E  ; two particles on the same line
 # c as a weight of 0 on B, and d has a weight of 0 on A
 SYSTEM_NULL = Reference(
     string="""\
-[molecule]
 system4
 
 [atoms]
@@ -161,7 +158,8 @@ system4
 # Same as system 1, but with origin and target force field explicitly
 # specified.
 SYSTEM_FROM_TO = Reference(
-    string="""\
+    string=SYSTEM_BASIC.string + """
+
 [from]
 from_ff
 from_ff_2
@@ -175,7 +173,7 @@ from_ff_7
 to_ff
 to_ff_2 to_ff_3
 
-""" + SYSTEM_BASIC.string,
+""",
     name=SYSTEM_BASIC.name,
     from_ff=['from_ff', 'from_ff_2', 'from_ff_3',
              'from_ff_4', 'from_ff_5', 'from_ff_6', 'from_ff_7'],
@@ -190,11 +188,11 @@ to_ff_2 to_ff_3
     'case',
     [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO]
 )
-def test_read_mapping(case):
+def test_read_mapping_partial(case):
     """
     Test that regular mapping files are read as expected.
     """
-    full_mapping = vermouth.map_input.read_mapping(case.string.split('\n'))
+    full_mapping = vermouth.map_input._read_mapping_partial(case.string.split('\n'))  # pylint: disable=protected-access
     name, from_ff, to_ff, mapping, weights, extra = full_mapping
     assert name == case.name
     assert from_ff == case.from_ff
@@ -206,7 +204,6 @@ def test_read_mapping(case):
 
 @pytest.mark.parametrize('content', (
     """
-[ molecule ]
 dummy
 
 [ atoms ]
@@ -217,7 +214,6 @@ dummy
 dummy
     """,  # Incomplete section line
     """
-[ molecule ]
 dummy
 
 [ atoms ]
@@ -226,21 +222,87 @@ dummy
 2 X1 Y U
     """,  # Multiple difinitions for the same atom
     """
-no initial context
-    """,
-    """
-[ molecule ]
 [ atoms ]
 0 A B
     """,  # no molecule name
 ))
-
 def test_read_mapping_errors(content):
     """
     Test that syntax error are caught when reading a mapping.
     """
     with pytest.raises(IOError):
-        vermouth.map_input.read_mapping(content.split('\n'))
+        vermouth.map_input._read_mapping_partial(content.split('\n'))  # pylint: disable=protected-access
+
+
+@pytest.mark.parametrize(
+    'case',
+    [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO]
+)
+def test_read_mapping_file(case):
+    """
+    Test that regular mapping files are read as expected.
+    """
+    reference = collections.defaultdict(lambda: collections.defaultdict(dict))
+    for from_ff, to_ff in itertools.product(case.from_ff, case.to_ff):
+        reference[from_ff][to_ff][case.name] = (
+            case.mapping, case.weights, case.extra
+        )
+    reference = vermouth.map_input._default_to_dict(reference)  # pylint: disable=protected-access
+
+    mappings = vermouth.map_input.read_mapping_file(
+        ['[ molecule ]'] + case.string.split('\n')
+    )
+
+    assert mappings == reference
+
+
+@pytest.fixture
+def reference_multi():
+    """
+    Build a reference file and mapping collection with multiple molecules.
+    """
+    content = textwrap.dedent("""
+        ; Some line before the first molecule.
+        ; Just because.
+
+        [ molecule ]
+        dummy_0
+
+        [ atoms ]
+        0 X1 A
+        1 X2 B
+
+        ; Some mess between two molecules.
+
+        [ molecule ]
+        dummy_1
+
+        [ atoms ]
+        0 X2 C
+        1 X3 D
+    """).split('\n')
+    reference = {'universal': {'martini22': {
+        'dummy_0': (
+            {(0, 'X1'): [(0, 'A')], (0, 'X2'): [(0, 'B')]},
+            {(0, 'A'): {(0, 'X1'): 1.0}, (0, 'B'): {(0, 'X2'): 1.0}},
+            [],
+        ),
+        'dummy_1': (
+            {(0, 'X2'): [(0, 'C')], (0, 'X3'): [(0, 'D')]},
+            {(0, 'C'): {(0, 'X2'): 1.0}, (0, 'D'): {(0, 'X3'): 1.0}},
+            [],
+        ),
+    }}}
+    return content, reference
+
+
+def test_read_mapping_file_multiple(reference_multi):  # pylint: disable=redefined-outer-name
+    """
+    Test that read_mapping_file can read more than one molecule.
+    """
+    content, reference = reference_multi
+    mappings = vermouth.map_input.read_mapping_file(content)
+    assert mappings == reference
 
 
 @pytest.fixture(scope='session')

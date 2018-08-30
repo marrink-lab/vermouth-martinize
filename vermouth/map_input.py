@@ -20,27 +20,92 @@ Read force field to force field mappings.
 
 from pathlib import Path
 import collections
+import itertools
 
 
-def read_mapping(lines):
+def read_mapping_file(lines):
     """
     Partial reader for modified Backward mapping files.
 
-    ..warning::
+    Read mappings from a Backward mapping file. Not all fields are supported,
+    only the "molecule" and the "atoms" fields are read. If not explicitly
+    specified, the origin force field for a molecule is assumed to be
+    "universal", and the destination force field is assumed to be "martini22".
 
-        This parser is a limited proof of concept. It must be replaced! See
-        [issue #5](https://github.com/jbarnoud/martinize2/issues/5).
+    The mapping collection is a 3 level dictionary where the first key is the
+    name of the initial force field, the second key is the name of the
+    destination force field, and the third key is the name of the molecule.
+
+    Parameters
+    ----------
+    lines: collections.abc.Iterable[str]
+        Collection of lines to read.
+
+    Return
+    ------
+    dict
+    """
+    lines = iter(lines)
+    mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
+
+    # Throw away everything before [ molecule ]
+    for line in lines:
+        cleaned = line.split(';', 1)[0].strip()
+        if (cleaned.startswith('[')
+                and cleaned.endswith(']')
+                and cleaned[1:-1].strip() == 'molecule'):
+            break
+    else:  # no break
+        msg = ('No mapping defined. '
+               'A mapping must start with a [ molecule ] section.')
+        raise IOError(msg)
+        
+    # At this point the last line read was [ molecule ] or else we would have
+    # raised an exception.
+    while True:
+        try:
+            full_mapping = _read_mapping_partial(lines)
+        except StopIteration:
+            break
+        else:
+            name, from_ff_list, to_ff_list, mapping, weights, extra = full_mapping
+            if name is not None:
+                for from_ff, to_ff in itertools.product(from_ff_list, to_ff_list):
+                    mappings[from_ff][to_ff][name] = (mapping, weights, extra)
+            else:
+                break
+
+    # We do not want to return defaultdicts.
+    mappings = _default_to_dict(mappings)
+
+    return mappings
+
+
+def _default_to_dict(mappings):
+    new_mappings = {}
+    for from_ff, from_dict in mappings.items():
+        new_mappings[from_ff] = {}
+        for to_ff, to_dict in from_dict.items():
+            new_mappings[from_ff][to_ff] = dict(to_dict)
+    return new_mappings
+            
+
+def _read_mapping_partial(lines):
+    """
+    Partial reader for modified Backward mapping files.
 
     Read mapping from a Backward mapping file. Not all fields are supported,
     only the "molecule" and the "atoms" fields are read. The origin force field
     is assumed to be "universal", and the destination force field is assumed to
     be "martini22".
 
-    The reader assumes only one molecule per file.
+    The content is assumed to start just *after* the '[ molecule  ]' line. The
+    function consumes the iterator until, and including, the next
+    '[ molecule ]' line if any.
 
     Parameters
     ----------
-    lines: collections.abc.Iterable[str]
+    lines: collections.abc.Iterator[str]
         Collection of lines to read.
 
     Returns
@@ -65,7 +130,7 @@ def read_mapping(lines):
     mapping = {}
     rev_mapping = collections.defaultdict(list)
     extra = []
-    context = None
+    context = 'molecule'
     name = None
 
     for line_number, line in enumerate(lines, start=1):
@@ -76,6 +141,8 @@ def read_mapping(lines):
             if not cleaned.endswith(']'):
                 raise IOError('Format error at line {}.'.format(line_number))
             context = cleaned[1:-1].strip()
+            if context == 'molecule':
+                break
         elif context == 'molecule':
             name = cleaned
         elif context == 'atoms':
@@ -94,11 +161,7 @@ def read_mapping(lines):
         elif context == 'extra':
             extra.extend(cleaned.split())
 
-    if context is None:
-        msg = ('No mapping defined. '
-               'A mapping must start with a [ molecule ] section.')
-        raise IOError(msg)
-    if name is None:
+    if name is None and context != 'molecule':
         msg = ('The mapping is defined without a name. '
                'The block name must follow the [ molecule ] section.')
         raise IOError(msg)
@@ -197,19 +260,11 @@ def read_mapping_directory(directory):
     for path in directory.glob('**/*.map'):
         with open(str(path)) as infile:
             try:
-                name, all_from_ff, all_to_ff, mapping, weights, extra = read_mapping(infile)
+                new_mappings = read_mapping_file(infile)
             except IOError:
                 raise IOError('An error occured while reading "{}".'.format(path))
-        for from_ff in all_from_ff:
-            to_ff = None
-            for to_ff in all_to_ff:
-                mappings[from_ff][to_ff][name] = (mapping, weights, extra)
-            if to_ff is not None:
-                # If all_to_ff is empty, then to_ff will not be redefined by
-                # the above for loop.
-                mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
-    for from_ff in mappings:
-        mappings[from_ff] = dict(mappings[from_ff])
+            else:
+                combine_mappings(mappings, new_mappings)
     return dict(mappings)
 
 
