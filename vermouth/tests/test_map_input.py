@@ -318,7 +318,7 @@ def test_read_mapping_directory_error(tmpdir):
     Test that :func:`vermouth.map_input.read_mapping_directory` raises an
     exception when a file could not be read.
     """
-    mapdir = tmpdir.mkdir('mappings')
+    mapdir = Path(str(tmpdir.mkdir('mappings')))
     with open(str(mapdir / 'valid.map'), 'w') as outfile:
         outfile.write(textwrap.dedent("""
             [ molecule ]
@@ -397,7 +397,8 @@ def test_generate_all_self_mappings():
     mappings = vermouth.map_input.generate_all_self_mappings(force_fields)
     found = [(from_ff, tuple(to_ff.keys())) for from_ff, to_ff in mappings.items()]
 
-    assert found == expected
+    # In python <= 3.5, dicts are not ordered.
+    assert sorted(found) == sorted(expected)
 
 
 @pytest.fixture
