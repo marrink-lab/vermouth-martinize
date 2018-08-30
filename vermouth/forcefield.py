@@ -40,14 +40,21 @@ class ForceField(object):
     variables: dict
     reference_graphs: dict
     """
-    def __init__(self, directory):
+    def __init__(self, directory=None, name=None):
         self.blocks = {}
         self.links = []
         self.modifications = []
         self.renamed_residues = {}
-        self.name = os.path.basename(directory)
         self.variables = {}
-        self.read_from(directory)
+        self.name = None
+        if directory is not None:
+            self.read_from(directory)
+            self.name = os.path.basename(directory)
+        if name is not None:
+            self.name = name
+        if self.name is None:
+            msg = 'At least one of `directory` or `name` must be provided.'
+            raise TypeError(msg)
 
     def read_from(self, directory):
         """

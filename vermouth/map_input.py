@@ -269,7 +269,8 @@ def generate_all_self_mappings(force_fields):
         :func:`read_mapping_directory` function.
     """
     mappings = collections.defaultdict(dict)
-    for name, force_field in force_fields.items():
+    for force_field in force_fields:
+        name = force_field.name
         mappings[name][name] = generate_self_mappings(force_field.blocks)
     return mappings
 

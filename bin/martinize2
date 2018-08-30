@@ -295,7 +295,7 @@ def entry():
         combine_mappings(known_mappings, partial_mapping)
 
     # Build self mappings
-    partial_mapping = generate_all_self_mappings(known_force_fields)
+    partial_mapping = generate_all_self_mappings(known_force_fields.values())
     combine_mappings(known_mappings, partial_mapping)
 
     from_ff = args.from_ff

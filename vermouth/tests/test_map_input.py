@@ -21,6 +21,7 @@ import textwrap
 from pathlib import Path
 import vermouth
 import vermouth.map_input
+import vermouth.forcefield
 
 Reference = collections.namedtuple('Reference',
                                    'string name from_ff to_ff mapping weights extra')
@@ -274,7 +275,7 @@ def ref_mapping_directory(tmpdir_factory):
 
     mappings = {from_ff: dict(to_ff) for from_ff, to_ff in mappings.items()}
 
-    return Path(basedir), mappings
+    return Path(str(basedir)), mappings
 
 
 def test_read_mapping_directory(ref_mapping_directory):
@@ -336,3 +337,86 @@ def test_generate_self_mapping():
     mappings = vermouth.map_input.generate_self_mappings(blocks)
     assert mappings.keys() == ref_mappings.keys()
     assert ref_mappings == mappings
+
+
+def test_generate_all_self_mappings():
+    force_fields = []
+    expected = []
+    for idx in range(3):
+        idx_str = str(idx)
+        ff_name = 'ff_' + idx_str
+        ff = vermouth.forcefield.ForceField(name=ff_name)
+        ff.blocks = {
+            'A' + idx_str: vermouth.molecule.Block([['AA', 'BBB'], ['BBB', 'CCCC']]),
+            'B' + idx_str: vermouth.molecule.Block([['BBB', 'CCCC'], ['BBB', 'E']]),
+        }
+        for name, block in ff.blocks.items():
+            block.name = name
+            for atomname, node in block.nodes.items():
+                node['atomname'] = atomname
+        force_fields.append(ff)
+
+        expected.append((ff_name, (ff_name, )))
+
+    mappings = vermouth.map_input.generate_all_self_mappings(force_fields)
+    found = [(from_ff,  tuple(to_ff.keys())) for from_ff, to_ff in mappings.items()]
+
+    assert found == expected
+
+
+@pytest.fixture
+def base_mappings():
+    return {
+        'from_1': {
+            'to_1': {
+                'mol_1': ({}, {}, []),
+                'mol_2': ({}, {}, []),
+            },
+        },
+    }
+
+
+@pytest.mark.parametrize('partial_mappings, expected', (
+    (  # new force field from and to
+        # partial 
+        {'from_2': {'to_2': {'mol_1': ({}, {}, [])}}},
+        # expected
+        {
+            'from_1': {'to_1': {'mol_1': ({}, {}, []), 'mol_2': ({}, {}, [])}},
+            'from_2': {'to_2': {'mol_1': ({}, {}, [])}}
+        }
+    ),
+    (  # Add a target to an existing force field
+        # partial
+        {'from_1': {'to_2': {'mol_1': ({}, {}, [])}}},
+        # expected
+        {
+            'from_1': {
+                'to_1': {'mol_1': ({}, {}, []), 'mol_2': ({}, {}, [])},
+                'to_2': {'mol_1': ({}, {}, [])}
+            }
+        }
+    ),
+    (  # Add a molecule to an existing force field pair
+        # partial
+        {'from_1': {'to_1': {'mol_3': ({}, {}, [])}}},
+        # expected
+        {'from_1': {'to_1': {
+            'mol_1': ({}, {}, []),
+            'mol_2': ({}, {}, []),
+            'mol_3': ({}, {}, []),
+        }}}
+    ),
+    (  # Replace a molecule from an existing force field pair
+        # partial
+        {'from_1': {'to_1': {'mol_1': ({}, {}, ['modified'])}}},
+        # expected
+        {'from_1': {'to_1': {
+            'mol_1': ({}, {}, ['modified']),
+            'mol_2': ({}, {}, []),
+        }}}
+    ),
+))
+def test_combine_mappings(base_mappings, partial_mappings, expected):
+    vermouth.map_input.combine_mappings(base_mappings, partial_mappings)
+    assert base_mappings == expected
