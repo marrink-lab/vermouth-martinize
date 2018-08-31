@@ -65,6 +65,8 @@ def read_mapping(lines):
     mapping = {}
     rev_mapping = collections.defaultdict(list)
     extra = []
+    context = None
+    name = None
 
     for line_number, line in enumerate(lines, start=1):
         cleaned = line.split(';', 1)[0].strip()
@@ -92,16 +94,32 @@ def read_mapping(lines):
         elif context == 'extra':
             extra.extend(cleaned.split())
 
+    if context is None:
+        msg = ('No mapping defined. '
+               'A mapping must start with a [ molecule ] section.')
+        raise IOError(msg)
+    if name is None:
+        msg = ('The mapping is defined without a name. '
+               'The block name must follow the [ molecule ] section.')
+        raise IOError(msg)
+
     # Atoms can be mapped with a null weight by prefixing the target particle
     # with a "!". We first set the non-null weights.
-    weights = {
-        to_atom: dict(collections.Counter(from_atoms))
-        for to_atom, from_atoms in rev_mapping.items()
-        if not to_atom.startswith('!')
+    pre_weights = {
+        from_atom: dict(collections.Counter([
+            to_atom for to_atom in to_atoms if not to_atom.startswith('!')
+        ]))
+        for from_atom, to_atoms in mapping.items()
     }
-    for bead_weights in weights.values():
-        for from_atom, count in bead_weights.items():
-            bead_weights[from_atom] = 1 / count
+    for atom_weights in pre_weights.values():
+        total = sum(atom_weights.values())
+        for to_atom in atom_weights:
+            atom_weights[to_atom] /= total
+    weights = collections.defaultdict(dict)
+    for from_atom, to_atoms in pre_weights.items():
+        for to_atom, weight in to_atoms.items():
+            weights[to_atom][from_atom] = weight
+
     # Then we add the null weights.
     null_weights = {
         to_atom[1:]: {from_atom: 0 for from_atom in from_atoms}
@@ -190,6 +208,8 @@ def read_mapping_directory(directory):
                 # If all_to_ff is empty, then to_ff will not be redefined by
                 # the above for loop.
                 mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
+    for from_ff in mappings:
+        mappings[from_ff] = dict(mappings[from_ff])
     return dict(mappings)
 
 
@@ -258,9 +278,10 @@ def generate_all_self_mappings(force_fields):
         :func:`read_mapping_directory` function.
     """
     mappings = collections.defaultdict(dict)
-    for name, force_field in force_fields.items():
+    for force_field in force_fields:
+        name = force_field.name
         mappings[name][name] = generate_self_mappings(force_field.blocks)
-    return mappings
+    return dict(mappings)
 
 
 def combine_mappings(known_mappings, partial_mapping):
