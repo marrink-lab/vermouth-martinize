@@ -183,17 +183,32 @@ to_ff_2 to_ff_3
     extra=SYSTEM_BASIC.extra,
 )
 
+# Test system 6: unused field from Backward
+# Same as system 1, but with a section that has to be ignored.
+SYSTEM_IGNORE = Reference(
+    string=SYSTEM_BASIC.string + """
+[ chiral ]
+A B C D
+""",
+    name=SYSTEM_BASIC.name,
+    from_ff=SYSTEM_BASIC.from_ff,
+    to_ff=SYSTEM_BASIC.to_ff,
+    mapping=SYSTEM_BASIC.mapping,
+    weights=SYSTEM_BASIC.weights,
+    extra=SYSTEM_BASIC.extra,
+)
+
 
 @pytest.mark.parametrize(
     'case',
-    [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO]
+    [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO, SYSTEM_IGNORE]
 )
 def test_read_mapping_partial(case):
     """
     Test that regular mapping files are read as expected.
     """
-    full_mapping = vermouth.map_input._read_mapping_partial(case.string.split('\n'))  # pylint: disable=protected-access
-    name, from_ff, to_ff, mapping, weights, extra = full_mapping
+    full_mapping = vermouth.map_input._read_mapping_partial(case.string.split('\n'), 1)  # pylint: disable=protected-access
+    name, from_ff, to_ff, mapping, weights, extra, _ = full_mapping
     assert name == case.name
     assert from_ff == case.from_ff
     assert to_ff == case.to_ff
@@ -225,18 +240,28 @@ dummy
 [ atoms ]
 0 A B
     """,  # no molecule name
+    """
+Just a pile of garbage.
+Clearly, this is not a mapping file.
+Not even a partial one.
+    """,
+    # If a file contains two consecutive [ molecule ] lines, it means the first
+    # of the molecules is empty.
+    """
+[ molecule ]
+    """,
 ))
 def test_read_mapping_errors(content):
     """
     Test that syntax error are caught when reading a mapping.
     """
     with pytest.raises(IOError):
-        vermouth.map_input._read_mapping_partial(content.split('\n'))  # pylint: disable=protected-access
+        vermouth.map_input._read_mapping_partial(content.split('\n'), 1)  # pylint: disable=protected-access
 
 
 @pytest.mark.parametrize(
     'case',
-    [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO]
+    [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO, SYSTEM_IGNORE]
 )
 def test_read_mapping_file(case):
     """

@@ -49,7 +49,8 @@ def read_mapping_file(lines):
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
 
     # Throw away everything before [ molecule ]
-    for line in lines:
+    line_number = 1
+    for line_number, line in enumerate(lines, start=1):
         cleaned = line.split(';', 1)[0].strip()
         if (cleaned.startswith('[')
                 and cleaned.endswith(']')
@@ -59,21 +60,17 @@ def read_mapping_file(lines):
         msg = ('No mapping defined. '
                'A mapping must start with a [ molecule ] section.')
         raise IOError(msg)
-        
+
     # At this point the last line read was [ molecule ] or else we would have
     # raised an exception.
     while True:
-        try:
-            full_mapping = _read_mapping_partial(lines)
-        except StopIteration:
-            break
+        full_mapping = _read_mapping_partial(lines, line_number + 1)
+        name, from_ff_list, to_ff_list, mapping, weights, extra, line_number = full_mapping
+        if name is not None:
+            for from_ff, to_ff in itertools.product(from_ff_list, to_ff_list):
+                mappings[from_ff][to_ff][name] = (mapping, weights, extra)
         else:
-            name, from_ff_list, to_ff_list, mapping, weights, extra = full_mapping
-            if name is not None:
-                for from_ff, to_ff in itertools.product(from_ff_list, to_ff_list):
-                    mappings[from_ff][to_ff][name] = (mapping, weights, extra)
-            else:
-                break
+            break
 
     # We do not want to return defaultdicts.
     mappings = _default_to_dict(mappings)
@@ -82,6 +79,9 @@ def read_mapping_file(lines):
 
 
 def _default_to_dict(mappings):
+    """
+    Convert a mapping collection from a defaultdict to a dict.
+    """
     new_mappings = {}
     for from_ff, from_dict in mappings.items():
         new_mappings[from_ff] = {}
@@ -152,9 +152,9 @@ def _compute_weights(mapping, name):
         weights[to_atom].update(from_weights)
 
     return weights
-            
 
-def _read_mapping_partial(lines):
+
+def _read_mapping_partial(lines, start_line):
     """
     Partial reader for modified Backward mapping files.
 
@@ -171,6 +171,8 @@ def _read_mapping_partial(lines):
     ----------
     lines: collections.abc.Iterator[str]
         Collection of lines to read.
+    start_line: int
+        The first line number. Starts at 1.
 
     Returns
     -------
@@ -188,16 +190,19 @@ def _read_mapping_partial(lines):
     weights: dict
     extra: list
         Unmapped atoms to be added.
+    line_number: int
+        The number of the last line consumed.
     """
     from_ff = []
     to_ff = []
     mapping = {}
-    rev_mapping = collections.defaultdict(list)
     extra = []
     context = 'molecule'
     name = None
 
-    for line_number, line in enumerate(lines, start=1):
+    has_content = False
+    line_number = None
+    for line_number, line in enumerate(lines, start=start_line):
         cleaned = line.split(';', 1)[0].strip()
         if not cleaned:
             continue
@@ -206,9 +211,26 @@ def _read_mapping_partial(lines):
                 raise IOError('Format error at line {}.'.format(line_number))
             context = cleaned[1:-1].strip()
             if context == 'molecule':
+                if not has_content:
+                    # This detects cases where the file looks like:
+                    # [ molecule ]
+                    # [ molecule ]
+                    #
+                    # Then the partial function gets:
+                    # [ molecule ]
+                    #
+                    # as the first section header is consimed by the parent
+                    # function.
+                    raise IOError('Mapping starting at line {} is empty.'
+                                  .format(start_line))
                 break
         elif context == 'molecule':
-            name = cleaned
+            if name is None:
+                name = cleaned
+            else:
+                msg = ('Line {} tries to redefine the name of the molecule '
+                       'starting at line {}.')
+                raise IOError(msg.format(line_number, start_line))
         elif context == 'atoms':
             _, from_atom, *to_atoms = cleaned.split()
             if from_atom in mapping:
@@ -216,19 +238,24 @@ def _read_mapping_partial(lines):
                        'get defined again.')
                 raise IOError(msg.format(line_number, from_atom))
             mapping[from_atom] = to_atoms
-            for to_atom in to_atoms:
-                rev_mapping[to_atom].append(from_atom)
         elif context in ['from', 'mapping']:
             from_ff.extend(cleaned.split())
         elif context == 'to':
             to_ff.extend(cleaned.split())
         elif context == 'extra':
             extra.extend(cleaned.split())
+        # else: we are dealing with a section that we should ignore.
+        has_content = True
 
     if name is None and context != 'molecule':
-        msg = ('The mapping is defined without a name. '
+        # At this point, there are two cases where the name can be None:
+        # either it was not defined, or there was no content to read. In the
+        # later case, the context was not changed from its initial value.
+        # Here, we are in the former case, and the name was not defined. This
+        #case is an erroroneous one.
+        msg = ('The mapping starting at line {} is defined without a name. '
                'The block name must follow the [ molecule ] section.')
-        raise IOError(msg)
+        raise IOError(msg.format(start_line))
 
     weights = _compute_weights(mapping, name)
 
@@ -256,7 +283,7 @@ def _read_mapping_partial(lines):
     if not to_ff:
         to_ff = ['martini22', ]
 
-    return name, from_ff, to_ff, mapping, weights, extra
+    return name, from_ff, to_ff, mapping, weights, extra, line_number
 
 
 def read_mapping_directory(directory):
