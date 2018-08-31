@@ -88,6 +88,70 @@ def _default_to_dict(mappings):
         for to_ff, to_dict in from_dict.items():
             new_mappings[from_ff][to_ff] = dict(to_dict)
     return new_mappings
+
+
+def _compute_weights(mapping, name):
+    """
+    Calculate the mapping weights from a preliminary mapping.
+
+    The preliminary mapping refers to atoms by their names instead of the tuple
+    ``(resid, name)`` used in a final mapping. Target atoms with null weights
+    are prefixed with a '!'. The result dictionary also refers to atoms
+    directly by name.
+
+    Parameters
+    ----------
+    mapping: dict[str, list[str]]
+        Preliminary mapping.
+    name: str
+        Molecule name. Used to generate error messages.
+
+    Returns
+    -------
+    dict
+    """
+    rev_mapping = collections.defaultdict(list)
+    for from_atom, to_atoms in mapping.items():
+        for to_atom in to_atoms:
+            rev_mapping[to_atom].append(from_atom)
+
+    # Atoms can be mapped with a null weight by prefixing the target particle
+    # with a "!". We first set the non-null weights.
+    pre_weights = {
+        from_atom: dict(collections.Counter([
+            to_atom for to_atom in to_atoms if not to_atom.startswith('!')
+        ]))
+        for from_atom, to_atoms in mapping.items()
+    }
+    for atom_weights in pre_weights.values():
+        total = sum(atom_weights.values())
+        for to_atom in atom_weights:
+            atom_weights[to_atom] /= total
+    weights = collections.defaultdict(dict)
+    for from_atom, to_atoms in pre_weights.items():
+        for to_atom, weight in to_atoms.items():
+            weights[to_atom][from_atom] = weight
+
+    # Then we add the null weights.
+    null_weights = {
+        to_atom[1:]: {from_atom: 0 for from_atom in from_atoms}
+        for to_atom, from_atoms in rev_mapping.items()
+        if to_atom.startswith('!')
+    }
+    for to_atom, from_weights in null_weights.items():
+        null_keys = set(from_weights.keys())
+        non_null_keys = set(weights.get(to_atom, {}).keys())
+        redifined_keys = null_keys & non_null_keys
+        if redifined_keys:
+            msg = ('Atom(s) {} is mapped to "{}" with and without a weight '
+                   'in the molecule "{}". '
+                   'There cannot be the same target atom name with and '
+                   'without a "!" prefix on a same line.')
+            raise IOError(msg.format(redifined_keys, to_atom, name))
+        weights[to_atom] = weights.get(to_atom, {})
+        weights[to_atom].update(from_weights)
+
+    return weights
             
 
 def _read_mapping_partial(lines):
@@ -166,41 +230,7 @@ def _read_mapping_partial(lines):
                'The block name must follow the [ molecule ] section.')
         raise IOError(msg)
 
-    # Atoms can be mapped with a null weight by prefixing the target particle
-    # with a "!". We first set the non-null weights.
-    pre_weights = {
-        from_atom: dict(collections.Counter([
-            to_atom for to_atom in to_atoms if not to_atom.startswith('!')
-        ]))
-        for from_atom, to_atoms in mapping.items()
-    }
-    for atom_weights in pre_weights.values():
-        total = sum(atom_weights.values())
-        for to_atom in atom_weights:
-            atom_weights[to_atom] /= total
-    weights = collections.defaultdict(dict)
-    for from_atom, to_atoms in pre_weights.items():
-        for to_atom, weight in to_atoms.items():
-            weights[to_atom][from_atom] = weight
-
-    # Then we add the null weights.
-    null_weights = {
-        to_atom[1:]: {from_atom: 0 for from_atom in from_atoms}
-        for to_atom, from_atoms in rev_mapping.items()
-        if to_atom.startswith('!')
-    }
-    for to_atom, from_weights in null_weights.items():
-        null_keys = set(from_weights.keys())
-        non_null_keys = set(weights.get(to_atom, {}).keys())
-        redifined_keys = null_keys & non_null_keys
-        if redifined_keys:
-            msg = ('Atom(s) {} is mapped to "{}" with and without a weight '
-                   'in the molecule "{}". '
-                   'There cannot be the same target atom name with and '
-                   'without a "!" prefix on a same line.')
-            raise IOError(msg.format(redifined_keys, to_atom, name))
-        weights[to_atom] = weights.get(to_atom, {})
-        weights[to_atom].update(from_weights)
+    weights = _compute_weights(mapping, name)
 
     # While it is not supported by the file format, mappings can contain
     # residue information. Atom identifiers in all the outputs must be formated
