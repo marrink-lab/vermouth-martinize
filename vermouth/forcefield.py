@@ -56,6 +56,9 @@ class ForceField(object):
             self.name = os.path.basename(directory)
         if name is not None:
             self.name = name
+        if directory is not None and name is not None:
+            msg = 'Only one of name or directory should be provided. Not both.'
+            raise TypeError(msg)
         if self.name is None:
             msg = 'At least one of `directory` or `name` must be provided.'
             raise TypeError(msg)
