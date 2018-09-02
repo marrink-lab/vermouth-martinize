@@ -33,6 +33,12 @@ from .molecule import (
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
 
+# Python 3.4 does not raise JSONDecodeError but ValueError.
+try:
+    from json import JSONDecodeError
+except ImportError:
+    JSONDecodeError = ValueError
+
 VALUE_PREDICATES = {
     'not': NotDefinedOrNot,
 }
@@ -285,7 +291,7 @@ def _parse_atom_attributes(token):
         raise ValueError('The token should start with a curly bracket.')
     try:
         attributes = json.loads(token)
-    except json.JSONDecodeError:
+    except JSONDecodeError:
         raise ValueError('The following value is not a valid atom attribute token: "{}".'
                          .format(token))
     modifications = {}
