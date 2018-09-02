@@ -343,9 +343,7 @@ def generate_self_mappings(blocks):
     -------
     mappings: dict[str, tuple]
         A dictionary of mappings where the keys are the names of the blocks,
-        and the values are tuples like (mapping, weights, extra). The elements
-        of these tuples are formatted as the corresponding output of the
-        :func:`read_mapping` function.
+        and the values are tuples like (mapping, weights, extra).
 
     Raises
     ------
@@ -354,7 +352,7 @@ def generate_self_mappings(blocks):
 
     See Also
     --------
-    read_mapping
+    read_mapping_file
         Read a mapping from a file.
     generate_all_self_mappings
         Generate self mappings for a list of force fields.
@@ -405,8 +403,7 @@ def combine_mappings(known_mappings, partial_mapping):
     similar to the output of the :func:`read_mapping_directory` function. They
     are dictionary with 3 levels of keys: the name of the initial force field,
     the name of the target force field, and the name of the block. The values
-    in the third level dictionary are tuples of (mapping, weights, extra) as
-    described in the :func:`read_mapping`.
+    in the third level dictionary are tuples of (mapping, weights, extra).
 
     If a force field appears in 'partial_mapping' that is not in
     'known_mappings', then it is added. For existing pairs of initial and
