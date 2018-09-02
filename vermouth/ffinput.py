@@ -188,8 +188,13 @@ def _tokenize(line):
         if brackets > 0:
             msg = 'Unexpected end of line. A closing bracket is missing.'
             raise IOError(msg)
+        elif brackets < 0:
+            msg = 'An opening bracket is missing.'
+            raise IOError(msg)
 
-        tokens.append(line[start:end + 1])
+        token = line[start:end + 1]
+        if token:
+            tokens.append(token)
 
         # Find the beginning of the next token.
         start = end + 1
@@ -199,13 +204,29 @@ def _tokenize(line):
 
 
 def _substitute_macros(line, macros):
+    r"""
+    Substitute macros by their content.
+
+    A macro starts with a '$' and ends with one amongst ' ${}\n\t'.
+
+    Parameters
+    ----------
+    line: str
+        The line to fix.
+    macros: dict[str, str]
+        Keys are macro names, values are the replacement content.
+
+    Returns
+    -------
+    str
+    """
     start = None
-    while start is None or 0 <= start < len(line):
+    while True:  # stops when start < 0
         start = line.find('$', start)
         if start < 0:
             break
         for end, char in enumerate(line[start + 1:], start=start + 1):
-            if char in ' \t\n{}':
+            if char in ' \t\n{}$':
                 break
         else: # no break
             end += 1
@@ -217,6 +238,28 @@ def _substitute_macros(line, macros):
 
 
 def _some_atoms_left(tokens, atoms, natoms):
+    """
+    Return True if the token list expected to contain atoms.
+
+    If the number of atoms is known before hand, then the function compares the
+    number of already found atoms to the expected number. If the '--' token if
+    found, it is removed from the token list and there is no atom left.
+
+    Parameters
+    ----------
+    tokens: collections.deque[str]
+        Deque of token to inspect. The deque **can be modified** in place.
+    atoms: list
+        List of already found atoms.
+    natoms: int or None
+        The number of expected atoms if known, else None.
+
+    Returns
+    -------
+    bool
+    """
+    if not tokens:
+        return False
     if tokens and tokens[0] == '--':
         tokens.popleft()
         return False
@@ -226,7 +269,25 @@ def _some_atoms_left(tokens, atoms, natoms):
 
 
 def _parse_atom_attributes(token):
-    attributes = json.loads(token)
+    """
+    Parse bracketted tokens.
+
+    Parameters
+    ----------
+    token: str
+        Token in the form of a json dictionary.
+
+    Returns
+    -------
+    dict
+    """
+    if not token.strip().startswith('{'):
+        raise ValueError('The token should start with a curly bracket.')
+    try:
+        attributes = json.loads(token)
+    except json.JSONDecodeError:
+        raise ValueError('The following value is not a valid atom attribute token: "{}".'
+                         .format(token))
     modifications = {}
     for key, value in attributes.items():
         try:
@@ -460,10 +521,9 @@ def _treat_atom_prefix(reference, attributes):
 
 def _treat_link_interaction_atoms(atoms, context, section):
     for reference, attributes in atoms:
-        if hasattr(context, '_apply_to_all_nodes'):
-            intermediate = context._apply_to_all_nodes.copy()
-            intermediate.update(attributes)
-            attributes = intermediate
+        intermediate = context._apply_to_all_nodes.copy()
+        intermediate.update(attributes)
+        attributes = intermediate
 
         prefixed_reference, attributes = _treat_atom_prefix(reference, attributes)
 

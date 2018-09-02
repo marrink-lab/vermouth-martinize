@@ -82,6 +82,9 @@ class LinkPredicate:
     def __repr__(self):
         return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and other.value == self.value
+
 
 class Choice(LinkPredicate):
     """
