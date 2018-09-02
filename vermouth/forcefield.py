@@ -25,6 +25,10 @@ from . import DATA_PATH
 
 FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
 
+# Cache the force fields.
+# It should only be used by the get_native_force_field function, or else...
+_FORCE_FIELDS = {}
+
 
 class ForceField(object):
     """
@@ -166,4 +170,34 @@ def iter_force_field_files(directory, extensions=FORCE_FIELD_PARSERS.keys()):
     ))
 
 
-FORCE_FIELDS = find_force_fields(os.path.join(DATA_PATH, 'force_fields'))
+def get_native_force_field(name):
+    """
+    Get a force field from the distributed library knowing its name.
+
+    Parameters
+    ----------
+    name: str
+        The name of the requested force field.
+
+    Returns
+    -------
+    ForceField
+
+    Raises
+    ------
+    KeyError
+        There is no force field with the requested name in the distributed
+        library.
+    """
+    # This function is a *temporary* solution. It reads all the distributed
+    # force fields and keep a cache of them. A better solution would only parse
+    # the requested force field! There would still be a need to cache the read
+    # force fields, though. Indeed, force field comparison is based on instance
+    # identity,so we want each force field to be  singleton.
+    # TODO: Implement a better way to request a force field by name.
+    global _FORCE_FIELDS
+    try:
+        return _FORCE_FIELDS[name]
+    except KeyError:
+        _FORCE_FIELDS = find_force_fields(os.path.join(DATA_PATH, 'force_fields'))
+        return _FORCE_FIELDS[name]

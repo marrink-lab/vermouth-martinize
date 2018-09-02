@@ -22,8 +22,8 @@ from vermouth.molecule import Molecule, Block
 import networkx.algorithms.isomorphism as iso
 
 
-FF_MARTINI = vermouth.forcefield.FORCE_FIELDS['martini22']
-FF_UNIVERSAL = vermouth.forcefield.FORCE_FIELDS['universal']
+FF_MARTINI = vermouth.forcefield.get_native_force_field(name='martini22')
+FF_UNIVERSAL = vermouth.forcefield.get_native_force_field(name='universal')
 
 AA_MOL = Molecule(force_field=FF_UNIVERSAL)
 AA_MOL.add_nodes_from((
