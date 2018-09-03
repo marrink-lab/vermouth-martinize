@@ -21,18 +21,11 @@ from pprint import pprint
 import networkx as nx
 import pytest
 import vermouth
+from .helper_functions import make_into_set
 
 # no-member because module networkx does indeed have a member isomorphism;
 # too-many-arguments because some tests just need a lot of data.
 # pylint: disable=no-member, too-many-arguments
-
-
-def make_into_set(iter_of_dict):
-    """
-    Convenience function that turns an iterator of dicts into a set of
-    frozenset of the dict items.
-    """
-    return set(frozenset(dict_.items()) for dict_ in iter_of_dict)
 
 
 def basic_molecule(node_data, edge_data=None):
@@ -50,7 +43,7 @@ def basic_molecule(node_data, edge_data=None):
     return mol
 
 
-@pytest.mark.parametrize('node_data_in,expected_node_data', [
+@pytest.mark.parametrize('node_data_in, expected_node_data', [
     ([], []),
     ([{'atomname': 'H3'}],
      [{'atomname': 'H3', 'element': 'H'}]),
@@ -75,11 +68,11 @@ def test_add_element_attr(node_data_in, expected_node_data):
     assert mol.nodes(data=True) == expected.nodes(data=True)
 
 
-@pytest.mark.parametrize('node_data_in,exception', [
-    ([{'atomname': '1234'}], ValueError),
-    ([{'peanuts': '1H3'}], ValueError),
-    ([{'atomname': 'H3'}, {'atomname': '1234'}], ValueError),
-    ([{'atomname': 'H3'}, {'peanuts': '1234'}], ValueError),
+@pytest.mark.parametrize('node_data_in, exception', [
+    ([{'atomname': '1234'}], ValueError),  # No alpha character
+    ([{'peanuts': '1H3'}], ValueError),  # Not atomname attribute
+    ([{'atomname': 'H3'}, {'atomname': '1234'}], ValueError),  # No alpha character for second atom
+    ([{'atomname': 'H3'}, {'peanuts': '1234'}], ValueError),  # No atomname attribute for second atom
 ])
 def test_add_element_attr_errors(node_data_in, exception):
     """
@@ -91,7 +84,7 @@ def test_add_element_attr_errors(node_data_in, exception):
         vermouth.graph_utils.add_element_attr(mol)
 
 
-@pytest.mark.parametrize('node_data1,node_data2,attrs,expected', [
+@pytest.mark.parametrize('node_data1, node_data2, attrs, expected', [
     ([], [], [], {}),
     ([{}], [{}], [], {(0, 0): {}}),
     (
@@ -170,7 +163,7 @@ def test_categorical_cartesian_product(node_data1, node_data2, attrs, expected):
     assert expected_mol.nodes(data=True) == found.nodes(data=True)
 
 
-@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,attrs,expected_nodes,expected_edges', [
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2, attrs, expected_nodes, expected_edges', [
     ([], {}, [], {}, [], {}, {}),
     (
         [{}, {}], {},
@@ -231,7 +224,7 @@ def test_categorical_modular_product(node_data1, edges1, node_data2, edges2,
     assert set(frozenset(edge) for edge in expected_mol.edges) == edges_seen
 
 
-@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,attrs,expected', [
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2, attrs, expected', [
     ([], {}, [], {}, ['id'], []),
     (
         [{'id': 1}], {},
@@ -275,7 +268,7 @@ def test_categorical_maximum_common_subgraph(node_data1, edges1, node_data2,
     assert make_into_set(found) == make_into_set(expected)
 
 
-@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,attrs', [
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2, attrs', [
     ([], {}, [], {}, ['id']),
     (
         [{'id': 1}], {},
@@ -344,7 +337,7 @@ def test_maximum_common_subgraph(node_data1, edges1, node_data2, edges2, attrs):
     assert found <= expected
 
 
-@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,attrs,expected', [
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2, attrs, expected', [
     ([], {}, [], {}, ['id'], []),
     (
         [{'id': 1}], {},
@@ -419,7 +412,7 @@ def test_maximum_common_subgraph_known_outcome(node_data1, edges1, node_data2, e
     assert found == expected
 
 
-@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2', [
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2', [
     (
         [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
         {(0, 1): {}},
@@ -464,7 +457,7 @@ def test_isomorphism(node_data1, edges1, node_data2, edges2):
     assert found <= expected
 
 
-@pytest.mark.parametrize('node_data1,edges1,node_data2,edges2,expected', [
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2, expected', [
     (
         [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
         {(0, 1): {}},
@@ -512,7 +505,7 @@ def test_isomorphism_known_outcome(node_data1, edges1, node_data2, edges2, expec
     assert found == expected
 
 
-@pytest.mark.parametrize('node_data,edges,partitions,attrs,expected_nodes,expected_edges', [
+@pytest.mark.parametrize('node_data, edges, partitions, attrs, expected_nodes, expected_edges', [
     ([], {}, [], {}, [], {}),
     ([{}], {}, [[0]], {}, [{}], {}),
     (
@@ -639,10 +632,14 @@ def test_blockmodel_graph_attr():
     """
     graph = basic_molecule([{}, {}, {}], {(0, 1): {}, (1, 2): {}})
     found = vermouth.graph_utils.blockmodel(graph, [[0], [1, 2]])
-    assert 1 == found.nodes[0]['nnodes'] == len(found.nodes[0]['graph'].nodes)
-    assert 2 == found.nodes[1]['nnodes'] == len(found.nodes[1]['graph'].nodes)
-    assert 0 == found.nodes[0]['nedges'] == len(found.nodes[0]['graph'].edges)
-    assert 1 == found.nodes[1]['nedges'] == len(found.nodes[1]['graph'].edges)
+    assert found.nodes[0]['nnodes'] == 1
+    assert found.nodes[0]['nnodes'] == len(found.nodes[0]['graph'].nodes)
+    assert found.nodes[1]['nnodes'] == 2
+    assert found.nodes[1]['nnodes'] == len(found.nodes[1]['graph'].nodes)
+    assert found.nodes[0]['nedges'] == 0
+    assert found.nodes[0]['nedges'] == len(found.nodes[0]['graph'].edges)
+    assert found.nodes[1]['nedges'] == 1
+    assert found.nodes[1]['nedges'] == len(found.nodes[1]['graph'].edges)
 
 
 @pytest.mark.parametrize('nodes1, nodes2, match, expected', [

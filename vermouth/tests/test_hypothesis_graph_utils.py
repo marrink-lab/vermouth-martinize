@@ -22,6 +22,9 @@ from hypothesis import event, given, note, settings
 from hypothesis_networkx import graph_builder
 import vermouth
 
+from .helper_functions import make_into_set
+
+
 # no-value-for-parameter because `draw` is not explicitely passed;
 # no-member because module networkx does indeed have a member isomorphism.
 # pylint: disable=no-value-for-parameter, no-member
@@ -36,14 +39,6 @@ ATTRS = st.lists(st.sampled_from(ATTRNAMES), unique=True, min_size=0, max_size=2
 
 MCS_BUILDER = graph_builder(node_data=NODE_DATA, min_nodes=0, max_nodes=MAX_NODES,
                             node_keys=st.integers(max_value=MAX_NODES, min_value=0))
-
-
-def make_into_set(iter_of_dict):
-    """
-    Convenience function that turns an iterator of dicts into a set of
-    frozenset of the dict items.
-    """
-    return set(frozenset(dict_.items()) for dict_ in iter_of_dict)
 
 
 @settings(max_examples=500)
