@@ -2,4 +2,5 @@ pytest
 coverage
 pytest-cov
 hypothesis
+hypothesis-networkx
 codecov

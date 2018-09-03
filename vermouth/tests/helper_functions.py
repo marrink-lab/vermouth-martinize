@@ -12,8 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import vermouth
+"""
+Contains helper functions for tests.
+"""
 
 
-def test_version():
-    assert isinstance(vermouth.__version__, str)
+def make_into_set(iter_of_dict):
+    """
+    Convenience function that turns an iterator of dicts into a set of
+    frozenset of the dict items.
+    """
+    return set(frozenset(dict_.items()) for dict_ in iter_of_dict)

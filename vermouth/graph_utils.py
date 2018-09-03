@@ -40,12 +40,14 @@ def add_element_attr(molecule):
 
 def categorical_cartesian_product(graph1, graph2, attributes=tuple()):
     product = nx.Graph()  # FIXME graphtype?
-    for node1, node2 in itertools.product(graph1, graph2):
-        if all(graph1.node[node1][attr] == graph2.node[node2][attr] for attr in attributes):
+    for idx1, idx2 in itertools.product(graph1, graph2):
+        node1 = graph1.nodes[idx1]
+        node2 = graph2.nodes[idx2]
+        if all(attr in node1 and attr in node2 and node1[attr] == node2[attr] for attr in attributes):
             attrs = {}
-            for attr in set(graph1.node[node1].keys()) | set(graph2.node[node2].keys()):
-                attrs[attr] = (graph1.node[node1].get(attr, None), graph2.node[node2].get(attr, None))
-            product.add_node((node1, node2), **attrs)
+            for attr in set(node1.keys()) | set(node2.keys()):
+                attrs[attr] = (node1.get(attr, None), node2.get(attr, None))
+            product.add_node((idx1, idx2), **attrs)
     return product
 
 
@@ -63,10 +65,10 @@ def categorical_modular_product(graph1, graph2, attributes=tuple()):
             attrs = {}
             if both_edge:
                 g1_edge_keys = set(graph1.edges[graph1_nodes].keys())
-                g2_edge_keys = set(graph2.edges[graph1_nodes].keys())
+                g2_edge_keys = set(graph2.edges[graph2_nodes].keys())
                 for attr in g1_edge_keys | g2_edge_keys:
                     attrs[attr] = (graph1.edges[graph1_nodes].get(attr, None),
-                                   graph2.edges[graph1_nodes].get(attr, None))
+                                   graph2.edges[graph2_nodes].get(attr, None))
             product.add_edge((graph1_node1, graph2_node1), (graph1_node2, graph2_node2), **attrs)
     return product
 
@@ -86,7 +88,9 @@ def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
     # First, find the MCS between all nodes of degree != 1, such as the carbons
     # Nothing new or exciting here.
     for g1_node, g2_node in itertools.product(graph1, graph2):
-        if all(graph1.node[g1_node][attr] == graph2.node[g2_node][attr] for attr in attributes):
+        node1 = graph1.nodes[g1_node]
+        node2 = graph2.nodes[g2_node]
+        if all(attr in node1 and attr in node2 and node1[attr] == node2[attr] for attr in attributes):
             if graph1.degree(g1_node) != 1 and graph2.degree(g2_node) != 1:
                 product.add_node((g1_node, g2_node))
     for (g1_node1, g2_node1), (g1_node2, g2_node2) in itertools.combinations(product.nodes(), 2):
@@ -96,7 +100,15 @@ def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
         if g1_node1 != g1_node2 and g2_node1 != g2_node2 and (both_edge or neither_edge):
             product.add_edge((g1_node1, g2_node1), (g1_node2, g2_node2))
     cliques = nx.find_cliques(product)
-    largest = maxes(cliques, key=len)
+#    largest = maxes(cliques, key=len)
+    # We can't do maxes, because it might still grow to be as large. Does make
+    # things slower though... We could say that it can grow to be at most the
+    # current size plus the number of degree-1 nodes.
+    largest = cliques
+
+    # Add an empty match in case nothing of degree > 1 matches. In that case we
+    # still need to do the loop below.
+    largest = itertools.chain([[]], largest)
 
     # Now, for every MCS we found, look at the nodes of degree 1. The
     # attributes still need to match. In addition, they need to have the same
@@ -107,13 +119,26 @@ def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
         product = nx.Graph()
         product.add_nodes_from(clique)
         for g1_node, g2_node in itertools.product(graph1, graph2):
+            node1 = graph1.nodes[g1_node]
+            node2 = graph2.nodes[g2_node]
             # We can't do this above, because we need the match to translate
             # nodes from graph graph1 to graph graph2 to see whether their neighbours
             # correspond.
-            if (graph1.degree(g1_node) == 1 or graph2.degree(g2_node) == 1) and\
-                    all(graph1.node[g1_node][attr] == graph2.node[g2_node][attr] for attr in attributes):
+            if (graph1.degree(g1_node) <= 1 or graph2.degree(g2_node) <= 1) and\
+                    all(attr in node1 and attr in node2 and node1[attr] == node2[attr] for attr in attributes):
                 g1_neighbors = [match.get(n, None) for n in graph1.neighbors(g1_node)]
-                if None in g1_neighbors or any(n in g1_neighbors for n in graph2.neighbors(g2_node)):
+                # If no neighbors are found for g1_node, or if any of them are
+                # the same in graph2, they're compatible.
+
+                # FIXME?
+                # This eliminates some nodes from the MCS, since it's possible
+                # the MCS does not include *all* nodes in match. This means
+                # that some nodes should be considered compatible, even if they
+                # have different neighbours, but only if that neighbor is not
+                # part of the final MCS. This makes testing a little tricky,
+                # since categorical_maximum_common_subgraph *does* find them.
+                # It'll be a cornercase anyway.
+                if not g1_neighbors or None in g1_neighbors or any(n in g1_neighbors for n in graph2.neighbors(g2_node)):
                     product.add_node((g1_node, g2_node))
         for (g1_node1, g2_node1), (g1_node2, g2_node2) in itertools.combinations(product.nodes(), 2):
             both_edge = graph1.has_edge(g1_node1, g1_node2) and graph2.has_edge(g2_node1, g2_node2)
@@ -121,10 +146,14 @@ def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
             # Effectively: not (graph1.has_edge(g1_node1, g1_node2) xor graph2.has_edge(g2_node1, g2_node2))
             if g1_node1 != g1_node2 and g2_node1 != g2_node2 and (both_edge or neither_edge):
                 product.add_edge((g1_node1, g2_node1), (g1_node2, g2_node2))
-        all_cliques.append(nx.find_cliques(product))
+        # TODO: This duplicates a lot of effort. Maybe create the compatibility
+        # graph first from all cliques, and find the cliques only once?
+        this_pass = nx.find_cliques(product)
+        all_cliques.append(this_pass)
     # And finally, find the largest MCS in all cliques graph2.
     largest = maxes(itertools.chain(*all_cliques), key=len)
-    matches = [dict(clique) for clique in largest]
+    matches = set(frozenset(m) for m in largest)  # remove duplicates
+    matches = [dict(clique) for clique in matches]
 
     return matches
 
@@ -167,8 +196,12 @@ def isomorphism(reference, residue):
     matches = []
 #    H_idxs = [idx for idx in residue if residue.node[idx]['element'] == 'H']
     H_idxs = [idx for idx in residue if residue.degree(idx) == 1]
-    heavy_res = residue.copy()
+    heavy_res = nx.Graph(residue).copy()
     heavy_res.remove_nodes_from(H_idxs)
+
+#    ref_H_idxs = [idx for idx in reference if reference.degree(idx) == 1]
+#    heavy_ref = nx.Graph(reference).copy()
+#    heavy_ref.remove_nodes_from(ref_H_idxs)
     # First, generate all the isomorphisms on heavy atoms. For each of these
     # we'll find *something* where the hydrogens match.
     GM = ElementGraphMatcher(reference, heavy_res)
@@ -197,7 +230,7 @@ def isomorphism(reference, residue):
                 if len(H_names[res_H_name]) != 1:
                     continue
                 ref_H_idx = H_names[res_H_name][0]
-                if ref_H_idx not in match:
+                if ref_H_idx not in match and reference.nodes[ref_H_idx]['element'] == residue.nodes[res_H_idx]['element']:
                     reverse_match[res_H_idx] = ref_H_idx
                     match[ref_H_idx] = res_H_idx
         GM_large = ElementGraphMatcher(reference, residue)
@@ -223,7 +256,10 @@ def isomorphism(reference, residue):
         # the atomnames might be flipped, and make PTM identification
         # troublesome. For example: C(=O)OH. That's why we extend the match to
         # include degree-1 nodes above.
-        matches.extend(itertools.islice(outcome, 1))
+        if match:
+            matches.extend(itertools.islice(outcome, 1))
+        else:
+            matches.extend(outcome)
     matches = sorted(matches,
                      key=lambda m: rate_match(reference, residue, m),
                      reverse=True)
@@ -377,7 +413,10 @@ def make_residue_graph(mol):
     for key, grp in itertools.groupby(nodes, keyfunc):
         keys.append(key)
         grps.append(list(grp))
-    chain, resids, resnames = map(list, zip(*keys))
+    if keys:
+        chain, resids, resnames = map(list, zip(*keys))
+    else:
+        chain, resids, resnames = [], [], []
     res_graph = blockmodel(mol, grps, chain=chain, resid=resids,
                            resname=resnames, atomname=resnames)
     return res_graph
