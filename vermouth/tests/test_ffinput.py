@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import collections
+import copy
 import pytest
 from vermouth import ffinput
-from vermouth.molecule import Choice, Link
+from vermouth.molecule import Choice, Link, Block
+from vermouth import forcefield
 import numpy as np
 
 
@@ -319,6 +321,16 @@ def test_parse_atom_attributes_error(token):
     (['A', 'B', 'C'], None, [['A', {}], ['B', {}], ['C', {}]]),
     (['A', 'B'], 2, [['A', {}], ['B', {}]]),
     (['A', '{"a": "abc"}', 'B'], 2, [['A', {'a': 'abc'}], ['B', {}]]),
+    (
+        ['A', '{"a": "abc"}', 'B', '{"b": 0}'],
+        2,
+        [['A', {'a': 'abc'}], ['B', {'b': 0}]],
+    ),
+    (
+        ['A', '{"a": "abc"}', 'B', '{"b": 0}', 'C'],
+        2,
+        [['A', {'a': 'abc'}], ['B', {'b': 0}]],
+    ),
     (['1', '2', '1', '0.31', '7500'], 2, [['1', {}], ['2', {}]]),
     (
         ['BB', '{"replace": {"atype": "Qd", "charge": 1}}'],
@@ -459,5 +471,172 @@ def test_treat_link_interaction_atoms_conflix():
     ('partial(end', False),
 ))
 def test_is_param_effector(token, expected):
+    """
+    Test that _is_param_effector recognizes param effector tokens.
+    """
     found = ffinput._is_param_effector(token)
     assert found == expected
+
+
+@pytest.mark.parametrize('tokens, existing', (
+    (['A'], []),
+    (['A', 'B'], []),
+    (['A', 'B'], ['X', 'Y']),
+    ([], []),
+    ([], ['X', 'Y']),
+))
+def test_parse_features(tokens, existing):
+    """
+    Test that _parse_features works as expected.
+    """
+    context = Link()
+    if existing:
+        context.features = existing
+    expected = existing + tokens
+    ffinput._parse_features(tokens, context, 'link')
+    assert context.features == expected
+
+
+def test_parse_features_wrong_type():
+    """
+    Test that _parse_features complains for context different than 'link'.
+    """
+    context = Link()
+    with pytest.raises(IOError):
+        ffinput._parse_features(['A', 'B'], context, 'not-link')
+
+
+@pytest.mark.parametrize('tokens, expected', (
+    (['A'], [['A', {}]]),
+    (['A', 'B'], [['A', {}], ['B', {}]]),
+    (['+A', '{"attr": 0}', 'B'], [['+A', {'attr': 0}], ['B', {}]]),
+))
+def test_parse_patterns(tokens, expected):
+    """
+    Test that _parse_patterns works as expected.
+    """
+    existing = [[['X', {}], ['Y', {}]]]
+    full_expected = copy.copy(existing)
+    full_expected.append(expected)
+    tokens = collections.deque(tokens)
+    context = Link()
+    context.patterns = existing
+    ffinput._parse_patterns(tokens, context, 'link')
+    assert context.patterns == full_expected
+
+
+def test_parse_patterns_wrong_type():
+    """
+    Test that _parse_patterns complains for context different than 'link'.
+    """
+    context = Link()
+    with pytest.raises(IOError):
+        ffinput._parse_patterns(['A', 'B'], context, 'not-link')
+
+
+@pytest.mark.parametrize('tokens, expected', (
+    (['name', '"value"'], {'name': 'value'}),
+    (['name', '"a|b|c"'], {'name': 'a|b|c'}),
+    (['name', 'value'], {'name': 'value'}),
+    (['other-name', '0'], {'other-name': 0}),
+    (
+        ['name', '{"key": 123, "key2": "value"}'],
+        {'name': {'key': 123, 'key2': 'value'}},
+    ),
+))
+def test_parse_variables(tokens, expected):
+    """
+    Test that _parse_variables works as expected.
+    """
+    existing = {'existing': 'I was there'}
+    full_expected = copy.copy(existing)
+    full_expected.update(expected)
+    force_field = forcefield.ForceField('dummy')
+    force_field.variables = existing
+
+    ffinput._parse_variables(tokens, force_field, 'section')
+
+    assert force_field.variables == full_expected
+
+
+@pytest.mark.parametrize('tokens', (
+    [],
+    ['single'],
+    ['one', 'two', 'extra'],
+))
+def test_parse_variables_wrong_length(tokens):
+    """
+    Test that _parse_variables fails when the number of tokens is wrong.
+    """
+    force_field = forcefield.ForceField('dummy')
+    with pytest.raises(IOError):
+        ffinput._parse_variables(tokens, force_field, 'section')
+
+
+@pytest.mark.parametrize('tokens', (
+    ['key', 'value'],
+    ['key1', 'new-value'],
+    ['key', '"quoted-value"'],
+))
+def test_parse_macro(tokens):
+    """
+    Test that _parse_macro works as expected.
+    """
+    macros = {'key1': 'value1', 'key2': 'value2'}
+    expected = copy.copy(macros)
+    expected[tokens[0]] = tokens[1]
+    tokens = collections.deque(tokens)
+    ffinput._parse_macro(tokens, macros)
+    assert macros == expected
+
+
+@pytest.mark.parametrize('tokens', (
+    [],
+    ['one'],
+    ['one', 'two', 'three'],
+))
+def test_parse_macro_wrong_length(tokens):
+    """
+    Test that _parse_macro fails when the number of tokens is wrong.
+    """
+    tokens = collections.deque(tokens)
+    with pytest.raises(IOError):
+        ffinput._parse_macro(tokens, {})
+
+
+@pytest.mark.parametrize('tokens, expected', (
+    (['#meta', '{"a": "123", "b": 123}'], {'a': '123', 'b': 123}),
+    (['ignored', '{"a": "123", "b": 123}'], {'a': '123', 'b': 123}),
+))
+@pytest.mark.parametrize('context_class, context_type', (
+    (Link, 'link'),
+    (Block, 'block'),
+    (Link, 'modification'),
+))
+def test_parse_meta(tokens, expected, context_class, context_type):
+    """
+    Test that _parse_meta works as expected.
+    """
+    existing = {'key': 'value'}
+
+    full_expected = copy.copy(existing)
+    full_expected.update(expected)
+
+    context = context_class()
+    context._apply_to_all_interactions['section'] = existing
+
+    ffinput._parse_meta(tokens, context, context_type, 'section')
+    assert context._apply_to_all_interactions['section'] == full_expected
+
+
+@pytest.mark.parametrize('tokens', (
+    [],
+    ['one'],
+    ['one', 'two', 'three'],
+))
+def test_parse_meta_wrong_length(tokens):
+    """
+    Test that _parse_meta fails when the number of tokens is wrong.
+    """
+    with pytest.raises(IOError):
+        ffinput._parse_meta(tokens, None, 'type', 'section')

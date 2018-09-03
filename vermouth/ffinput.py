@@ -702,10 +702,12 @@ def _parse_link_atom(tokens, context, defaults=None, treat_prefix=True):
 
 
 def _parse_macro(tokens, macros):
+    if len(tokens) > 2:
+        raise IOError('Unexpected column in macro definition.')
+    elif len(tokens) < 2:
+        raise IOError('Missing column in macro definition.')
     macro_name = tokens.popleft()
     macro_value = tokens.popleft()
-    if tokens:
-        raise IOError('Unexpected column in macro definition.')
     macros[macro_name] = macro_value
 
 
@@ -734,6 +736,22 @@ def _parse_link_attribute(tokens, context, section):
 
 
 def _parse_meta(tokens, context, context_type, section):
+    """
+    Parse lines starting with '#meta'.
+
+    The function expects 2 tokens. The first token is assumed to be '#meta' and
+    is ignored. The second must be a bracketted token. This second token is
+    parsed as a dictionary and updated the dictionary of attributes to add to
+    all the nodes involved in a given type of interaction for the context.
+
+    The type of interaction is set by the `section` argument.
+
+    The context is a :class:`vermouth.molecule.Block` or a subclass such as a
+    :class:`vermouth.molecule.Link`.
+
+    The `context_type` is a string version of the first level section (i.e
+    "link", "block", or "modification").
+    """
     if len(tokens) > 2:
         msg = ('Unexpected column when defining meta attributes for section '
                '"{}" of a {}. {} tokens read instead of 2.')
@@ -777,7 +795,10 @@ def _parse_variables(tokens, force_field, section):
     elif len(tokens) < 2:
         raise IOError('Missing column in section "{}".'.format(section))
     key, value = tokens
-    value = json.loads(value)
+    try:
+        value = json.loads(value)
+    except JSONDecodeError:
+        value = json.loads('"{}"'.format(value))
     force_field.variables[key] = value
 
 
