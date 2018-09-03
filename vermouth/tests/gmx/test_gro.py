@@ -36,6 +36,7 @@ import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 
 import vermouth
+from vermouth.utils import are_different
 from vermouth.molecule import Molecule
 from vermouth.gmx import gro
 
@@ -418,31 +419,6 @@ def generate_equal_dict(draw):
     return dict_a, dict_b
 
 
-def are_different(left, right):
-    """
-    Return True if two values are different from one another.
-
-    Values are considered different if they do not share the same type. In case
-    of numerical value, the comparison is done with :func:`numpy.isclose` to
-    account for rounding. In the context of this test, `nan` compares equal to
-    itself, which is not the default behavior.
-    """
-    if not isinstance(left, right.__class__):
-        return True
-
-    left = np.asarray(left)
-    right = np.asarray(right)
-
-    if left.shape != right.shape:
-        return True
-
-    # For numbers, we want an approximate comparison to account for rounding
-    # errors; it only works for numbers, though.
-    try:
-        return not np.all(np.isclose(left, right, equal_nan=True))
-    except TypeError:
-        return np.any(left != right)
-
 
 @st.composite
 def generate_diff_dict(draw):
@@ -487,25 +463,6 @@ def test_compare_dict_diff(dict_a_and_b):
     dict_a = dict_a_and_b[0]
     dict_b = dict_a_and_b[1]
     assert compare_dicts(dict_a, dict_b)  # report is not empty
-
-
-@pytest.mark.parametrize(
-    'left, right',
-    itertools.combinations(DIFFERENCE_USE_CASE, 2)
-)
-def test_are_different(left, right):
-    """
-    Test that :func:`are_different` identify different values.
-    """
-    assert are_different(left, right)
-
-
-@pytest.mark.parametrize('left', DIFFERENCE_USE_CASE)
-def test_not_are_different(left):
-    """
-    Test that :func:`are_different` returns False for equal values.
-    """
-    assert not are_different(left, left)
 
 
 def test_filter_molecule_none(gro_reference):  # pylint: disable=redefined-outer-name

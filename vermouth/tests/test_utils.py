@@ -16,12 +16,30 @@
 Tests for the `test_utils.py` module.
 """
 
+import itertools
 import string
 import pytest
 from hypothesis import strategies, given, example
 import numpy as np
 from numpy.testing import assert_allclose
 from vermouth import utils
+
+DIFFERENCE_USE_CASE = (
+    '', [], 'a', 2, 3, True, False, None, float('nan'), float('inf'),
+    [True], [False], [True, False], [False, False], [None], [None, None],
+    [1.1, 1.1], [0.0, 1.1],
+    [float('nan'), float('inf')],
+    [float('inf'), float('nan')],
+    ['a', 'b'], 'ab',
+    np.array([1.2, 2.3, 4.5]),
+    np.array([[1.2, 2.3, 4.5], [5.6, 7.8, 8.9]]),
+    np.array([np.nan, np.inf, 3]),
+    [[6, 8], [9, 10, 11]],
+    {'a': 3, 2: 'tata'},
+    {'a': 3, 2: np.array([2, 3, 4])},
+    {'a': 4, 2: 'not tata'},
+)
+
 
 
 @pytest.mark.parametrize('iter_type', (list, tuple, iter, np.array))
@@ -168,3 +186,22 @@ def test_distance(vec_and_dist):
     """
     point1, point2, distance = vec_and_dist
     assert_allclose(utils.distance(point1, point2), distance)
+
+
+@pytest.mark.parametrize(
+    'left, right',
+    itertools.combinations(DIFFERENCE_USE_CASE, 2)
+)
+def test_are_different(left, right):
+    """
+    Test that :func:`are_different` identify different values.
+    """
+    assert utils.are_different(left, right)
+
+
+@pytest.mark.parametrize('left', DIFFERENCE_USE_CASE)
+def test_not_are_different(left):
+    """
+    Test that :func:`are_different` returns False for equal values.
+    """
+    assert not utils.are_different(left, left)

@@ -127,3 +127,29 @@ def are_all_equal(iterable):
     iterator = iter(iterable)
     first = next(iterator, None)
     return all(item == first for item in iterator)
+
+
+def are_different(left, right):
+    """
+    Return True if two values are different from one another.
+
+    Values are considered different if they do not share the same type. In case
+    of numerical value, the comparison is done with :func:`numpy.isclose` to
+    account for rounding. In the context of this test, `nan` compares equal to
+    itself, which is not the default behavior.
+    """
+    if not isinstance(left, right.__class__):
+        return True
+
+    left = np.asarray(left)
+    right = np.asarray(right)
+
+    if left.shape != right.shape:
+        return True
+
+    # For numbers, we want an approximate comparison to account for rounding
+    # errors; it only works for numbers, though.
+    try:
+        return not np.all(np.isclose(left, right, equal_nan=True))
+    except TypeError:
+        return np.any(left != right)
