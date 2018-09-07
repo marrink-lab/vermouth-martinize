@@ -22,6 +22,7 @@ import numpy as np
 
 from . import graph_utils
 from . import geometry
+from . import utils
 
 
 Interaction = namedtuple('Interaction', 'atoms parameters meta')
@@ -326,6 +327,15 @@ class Molecule(nx.Graph):
         self.nrexcl = kwargs.pop('nrexcl', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
+
+    def __eq__(self, other):
+        return (
+            self.nrexcl == other.nrexcl
+            and self._force_field == other._force_field
+            and self.same_nodes(other)
+            and set(self.edges) == set(other.edges)
+            and self.same_interactions(other)
+        )
 
     @property
     def force_field(self):
@@ -642,6 +652,69 @@ class Molecule(nx.Graph):
         # the interactions.
         return nx.is_isomorphic(self, other)
 
+    # TODO: Allow comparison of interactions betweem isomorphic molecules.
+    def same_interactions(self, other):
+        """
+        Returns :bool:`True` if the interactions are the same.
+
+        To be equal, two interations must share the same node key references,
+        the same interation parameters, and the same meta attributes.
+
+        Parameters
+        ----------
+        other: Molecule
+
+        Returns
+        -------
+        bool
+        """
+        return self.interactions == other.interactions
+
+    # TODO: Allow default values for attributes.
+    # In most cases, we assume that an unspecified attribute is equivalent to
+    # the attribute being None; we should allow for this in the comparison. We
+    # should also allow an attribute to have an arbitrary default value. For
+    # instance, the assumed default for the `PTM_atom` attribute is False.
+    def same_nodes(self, other, ignore_attr=()):
+        """
+        Returns :bool:`True` if the nodes are the same and in the same order.
+
+        The equality criteria used for the attribute values are those of
+        :func:`are_different`.
+
+        Parameters
+        ----------
+        other: Molecule
+        ignore_attr: collections.abc.Sequence
+            Sequence of attribute keys that will not be considered in the
+            comparison.
+
+        Returns
+        -------
+        bool
+        """
+        # We first check that the node keys match between the two molecules.
+        # The order matters here, and we count on the fact that Molecules are
+        # OrderedDicts.
+        if list(self.nodes.keys()) != list(other.nodes.keys()):
+            return False
+        zipped_nodes = zip(self.nodes.values(), other.nodes.values())
+        for self_node, other_node in zipped_nodes:
+            # For each pair of nodes, we compare the attribute dictionaries.
+            # The order does not matter here.
+            self_keys = set(key for key in self_node if key not in ignore_attr)
+            other_keys = set(key for key in other_node if key not in ignore_attr)
+            if self_node.keys() != other_node.keys():
+                return False
+            # We can loop over the keys because we tested above that they were
+            # matching between the two dicts.
+            for key in self_keys:
+                self_value = self_node[key]
+                other_value = other_node[key]
+                if utils.are_different(self_value, other_value):
+                    return False
+        return True
+
     def iter_residues(self):
         """
         Returns a generator over the nodes of this molecules residues.
@@ -770,6 +843,9 @@ class Block(Molecule):
         for attribute, default_value in defaults.items():
             if not hasattr(self, attribute):
                 setattr(self, attribute, default_value)
+
+    def __eq__(self, other):
+        return self.name == other.name and super().__eq__(other)
 
     def __repr__(self):
         name = self.name
