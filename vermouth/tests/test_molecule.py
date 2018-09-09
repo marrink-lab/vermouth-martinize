@@ -16,9 +16,12 @@ import copy
 import itertools
 import numpy as np
 import pytest
+import hypothesis
+import hypothesis.strategies as st
+import hypothesis_networkx.strategy as hnst
 import vermouth
 import vermouth.molecule
-from vermouth.molecule import Interaction, Molecule
+from vermouth.molecule import Interaction, Molecule, Block, Link, DeleteInteraction
 
 
 @pytest.fixture
@@ -866,3 +869,94 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
     right = right_class(right_keys)
 
     assert left != right
+
+
+@st.composite
+def random_interaction(draw, graph, natoms=None,
+                       interaction_class=Interaction, attrs=False):
+    if natoms is None:
+        natoms = draw(st.integers(min_value=0, max_value=len(graph.nodes)))
+    # The test is only relevant with a user-provided value of natoms.
+    hypothesis.assume(0 <= natoms <= len(graph.nodes))
+    atoms = tuple(draw(st.sampled_from(list(graph.nodes))) for _ in range(natoms))
+    # TODO: Allow for LinkParameterEffector instances.
+    parameters = st.lists(elements=st.text())
+    # TODO: Allow for more complex meta attributes.
+    meta = draw(st.one_of(st.none(), st.fixed_dictionaries({})))
+    if attrs:
+        atom_attrs = tuple(draw(st.fixed_dictionaries({})) for _ in atoms)
+        return interaction_class(
+            atoms=atoms,
+            atom_attrs=atom_attrs,
+            parameters=parameters,
+            meta=meta,
+        )
+    return interaction_class(atoms=atoms, parameters=parameters, meta=meta)
+
+
+@st.composite
+def interaction_collection(draw, graph,
+                           interaction_class=Interaction, attrs=False):
+    result = {}
+    ninteraction_types = draw(st.integers(min_value=0, max_value=10))
+    for _ in range(ninteraction_types):
+        ninteractions = draw(st.integers(min_value=0, max_value=10))
+        type_name = draw(st.text())
+        if type_name not in result and ninteractions > 0:
+            result[type_name] = []
+        for _ in range(ninteractions):
+            interaction = draw(random_interaction(
+                graph, interaction_class=interaction_class, attrs=attrs,
+            ))
+            result[type_name].append(interaction)
+    return result
+
+
+@st.composite
+def random_molecule(draw, molecule_class=Molecule):
+    # TODO: Allow for more complex atom attributes.
+    graph = draw(hnst.graph_builder())
+    # TODO: Allow for more complex meta attributes.
+    meta = draw(st.one_of(st.none(), st.fixed_dictionaries({})))
+    nrexcl = draw(st.one_of(st.none(), st.integers()))
+    molecule = molecule_class(graph, meta=meta, nrexcl=nrexcl)
+
+    molecule.interations = draw(interaction_collection(graph))
+    
+    return molecule
+
+
+@st.composite
+def random_block(draw, block_class=Block):
+    block = draw(random_molecule(molecule_class=block_class))
+    block.name = draw(st.one_of(st.none(), st.text()))
+    return block
+
+
+@st.composite
+def random_link(draw):
+    link = draw(random_block(block_class=Link))
+    link.removed_interactions = draw(interaction_collection(
+        link, interaction_class=DeleteInteraction, attrs=True,
+    ))
+    # TODO: Allow for more complex attributes.
+    link.molecule_meta = draw(st.fixed_dictionaries({}))
+    # TODO: Generate non_edges
+    # TODO: Generate patters
+    # TODO: Generate features
+    return link
+
+
+@hypothesis.given(random_molecule())
+def test_molecule_equal(mol):
+    assert mol == mol
+
+
+@hypothesis.given(random_block())
+def test_block_equal(block):
+    assert block == block
+
+
+@hypothesis.given(random_link())
+def test_link_equal(link):
+    assert link == link

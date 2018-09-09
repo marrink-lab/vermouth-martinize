@@ -1081,6 +1081,15 @@ class Link(Block):
         self._set_defaults(defaults)
         self._apply_to_all_nodes = {}
 
+    def __eq__(self, other):
+        return (super().__eq__(other)
+                and self.non_edges == other.non_edges
+                and self.removed_interactions == other.removed_interactions
+                and self.molecule_meta == other.molecule_meta
+                and self.patterns == other.patterns
+                and self.features == other.features
+                )
+
 
 def attributes_match(attributes, template_attributes, ignore_keys=()):
     """
