@@ -64,15 +64,22 @@ def read_system(path):
 
 
 def pdb_to_universal(system, delete_unknown=False,
-                     force_field=FORCE_FIELDS['universal']):
+                     force_field=FORCE_FIELDS['universal'],
+                     write_graph=None, write_repair=None, write_canon=None):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
     canonicalized = system.copy()
     canonicalized.force_field = force_field
     vermouth.MakeBonds().run_system(canonicalized)
+    if write_graph is not None:
+        vermouth.pdb.write_pdb(system, str(write_graph), omit_charges=True)
     vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
+    if write_repair is not None:
+        vermouth.pdb.write_pdb(system, str(write_repair), omit_charges=True)
     vermouth.CanonicalizeModifications().run_system(canonicalized)
+    if write_canon is not None:
+        vermouth.pdb.write_pdb(system, str(write_canon), omit_charges=True)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
     return canonicalized
 
@@ -242,7 +249,8 @@ def entry():
     secstruct_group.add_argument('-dssp', nargs='?', const='dssp',
                                  help='DSSP executable for determining structure')
     secstruct_group.add_argument('-ed', dest='extdih', action='store_true', default=False,
-                                 help='Use dihedrals for extended regions rather than elastic bonds')
+                                 help=('Use dihedrals for extended regions '
+                                       'rather than elastic bonds'))
     secstruct_group.add_argument('-collagen', action='store_true', default=False,
                                  help='Use collagen parameters')
 
@@ -272,6 +280,16 @@ def entry():
     prot_group.add_argument('-cys', dest='cystein_bridge',
                             type=_cys_argument,
                             default='none', help='Cystein bonds')
+
+    debug_group = parser.add_argument_group('Debugging options')
+    debug_group.add_argument('-write-graph', type=Path, default=None,
+                             help='Write the graph as PDB after the MakeBonds step.')
+    debug_group.add_argument('-write-repair', type=Path, default=None,
+                             help='Write the graph as PDB after the RepairGraph step.')
+    debug_group.add_argument('-write-canon', type=Path, default=None,
+                             help=('Write the graph as PDB after the '
+                                   'CanonicalizeModifications step.'))
+
     args = parser.parse_args()
 
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -312,8 +330,14 @@ def entry():
     # input structure to be a clean universal system.
     # For now at least, we silently delete molecules with unknown blocks.
     system = read_system(args.inpath)
-    system = pdb_to_universal(system, delete_unknown=True,
-                              force_field=known_force_fields[from_ff])
+    system = pdb_to_universal(
+        system,
+        delete_unknown=True,
+        force_field=known_force_fields[from_ff],
+        write_graph=args.write_graph,
+        write_repair=args.write_repair,
+        write_canon=args.write_canon,
+    )
 
     target_ff = known_force_fields[args.to_ff]
     if args.dssp is not None:
