@@ -249,7 +249,8 @@ def entry():
     secstruct_group.add_argument('-dssp', nargs='?', const='dssp',
                                  help='DSSP executable for determining structure')
     secstruct_group.add_argument('-ed', dest='extdih', action='store_true', default=False,
-                                 help='Use dihedrals for extended regions rather than elastic bonds')
+                                 help=('Use dihedrals for extended regions '
+                                       'rather than elastic bonds'))
     secstruct_group.add_argument('-collagen', action='store_true', default=False,
                                  help='Use collagen parameters')
 
@@ -286,7 +287,8 @@ def entry():
     debug_group.add_argument('-write-repair', type=Path, default=None,
                              help='Write the graph as PDB after the RepairGraph step.')
     debug_group.add_argument('-write-canon', type=Path, default=None,
-                             help='Write the graph as PDB after the CanonicalizeModifications step.')
+                             help=('Write the graph as PDB after the '
+                                   'CanonicalizeModifications step.'))
 
     args = parser.parse_args()
 
