@@ -234,6 +234,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
         A new molecule, created by transforming `molecule` to `to_ff` according
         to `mappings`.
     """
+    # Transfering the meta meybe should be a copy, or a deep copy...
+    # If it breaks we look at this line.
     graph_out = Molecule(force_field=to_ff, meta=molecule.meta)
     # We want to keep the 'chain' property from the original molecule.
     attribute_keep = ['chain'] + list(attribute_keep)
