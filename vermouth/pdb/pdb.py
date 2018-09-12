@@ -126,13 +126,8 @@ def write_pdb_string(system, conect=True, omit_charges=True):
             node_order = sorted(molecule, key=partial(keyfunc, molecule))
 
             for node_idx in node_order:
-                # TODO:
-                # we currently write every edge twice: once for every node it
-                # connects. Not really a problem, but also not elegant.
-                # Option 1: write molecule.edges, but then you risk the
-                # ordering becoming a mess.
-                # Option 2: keep track of which edges we've already written.
-                todo = [nodeidx2atomid[(mol_idx, n_idx)] for n_idx in molecule[node_idx]]
+                todo = [nodeidx2atomid[(mol_idx, n_idx)]
+                        for n_idx in molecule[node_idx] if n_idx > node_idx]
                 while todo:
                     current, todo = todo[:4], todo[4:]
                     fmt = ['CONECT'] + [number_fmt]*(len(current) + 1)

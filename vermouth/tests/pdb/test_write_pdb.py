@@ -41,7 +41,8 @@ def test_conect():
     for idx, node in enumerate(nodes):
         node['chain'] = ''
         node['element'] = node['atomname']
-        graph.add_node(idx, **node, position=np.array([1, 2, -3]))
+        node['position'] = np.array([1, 2, -3])
+        graph.add_node(idx, **node)
     graph.add_edges_from(edges)
     molecules = [Molecule(graph.subgraph(component))
                  for component in nx.connected_components(graph)]
@@ -61,13 +62,9 @@ ATOM      9 G    B       4      10.000  20.000 -30.000  1.00  0.00          G
 ATOM     10 H    B       4      10.000  20.000 -30.000  1.00  0.00          H   
 TER      11      B       4 
 CONECT    1    2
-CONECT    2    1
 CONECT    4    5
-CONECT    5    4
 CONECT    7    8
-CONECT    8    7    9   10
-CONECT    9    8
-CONECT   10    8
+CONECT    8    9   10
 END
 '''
     assert pdb_found.strip() == expected.strip()
