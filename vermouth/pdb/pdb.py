@@ -88,11 +88,11 @@ def write_pdb_string(system, conect=True, omit_charges=True):
     # molecules in a system. Probably not a good idea
     nodeidx2atomid = {}
     atomid = 1
-    for molecule in system.molecules:
+    for mol_idx, molecule in enumerate(system.molecules):
         node_order = sorted(molecule, key=partial(keyfunc, molecule))
 
         for node_idx in node_order:
-            nodeidx2atomid[node_idx] = atomid
+            nodeidx2atomid[(mol_idx, node_idx)] = atomid
             node = molecule.node[node_idx]
             atomname = node['atomname']
             altloc = get_not_none(node, 'altloc', '')
@@ -122,16 +122,17 @@ def write_pdb_string(system, conect=True, omit_charges=True):
     if conect:
         number_fmt = '{:>4dt}'
         format_string = 'CONECT '
-        for molecule in system.molecules:
+        for mol_idx, molecule in enumerate(system.molecules):
             node_order = sorted(molecule, key=partial(keyfunc, molecule))
 
             for node_idx in node_order:
-                todo = [nodeidx2atomid[n_idx] for n_idx in molecule[node_idx]]
+                todo = [nodeidx2atomid[(mol_idx, n_idx)]
+                        for n_idx in molecule[node_idx] if n_idx > node_idx]
                 while todo:
                     current, todo = todo[:4], todo[4:]
                     fmt = ['CONECT'] + [number_fmt]*(len(current) + 1)
                     fmt = ' '.join(fmt)
-                    line = formatter.format(fmt, nodeidx2atomid[node_idx], *current)
+                    line = formatter.format(fmt, nodeidx2atomid[(mol_idx, node_idx)], *current)
                     out.append(line)
     out.append('END   ')
     return '\n'.join(out)
