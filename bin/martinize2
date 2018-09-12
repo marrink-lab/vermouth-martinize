@@ -24,6 +24,7 @@ import logging
 import itertools
 import textwrap
 from pathlib import Path
+import sys
 
 import vermouth
 from vermouth.forcefield import FORCE_FIELDS
@@ -99,7 +100,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     return system
 
 
-def write_gmx_topology(system, top_path, deduplicate=True):
+def write_gmx_topology(system, top_path, deduplicate=True, header=()):
     """
     Writes a Gromacs .top file for the specified system.
     """
@@ -122,7 +123,7 @@ def write_gmx_topology(system, top_path, deduplicate=True):
     for molidx, (molecule_type, _) in enumerate(molecule_types):
         molecule_type.moltype = 'molecule_{}'.format(molidx)
         with open('molecule_{}.itp'.format(molidx), 'w') as outfile:
-            vermouth.gmx.itp.write_molecule_itp(molecule_type, outfile)
+            vermouth.gmx.itp.write_molecule_itp(molecule_type, outfile, header=header)
     # Reorganize the molecule type assignment to write the top file.
     # The top file "molecules" section lists the molecules in the same order
     # as in the structure and group them. To do the grouping, we associate each
@@ -408,9 +409,15 @@ def entry():
             vermouth.MergeChains(chain_set).run_system(system)
 
     # Write the topology if requested
+    header = [
+        'This file was generated using the following command:',
+        ' '.join(sys.argv),
+        VERSION,
+    ]
     if args.top_path is not None:
         write_gmx_topology(system, args.top_path,
-                           deduplicate=not args.keep_duplicate_itp)
+                           deduplicate=not args.keep_duplicate_itp,
+                           header=header)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
