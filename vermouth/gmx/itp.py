@@ -55,7 +55,7 @@ def _interaction_sorting_key(interaction):
     return (conditional, group)
 
 
-def write_molecule_itp(molecule, outfile):
+def write_molecule_itp(molecule, outfile, header=()):
     """
     Write a molecule in ITP format.
 
@@ -71,6 +71,10 @@ def write_molecule_itp(molecule, outfile):
         molecule must contain.
     outfile: io.TextIOBase
         The file in which to write.
+    header: collection.abc.Iterable[str]
+        List of lines to write as comment at the beginning of the file. The
+        comment character and the new line should not be included as they will
+        be added in the function.
 
     Raises
     ------
@@ -99,6 +103,17 @@ def write_molecule_itp(molecule, outfile):
                       'charge_group', 'charge', 'mass'):
         max_length[attribute] = max(len(str(atom.get(attribute, '')))
                                     for _, atom in molecule.atoms)
+
+    # Write the header.
+    # We want to follow the header with an empty line, only if there is a
+    # header. The `has_header` variable is needed in case `header` is a
+    # generator, in which case we cannot know before hand if it contains lines.
+    has_header = False
+    for line in header:
+        outfile.write('; {}\n'.format(line))
+        has_header = True
+    if has_header:
+        outfile.write('\n')
 
     outfile.write('[ moleculetype ]\n')
     outfile.write('{} {}\n\n'.format(molecule.moltype, molecule.nrexcl))
