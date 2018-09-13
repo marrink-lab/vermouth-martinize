@@ -17,7 +17,7 @@ import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 # Do not generate APIdocs for members missing docstrings (undoc-members)
-os.environ['APIDOC_OPTIONS'] = 'members,show-inheritence'
+os.environ['APIDOC_OPTIONS'] = 'members,show-inheritence,inherited-members'
 
 # Set APIDOC options
 #os.environ['SPHINX_APIDOC_OPTIONS'] = 'members,undoc-members,show-inheritance,special-members'
@@ -180,7 +180,9 @@ apidoc_separate_modules = True
 apidoc_excluded_paths = ['tests', 'redistributed']
 
 autoclass_content = 'both'
-autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
+autodoc_default_options = {'members': None,
+                           'undoc-members': None,
+                           'show-inheritance': None}
 
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.

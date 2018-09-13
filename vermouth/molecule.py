@@ -158,6 +158,12 @@ class LinkParameterEffector:
     instance will be validated against that number; else, the user can pass an
     arbitrary number of keys without validation.
 
+    Attributes
+    ----------
+    n_keys_asked: int
+        Class attribute describing the number of keys required.
+
+
     .. automethod:: __call__
     .. automethod:: _apply
     """
@@ -660,7 +666,7 @@ class Block(Molecule):
     ----------
     name: str or None
         The name of the residue. Set to `None` if undefined.
-    atoms: iterator of dict
+    atoms: collections.abc.Iterator[dict]
         The atoms in the residue. Each atom is a dict with *a minima* a key
         'name' for the name of the atom, and a key 'atype' for the atom type.
         An atom can also have a key 'charge', 'charge_group', 'comment', or any
