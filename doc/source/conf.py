@@ -180,7 +180,12 @@ apidoc_separate_modules = True
 apidoc_excluded_paths = ['tests', 'redistributed']
 
 autoclass_content = 'both'
-autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
+#autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
+autodoc_default_options = {
+    'members': None,
+    'undoc-members': None,
+    'show-inheritance': None,
+}
 
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
