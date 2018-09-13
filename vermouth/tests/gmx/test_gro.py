@@ -455,14 +455,17 @@ def generate_diff_dict(draw):
         st.text(), st.integers(), st.floats(),
         hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes())
     )
-    for _ in range(draw(st.integers(min_value=1, max_value=len(dict_b)))):
+    num_to_change = draw(st.integers(
+        min_value=1, max_value=(len(dict_b) // 2) + 1
+    ))
+    for _ in range(num_to_change):
         key = draw(st.sampled_from(list(dict_b.keys())))
         new_val = draw(values)
-        assume(are_different(new_val, dict_b[key]))
+        assume(are_different(new_val, dict_a[key]))
         dict_b[key] = new_val
     dict_c = draw(generate_dict())
-    assume(dict_c.keys() - dict_b.keys())
-    dict_b.update(dict_c)
+    for key in set(dict_c.keys()) - set(dict_b.keys()):
+        dict_b[key] = dict_c[key]
     return dict_a, dict_b
 
 
