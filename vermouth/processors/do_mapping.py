@@ -20,12 +20,16 @@ molecule.
 from collections import defaultdict
 from functools import partial
 from itertools import product, combinations
+import logging
 
 import networkx as nx
 
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import are_all_equal
+from ..log_helpers import StyleAdapter
+
+LOGGER = StyleAdapter(logging.getLogger(__name__))
 
 
 class GraphMapping:
@@ -291,8 +295,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                      for name in attribute_keep}
             for attr, vals in attrs.items():
                 if not are_all_equal(vals):
-                    print('The attribute {} for atom {} is going to be'
-                          ' garbage.'.format(name, graph_out.nodes[out_idx]))
+                    LOGGER.warning('The attribute {} for atom {} is going to'
+                                   ' be garbage.', name, graph_out.nodes[out_idx])
                 if vals:
                     graph_out.nodes[out_idx][attr] = vals[0]
                 else:
@@ -323,12 +327,16 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                 if out_idx != out_jdx:
                     graph_out.add_edge(out_idx, out_jdx)
         if shared_atoms:
-            print("You have a shared atom between blocks. This may mean you"
-                  " have too  particles in your output and/or erroneous bonds.")
+            LOGGER.warning("You have the following atoms that are shared"
+                           " between blocks. This may mean you have too many"
+                           " particles in your output and/or erroneous bonds."
+                           " {}. They've end up in the following output atoms:"
+                           " {}.",
+                           [molecule.nodes(idx, data=True) for idx in shared_atoms],
+                           [graph_out.nodes(idx, data=True) for idx in shared_out_atoms])
     # TODO: These should be turned into warnings.
-    print('double covered:', {k: len(v) for k, v in mol_to_out.items() if len(v) > 1})
-    print('uncovered:', set(molecule.nodes.keys()) - set(mol_to_out.keys()))
-    print(len(set(molecule.nodes.keys()) - set(mol_to_out.keys())))
+    LOGGER.debug('double covered: {}', {k: len(v) for k, v in mol_to_out.items() if len(v) > 1})
+    LOGGER.debug('uncovered: {}', set(molecule.nodes.keys()) - set(mol_to_out.keys()))
     return graph_out
 
 

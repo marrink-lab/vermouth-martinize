@@ -16,10 +16,15 @@
 """
 Provides a processor that repairs a graph based on a reference.
 """
+import logging
+
 import networkx as nx
 
 from .processor import Processor
 from ..graph_utils import *
+from ..log_helpers import StyleAdapter
+
+LOGGER = StyleAdapter(logging.getLogger(__name__))
 
 
 def make_reference(mol):
@@ -71,7 +76,6 @@ def make_reference(mol):
         resname = residues.node[residx]['resname']
         resid = residues.node[residx]['resid']
         chain = residues.node[residx]['chain']
-        # print("{}{}".format(resname, resid), flush=True)
         residue = residues.node[residx]['graph']
         reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
@@ -84,7 +88,7 @@ def make_reference(mol):
             matches = [{v: k for k, v in match.items()} for match in matches]
         if not matches:
             # DEBUG
-            print('Doing MCS matching for residue {}{}'.format(resname, resid))
+            LOGGER.debug('Doing MCS matching for residue {}{}', resname, resid)
             # The problem is that some residues (termini in particular) will
             # contain more atoms than they should according to the reference.
             # Furthermore they will have too little atoms because X-Ray is
@@ -111,10 +115,9 @@ def make_reference(mol):
             raise ValueError("Can't find isomorphism between {}{} and it's "
                              "reference.".format(resname, resid))
         elif len(matches) > 1:
-            # WARNING
-            print("More than one way to fit {}{} on it's reference. I'm "
-                  "picking one arbitrarily. You might want to fix at least "
-                  "some atomnames.".format(resname, resid))
+            LOGGER.warning("More than one way to fit {}{} on it's reference."
+                           " I'm picking one arbitrarily. You might want to"
+                           " fix at least some atomnames.", resname, resid)
         match = matches[0]
         reference_graph.add_node(residx, chain=chain, reference=reference,
                                  found=residue, resname=resname, resid=resid,
@@ -150,8 +153,7 @@ def repair_residue(molecule, ref_residue):
         else:
             # if reference.nodes[ref_idx]['element'] != 'H':
             # INFO
-            print(match)
-            print('Missing atom {}{}:{}'.format(resname, resid, reference.nodes[ref_idx]['atomname']))
+            LOGGER.info('Missing atom {}{}:{}', resname, resid, reference.nodes[ref_idx]['atomname'])
             missing.append(ref_idx)
     # Step 2: try to add all missing atoms one by one. As long as we added
     # *something* the situation changed, and we might be able to place another.
@@ -184,7 +186,7 @@ def repair_residue(molecule, ref_residue):
             match[ref_idx] = res_idx
             molecule.add_node(res_idx, **node)
             found.add_node(res_idx, **node)
-            # print("Adding {}{}:{}".format(resname, resid, node['atomname']))
+            LOGGER.debug("Adding {}{}:{}", resname, resid, node['atomname'])
 
             neighbours = 0
             for neighbour_ref_idx in reference[ref_idx]:
@@ -199,9 +201,10 @@ def repair_residue(molecule, ref_residue):
     if missing:
         for ref_idx in missing:
             # WARNING?
-            print('Could not reconstruct atom {}{}:{}'.format(reference.nodes[ref_idx]['resname'],
-                                                              reference.nodes[ref_idx]['resid'],
-                                                              reference.nodes[ref_idx]['atomname']))
+            LOGGER.error('Could not reconstruct atom {}{}:{}',
+                         reference.nodes[ref_idx]['resname'],
+                         reference.nodes[ref_idx]['resid'],
+                         reference.nodes[ref_idx]['atomname'])
 
 
 def repair_graph(molecule, reference_graph):
@@ -272,14 +275,15 @@ class RepairGraph(Processor):
 
     def run_system(self, system):
         mols = []
-        for molecule in system.molecules:
+        for idx, molecule in enumerate(system.molecules):
             try:
                 new_molecule = self.run_molecule(molecule)
             except KeyError as err:
                 if not self.delete_unknown:
                     raise err
                 else:
-                    print("Can't recognize, deleting")
+                    LOGGER.warning("Can't recognize molecule {}. Deleting.",
+                                   idx)
                     # TODO: raise a loud warning here
             else:
                 mols.append(new_molecule)

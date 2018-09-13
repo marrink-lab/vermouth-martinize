@@ -34,6 +34,7 @@ from vermouth.dssp.dssp import (
     AnnotateMartiniSecondaryStructures,
     AnnotateResidues,
 )
+from vermouth.log_helpers import StyleAdapter
 from vermouth import selectors
 from vermouth.map_input import (
     read_mapping_directory,
@@ -41,6 +42,18 @@ from vermouth.map_input import (
     combine_mappings
 )
 
+
+LOGGER = logging.getLogger('vermouth')
+console_handler = logging.StreamHandler()
+#console_handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('{levelname:>8} - {name} - {message}',
+                              style='{')
+console_handler.setFormatter(formatter)
+LOGGER.addHandler(console_handler)
+LOGGER.setLevel(logging.DEBUG)
+
+LOGGER = StyleAdapter(LOGGER)
 
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
 
