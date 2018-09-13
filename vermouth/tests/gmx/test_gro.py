@@ -404,7 +404,7 @@ def generate_dict(draw, min_size=None):
         st.text(), st.integers(), st.floats(),
         hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes())
     )
-    dict_a = draw(st.dictionaries(keys, values, min_size=min_size))
+    dict_a = draw(st.dictionaries(keys, values, min_size=min_size, max_size=10))
     return dict_a
 
 
