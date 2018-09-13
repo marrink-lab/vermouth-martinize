@@ -151,9 +151,14 @@ def repair_residue(molecule, ref_residue):
             # be better to try and figure why found is not a reference, but meh
             found.nodes[res_idx].update(reference.nodes[ref_idx])
         else:
-            # if reference.nodes[ref_idx]['element'] != 'H':
-            # INFO
-            LOGGER.info('Missing atom {}{}:{}', resname, resid, reference.nodes[ref_idx]['atomname'])
+            message = 'Missing atom {}{}:{}'
+            args = (resname, resid, reference.nodes[ref_idx]['atomname'])
+            if reference.nodes[ref_idx]['element'] != 'H':
+                LOGGER.info(message, *args)
+            else:
+                # These are logged *below* debug level. Otherwise your screen
+                # fills up pretty fast.
+                LOGGER.log(5, message, args)
             missing.append(ref_idx)
     # Step 2: try to add all missing atoms one by one. As long as we added
     # *something* the situation changed, and we might be able to place another.
@@ -186,7 +191,15 @@ def repair_residue(molecule, ref_residue):
             match[ref_idx] = res_idx
             molecule.add_node(res_idx, **node)
             found.add_node(res_idx, **node)
-            LOGGER.debug("Adding {}{}:{}", resname, resid, node['atomname'])
+            
+            message = "Adding {}{}:{}"
+            args = resname, resid, node['atomname']
+            if node['element'] != 'H':
+                LOGGER.debug(message, *args)
+            else:
+                # These are logged *below* debug level. Otherwise your screen
+                # fills up pretty fast.
+                LOGGER.log(5, message, args)
 
             neighbours = 0
             for neighbour_ref_idx in reference[ref_idx]:

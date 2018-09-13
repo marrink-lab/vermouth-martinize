@@ -260,12 +260,21 @@ def fix_ptm(molecule):
         options = allowed_ptms(residue, res_ptms, known_PTMs)
         # TODO/FIXME: This includes anchors in sorting by size.
         options = sorted(options, key=lambda opt: len(opt[0]), reverse=True)
-        identified = identify_ptms(residue, res_ptms, options)
+        try:
+            identified = identify_ptms(residue, res_ptms, options)
+        except KeyError:
+            LOGGER.exception('Could not identify the modifications for'
+                             ' residues {}, involving atoms {}', 
+                             ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
+                              for resid in resids],
+                             ['{atomname}-{atomid}'.format(**molecule.nodes[idx])
+                              for idxs in res_ptms for idx in idxs[0]])
+            raise
         # Why this mess? There can be multiple PTMs for a single (set of)
         # residue(s); and a single PTM can span multiple residues.
         LOGGER.info("Identified the modifications {} on residues {}",
                     [out[0].graph['name'] for out in identified],
-                    ['{}{}'.format(molecule.nodes[resid_to_idxs[resid][0]]['resname'], resid)
+                    ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
                      for resid in resids])
         for ptm, match in identified:
             for mol_idx, ptm_idx in match.items():
@@ -292,11 +301,12 @@ def fix_ptm(molecule):
                             break
                         if mol_node.get(attr_name) != val:
                             # DEBUG output
-                            fmt = 'Changing attribute {} from {} to {} for atom {}{}:{}'
+                            fmt = 'Changing attribute {} from {} to {} for atom {}{}:{}-{}'
                             LOGGER.debug(fmt, attr_name, mol_node[attr_name],
                                          val, mol_node['resname'], 
                                          mol_node['resid'], 
-                                         mol_node['atomname'])
+                                         mol_node['atomname'],
+                                         mol_node['atomid'])
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
                 molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])

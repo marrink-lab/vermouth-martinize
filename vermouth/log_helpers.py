@@ -28,6 +28,9 @@ class Message(object):
     def __str__(self):
         return self.fmt.format(*self.args)
 
+    def __repr__(self):
+        return '{}.format({})'.format(self.fmt, self.args)
+
 
 class StyleAdapter(logging.LoggerAdapter):
     def __init__(self, logger, extra=None):
