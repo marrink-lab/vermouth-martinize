@@ -71,7 +71,7 @@ def write_molecule_itp(molecule, outfile, header=()):
         molecule must contain.
     outfile: io.TextIOBase
         The file in which to write.
-    header: collection.abc.Iterable[str]
+    header: collections.abc.Iterable[str]
         List of lines to write as comment at the beginning of the file. The
         comment character and the new line should not be included as they will
         be added in the function.
