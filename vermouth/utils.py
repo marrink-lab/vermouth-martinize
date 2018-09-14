@@ -35,7 +35,7 @@ except ImportError:
 
 
 def format_atom_string(node):
-    return '{}-{}{}:{}'.format(node['atomid'], node['resname'], node['resid'], node['atomname'])
+    return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**node)
 
 
 def maxes(iterable, key=lambda x: x):
