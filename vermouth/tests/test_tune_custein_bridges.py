@@ -14,16 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Unit tests for the :mod:`vermouth.processors.tune_cystein_bridges` module.
+"""
+
+# The redefined-outer-name check from pylint wrongly catches the use of pytest
+# fixtures.
+# pylint: disable=redefined-outer-name
+
 import copy
 import pytest
 import numpy as np
 import networkx as nx
 import vermouth
-import vermouth.processors.tune_cystein_bridges as tune_cystein_bridges
+from vermouth.processors import tune_cystein_bridges
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def molecule_for_pruning():
+    """
+    Build arbitrary graph to be pruned.
+    """
     graph = nx.Graph([
         ['A', 'B'],
         ['C', 'A'],
@@ -41,6 +52,10 @@ def molecule_for_pruning():
 
 @pytest.fixture
 def molecule_pruned(molecule_for_pruning):
+    """
+    Graph with edges pruned by
+    :func:`tune_cystein_bridges.prune_edges_between_selections`.
+    """
     graph = copy.deepcopy(molecule_for_pruning)
     selection_a = ['A', 'B', 'G']
     selection_b = ['C', 'D', 'G']
@@ -54,6 +69,11 @@ def molecule_pruned(molecule_for_pruning):
     ['A', 'C'], ['A', 'D'], ['B', 'D']
 ])
 def test_prune_edges_between_selections_removed(molecule_pruned, edge):
+    """
+    Make sure that the edges pruned by
+    :func:`tune_cystein_bridges.prune_edges_between_selections` are not present
+    in the final graph.
+    """
     assert edge not in molecule_pruned.edges
 
 
@@ -65,11 +85,21 @@ def test_prune_edges_between_selections_removed(molecule_pruned, edge):
     ['E', 'F'],  # None of E and F in selections
 ])
 def test_prune_edges_between_selections_kept(molecule_pruned, edge):
+    """
+    Make sure edges that should not be pruned by
+    tune_cystein_bridges.prune_edges_between_selections` are still present in
+    the final graph.
+    """
     assert edge in molecule_pruned.edges
 
 
 @pytest.fixture
 def simple_protein():
+    """
+    Build a protein-like molecule graph with possible cystein bridges.
+
+    The molecule does not have coordinates.
+    """
     graph = nx.Graph()
     graph.add_nodes_from((
         (0, {'atomname': 'BB', 'resname': 'CYS'}),
@@ -104,6 +134,10 @@ def simple_protein():
 
 @pytest.fixture
 def simple_protein_pruned(simple_protein):
+    """
+    Protein-like molecule with cystein bridges removed using
+    :func:`tune_cystein_bridges.remove_cystein_bridge_edges`.
+    """
     graph = copy.deepcopy(simple_protein)
     tune_cystein_bridges.remove_cystein_bridge_edges(graph)
     return graph
@@ -111,6 +145,10 @@ def simple_protein_pruned(simple_protein):
 
 @pytest.mark.parametrize('edge', ((5, 13), (7, 11)))
 def test_remove_cystein_bridge_edges_remove(simple_protein_pruned, edge):
+    """
+    Assure that the expected edges were removed by
+    :func:`tune_cystein_bridges.remove_cystein_bridge_edges`.
+    """
     assert edge not in simple_protein_pruned.edges
 
 
@@ -120,11 +158,21 @@ def test_remove_cystein_bridge_edges_remove(simple_protein_pruned, edge):
     (14, 16), (16, 17), (1, 17), (3, 15),
 ))
 def test_remove_cystein_bridge_edges_kept(simple_protein_pruned, edge):
+    """
+    Assure that :func:`tune_cystein_bridges.remove_cystein_bridge_edges`
+    does not remove edges it should not remove.
+    """
     assert edge in simple_protein_pruned.edges
 
 
 @pytest.fixture
 def coordinate_array():
+    """
+    Build an array of coordinates for 36 points.
+
+    The coordinates are random, but preset in the sense that they were rolled
+    once and the same array is always returned.
+    """
     # This array of coordinates was generated using:
     #    coordinates = (
     #        np.random.uniform(low=-2, high=2, size=(36, 3))
@@ -174,6 +222,10 @@ def coordinate_array():
 
 @pytest.fixture
 def protein_with_coords(coordinate_array):
+    """
+    Build a graph with coordinates and edges placed by
+    :func:`tune_cystein_bridges.add_edges_at_distance`.
+    """
     graph = nx.Graph()
     graph.add_nodes_from([
         (index, {'coord': position})
@@ -194,17 +246,33 @@ def protein_with_coords(coordinate_array):
     (5, 24), (5, 32), (5, 35)
 ])
 def test_add_edges_at_distance(protein_with_coords, edge):
+    """
+    Make sure all the expected edges are added by
+    :func:`tune_cystein_bridges.add_edges_at_distance`.
+    """
     assert edge in protein_with_coords.edges
 
 
-def test_add_edges_at_distance(protein_with_coords):
+def test_add_edges_at_distance_num(protein_with_coords):
+    """
+    Make sure that :func:`tune_cystein_bridges.add_edges_at_distance` adds the
+    expected number of edges.
+
+    This test passing is only relevant if :func:`test_add_edges_at_distance`
+    passes as well.
+    """
     assert len(protein_with_coords.edges) == 43
 
 
 @pytest.fixture
 def multi_molecules(coordinate_array):
+    """
+    Build 6 molecules with 6 atoms each. Coordinates are populated unter the
+    `coords` attribute key with the coordinates produced by
+    :func:`coordinate_array`.
+    """
     molecules = []
-    for i in range(6):
+    for _ in range(6):
         molecule = vermouth.molecule.Molecule()
         molecule.add_nodes_from([(idx, {'resid': 1}) for idx in range(6)])
         molecules.append(molecule)
@@ -220,6 +288,10 @@ def multi_molecules(coordinate_array):
 
 @pytest.fixture
 def multi_molecules_linked(multi_molecules):
+    """
+    Merge the molecules from :func:`multi_molecules` using
+    :func:`tune_cystein_bridges.add_inter_molecule_edges`.
+    """
     edges = [
         ((0, 1), (4, 2)),
         ((4, 3), (5, 0)),
@@ -231,6 +303,10 @@ def multi_molecules_linked(multi_molecules):
 
 
 def test_add_inter_molecule_edges_nmols(multi_molecules_linked):
+    """
+    Test that :func:`tune_cystein_bridges.add_inter_molecule_edges` produces
+    the expected number of molecules.
+    """
     print(multi_molecules_linked)
     assert len(multi_molecules_linked) == 3
 
@@ -243,11 +319,19 @@ def test_add_inter_molecule_edges_nmols(multi_molecules_linked):
     (1, (1, 2)),
 ))
 def test_add_inter_molecule_edges_edges(multi_molecules_linked, mol, edge):
+    """
+    Test that :func:`tune_cystein_bridges.add_inter_molecule_edges` creates the
+    expected edges.
+    """
     assert edge in multi_molecules_linked[mol].edges
 
 
 @pytest.fixture
 def pair_selected(multi_molecules):
+    """
+    Call :func:`tune_cystein_bridges.pairs_under_threshold` with twice the same
+    selection.
+    """
     selection = [
         [0, 1],
         [0, 2],
@@ -267,10 +351,18 @@ def pair_selected(multi_molecules):
     ([0, 1], [2, 5]), ([2, 5], [5, 4]),
 ])
 def test_pairs_under_threshold_symetric(pair_selected, edge):
+    """
+    Test that :func:`tune_cystein_bridges.pairs_under_threshold` select the
+    expected pairs when provided twice the same selection.
+    """
     assert edge in list(pair_selected)
 
 
 def test_pairs_under_threshold_symetric_nedges(pair_selected):
+    """
+    Test that :func:`tune_cystein_bridges.pairs_under_threshold` select the
+    expected number of pairs when provided twice the same selection.
+    """
     # Each pair is yielded twice. Indeed, both selections are the same leading
     # to symetric pairs.
     assert len(list(pair_selected)) == 12
@@ -278,6 +370,10 @@ def test_pairs_under_threshold_symetric_nedges(pair_selected):
 
 @pytest.fixture
 def assymetric_pair_selected(multi_molecules):
+    """
+    Call :func:`tune_cystein_bridges.pairs_under_threshold` with two different
+    selections.
+    """
     selection_a = [
         [0, 1],
         [1, 4],
@@ -298,8 +394,16 @@ def assymetric_pair_selected(multi_molecules):
     ([3, 1], [5, 4]), ([0, 1], [2, 5]),
 ])
 def test_pairs_under_threshold_assymetric(assymetric_pair_selected, edge):
+    """
+    Test that :func:`tune_cystein_bridges.pairs_under_threshold` select the
+    expected pairs when provided two different selections.
+    """
     assert edge in list(assymetric_pair_selected)
 
 
 def test_pairs_under_threshold_assymetric_nedges(assymetric_pair_selected):
+    """
+    Test that :func:`tune_cystein_bridges.pairs_under_threshold` select the
+    expected number of pairs when provided twice the same selection.
+    """
     assert len(list(assymetric_pair_selected)) == 4
