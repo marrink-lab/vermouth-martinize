@@ -23,6 +23,7 @@ import networkx as nx
 
 from .processor import Processor
 from ..log_helpers import StyleAdapter
+from ..utils import format_atom_string
 
 LOGGER = StyleAdapter(logging.getLogger(__name__))
 
@@ -267,7 +268,7 @@ def fix_ptm(molecule):
                              ' residues {}, involving atoms {}', 
                              ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
                               for resid in resids],
-                             ['{atomname}-{atomid}'.format(**molecule.nodes[idx])
+                             ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
                               for idxs in res_ptms for idx in idxs[0]])
             raise
         # Why this mess? There can be multiple PTMs for a single (set of)
@@ -292,21 +293,16 @@ def fix_ptm(molecule):
                     for attr_name, val in to_replace.items():
                         if attr_name == 'atomname' and val is None:
                             # DEBUG output
-                            LOGGER.debug('Removing atom {}{}:{}',
-                                         mol_node['resname'],
-                                         mol_node['resid'],
-                                         mol_node['atomname'])
+                            LOGGER.debug('Removing atom {}',
+                                         format_atom_string(mol_node))
                             molecule.remove_node(mol_idx)
                             n_idxs.remove(mol_idx)
                             break
                         if mol_node.get(attr_name) != val:
                             # DEBUG output
-                            fmt = 'Changing attribute {} from {} to {} for atom {}{}:{}-{}'
+                            fmt = 'Changing attribute {} from {} to {} for atom {}'
                             LOGGER.debug(fmt, attr_name, mol_node[attr_name],
-                                         val, mol_node['resname'], 
-                                         mol_node['resid'], 
-                                         mol_node['atomname'],
-                                         mol_node['atomid'])
+                                         val, format_atom_string(mol_node))
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
                 molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])

@@ -34,6 +34,10 @@ except ImportError:
     distance = _distance
 
 
+def format_atom_string(node):
+    return '{}-{}{}:{}'.format(node['atomid'], node['resname'], node['resid'], node['atomname'])
+
+
 def maxes(iterable, key=lambda x: x):
     """
     Analogous to ``max``, but returns a list of all maxima.

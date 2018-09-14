@@ -42,7 +42,8 @@ del pbr
 try:
     from scipy.spatial import cKDTree as KDTree
 except ImportError:
-    LOGGER.info('Using redistributed KDTree')
+    LOGGER.info('Using redistributed KDTree. Some functionality might be slow.'
+                ' Install scipy for better performance.')
     from .redistributed.kdtree import KDTree
 
 from .molecule import Molecule

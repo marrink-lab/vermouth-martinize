@@ -23,6 +23,7 @@ import networkx as nx
 from .processor import Processor
 from ..graph_utils import *
 from ..log_helpers import StyleAdapter
+from ..utils import format_atom_string
 
 LOGGER = StyleAdapter(logging.getLogger(__name__))
 
@@ -187,13 +188,14 @@ def repair_residue(molecule, ref_residue):
                 if key not in ('match', 'found', 'reference'):
                     node[key] = val
             node.update(reference.nodes[ref_idx])
+            node['atomid'] = res_idx + 1
 
             match[ref_idx] = res_idx
             molecule.add_node(res_idx, **node)
             found.add_node(res_idx, **node)
-            
-            message = "Adding {}{}:{}"
-            args = resname, resid, node['atomname']
+
+            message = "Adding {}"
+            args = format_atom_string(node)
             if node['element'] != 'H':
                 LOGGER.debug(message, *args)
             else:

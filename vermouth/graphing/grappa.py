@@ -71,7 +71,7 @@ import string
 
 import networkx as nx
 
-from .log_helpers import StyleAdapter
+from ..log_helpers import StyleAdapter
 
 LOGGER = StyleAdapter(logging.getLogger(__name__))
 

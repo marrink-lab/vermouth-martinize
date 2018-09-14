@@ -26,7 +26,7 @@ import networkx as nx
 
 from ..molecule import Molecule
 from .processor import Processor
-from ..utils import are_all_equal
+from ..utils import are_all_equal, format_atom_string
 from ..log_helpers import StyleAdapter
 
 LOGGER = StyleAdapter(logging.getLogger(__name__))
@@ -270,12 +270,13 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             # merge_molecule will return a dict mapping the node keys of the
             # added block to the ones in graph_out
             block_to_out = graph_out.merge_molecule(mapping.block_to)
-        except ValueError as err:
+        except ValueError:
             # This probably means the nrexcl of the block is different from the
             # others. This means the user messed up their data. Or there are
             # different forcefields in the same forcefield folder...
-            raise ValueError('Residue {} is not compatible with the'
-                             ' others'.format(name)) from err
+            LOGGER.exception('Residue {} is not compatible with the others',
+                             name)
+            raise
         block_to_mol = {v: k for k, v in match.items()}
         for to_idx, from_idxs in mapping.mapping.items():
             # Some bookkeeping with indices.
@@ -298,7 +299,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             for attr, vals in attrs.items():
                 if not are_all_equal(vals):
                     LOGGER.warning('The attribute {} for atom {} is going to'
-                                   ' be garbage.', name, graph_out.nodes[out_idx])
+                                   ' be garbage.', name, format_atom_string(graph_out.nodes[out_idx]))
                 if vals:
                     graph_out.nodes[out_idx][attr] = vals[0]
                 else:
@@ -321,8 +322,13 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                     graph_out.add_edge(out_idx, out_jdx)
         shared_atoms = set(match1.keys()) & set(match2.keys())
         shared_out_atoms = [mol_to_out[mol_idx] for mol_idx in shared_atoms]
-        for out_atoms in shared_out_atoms:
+        for in_atom, out_atoms in zip(shared_atoms, shared_out_atoms):
             if len(out_atoms) < 2:
+                LOGGER.critical('The atom {} is shared between blocks, but'
+                                ' only mapped once to {}?',
+                                format_atom_string(molecule.nodes[in_atom]),
+                                [format_atom_string(graph_out.nodes[idx])
+                                 for idx in out_atoms])
                 raise ValueError("This atom is shared between blocks, but only"
                                  " mapped once?")
             for out_idx, out_jdx in combinations(out_atoms, 2):
@@ -334,15 +340,30 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                            " particles in your output and/or erroneous bonds."
                            " {}. They've end up in the following output atoms:"
                            " {}.",
-                           [molecule.nodes[idx] for idx in shared_atoms],
-                           [graph_out.nodes[idx] for idx in shared_out_atoms])
+                           [format_atom_string(molecule.nodes[idx]) for idx in shared_atoms],
+                           [format_atom_string(graph_out.nodes[idx]) for idx in shared_out_atoms])
     # TODO: These should be turned into warnings.
-    LOGGER.debug('double covered: {}', {k: v for k, v in blocks_per_atom.items() if v > 1})
-    for node_idx, v in blocks_per_atom.items():
-        if v > 1:
-            LOGGER.debug('{}', molecule.nodes[node_idx]['atomname'])
-        
-    LOGGER.debug('uncovered: {}', set(molecule.nodes.keys()) - set(mol_to_out.keys()))
+    if any(v > 1 for v in blocks_per_atom.values()):
+        LOGGER.warning('These atoms are covered by multiple blocks. This is a '
+                       'bad idea: {}', {format_atom_string(molecule.nodes[k]): v
+                                        for k, v in blocks_per_atom.items() if v > 1})
+    uncovered_atoms = set(molecule.nodes.keys()) - set(mol_to_out.keys())
+    if uncovered_atoms:
+        uncovered_hydrogens = {idx for idx in uncovered_atoms if molecule.nodes[idx]['element'] == 'H'}
+        if uncovered_hydrogens:
+            LOGGER.debug('These hydrogen atoms are not covered by a mapping.'
+                         ' This is not the best idea. {}',
+                         [format_atom_string(molecule.nodes[idx])
+                          for idx in uncovered_hydrogens]
+                        )
+        other_uncovered = uncovered_atoms - uncovered_hydrogens
+        if other_uncovered:
+            LOGGER.warning("These atoms are not covered by a mapping. Either"
+                           " your mappings don't describe all atoms (bad idea),"
+                           " or, there's no mapping available for all residues."
+                           " {}",
+                           [format_atom_string(molecule.nodes[idx])
+                            for idx in other_uncovered])
     return graph_out
 
 

@@ -121,6 +121,8 @@ def system_mod(forcefield_with_mods):
         [22, 28], [23, 26], [23, 27], [24, 29], [29, 30], [30, 31], [31, 32],
         [31, 36], [29, 33], [30, 34], [30, 35],
     ])
+    for node in molecule:
+        molecule.nodes[node]['atomid'] = node
     system = vermouth.System()
     system.molecules = [molecule]
     system.force_field = forcefield_with_mods
