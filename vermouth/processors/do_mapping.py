@@ -349,7 +349,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                                         for k, v in blocks_per_atom.items() if v > 1})
     uncovered_atoms = set(molecule.nodes.keys()) - set(mol_to_out.keys())
     if uncovered_atoms:
-        uncovered_hydrogens = {idx for idx in uncovered_atoms if molecule.nodes[idx]['element'] == 'H'}
+        uncovered_hydrogens = {idx for idx in uncovered_atoms if molecule.nodes[idx].get('element', '') == 'H'}
         if uncovered_hydrogens:
             LOGGER.debug('These hydrogen atoms are not covered by a mapping.'
                          ' This is not the best idea. {}',

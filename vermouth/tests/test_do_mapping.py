@@ -187,46 +187,54 @@ def test_peptide():
     peptide.add_edge(list(peptide.find_atoms(atomname='N', resid=2))[0],
                      list(peptide.find_atoms(atomname='C', resid=3))[0])
 
+    for node in peptide:
+        peptide.nodes[node]['atomid'] = node + 1
+        peptide.nodes[node]['chain'] = ''
+
     cg = do_mapping(peptide, mappings, FF_MARTINI)
 
     expected = Molecule(force_field=FF_MARTINI)
     expected.add_nodes_from({1: {'atomname': 'BB',
                                  'atype': 'P5',
-                                 'chain': None,
+                                 'chain': '',
                                  'charge': 0.0,
                                  'charge_group': 1,
                                  'resid': 1,
                                  'resname': 'GLY'},
                              2: {'atomname': 'BB',
                                  'atype': 'P5',
-                                 'chain': None,
+                                 'chain': '',
                                  'charge': 0.0,
                                  'charge_group': 2,
                                  'resid': 2,
                                  'resname': 'ILE'},
                              3: {'atomname': 'SC1',
                                  'atype': 'AC1',
-                                 'chain': None,
+                                 'chain': '',
                                  'charge': 0.0,
                                  'charge_group': 2,
                                  'resid': 2,
                                  'resname': 'ILE'},
                              4: {'atomname': 'BB',
                                  'atype': 'P5',
-                                 'chain': None,
+                                 'chain': '',
                                  'charge': 0.0,
                                  'charge_group': 3,
                                  'resid': 3,
                                  'resname': 'LEU'},
                              5: {'atomname': 'SC1',
                                  'atype': 'AC1',
-                                 'chain': None,
+                                 'chain': '',
                                  'charge': 0.0,
                                  'charge_group': 3,
                                  'resid': 3,
                                  'resname': 'LEU'}}.items()
                             )
     expected.add_edges_from([(1, 2), (2, 3), (2, 4), (4, 5)])
+    
+    for node in expected:
+        expected.nodes[node]['atomid'] = node + 1
+    
     assert _equal_graphs(cg, expected)
 
 if __name__ == '__main__':
