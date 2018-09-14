@@ -266,11 +266,40 @@ def pair_selected(multi_molecules):
     ([0, 2], [2, 5]), ([3, 1], [5, 4]),
     ([0, 1], [2, 5]), ([2, 5], [5, 4]),
 ])
-def test_pairs_under_threshold(pair_selected, edge):
+def test_pairs_under_threshold_symetric(pair_selected, edge):
     assert edge in list(pair_selected)
 
 
-def test_pairs_under_threshold_nedges(pair_selected):
+def test_pairs_under_threshold_symetric_nedges(pair_selected):
     # Each pair is yielded twice. Indeed, both selections are the same leading
     # to symetric pairs.
     assert len(list(pair_selected)) == 12
+
+
+@pytest.fixture
+def assymetric_pair_selected(multi_molecules):
+    selection_a = [
+        [0, 1],
+        [1, 4],
+        [3, 1],
+    ]
+    selection_b = [
+        [0, 2],
+        [2, 5],
+        [5, 4],
+    ]
+    return tune_cystein_bridges.pairs_under_threshold(
+        multi_molecules, 2.0, selection_a, selection_b, attribute='coords'
+    )
+
+
+@pytest.mark.parametrize('edge', [
+    ([0, 1], [0, 2]), ([1, 4], [0, 2]),
+    ([3, 1], [5, 4]), ([0, 1], [2, 5]),
+])
+def test_pairs_under_threshold_assymetric(assymetric_pair_selected, edge):
+    assert edge in list(assymetric_pair_selected)
+
+
+def test_pairs_under_threshold_assymetric_nedges(assymetric_pair_selected):
+    assert len(list(assymetric_pair_selected)) == 4
