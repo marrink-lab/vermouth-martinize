@@ -257,7 +257,7 @@ def pair_selected(multi_molecules):
         [5, 4],
     ]
     return tune_cystein_bridges.pairs_under_threshold(
-        multi_molecules, 2.0, selection, attribute='coords'
+        multi_molecules, 2.0, selection, selection, attribute='coords'
     )
 
 
@@ -271,4 +271,6 @@ def test_pairs_under_threshold(pair_selected, edge):
 
 
 def test_pairs_under_threshold_nedges(pair_selected):
-    assert len(list(pair_selected)) == 6
+    # Each pair is yielded twice. Indeed, both selections are the same leading
+    # to symetric pairs.
+    assert len(list(pair_selected)) == 12

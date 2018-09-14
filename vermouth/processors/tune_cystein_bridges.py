@@ -252,7 +252,9 @@ def add_inter_molecule_edges(molecules, edges):
     return new_molecules
 
 
-def pairs_under_threshold(molecules, threshold, selection, attribute='position'):
+def pairs_under_threshold(molecules, threshold,
+                          selection_a, selection_b,
+                          attribute='position'):
     """
     List pairs of nodes from a selection that are closer than a threshold.
 
@@ -273,8 +275,12 @@ def pairs_under_threshold(molecules, threshold, selection, attribute='position')
     threshold: float
         A distance threshold in nm. Pairs are return if the nodes are closer
         than this threshold.
-    selection: list
-        List of nodes to consider. The format is described above.
+    selection_a: list
+        List of nodes to consider at one end of the pairs. The format is
+        described above.
+    selection_b: list
+        List of nodes to consider at the other end of the pairs. The format is
+        described above.
     attribute: str
         The dictionary key under which the node positions are stored in the
         nodes.
@@ -288,13 +294,25 @@ def pairs_under_threshold(molecules, threshold, selection, attribute='position')
     ------
     KeyError
         Raised if a node from the selection does not have a position.
+
+    Notes
+    -----
+
+    Symetric node pairs are not deduplicated.
     """
-    coordinates = []
-    for key in selection:
-        coordinates.append(molecules[key[0]].nodes[key[1]][attribute])
-    kdtree = KDTree(coordinates)
-    for idx, jdx in kdtree.query_pairs(threshold):
-        yield (selection[idx], selection[jdx])
+    coordinates_a = []
+    for key in selection_a:
+        coordinates_a.append(molecules[key[0]].nodes[key[1]][attribute])
+    coordinates_b = []
+    for key in selection_b:
+        coordinates_b.append(molecules[key[0]].nodes[key[1]][attribute])
+    kdtree = KDTree(coordinates_a)
+    for idx, jdx_multi in enumerate(kdtree.query_ball_point(coordinates_b, threshold)):
+        for jdx in jdx_multi:
+            node_a = selection_a[idx]
+            node_b = selection_b[jdx]
+            if node_a != node_b:
+                yield (node_a, node_b)
 
 
 def select_nodes_multi(molecules, selector):
@@ -324,15 +342,16 @@ def select_nodes_multi(molecules, selector):
                 yield (molecule_idx, key)
 
 
-def add_cystein_bridge_threshold(molecules, threshold,  # pylint: disable=dangerous-default-value
-                                 template=UNIVERSAL_BRIDGE_TEMPLATE,
-                                 attribute='position'):
+def add_edges_threshold(molecules, threshold,  # pylint: disable=dangerous-default-value
+                        template_a=UNIVERSAL_BRIDGE_TEMPLATE,
+                        template_b=UNIVERSAL_BRIDGE_TEMPLATE,
+                        attribute='position'):
     """
-    Add edges corresponding to cystein bridges based on a distance threshold.
+    Add edges between two selections when under a given threshold.
 
     Edges are added within and between the molecules and connect nodes that
     match the given template. Molecules that get connected by an edge are
-    merged and the new list f molecules is retureturned.
+    merged and the new list of molecules is retureturned.
 
     Parameters
     ----------
@@ -340,8 +359,10 @@ def add_cystein_bridge_threshold(molecules, threshold,  # pylint: disable=danger
         A list of molecules.
     threshold: float
         The distance threshold in nanometers under which an edge is created.
-    template: dict
-        A template that selected atom must match.
+    template_a: dict
+        A template that selected atom must match at one end.
+    template_b: dict
+        A template that selected atom must match at the other end.
     attribute: str
         Name of the key in the node dictionaries under which the coordinates
         are stored.
@@ -351,9 +372,13 @@ def add_cystein_bridge_threshold(molecules, threshold,  # pylint: disable=danger
     list
         A new list of molecules.
     """
-    selector = functools.partial(attributes_match, template_attributes=template)
-    selection = list(select_nodes_multi(molecules, selector))
-    edges = pairs_under_threshold(molecules, threshold, selection, attribute)
+    selector_a = functools.partial(attributes_match, template_attributes=template_a)
+    selection_a = list(select_nodes_multi(molecules, selector_a))
+    selector_b = functools.partial(attributes_match, template_attributes=template_a)
+    selection_b = list(select_nodes_multi(molecules, selector_b))
+    edges = pairs_under_threshold(molecules, threshold,
+                                  selection_a, selection_b,
+                                  attribute)
     new_molecules = add_inter_molecule_edges(molecules, edges)
     return new_molecules
 
@@ -375,7 +400,7 @@ class AddCysteinBridgesThreshold(Processor):
         self.attribute = attribute
 
     def run_system(self, system):
-        system.molecules = add_cystein_bridge_threshold(
+        system.molecules = add_edges_threshold(
             system.molecules, self.threshold,
             template=self.template,
             attribute=self.attribute
