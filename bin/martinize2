@@ -42,15 +42,61 @@ from vermouth.map_input import (
     combine_mappings
 )
 
+# Since vermouth's __init__.py does some logging (KDTree), this may or may not
+# work as intended. Investigation required.
 
 LOGGER = logging.getLogger('vermouth')
-console_handler = logging.StreamHandler()
-#console_handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('{levelname:>8} - {name} - {message}',
-                              style='{')
-console_handler.setFormatter(formatter)
+
+class BipolarFormatter:
+    """
+    A logging formatter that formats using either `low_formatter` or
+    `high_formatter` depending on the `logger`'s effective loglevel.
+
+    Parameters
+    ----------
+    low_formatter: logging.Formatter
+        The formatter used if `cutoff` <= `logger.getEffectiveLevel()`.
+    high_formatter: logging.Formatter
+        The formatter used if `cutoff` > `logger.getEffectiveLevel()`.
+    cutoff: int
+        The cutoff used to decide whether the low or high formatter is used.
+    logger: logging.Logger
+        The logger whose effective loglevel is used. Defaults to
+        ``logging.getLogger()``.
+    """
+    def __init__(self, low_formatter, high_formatter, cutoff, logger=None):
+        self.detailed_formatter = low_formatter
+        self.pretty_formatter = high_formatter
+        self.cutoff = cutoff
+        if logger is None:
+            logger = logging.getLogger()
+        self.logger = logger
+
+    def format(self, record):
+        """
+        Dispatches to either pretty_formatter or detailed_formatter.
+        """
+        if self.logger.getEffectiveLevel() <= self.cutoff:
+            return self.detailed_formatter.format(record)
+        else:
+            return self.pretty_formatter.format(record)
+
+    def __getattr__(self, item):
+        return getattr(self.detailed_formatter, item)
+
+
+pretty_formatter = logging.Formatter(fmt='{levelname:>8} - {message}', style='{')
+detailed_formatter = logging.Formatter(fmt='{levelname:>8} - {name} - {message}', style='{')
+
+console_handler = logging.StreamHandler()
+formatter = BipolarFormatter(detailed_formatter, 
+                             pretty_formatter,
+                             logging.DEBUG,
+                             logger=LOGGER)
+console_handler.setFormatter(formatter)    
 LOGGER.addHandler(console_handler)
+
 LOGGER.setLevel(logging.DEBUG)
 
 LOGGER = StyleAdapter(LOGGER)

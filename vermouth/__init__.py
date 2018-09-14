@@ -20,7 +20,7 @@ the CLI tool martinize2.
 """
 import logging
 from .log_helpers import StyleAdapter
-
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 LOGGER = StyleAdapter(logging.getLogger(__name__))
 
 
@@ -45,6 +45,8 @@ except ImportError:
     LOGGER.info('Using redistributed KDTree. Some functionality might be slow.'
                 ' Install scipy for better performance.')
     from .redistributed.kdtree import KDTree
+
+del LOGGER
 
 from .molecule import Molecule
 from .processors import *
