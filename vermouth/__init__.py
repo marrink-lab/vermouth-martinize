@@ -19,9 +19,10 @@ Provides functionality for creating MD topologies from coordinate files. Powers
 the CLI tool martinize2.
 """
 import logging
-from .log_helpers import StyleAdapter
+from .log_helpers import StyleAdapter, get_logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
-LOGGER = StyleAdapter(logging.getLogger(__name__))
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 # Find the data directory once.
@@ -43,7 +44,7 @@ try:
     from scipy.spatial import cKDTree as KDTree
 except ImportError:
     LOGGER.info('Using redistributed KDTree. Some functionality might be slow.'
-                ' Install scipy for better performance.')
+                ' Install scipy for better performance.', type='performance')
     from .redistributed.kdtree import KDTree
 
 del LOGGER

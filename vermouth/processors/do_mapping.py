@@ -20,16 +20,15 @@ molecule.
 from collections import defaultdict, Counter
 from functools import partial
 from itertools import product, combinations
-import logging
 
 import networkx as nx
 
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import are_all_equal, format_atom_string
-from ..log_helpers import StyleAdapter
+from ..log_helpers import StyleAdapter, get_logger
 
-LOGGER = StyleAdapter(logging.getLogger(__name__))
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 class GraphMapping:
@@ -275,7 +274,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             # others. This means the user messed up their data. Or there are
             # different forcefields in the same forcefield folder...
             LOGGER.exception('Residue {} is not compatible with the others',
-                             name)
+                             name, type='inconsistent-data')
             raise
         block_to_mol = {v: k for k, v in match.items()}
         for to_idx, from_idxs in mapping.mapping.items():
@@ -299,7 +298,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             for attr, vals in attrs.items():
                 if not are_all_equal(vals):
                     LOGGER.warning('The attribute {} for atom {} is going to'
-                                   ' be garbage.', name, format_atom_string(graph_out.nodes[out_idx]))
+                                   ' be garbage.', name, format_atom_string(graph_out.nodes[out_idx]),
+                                   type='inconsistent-data')
                 if vals:
                     graph_out.nodes[out_idx][attr] = vals[0]
                 else:
@@ -328,7 +328,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                                 ' only mapped once to {}?',
                                 format_atom_string(molecule.nodes[in_atom]),
                                 [format_atom_string(graph_out.nodes[idx])
-                                 for idx in out_atoms])
+                                 for idx in out_atoms],
+                                type='inconsistent-data')
                 raise ValueError("This atom is shared between blocks, but only"
                                  " mapped once?")
             for out_idx, out_jdx in combinations(out_atoms, 2):
@@ -341,12 +342,14 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                            " {}. They've end up in the following output atoms:"
                            " {}.",
                            [format_atom_string(molecule.nodes[idx]) for idx in shared_atoms],
-                           [format_atom_string(graph_out.nodes[idx]) for idx in shared_out_atoms])
+                           [format_atom_string(graph_out.nodes[idx]) for idx in shared_out_atoms],
+                           type='inconsistent-data')
     # TODO: These should be turned into warnings.
     if any(v > 1 for v in blocks_per_atom.values()):
         LOGGER.warning('These atoms are covered by multiple blocks. This is a '
                        'bad idea: {}', {format_atom_string(molecule.nodes[k]): v
-                                        for k, v in blocks_per_atom.items() if v > 1})
+                                        for k, v in blocks_per_atom.items() if v > 1},
+                       type='inconsistent-data')
     uncovered_atoms = set(molecule.nodes.keys()) - set(mol_to_out.keys())
     if uncovered_atoms:
         uncovered_hydrogens = {idx for idx in uncovered_atoms if molecule.nodes[idx].get('element', '') == 'H'}
@@ -354,7 +357,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
             LOGGER.debug('These hydrogen atoms are not covered by a mapping.'
                          ' This is not the best idea. {}',
                          [format_atom_string(molecule.nodes[idx])
-                          for idx in uncovered_hydrogens]
+                          for idx in uncovered_hydrogens],
+                         type='unmapped-atom'
                         )
         other_uncovered = uncovered_atoms - uncovered_hydrogens
         if other_uncovered:
@@ -363,7 +367,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                            " or, there's no mapping available for all residues."
                            " {}",
                            [format_atom_string(molecule.nodes[idx])
-                            for idx in other_uncovered])
+                            for idx in other_uncovered],
+                           type='unmapped-atom')
     return graph_out
 
 

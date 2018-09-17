@@ -17,15 +17,14 @@
 
 from collections import defaultdict
 import itertools
-import logging
 
 import networkx as nx
 
 from .processor import Processor
-from ..log_helpers import StyleAdapter
+from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string
 
-LOGGER = StyleAdapter(logging.getLogger(__name__))
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
@@ -269,7 +268,8 @@ def fix_ptm(molecule):
                              ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
                               for resid in resids],
                              ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
-                              for idxs in res_ptms for idx in idxs[0]])
+                              for idxs in res_ptms for idx in idxs[0]],
+                             type='unknown-input')
             raise
         # Why this mess? There can be multiple PTMs for a single (set of)
         # residue(s); and a single PTM can span multiple residues.
@@ -294,7 +294,8 @@ def fix_ptm(molecule):
                         if attr_name == 'atomname' and val is None:
                             # DEBUG output
                             LOGGER.debug('Removing atom {}',
-                                         format_atom_string(mol_node))
+                                         format_atom_string(mol_node),
+                                         type='remove-atom')
                             molecule.remove_node(mol_idx)
                             n_idxs.remove(mol_idx)
                             break
@@ -302,7 +303,8 @@ def fix_ptm(molecule):
                             # DEBUG output
                             fmt = 'Changing attribute {} from {} to {} for atom {}'
                             LOGGER.debug(fmt, attr_name, mol_node[attr_name],
-                                         val, format_atom_string(mol_node))
+                                         val, format_atom_string(mol_node),
+                                         type='change-atom')
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
                 molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])

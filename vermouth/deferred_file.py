@@ -101,7 +101,7 @@ def replace_with_backup(file_in, file_out, suffix='bak'):
     """
     if os.path.exists(file_out):
         file_out_bak = find_next_filename(file_out, suffix=suffix)
-        LOGGER.info('Backing up {} to {}'.format(file_out, file_out_bak))
+        LOGGER.info('Backing up {} to {}', file_out, file_out_bak)
         replace(file_out, file_out_bak)
     return replace(file_in, file_out)
 

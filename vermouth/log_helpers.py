@@ -15,12 +15,17 @@
 # limitations under the License.
 
 """
-Provide some helper classes to allow new style brace formatting for logging.
+Provide some helper classes to allow new style brace formatting for logging and
+processing the `type` keyword.
 """
 import logging
 
 
-class Message(object):
+class Message:
+    """
+    Class that defers string formatting until it's ``__str__`` method is
+    called.
+    """
     def __init__(self, fmt, args):
         self.fmt = fmt
         self.args = args
@@ -29,16 +34,71 @@ class Message(object):
         return self.fmt.format(*self.args)
 
     def __repr__(self):
-        return '{}.format({})'.format(self.fmt, self.args)
+        return '{}.format(*{})'.format(self.fmt, self.args)
 
 
 class StyleAdapter(logging.LoggerAdapter):
+    """
+    Logging adapter that encapsulate messages in :class:`Message`, allowing
+    ``{}`` style formatting.
+    """
     def __init__(self, logger, extra=None):
         if extra is None:
             extra = {}
-        super(StyleAdapter, self).__init__(logger, extra)
+        super().__init__(logger, extra)
 
     def log(self, level, msg, *args, **kwargs):
         if self.isEnabledFor(level):
             msg, kwargs = self.process(msg, kwargs)
-            self.logger._log(level, Message(msg, args), (), **kwargs)
+            self.logger.log(level, Message(msg, args), **kwargs)
+
+    def __getattr__(self, item):
+        # Delegate attribute lookup further down the chain of LoggerAdapters
+        return getattr(self.logger, item)
+
+
+class TypeAdapter(logging.LoggerAdapter):
+    """
+    Logging adapter that takes the `type` keyword argument passed to logging
+    calls and passes adds it to the `extra` attribute.
+
+    Parameters
+    ----------
+    logger: logging.Logger or logging.LoggerAdapter
+        As described in :class:`logging.LoggerAdapter`.
+    extra: dict
+        As described in :class:`logging.LoggerAdapter`.
+    default_type: str
+        The type of the messages if none is given.
+    """
+    def __init__(self, logger, extra=None, default_type='general'):
+        if extra is None:
+            extra = {}
+        self.default_type = default_type
+        super().__init__(logger, extra)
+
+    def log(self, level, msg, *args, type=None, **kwargs):  # pylint: disable=arguments-differ
+        if type is None:
+            type = self.default_type
+        if self.isEnabledFor(level):
+            msg, kwargs = self.process(msg, kwargs)
+            kwargs['extra'].update(type=type)
+            self.logger.log(level, msg, *args, **kwargs)
+
+    def __getattr__(self, item):
+        # Delegate attribute lookup further down the chain of LoggerAdapters
+        return getattr(self.logger, item)
+
+
+def get_logger(name):
+    """
+    Convenience method that wraps a :class:`TypeAdapter` around
+    ``logging.getLogger(name)``
+
+    Parameters
+    ----------
+    name: str
+        The name of the logger to get. Passed to :func:`logging.getLogger`.
+        Should probably be ``__name__``.
+    """
+    return TypeAdapter(logging.getLogger(name))

@@ -19,6 +19,7 @@ High level API for Martinize2
 """
 
 import argparse
+from collections import defaultdict
 import functools
 import logging
 import itertools
@@ -86,8 +87,40 @@ class BipolarFormatter:
         return getattr(self.detailed_formatter, item)
 
 
-PRETTY_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {message}', style='{')
-DETAILED_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {name} - {message}', style='{')
+class CountingHandler(logging.NullHandler):
+    """
+    A logging handler that counts the number of times a specific type of
+    message is logged per loglevel.
+
+    Parameters
+    ----------
+    type_attribute: str
+        The name of the attribute carrying the type.
+    default_type: str
+        The type of message if none is provided.
+
+    """
+    def __init__(self, *args, type_attribute='type', default_type='general', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.counts = defaultdict(lambda: defaultdict(int))
+        self.default_type = default_type
+        self.type_attr = type_attribute
+
+    def handle(self, record):
+        record_level = record.levelno
+        record_type = getattr(record, self.type_attr, self.default_type)
+        self.counts[record_level][record_type] += 1
+
+
+PRETTY_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {type} - {message}',
+                                     style='{')
+DETAILED_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {type} - {name} - {message}',
+                                       style='{')
+
+COUNTER = CountingHandler()
+
+# Control above what level message we want to count
+COUNTER.setLevel(logging.WARNING)
 
 CONSOLE_HANDLER = logging.StreamHandler()
 FORMATTER = BipolarFormatter(DETAILED_FORMATTER,
@@ -96,6 +129,7 @@ FORMATTER = BipolarFormatter(DETAILED_FORMATTER,
                              logger=LOGGER)
 CONSOLE_HANDLER.setFormatter(FORMATTER)
 LOGGER.addHandler(CONSOLE_HANDLER)
+LOGGER.addHandler(COUNTER)
 
 LOGGER.setLevel(logging.DEBUG)
 
@@ -492,3 +526,4 @@ def entry():
 
 if __name__ == '__main__':
     entry()
+    print(COUNTER.counts)

@@ -16,16 +16,14 @@
 """
 Provides a processor that repairs a graph based on a reference.
 """
-import logging
-
 import networkx as nx
 
 from .processor import Processor
 from ..graph_utils import *
-from ..log_helpers import StyleAdapter
+from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string
 
-LOGGER = StyleAdapter(logging.getLogger(__name__))
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 def make_reference(mol):
@@ -89,7 +87,8 @@ def make_reference(mol):
             matches = [{v: k for k, v in match.items()} for match in matches]
         if not matches:
             # DEBUG
-            LOGGER.debug('Doing MCS matching for residue {}{}', resname, resid)
+            LOGGER.debug('Doing MCS matching for residue {}{}', resname, resid,
+                         type='performance')
             # The problem is that some residues (termini in particular) will
             # contain more atoms than they should according to the reference.
             # Furthermore they will have too little atoms because X-Ray is
@@ -118,7 +117,8 @@ def make_reference(mol):
         elif len(matches) > 1:
             LOGGER.warning("More than one way to fit {}{} on it's reference."
                            " I'm picking one arbitrarily. You might want to"
-                           " fix at least some atomnames.", resname, resid)
+                           " fix at least some atomnames.", resname, resid,
+                           type='bad-atom-names')
         match = matches[0]
         reference_graph.add_node(residx, chain=chain, reference=reference,
                                  found=residue, resname=resname, resid=resid,
@@ -155,11 +155,11 @@ def repair_residue(molecule, ref_residue):
             message = 'Missing atom {}{}:{}'
             args = (resname, resid, reference.nodes[ref_idx]['atomname'])
             if reference.nodes[ref_idx]['element'] != 'H':
-                LOGGER.info(message, *args)
+                LOGGER.info(message, *args, type='missing-atom')
             else:
                 # These are logged *below* debug level. Otherwise your screen
                 # fills up pretty fast.
-                LOGGER.log(5, message, args)
+                LOGGER.log(5, message, *args, type='missing-atom')
             missing.append(ref_idx)
     # Step 2: try to add all missing atoms one by one. As long as we added
     # *something* the situation changed, and we might be able to place another.
@@ -197,11 +197,11 @@ def repair_residue(molecule, ref_residue):
             message = "Adding {}"
             args = format_atom_string(node)
             if node['element'] != 'H':
-                LOGGER.debug(message, *args)
+                LOGGER.debug(message, *args, type='missing-atom')
             else:
                 # These are logged *below* debug level. Otherwise your screen
                 # fills up pretty fast.
-                LOGGER.log(5, message, args)
+                LOGGER.log(5, message, args, type='missing-atom')
 
             neighbours = 0
             for neighbour_ref_idx in reference[ref_idx]:
@@ -219,7 +219,8 @@ def repair_residue(molecule, ref_residue):
             LOGGER.error('Could not reconstruct atom {}{}:{}',
                          reference.nodes[ref_idx]['resname'],
                          reference.nodes[ref_idx]['resid'],
-                         reference.nodes[ref_idx]['atomname'])
+                         reference.nodes[ref_idx]['atomname'],
+                         type='missing-atom')
 
 
 def repair_graph(molecule, reference_graph):
@@ -298,7 +299,7 @@ class RepairGraph(Processor):
                     raise err
                 else:
                     LOGGER.warning("Can't recognize molecule {}. Deleting.",
-                                   idx)
+                                   idx, type='unknown-residue')
                     # TODO: raise a loud warning here
             else:
                 mols.append(new_molecule)
