@@ -18,12 +18,14 @@
 Set of tools to add and remove edges.
 """
 
+import functools
 import numpy as np
 import networkx as nx
 
 from . import KDTree
 from . import selectors
 from . import geometry
+from .molecule import attributes_match
 
 
 def _edge_is_between_selections(edge, selection_a, selection_b):
@@ -185,6 +187,7 @@ def add_inter_molecule_edges(molecules, edges):
     list
         New list of molecules.
     """
+    edges = tuple(edges)  # We iterate multiple time trhough it.
     molecule_graph = nx.Graph()
     molecule_graph.add_nodes_from(range(len(molecules)))
     molecule_edges = [(edge[0][0], edge[1][0]) for edge in edges]
@@ -343,7 +346,7 @@ def add_edges_threshold(molecules, threshold,
     """
     selector_a = functools.partial(attributes_match, template_attributes=template_a)
     selection_a = list(select_nodes_multi(molecules, selector_a))
-    selector_b = functools.partial(attributes_match, template_attributes=template_a)
+    selector_b = functools.partial(attributes_match, template_attributes=template_b)
     selection_b = list(select_nodes_multi(molecules, selector_b))
     edges = pairs_under_threshold(molecules, threshold,
                                   selection_a, selection_b,

@@ -27,10 +27,11 @@ import pytest
 import numpy as np
 import networkx as nx
 import vermouth
+from vermouth.molecule import Choice
 from vermouth import edge_tuning
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def molecule_for_pruning():
     """
     Build arbitrary graph to be pruned.
@@ -47,6 +48,8 @@ def molecule_for_pruning():
         ['G', 'A'],
         ['G', 'C'],
     ])
+    for key, value in graph.nodes.items():
+        value['name'] = key
     return graph
 
 
@@ -63,6 +66,42 @@ def molecule_pruned(molecule_for_pruning):
         graph, selection_a, selection_b
     )
     return graph
+
+
+def dummy_selector_a(node):
+    """
+    Dummy node selector.
+    """
+    return node['name'] in ('A', 'B', 'G')
+
+
+def dummy_selector_b(node):
+    """
+    Dummy node selector.
+    """
+    return node['name'] in ('C', 'D', 'G')
+
+
+@pytest.fixture
+def molecule_pruned_one_selector(molecule_for_pruning):
+    """
+    Graph with edges pruned by :func:`edge_tuning.prune_edges_with_selectors`
+    called with only :func:`dummy_selector_a`.
+    """
+    edge_tuning.prune_edges_with_selectors(molecule_for_pruning, dummy_selector_a)
+    return molecule_for_pruning
+
+
+@pytest.fixture
+def molecule_pruned_two_selectors(molecule_for_pruning):
+    """
+    Graph with edges pruned by :func:`edge_tuning.prune_edges_with_selectors`
+    called with both :func:`dummy_selector_a` and :func:`dummy_selector_b`.
+    """
+    edge_tuning.prune_edges_with_selectors(
+        molecule_for_pruning, dummy_selector_a, dummy_selector_b
+    )
+    return molecule_for_pruning
 
 
 @pytest.mark.parametrize('edge', [
@@ -91,6 +130,46 @@ def test_prune_edges_between_selections_kept(molecule_pruned, edge):
     the final graph.
     """
     assert edge in molecule_pruned.edges
+
+
+@pytest.mark.parametrize('edge', [
+    ['A', 'B'], ['A', 'G'],
+])
+def test_prune_edges_with_one_selector_removed(molecule_pruned_one_selector, edge):
+    """
+    Make sure that the edges pruned by
+    :func:`edge_tuning.prune_edges_with_selectors` with a single selector
+    provided are not present in the final graph.
+    """
+    assert edge not in molecule_pruned_one_selector.edges
+
+
+@pytest.mark.parametrize('edge', [
+    ['A', 'C'], ['A', 'D'], ['B', 'D'],
+])
+def test_prune_edges_with_two_selectors_removed(molecule_pruned_two_selectors, edge):
+    """
+    Make sure that the edges pruned by
+    :func:`edge_tuning.prune_edges_with_selectors` with two selectors provided
+    are not present in the final graph.
+    """
+    assert edge not in molecule_pruned_two_selectors.edges
+
+
+@pytest.mark.parametrize('edge', [
+    ['A', 'B'],  # Both in selection_a
+    ['C', 'D'],  # Both in selection_b
+    ['B', 'E'],  # E not in selections
+    ['D', 'F'],  # F not in selections
+    ['E', 'F'],  # None of E and F in selections
+])
+def test_prune_edges_with_two_selectors_kept(molecule_pruned_two_selectors, edge):
+    """
+    Make sure edges that should not be pruned by
+    edge_tuning.prune_edges_with_selectors` with two selectors are still
+    present in the final graph.
+    """
+    assert edge in molecule_pruned_two_selectors.edges
 
 
 @pytest.fixture
@@ -241,15 +320,17 @@ def multi_molecules(coordinate_array):
     molecules = []
     for _ in range(6):
         molecule = vermouth.molecule.Molecule()
-        molecule.add_nodes_from([(idx, {'resid': 1}) for idx in range(6)])
+        molecule.add_nodes_from([(idx, {'atomid': idx, 'resid': 1})
+                                 for idx in range(6)])
         molecules.append(molecule)
     iter_nodes = (
         node
         for molecule in molecules
         for node in molecule.nodes.values()
     )
-    for node, coords in zip(iter_nodes, coordinate_array):
+    for idx, (node, coords) in enumerate(zip(iter_nodes, coordinate_array)):
         node['coords'] = coords
+        node['serial'] = idx
     return molecules
 
 
@@ -374,3 +455,49 @@ def test_pairs_under_threshold_assymetric_nedges(assymetric_pair_selected):
     expected number of pairs when provided twice the same selection.
     """
     assert len(list(assymetric_pair_selected)) == 4
+
+
+def dummy_selector(node):
+    """
+    Dummy selector that selects nodes with an even atomid.
+    """
+    return node['atomid'] % 2 == 0
+
+
+def test_select_nodes_multi(multi_molecules):
+    """
+    Test the output of :func:`edge_tuning.select_nodes_multi`.
+    """
+    selected = list(edge_tuning.select_nodes_multi(multi_molecules, dummy_selector))
+    expected = [(molid, atomid) for molid in range(6) for atomid in range(0, 6, 2)]
+    assert selected == expected
+
+
+@pytest.fixture
+def multi_molecules_with_edges(multi_molecules):
+    """
+    Creates multiple molecules connected using
+    :func:`edge_tuning.add_edges_threshold`.
+    """
+    template_a = {'serial': Choice([1, 10, 19])}
+    template_b = {'serial': Choice([2, 17, 34])}
+    return edge_tuning.add_edges_threshold(
+        multi_molecules, 2.0, template_a, template_b, attribute='coords'
+    )
+
+
+def test_add_edges_threshold_nmol(multi_molecules_with_edges):
+    """
+    Test that :func:`edge_tuning.add_edges_threshold` generate the expected
+    number of molecules.
+    """
+    assert len(multi_molecules_with_edges) == 3
+
+
+def test_add_edges_threshold_nedges(multi_molecules_with_edges):
+    """
+    Test that :func:`edge_tuning.add_edges_threshold` generate the expected
+    number of edges.
+    """
+    total_nedges = sum(len(molecule.edges) for molecule in multi_molecules_with_edges)
+    assert total_nedges == 4
