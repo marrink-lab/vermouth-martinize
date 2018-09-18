@@ -16,7 +16,10 @@
 Tests for the selectors in :mod:`vermouth.selectors`.
 """
 
+import functools
+
 import pytest
+
 import vermouth
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
@@ -54,6 +57,54 @@ def test_selector_no_position(atom, reference_answer):
     Test that :func:`vermouth.selectors.selector_has_position` works as expected.
     """
     assert vermouth.selectors.selector_has_position(atom) == reference_answer
+
+
+@pytest.mark.parametrize('node', (
+    {},
+    {'resname': 'PLOP', 'atomname': 'A'},
+))
+def test_select_all(node):
+    """
+    Test that :func:`vermouth.selectors.select_all` indeed accept every nodes.
+    """
+    assert vermouth.selectors.select_all(node)
+
+
+@pytest.mark.parametrize('node, expected', (
+    ({}, False),  # empty node
+    ({'atomname': 'not BB'}, False),  # wrong atomname
+    ({'resname': 'anything'}, False),  # no atomname
+    ({'atomname': 'BB'}, True),  # only correct atomname
+    ({'atomname': 'BB', 'other': 'something'}, True),  # correct atomname + other attribute
+))
+def test_select_backbone(node, expected):
+    """
+    Test that :func:`vermouth.selectors.select_backbone` only select beads with
+    'BB' as atom name.
+    """
+    assert vermouth.selectors.select_backbone(node) == expected
+
+
+@pytest.mark.parametrize('node, attribute, values, expected', (
+    ({}, 'name', ['something', 'other'], False),
+    ({'name': 'nothing'}, 'name', ['something', 'other'], False),
+    ({'name': 'something'}, 'name', ['something', 'other'], True),
+    ({'name': 'nothing', 'plop': 'other'}, 'name', ['something', 'other'], False),
+    ({'name': 'nothing'}, 'name', [], False),
+))
+def test_select_proto_select_attribute_in(node, attribute, values, expected):
+    """
+    Test that :func:`vermouth.selectors.proto_select_attribute_in` works as
+    expected and can be used with :func:`functools.partial`.
+    """
+    # The use of functools.partial is not necessary. Though this is how
+    # proto_select_attribute_in is used in the example from its docstring so
+    # it should work.
+    select_attribute_in = functools.partial(
+        vermouth.selectors.proto_select_attribute_in,
+        attribute=attribute, values=values,
+    )
+    assert select_attribute_in(node) == expected
 
 
 def test_filter_minimal():
