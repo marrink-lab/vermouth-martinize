@@ -17,6 +17,9 @@
 Unittests for the PDB writer.
 """
 
+# Pylint is wrongly complaining about fixtures.
+# pylint: disable=redefined-outer-name
+
 
 import numpy as np
 import networkx as nx
@@ -46,15 +49,15 @@ def dummy_system():
     molecules are connected.
     """
     nodes = (
-             {'atomname': 'A', 'resname': 'A', 'resid': 1, },
-             {'atomname': 'B', 'resname': 'A', 'resid': 1, 'charge': -1},
-             {'atomname': 'C', 'resname': 'A', 'resid': 2, 'charge': 1},
-             {'atomname': 'D', 'resname': 'A', 'resid': 3, },
-             {'atomname': 'E', 'resname': 'A', 'resid': 4, },
-             {'atomname': 'F', 'resname': 'B', 'resid': 4, },
-             {'atomname': 'G', 'resname': 'B', 'resid': 4, },
-             {'atomname': 'H', 'resname': 'B', 'resid': 4, },
-            )
+        {'atomname': 'A', 'resname': 'A', 'resid': 1, },
+        {'atomname': 'B', 'resname': 'A', 'resid': 1, 'charge': -1},
+        {'atomname': 'C', 'resname': 'A', 'resid': 2, 'charge': 1},
+        {'atomname': 'D', 'resname': 'A', 'resid': 3, },
+        {'atomname': 'E', 'resname': 'A', 'resid': 4, },
+        {'atomname': 'F', 'resname': 'B', 'resid': 4, },
+        {'atomname': 'G', 'resname': 'B', 'resid': 4, },
+        {'atomname': 'H', 'resname': 'B', 'resid': 4, },
+    )
     edges = [(0, 1), (2, 3), (4, 5), (5, 6), (5, 7)]
     graph = nx.Graph()
     for idx, node in enumerate(nodes):

@@ -16,7 +16,6 @@
 Provides functions for reading and writing PDB files.
 """
 
-
 from functools import partial
 
 import numpy as np
@@ -107,10 +106,11 @@ def write_pdb_string(system, conect=True, omit_charges=True, omit_missing_pos=Fa
             resid = node['resid']
             insertion_code = get_not_none(node, 'insertioncode', '')
             try:
-                x, y, z = node['position'] * 10  # converting from nm to A  # pylint: disable=invalid-name
+                # converting from nm to A
+                x, y, z = node['position'] * 10  # pylint: disable=invalid-name
             except KeyError:
                 if omit_missing_pos:
-                    x = y = z = float('nan')
+                    x = y = z = float('nan')  # pylint: disable=invalid-name
                 else:
                     raise
             occupancy = get_not_none(node, 'occupancy', 1)
@@ -212,8 +212,6 @@ def do_conect(mol, conectlist):
                 dist = distance(mol.node[at0]['position'], mol.node[atom]['position'])
                 mol.add_edge(at0, atom, distance=dist)
 
-    return
-
 
 def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
     """
@@ -258,7 +256,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
             record = line[:6]
             if record == 'ENDMDL':
                 models.append(Molecule())
-            elif record == 'ATOM  ' or record == 'HETATM':
+            elif record in ('ATOM  ', 'HETATM'):
                 properties = {}
                 for name, type_, slice_ in zip(field_names, field_types, slices):
                     properties[name] = type_(line[slice_].strip())
