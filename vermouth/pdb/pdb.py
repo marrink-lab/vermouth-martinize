@@ -51,7 +51,7 @@ def get_not_none(node, attr, default):
     return value
 
 
-def write_pdb_string(system, conect=True, omit_charges=True):
+def write_pdb_string(system, conect=True, omit_charges=True, omit_missing_pos=False):
     """
     Describes `system` as a PDB formatted string. Will create CONECT records
     from the edges in the molecules in `system` iff `conect` is True.
@@ -65,6 +65,12 @@ def write_pdb_string(system, conect=True, omit_charges=True):
     omit_charges: bool
         Whether charges should be omitted. This is usually a good idea since
         the PDB format can only deal with integer charges.
+    omit_missing_pos: bool
+        Wether the writing should fail if an atom does not have a position.
+        When set to :bool:`True`, atoms without coordinates will be written
+        with 'nan' as coordinates; this will cause the output file to be
+        *invalid* for most uses.
+        for most use.
 
     Returns
     -------
@@ -100,7 +106,13 @@ def write_pdb_string(system, conect=True, omit_charges=True):
             chain = node['chain']
             resid = node['resid']
             insertion_code = get_not_none(node, 'insertioncode', '')
-            x, y, z = node['position'] * 10  # converting from nm to A  # pylint: disable=invalid-name
+            try:
+                x, y, z = node['position'] * 10  # converting from nm to A  # pylint: disable=invalid-name
+            except KeyError:
+                if omit_missing_pos:
+                    x = y = z = float('nan')
+                else:
+                    raise
             occupancy = get_not_none(node, 'occupancy', 1)
             temp_factor = get_not_none(node, 'temp_factor', 0)
             element = get_not_none(node, 'element', '')
@@ -138,7 +150,7 @@ def write_pdb_string(system, conect=True, omit_charges=True):
     return '\n'.join(out)
 
 
-def write_pdb(system, path, conect=True, omit_charges=True):
+def write_pdb(system, path, conect=True, omit_charges=True, omit_missing_pos=False):
     """
     Writes `system` to `path` as a PDB formatted string.
 
@@ -153,13 +165,19 @@ def write_pdb(system, path, conect=True, omit_charges=True):
     omit_charges: bool
         Whether charges should be omitted. This is usually a good idea since
         the PDB format can only deal with integer charges.
+    omit_missing_pos: bool
+        Wether the writing should fail if an atom does not have a position.
+        When set to :bool:`True`, atoms without coordinates will be written
+        with 'nan' as coordinates; this will cause the output file to be
+        *invalid* for most uses.
+        for most use.
 
     See Also
     --------
     :func:write_pdb_string
     """
     with open(path, 'w') as out:
-        out.write(write_pdb_string(system, conect, omit_charges))
+        out.write(write_pdb_string(system, conect, omit_charges, omit_missing_pos))
 
 
 def do_conect(mol, conectlist):

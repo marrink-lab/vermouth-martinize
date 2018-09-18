@@ -25,6 +25,8 @@ import itertools
 import textwrap
 from pathlib import Path
 
+import networkx as nx
+
 import vermouth
 from vermouth.forcefield import FORCE_FIELDS
 from vermouth import DATA_PATH
@@ -73,13 +75,15 @@ def pdb_to_universal(system, delete_unknown=False,
     canonicalized.force_field = force_field
     vermouth.MakeBonds().run_system(canonicalized)
     if write_graph is not None:
-        vermouth.pdb.write_pdb(system, str(write_graph), omit_charges=True)
+        vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
     vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
     if write_repair is not None:
-        vermouth.pdb.write_pdb(system, str(write_repair), omit_charges=True)
+        vermouth.pdb.write_pdb(canonicalized, str(write_repair),
+                               omit_charges=True, omit_missing_pos=True)
     vermouth.CanonicalizeModifications().run_system(canonicalized)
     if write_canon is not None:
-        vermouth.pdb.write_pdb(system, str(write_canon), omit_charges=True)
+        vermouth.pdb.write_pdb(canonicalized, str(write_canon),
+                               omit_charges=True, omit_missing_pos=True)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
     return canonicalized
 
@@ -285,10 +289,16 @@ def entry():
     debug_group.add_argument('-write-graph', type=Path, default=None,
                              help='Write the graph as PDB after the MakeBonds step.')
     debug_group.add_argument('-write-repair', type=Path, default=None,
-                             help='Write the graph as PDB after the RepairGraph step.')
+                             help=('Write the graph as PDB after the '
+                                   'RepairGraph step. The resulting file may '
+                                   'contain "nan" coordinates making it '
+                                   'unreadable by most softwares.'))
     debug_group.add_argument('-write-canon', type=Path, default=None,
                              help=('Write the graph as PDB after the '
-                                   'CanonicalizeModifications step.'))
+                                   'CanonicalizeModifications step. The '
+                                   'resulting file may contain "nan" '
+                                   'coordinates making it unreadable by most '
+                                   'softwares.'))
 
     args = parser.parse_args()
 
