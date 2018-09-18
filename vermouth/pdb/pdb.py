@@ -50,7 +50,7 @@ def get_not_none(node, attr, default):
     return value
 
 
-def write_pdb_string(system, conect=True, omit_charges=True, omit_missing_pos=False):
+def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=False):
     """
     Describes `system` as a PDB formatted string. Will create CONECT records
     from the edges in the molecules in `system` iff `conect` is True.
@@ -64,7 +64,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, omit_missing_pos=Fa
     omit_charges: bool
         Whether charges should be omitted. This is usually a good idea since
         the PDB format can only deal with integer charges.
-    omit_missing_pos: bool
+    nan_missing_pos: bool
         Wether the writing should fail if an atom does not have a position.
         When set to `True`, atoms without coordinates will be written
         with 'nan' as coordinates; this will cause the output file to be
@@ -109,7 +109,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, omit_missing_pos=Fa
                 # converting from nm to A
                 x, y, z = node['position'] * 10  # pylint: disable=invalid-name
             except KeyError:
-                if omit_missing_pos:
+                if nan_missing_pos:
                     x = y = z = float('nan')  # pylint: disable=invalid-name
                 else:
                     raise
@@ -150,7 +150,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, omit_missing_pos=Fa
     return '\n'.join(out)
 
 
-def write_pdb(system, path, conect=True, omit_charges=True, omit_missing_pos=False):
+def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=False):
     """
     Writes `system` to `path` as a PDB formatted string.
 
@@ -165,7 +165,7 @@ def write_pdb(system, path, conect=True, omit_charges=True, omit_missing_pos=Fal
     omit_charges: bool
         Whether charges should be omitted. This is usually a good idea since
         the PDB format can only deal with integer charges.
-    omit_missing_pos: bool
+    nan_missing_pos: bool
         Wether the writing should fail if an atom does not have a position.
         When set to `True`, atoms without coordinates will be written
         with 'nan' as coordinates; this will cause the output file to be
@@ -177,7 +177,7 @@ def write_pdb(system, path, conect=True, omit_charges=True, omit_missing_pos=Fal
     :func:write_pdb_string
     """
     with open(path, 'w') as out:
-        out.write(write_pdb_string(system, conect, omit_charges, omit_missing_pos))
+        out.write(write_pdb_string(system, conect, omit_charges, nan_missing_pos))
 
 
 def do_conect(mol, conectlist):

@@ -114,7 +114,7 @@ END
 def test_write_failure_missing_pos(missing_pos_system):
     """
     Make sure the writing fails when coordinates are missing and
-    `omit_missing_pos` is not set. (Shall be `False` by default.)
+    `nan_missing_pos` is not set. (Shall be `False` by default.)
     """
     with pytest.raises(KeyError):
         pdb.write_pdb_string(missing_pos_system)
@@ -123,13 +123,13 @@ def test_write_failure_missing_pos(missing_pos_system):
 def test_write_success_missing_pos(missing_pos_system):
     """
     Make sure the writing succeed when coordinates are missing and
-    `omit_missing_pos` is `True`.
+    `nan_missing_pos` is `True`.
     """
     pdb_found = pdb.write_pdb_string(
         missing_pos_system,
         conect=False,
         omit_charges=False,
-        omit_missing_pos=True,  # Argument of interest!
+        nan_missing_pos=True,  # Argument of interest!
     )
     expected = '''
 ATOM      1 A    A       1      10.000  20.000 -30.000  1.00  0.00          A   

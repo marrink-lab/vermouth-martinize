@@ -77,11 +77,11 @@ def pdb_to_universal(system, delete_unknown=False,
     vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
     if write_repair is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_repair),
-                               omit_charges=True, omit_missing_pos=True)
+                               omit_charges=True, nan_missing_pos=True)
     vermouth.CanonicalizeModifications().run_system(canonicalized)
     if write_canon is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_canon),
-                               omit_charges=True, omit_missing_pos=True)
+                               omit_charges=True, nan_missing_pos=True)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
     return canonicalized
 
