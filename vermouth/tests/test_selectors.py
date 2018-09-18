@@ -107,6 +107,27 @@ def test_select_proto_select_attribute_in(node, attribute, values, expected):
     assert select_attribute_in(node) == expected
 
 
+@pytest.mark.parametrize('node, templates, ignore_keys, expected', (
+    ({}, [], (), False),  # Everything empty
+    ({}, [{'name': 'A'}, {'name': 'B'}], (), False),  # Empty node
+    ({'name': 'A'}, [{'resname': 'A'}, {'resid': 1}], (), False),  # Not matching
+    ({'name': 'A'}, [{'name': 'not A'}, {'name': 'A', 'resname': 'something'}], (), False),
+    ({'name': 'A'}, [{'resid': 1, 'resname': 'something'}, {'name': 'A'}], (), True),
+    ({'name': 'A', 'resname': 'plop'}, [{'name': 'A'}], ('resname', 'other'), True),
+))
+def test_proto_multi_templates(node, templates, ignore_keys, expected):
+    """
+    Test that :func:`vermouth.selectors.proto_multi_templates` works as
+    expected and can be used with :func:`functools.partial`.
+    """
+    multi_templates = functools.partial(
+        vermouth.selectors.proto_multi_templates,
+        templates=templates,
+        ignore_keys=ignore_keys,
+    )
+    assert multi_templates(node) == expected
+
+
 def test_filter_minimal():
     """
     Test that :func:`vermouth.selectors.filter_minimal` works as expected.
