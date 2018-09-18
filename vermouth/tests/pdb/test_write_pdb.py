@@ -114,7 +114,7 @@ END
 def test_write_failure_missing_pos(missing_pos_system):
     """
     Make sure the writing fails when coordinates are missing and
-    `omit_missing_pos` is not set. (Shall be :bool:`False` by default.)
+    `omit_missing_pos` is not set. (Shall be `False` by default.)
     """
     with pytest.raises(KeyError):
         pdb.write_pdb_string(missing_pos_system)
@@ -123,7 +123,7 @@ def test_write_failure_missing_pos(missing_pos_system):
 def test_write_success_missing_pos(missing_pos_system):
     """
     Make sure the writing succeed when coordinates are missing and
-    `omit_missing_pos` is :bool:`True`.
+    `omit_missing_pos` is `True`.
     """
     pdb_found = pdb.write_pdb_string(
         missing_pos_system,

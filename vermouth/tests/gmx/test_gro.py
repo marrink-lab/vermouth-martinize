@@ -281,7 +281,7 @@ def filter_molecule(molecule, exclude, ignh):
     Remove nodes from a graph based on some criteria.
 
     Nodes are removed if their resname matches one from
-    the `exclude` argument, or of `ighn` is :bool:`True` and the node is a
+    the `exclude` argument, or of `ighn` is `True` and the node is a
     hydrogen.
 
     The atoms are renumbered after the filtered atoms are removed. This will
@@ -295,7 +295,7 @@ def filter_molecule(molecule, exclude, ignh):
     exclude: list
         List of residue name to exclude.
     ighn: bool
-        If :bool:`True`, the hydrogens are excluded.
+        If `True`, the hydrogens are excluded.
     """
     to_remove = []
     exclusions = [('resname', value) for value in exclude]

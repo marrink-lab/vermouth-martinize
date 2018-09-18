@@ -66,7 +66,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, omit_missing_pos=Fa
         the PDB format can only deal with integer charges.
     omit_missing_pos: bool
         Wether the writing should fail if an atom does not have a position.
-        When set to :bool:`True`, atoms without coordinates will be written
+        When set to `True`, atoms without coordinates will be written
         with 'nan' as coordinates; this will cause the output file to be
         *invalid* for most uses.
         for most use.
@@ -167,7 +167,7 @@ def write_pdb(system, path, conect=True, omit_charges=True, omit_missing_pos=Fal
         the PDB format can only deal with integer charges.
     omit_missing_pos: bool
         Wether the writing should fail if an atom does not have a position.
-        When set to :bool:`True`, atoms without coordinates will be written
+        When set to `True`, atoms without coordinates will be written
         with 'nan' as coordinates; this will cause the output file to be
         *invalid* for most uses.
         for most use.
