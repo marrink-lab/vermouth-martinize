@@ -23,9 +23,34 @@ Unit tests for the :mod:`vermouth.processors.tune_cystein_bridges` module.
 # pylint: disable=redefined-outer-name
 
 import copy
+
 import pytest
+
+import vermouth
+from vermouth.pdb.pdb import read_pdb
 from vermouth.processors import tune_cystein_bridges
+from vermouth.utils import distance
 from .test_edge_tuning import simple_protein  # pylint: disable=unused-import
+from .datafiles import PDB_CYS
+
+@pytest.fixture
+def cys_protein():
+    """
+    Read a PDB file describing a protein with a cystein bridge and cystein
+    residues that are not involved in a bridge. Embed the content of the PDB in
+    a :class:`vermouth.system.System`.
+
+    Note that the PDB file does contain water, ions, and ligands in addition to
+    the protein. The ligand bonds are explicitely provided as CONECT records.
+    The edges from the CONECT records are removed from the system, so there is
+    no edge left.
+    """
+    molecule = read_pdb(PDB_CYS)
+    molecule.remove_edges_from(list(molecule.edges))
+    system = vermouth.system.System()
+    system.molecules = [molecule]
+    assert len(system.molecules[0].edges) == 0
+    return system
 
 
 @pytest.fixture
@@ -59,3 +84,29 @@ def test_remove_cystein_bridge_edges_kept(simple_protein_pruned, edge):
     does not remove edges it should not remove.
     """
     assert edge in simple_protein_pruned.edges
+
+
+def test_add_cystein_bridges_threshold(cys_protein):
+    """
+    Test that :class:`vermouth.AddCysteinBridgesThreshold` detects a cystein
+    bridge in a PDB file.
+    """
+    processor = vermouth.AddCysteinBridgesThreshold(threshold=0.22)
+    system = processor.run_system(cys_protein)
+    for edge in system.molecules[0].edges:
+        node_a = system.molecules[0].nodes[edge[0]]
+        node_b = system.molecules[0].nodes[edge[1]]
+        print('*', node_a, '--', node_b) 
+        print(distance(node_a['position'], node_b['position']))
+    assert len(system.molecules[0].edges) == 1
+    assert (1285, 3508) in system.molecules[0].edges
+
+
+def test_remove_cystein_bridge_edges_processor(cys_protein):
+    """
+    Test that :class:`vermouth.RemoveCysteinBridgeEdges` removes edges.
+    """
+    cys_protein.molecules[0].add_edge(1285, 3508)
+    processor = vermouth.RemoveCysteinBridgeEdges()
+    processor.run_system(cys_protein)
+    assert (1285, 3508) not in cys_protein.molecules[0].edges

@@ -20,22 +20,24 @@ Provides processors that can add and remove cystein bridges.
 import functools
 
 
-from ..molecule import attributes_match
+from ..selectors import proto_multi_templates
 from .processor import Processor
 from .. import edge_tuning
 
 UNIVERSAL_BRIDGE_TEMPLATE = [{'resname': 'CYS', 'atomname': 'SG'}, ]
 
 
-def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
+def remove_cystein_bridge_edges(molecule, templates=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
     """
     Remove all the edges that correspond to cystein bridges from a molecule.
 
     Cystein bridge edges link an atom from a cystein side chain to the same
-    atom on an other cystein. Selecting the correct atom is done with a
-    template node dictionary, in the same way as node matching in links. The
-    default template selects the 'SG' bead of the residue 'CYS':
-    ``{'resname': 'CYS', 'atomname': 'SG'}``.
+    atom on an other cystein. Selecting the correct atom is done with a list
+    of template node dictionaries. A template node dictionary functions in the
+    same way as node matching in links. An atom that can be involved in a
+    cystein bridge must match at least one of the templates of the list.
+    The default template list selects the 'SG' bead of the residue 'CYS':
+    ``[{'resname': 'CYS', 'atomname': 'SG'}, ]``.
 
     A template is a dictionary that defines the key:value pairs that must be
     matched in the atoms. Values can be instances of
@@ -45,10 +47,10 @@ def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):  
     ----------
     molecule: networkx.Graph
         Molecule to modify in-place.
-    template: dict
-        A template that selected atom must match.
+    templates: list[dict]
+        A list of templates; selected atom must match at least one.
     """
-    selector = functools.partial(attributes_match, template_attributes=template)
+    selector = functools.partial(proto_multi_templates, templates=templates)
     edge_tuning.prune_edges_with_selectors(molecule, selector)
 
 
