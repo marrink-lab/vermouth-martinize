@@ -22,6 +22,7 @@ import functools
 
 from ..selectors import proto_multi_templates
 from .processor import Processor
+from .add_molecule_edges import AddMoleculeEdgesAtDistance
 from .. import edge_tuning
 
 UNIVERSAL_BRIDGE_TEMPLATE = [{'resname': 'CYS', 'atomname': 'SG'}, ]
@@ -63,18 +64,12 @@ class RemoveCysteinBridgeEdges(Processor):
         return molecule
 
 
-class AddCysteinBridgesThreshold(Processor):
+class AddCysteinBridgesThreshold(AddMoleculeEdgesAtDistance):
     def __init__(self, threshold,  # pylint: disable=dangerous-default-value
                  template=UNIVERSAL_BRIDGE_TEMPLATE, attribute='position'):
-        self.threshold = threshold
-        self.template = template
-        self.attribute = attribute
-
-    def run_system(self, system):
-        system.molecules = edge_tuning.add_edges_threshold(
-            system.molecules, self.threshold,
-            templates_a=self.template,
-            templates_b=self.template,
-            attribute=self.attribute
+        super().__init__(
+            threshold,
+            templates_from=template,
+            templates_to=template,
+            attribute=attribute,
         )
-        return system
