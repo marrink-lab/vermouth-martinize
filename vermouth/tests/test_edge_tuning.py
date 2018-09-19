@@ -27,8 +27,9 @@ import pytest
 import numpy as np
 import networkx as nx
 import vermouth
-from vermouth.molecule import Choice
 from vermouth import edge_tuning
+from vermouth.molecule import Choice
+from vermouth.utils import distance
 
 
 @pytest.fixture
@@ -447,6 +448,15 @@ class TestPairsUnderThreshold:
         # Each pair is yielded twice. Indeed, both selections are the same leading
         # to symetric pairs.
         assert len(list(pair_selected)) == 12
+
+    @staticmethod
+    def test_distance_under_threshold(multi_molecules, assymetric_pair_selected):
+        distances = []
+        for ((mol_a, key_a), (mol_b, key_b)) in assymetric_pair_selected:
+            node_a = multi_molecules[mol_a].nodes[key_a]
+            node_b = multi_molecules[mol_b].nodes[key_b]
+            distances.append(distance(node_a['coords'], node_b['coords']))
+        assert all(d <= 2.0 for d in distances)
 
     @staticmethod
     @pytest.mark.parametrize('edge', [

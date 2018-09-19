@@ -58,8 +58,8 @@ class AddMoleculeEdgesAtDistance(Processor):
         system.molecules = edge_tuning.add_edges_threshold(
             system.molecules,
             threshold=self.threshold,
-            templates_a=self.template_from,
-            templates_b=self.template_to,
+            templates_a=self.templates_from,
+            templates_b=self.templates_to,
             attribute=self.attribute,
         )
         return system

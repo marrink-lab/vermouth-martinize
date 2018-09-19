@@ -26,6 +26,7 @@ from . import KDTree
 from . import selectors
 from . import geometry
 from .molecule import attributes_match
+from .utils import distance
 
 
 def _edge_is_between_selections(edge, selection_a, selection_b):
@@ -284,7 +285,13 @@ def pairs_under_threshold(molecules, threshold,
         for jdx in jdx_multi:
             node_a = selection_a[idx]
             node_b = selection_b[jdx]
-            if node_a != node_b:
+            distance_between = distance(
+                molecules[node_a[0]].nodes[node_a[1]][attribute],
+                molecules[node_b[0]].nodes[node_b[1]][attribute],
+            )
+            # Not sure why I need the distance test. I expected KDTree to deal
+            # with it by itself.
+            if node_a != node_b and distance_between < threshold:
                 yield (node_a, node_b)
 
 

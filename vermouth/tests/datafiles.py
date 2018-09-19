@@ -32,6 +32,9 @@ PDB_NOT_PROTEIN = TEST_DATA / 'heme.pdb'
 # Full PDB files
 PDB_CYS = TEST_DATA / '2QWO.pdb'  # Contains cystein bridges
 
+# DNA
+SHORT_DNA = TEST_DATA / 'dna-short.pdb'
+
 DSSP_OUTPUT = TEST_DATA / 'dssp_1bta.ssd'
 
 # Clean the namespace so only the data file variables can be imported.
