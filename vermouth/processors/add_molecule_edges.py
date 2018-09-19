@@ -20,6 +20,22 @@ Processor adding edges between molecules.
 
 from .processor import Processor
 from .. import edge_tuning
+from ..molecule import Choice
+
+# TODO: this should be defined in te force fields
+DNA_DONNORS = [
+    {'resname': Choice(['DA', 'DA3', 'DA5']), 'atomname': Choice(['C2', 'N6'])},
+    {'resname': Choice(['DG', 'DG3', 'DG5']), 'atomname': Choice(['N1', 'N2'])},
+    {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': 'N4'},
+    {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': 'N3'},
+]
+DNA_ACCEPTORS = [
+    {'resname': Choice(['DA', 'DA3', 'DA5']), 'atomname': 'N1'},
+    {'resname': Choice(['DG', 'DG3', 'DG5']), 'atomname': 'O6'},
+    {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': Choice(['N3', 'O2'])},
+    {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': Choice(['O2', 'O4'])},
+]
+DNA_HB_DIST = 0.3
 
 
 class AddMoleculeEdgesAtDistance(Processor):
@@ -63,3 +79,33 @@ class AddMoleculeEdgesAtDistance(Processor):
             attribute=self.attribute,
         )
         return system
+
+
+class MergeNucleicStrands(AddMoleculeEdgesAtDistance):
+    """
+    Add edges between complementary nucleic acid strands.
+
+    By default, the edges are added in place of the hydrogen bonds between
+    complementary bases.
+
+    Parameters
+    ----------
+    threshold: float
+        Distance threshold in nanometers under which to create an edge.
+    templates_donnors: list[dict]
+        List of templates describing hydrogen donnors.
+    templates_acceptors: list[dict]
+        List of templates describing hydrogen acceptors.
+    attribute: str
+        Name of the attribute under which are store the node coordinates.
+    """
+    def __init__(self, threshold=DNA_HB_DIST,
+                 templates_donnors=DNA_DONNORS,
+                 templates_acceptors=DNA_ACCEPTORS,
+                 attribute='position'):
+        super().__init__(
+            threshold=threshold,
+            templates_from=templates_donnors,
+            templates_to=templates_acceptors,
+            attribute=attribute
+        )

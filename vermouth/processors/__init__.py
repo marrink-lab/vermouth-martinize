@@ -38,4 +38,4 @@ from .tune_cystein_bridges import (
     RemoveCysteinBridgeEdges,
     AddCysteinBridgesThreshold,
 )
-from .add_molecule_edges import AddMoleculeEdgesAtDistance
+from .add_molecule_edges import AddMoleculeEdgesAtDistance, MergeNucleicStrands

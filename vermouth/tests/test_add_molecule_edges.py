@@ -27,45 +27,64 @@ import pytest
 import vermouth
 from vermouth.molecule import Choice
 from vermouth.pdb.pdb import read_pdb
+from vermouth.processors.add_molecule_edges import (
+    DNA_ACCEPTORS, DNA_DONNORS, DNA_HB_DIST,
+)
 from .datafiles import SHORT_DNA
 
-DNA_DONNORS = [
-    {'resname': Choice(['DA', 'DA3', 'DA5']), 'atomname': Choice(['C2', 'N6'])},
-    {'resname': Choice(['DG', 'DG3', 'DG5']), 'atomname': Choice(['N1', 'N2'])},
-    {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': 'N4'},
-    {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': 'N3'},
-]
-DNA_ACCEPTORS = [
-    {'resname': Choice(['DA', 'DA3', 'DA5']), 'atomname': 'N1'},
-    {'resname': Choice(['DG', 'DG3', 'DG5']), 'atomname': 'O6'},
-    {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': Choice(['N3', 'O2'])},
-    {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': Choice(['O2', 'O4'])},
-]
-DNA_HB_DIST = 0.3
 
 
 @pytest.fixture
 def short_dna():
     """
-    Build a system that contains a short DNA double strand and add hydrogen
-    bonds using :class:`vermouth.AddMoleculeEdgesAtDistance`.
+    Build a system that contains a short DNA double strand without edges.
     """
     molecule = read_pdb(SHORT_DNA)
 
     system = vermouth.system.System()
     system.molecules = [molecule]
-
-    processor = vermouth.AddMoleculeEdgesAtDistance(
-        DNA_HB_DIST, DNA_DONNORS, DNA_ACCEPTORS
-    )
-    system = processor.run_system(system)
     return system
 
 
-def test_add_molecule_edges_distance(short_dna):
+def short_dna_general(short_dna):
     """
-    Assure that :class:`vermouth.AddMoleculeEdgesAtDistance` adds the expected
-    edges.
+    DNA double strands with hydrogen bonds dded using
+    :class:`vermouth.AddMoleculeEdgesAtDistance`.
+    """
+    processor = vermouth.AddMoleculeEdgesAtDistance(
+        DNA_HB_DIST, DNA_DONNORS, DNA_ACCEPTORS
+    )
+    system = processor.run_system(short_dna)
+    return system
+
+
+def short_dna_strands(short_dna):
+    """
+    DNA double strands with hydrogen bonds dded using
+    :class:`vermouth.MergeNucleicStrands`.
+    """
+    processor = vermouth.MergeNucleicStrands()
+    system = processor.run_system(short_dna)
+    return system
+
+
+@pytest.fixture(params=(short_dna_general, short_dna_strands))
+def short_dna_edges(request, short_dna):
+    """
+    Create successively a system with edges produced by
+    :class:`vermouth.AddMoleculeEdgesAtDistance` and by
+    :class:`vermouth.MergeNucleicStrands`. Having this fixture allows to run
+    :func:`test_add_molecule_edges_distance` with the output of both
+    :func:`short_dna_general` and :func:`short_dna_strands` the outputs of
+    which should be identical.
+    """
+    return request.param(short_dna)
+
+
+def test_add_molecule_edges_distance(short_dna_edges):
+    """
+    Assure that :class:`vermouth.AddMoleculeEdgesAtDistance` and
+    :class:`vermouth.MergeNucleicStrands` adds the expected edges.
     """
     expected = set([
         (52, 74),
@@ -78,4 +97,4 @@ def test_add_molecule_edges_distance(short_dna):
         (33, 93),
         (11, 115),
     ])
-    assert set(short_dna.molecules[0].edges) == expected
+    assert set(short_dna_edges.molecules[0].edges) == expected

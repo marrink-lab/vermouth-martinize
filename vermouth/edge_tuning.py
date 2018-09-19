@@ -25,7 +25,6 @@ import networkx as nx
 from . import KDTree
 from . import selectors
 from . import geometry
-from .molecule import attributes_match
 from .utils import distance
 
 
