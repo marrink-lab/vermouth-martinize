@@ -480,10 +480,10 @@ class TestAddEdgesThreshold:
         Creates multiple molecules connected using
         :func:`edge_tuning.add_edges_threshold`.
         """
-        template_a = {'serial': Choice([1, 10, 19])}
-        template_b = {'serial': Choice([2, 17, 34])}
+        templates_a = [{'serial': Choice([1, 10, 19])}, {'name': 'not there'}]
+        templates_b = [{'serial': Choice([2, 17])}, {'serial': 34}]
         return edge_tuning.add_edges_threshold(
-            multi_molecules, 2.0, template_a, template_b, attribute='coords'
+            multi_molecules, 2.0, templates_a, templates_b, attribute='coords'
         )
 
     @staticmethod

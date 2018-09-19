@@ -24,7 +24,7 @@ from ..molecule import attributes_match
 from .processor import Processor
 from .. import edge_tuning
 
-UNIVERSAL_BRIDGE_TEMPLATE = {'resname': 'CYS', 'atomname': 'SG'}
+UNIVERSAL_BRIDGE_TEMPLATE = [{'resname': 'CYS', 'atomname': 'SG'}, ]
 
 
 def remove_cystein_bridge_edges(molecule, template=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
@@ -71,8 +71,8 @@ class AddCysteinBridgesThreshold(Processor):
     def run_system(self, system):
         system.molecules = edge_tuning.add_edges_threshold(
             system.molecules, self.threshold,
-            template_a=self.template,
-            template_b=self.template,
+            templates_a=self.template,
+            templates_b=self.template,
             attribute=self.attribute
         )
         return system

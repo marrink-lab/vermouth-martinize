@@ -33,10 +33,10 @@ class AddMoleculeEdgesAtDistance(Processor):
     ----------
     threshold: float
         Distance threshold in nanometers under which to create an edge.
-    template_from: dict
-        Node template to select the atoms at one end of the edges.
-    template_to: dict
-        Node template to select the atoms at the other end of the edges.
+    templates_from: list[dict]
+        List of node templates to select the atoms at one end of the edges.
+    templates_to: list[dict]
+        List of node template to select the atoms at the other end of the edges.
     attribute: str
         Name of the attribute under which are stores the coordinates.
 
@@ -44,10 +44,10 @@ class AddMoleculeEdgesAtDistance(Processor):
     --------
     vermouth.molecule.attributes_match
     """
-    def __init__(self, threshold, template_from, template_to, attribute='position'):
+    def __init__(self, threshold, templates_from, templates_to, attribute='position'):
         self.threshold = threshold
-        self.template_from = template_from
-        self.template_to = template_to
+        self.templates_from = templates_from
+        self.templates_to = templates_to
         self.attribute = attribute
 
     def run_system(self, system):
@@ -57,8 +57,8 @@ class AddMoleculeEdgesAtDistance(Processor):
         system.molecules = edge_tuning.add_edges_threshold(
             system.molecules,
             threshold=self.threshold,
-            template_a=self.template_from,
-            template_b=self.template_to,
+            templates_a=self.template_from,
+            templates_b=self.template_to,
             attribute=self.attribute,
         )
         return system

@@ -316,7 +316,7 @@ def select_nodes_multi(molecules, selector):
 
 
 def add_edges_threshold(molecules, threshold,
-                        template_a, template_b,
+                        templates_a, templates_b,
                         attribute='position'):
     """
     Add edges between two selections when under a given threshold.
@@ -327,14 +327,16 @@ def add_edges_threshold(molecules, threshold,
 
     Parameters
     ----------
-    molecule: list
+    molecules: list
         A list of molecules.
     threshold: float
         The distance threshold in nanometers under which an edge is created.
-    template_a: dict
-        A template that selected atom must match at one end.
-    template_b: dict
-        A template that selected atom must match at the other end.
+    templates_a: dict
+        A list of templates; a node need to match at least one of them to be
+        selected at one end.
+    templates_b: dict
+        A list of templates; a node need to match at least one of them to be
+        selected at the other end.
     attribute: str
         Name of the key in the node dictionaries under which the coordinates
         are stored.
@@ -344,9 +346,13 @@ def add_edges_threshold(molecules, threshold,
     list
         A new list of molecules.
     """
-    selector_a = functools.partial(attributes_match, template_attributes=template_a)
+    selector_a = functools.partial(
+        selectors.proto_multi_templates, templates=templates_a
+    )
     selection_a = list(select_nodes_multi(molecules, selector_a))
-    selector_b = functools.partial(attributes_match, template_attributes=template_b)
+    selector_b = functools.partial(
+        selectors.proto_multi_templates, templates=templates_b
+    )
     selection_b = list(select_nodes_multi(molecules, selector_b))
     edges = pairs_under_threshold(molecules, threshold,
                                   selection_a, selection_b,
