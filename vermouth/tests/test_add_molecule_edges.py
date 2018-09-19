@@ -18,6 +18,10 @@
 Tests for the AddMoleculeEdgesAtDistance processor.
 """
 
+# The redefined-outer-name check from pylint wrongly catches the use of pytest
+# fixtures.
+# pylint: disable=redefined-outer-name
+
 import pytest
 
 import vermouth
@@ -47,7 +51,6 @@ def short_dna():
     bonds using :class:`vermouth.AddMoleculeEdgesAtDistance`.
     """
     molecule = read_pdb(SHORT_DNA)
-    assert len(molecule.edges) == 0
 
     system = vermouth.system.System()
     system.molecules = [molecule]
