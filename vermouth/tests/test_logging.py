@@ -104,7 +104,7 @@ def test_style_type_adapter(logger, args, kwargs, type, default_type):
         logger.info(fmt, *args, **kwargs)
         event('type is None')
     else:   
-        logger.info(fmt, *args, **kwargs, type=type)
+        logger.info(fmt, *args, type=type, **kwargs)
 
 
 @example(args=[], kwargs={})
