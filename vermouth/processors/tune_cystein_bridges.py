@@ -56,6 +56,17 @@ def remove_cystein_bridge_edges(molecule, templates=UNIVERSAL_BRIDGE_TEMPLATE): 
 
 
 class RemoveCysteinBridgeEdges(Processor):
+    """
+    Processor removing edges corresponding to cystein bridges.
+
+    The edge for a cystein bridge is an edge between two atoms that match at
+    least one template from a list of templates.
+
+    Parameters
+    ----------
+    template: list[dict]
+        List of node templates.
+    """
     def __init__(self, template=UNIVERSAL_BRIDGE_TEMPLATE):  # pylint: disable=dangerous-default-value
         self.template = template
 
@@ -65,6 +76,21 @@ class RemoveCysteinBridgeEdges(Processor):
 
 
 class AddCysteinBridgesThreshold(AddMoleculeEdgesAtDistance):
+    """
+    Add edges corresponding to cystein bridges on a distance criterion.
+
+
+    The edge for a cystein bridge is an edge between two atoms that match at
+    least one template from a list of templates if the two ends of the edge are
+    closer than a given distance.
+
+    Parameters
+    ----------
+    threshold: float
+        Distance in nanometers under which to consider an edge.
+    template: list[dict]
+        List of node templates.
+    """
     def __init__(self, threshold,  # pylint: disable=dangerous-default-value
                  template=UNIVERSAL_BRIDGE_TEMPLATE, attribute='position'):
         super().__init__(
