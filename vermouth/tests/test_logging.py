@@ -24,10 +24,30 @@ from hypothesis import given, note, event, example
 import pytest
 
 from vermouth.log_helpers import (get_logger, TypeAdapter, StyleAdapter,
-                                  PassingLoggerAdapter)
+                                  PassingLoggerAdapter, Message)
 
-# Pylint does *not* like pytest fixtures...
-# pylint: disable=redefined-outer-name
+# Pylint does *not* like pytest fixtures... Also, sometimes you just need more
+# data
+# pylint: disable=redefined-outer-name, too-many-arguments
+
+KWARG_ST = st.text(alphabet=string.ascii_letters, min_size=1)
+
+
+class FormatCounter:
+    """Helper class that counts how often it's format method is called"""
+    def __init__(self, payload):
+        self.payload = payload
+        self.__format_count = 0
+
+    def format(self, *args, **kwargs):
+        """"Increments the counter, and delegates the call to payload."""
+        self.__format_count += 1
+        return self.payload.format(*args, **kwargs)
+
+    def get_count(self):
+        """Returns the current value of the counter"""
+        return self.__format_count
+
 
 class LogHandler(logging.NullHandler):
     """Helper class which will run a test for every log record"""
@@ -64,11 +84,15 @@ def test_get_logger(name):
     assert vm_logger.logger is default_logger
 
 
-@example(args=[], type_='general', default_type='general')
-@given(args=st.lists(st.text(), min_size=0, max_size=5),
-       type_=st.one_of(st.none(), st.text()),
-       default_type=st.text(min_size=1))
-def test_type_adapter(logger, args, type_, default_type):
+@example(args=[], type_='general', default_type='general', extra=None)
+@given(
+    args=st.lists(st.text(), min_size=0, max_size=5),
+    type_=st.one_of(st.none(), st.text()),
+    default_type=st.text(min_size=1),
+    extra=st.one_of(st.none(),
+                    st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
+)
+def test_type_adapter(logger, args, type_, default_type, extra):
     """Make sure the TypeAdapter sets the correct type attr"""
     def test(record):
         """Make sure the type attribute is as expected"""
@@ -79,8 +103,13 @@ def test_type_adapter(logger, args, type_, default_type):
             assert rectype == default_type
         else:
             assert rectype == type_
+        if extra is not None:
+            note(str(dir(record)))
+            for key, val in extra.items():
+                assert getattr(record, key, None) == val
+
     logger, handler = logger
-    logger = TypeAdapter(logger, default_type=default_type)
+    logger = TypeAdapter(logger, default_type=default_type, extra=extra)
     handler.set_test(test)
     fmt = ['%s']*len(args)
     fmt = ' '.join(fmt)
@@ -94,13 +123,17 @@ def test_type_adapter(logger, args, type_, default_type):
         logger.info(fmt, *args, type=type_)
 
 
-@example(args=[], kwargs={}, type_='general', default_type='general')
-@given(args=st.lists(st.text(), min_size=0, max_size=5),
-       kwargs=st.dictionaries(st.text(alphabet=string.ascii_letters, min_size=1),
-                              st.text(), min_size=0, max_size=5),
-       type_=st.one_of(st.none(), st.text()),
-       default_type=st.text(min_size=1))
-def test_style_type_adapter(logger, args, kwargs, type_, default_type):
+@example(args=[], kwargs={}, type_='general', default_type='general', extra=None)
+@given(
+    args=st.lists(st.text(), min_size=0, max_size=5),
+    kwargs=st.dictionaries(KWARG_ST,
+                           st.text(), min_size=0, max_size=5),
+    type_=st.one_of(st.none(), st.text()),
+    default_type=st.text(min_size=1),
+    extra=st.one_of(st.none(),
+                    st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
+)
+def test_style_type_adapter(logger, args, kwargs, type_, default_type, extra):
     """Make sure that if you have both a TypeAdapter and a StyleAdapter the
     type you provide ends up in the right place, and that it doesn't interfere
     with keyword formatting."""
@@ -113,15 +146,20 @@ def test_style_type_adapter(logger, args, kwargs, type_, default_type):
             assert rectype == default_type
         else:
             assert rectype == type_
+        if extra is not None:
+            for key, val in extra.items():
+                assert getattr(record, key, None) == val
+
     logger, handler = logger
     logger = TypeAdapter(logger, default_type=default_type)
-    logger = StyleAdapter(logger)
+    logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
     fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
     fmt = ' '.join(fmt)
 
     note('fmt={}'.format(fmt))
-
+    print('New Test')
+    print('--------')
     if type_ is None:
         logger.info(fmt, *args, **kwargs)
         event('type is None')
@@ -129,18 +167,25 @@ def test_style_type_adapter(logger, args, kwargs, type_, default_type):
         logger.info(fmt, *args, type=type_, **kwargs)
 
 
-@example(args=[], kwargs={})
-@given(args=st.lists(st.text(), min_size=0, max_size=5),
-       kwargs=st.dictionaries(st.text(alphabet=string.ascii_letters, min_size=1),
-                              st.text(), min_size=0, max_size=5),
-      )
-def test_style_adapter(logger, args, kwargs):
+@example(args=[], kwargs={}, extra=None)
+@given(
+    args=st.lists(st.text(), min_size=0, max_size=5),
+    kwargs=st.dictionaries(KWARG_ST,
+                           st.text(), min_size=0, max_size=5),
+    extra=st.one_of(st.none(),
+                    st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
+)
+def test_style_adapter(logger, args, kwargs, extra):
     """Make sure the StyleAdapter can do keyword formatting"""
     def test(record):
         """Make sure the formatting worked"""
         assert record.getMessage() == expected
+        if extra is not None:
+            for key, val in extra.items():
+                assert getattr(record, key, None) == val
+
     logger, handler = logger
-    logger = StyleAdapter(logger)
+    logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
     fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
     fmt = ' '.join(fmt)
@@ -151,10 +196,10 @@ def test_style_adapter(logger, args, kwargs):
     logger.info(fmt, *args, **kwargs)
 
 
-@given(args=st.lists(st.text(), min_size=0, max_size=5),
-       kwargs=st.dictionaries(st.text(alphabet=string.ascii_letters, min_size=1),
-                              st.text(), min_size=1, max_size=5),
-      )
+@given(
+    args=st.lists(st.text(), min_size=0, max_size=5),
+    kwargs=st.dictionaries(KWARG_ST, st.text(), min_size=1, max_size=5),
+)
 def test_passing_adapter(logger, args, kwargs):
     """Make sure the PassingLoggerAdapter does not allow keywords to be set for
     formatting."""
@@ -164,3 +209,19 @@ def test_passing_adapter(logger, args, kwargs):
     fmt = ['%s']*len(args) + ['%('+name+')s' for name in kwargs]
     with pytest.raises(TypeError):
         logger.info(fmt, *args, **kwargs)
+
+
+@given(
+    args=st.lists(st.text(), min_size=0, max_size=5),
+    kwargs=st.dictionaries(KWARG_ST, st.text(), min_size=0, max_size=5)
+)
+def test_message(args, kwargs):
+    """Make sure Message doesn't formats it's contents needlessly"""
+    fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
+    fmt = ' '.join(fmt)
+    note('fmt={}'.format(fmt))
+    counter = FormatCounter(fmt)
+    msg = Message(counter, args, kwargs)
+    assert counter.get_count() == 0
+    assert str(msg) == fmt.format(*args, **kwargs)
+    assert counter.get_count() == 1

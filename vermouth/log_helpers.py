@@ -40,32 +40,63 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
     def __init__(self, logger, extra=None):
         if extra is None:
             extra = {}
+
+        # These are all set by the logger.setter property. Which
+        # super().__init__ calls.
+        self.known_kwargs = set()
+        self.child_kwargs = set()
+        self._logger = None
         super().__init__(logger, extra)
+        # A LoggerAdapter does not have a manager, but logging.Logger.log needs
+        # it to see if logging is enabled.
+        self.manager = self.logger.manager
 
     @property
-    def logger(self):
+    def logger(self):  # pylint: disable=missing-docstring
         return self._logger
 
     @logger.setter
     def logger(self, new_val):
+        current_logger = self._logger
         self._logger = new_val
-        self._find_kwargs()
+        if new_val is not current_logger:
+            self._find_kwargs()
 
     def _find_kwargs(self):
-        logsig = inspect.signature(self.log)
-        my_kwargs = set(name for name, param in logsig.parameters.items()
-                        if param.kind not in [param.VAR_POSITIONAL, param.VAR_KEYWORD])
+        my_kwargs = self._get_fixed_params(self.log)
         if isinstance(self._logger, logging.Logger):
-            child_kwargs = {'lvl', 'msg', 'exc_info', 'stack_info', 'extra'}
+            # logging.Logger.log uses *args and **kwargs, so look deeper
+            child_kwargs = self._get_fixed_params(self.logger._log)  # pylint: disable=protected-access
         else:
-            if hasattr(self._logger, 'known_kwargs'):
-                child_kwargs = self._logger.known_kwargs
-            else:
-                parameters = inspect.signature(self._logger.log).parameters
-                child_kwargs = set(name for name, param in parameters.items()
-                                   if param.kind not in [param.VAR_POSITIONAL, param.VAR_KEYWORD])
+            child_kwargs = self._get_fixed_params(self.logger.log)
         self.known_kwargs = my_kwargs.union(child_kwargs)
         self.child_kwargs = child_kwargs
+
+    @staticmethod
+    def _get_fixed_params(method):
+        parameters = inspect.signature(method).parameters
+        param_names = set(name for name, param in parameters.items()
+                          if param.kind not in [param.VAR_POSITIONAL, param.VAR_KEYWORD])
+        return param_names
+
+    def process(self, msg, kwargs):
+        try:
+            # logging.Logger does not have a process.
+            msg, kwargs = self.logger.process(msg, kwargs)
+        except AttributeError:
+            msg, kwargs = super().process(msg, kwargs)
+        # The documentation is a lie and the original implementation clobbers
+        # 'extra' that is set by other LoggerAdapters in the chain.
+        kwargs['extra'] = kwargs.get('extra', {})
+        kwargs['extra'].update(self.extra)
+        return msg, kwargs
+
+    def log(self, level, msg, *args, **kwargs):
+        # Differs from super().log because this calls `self.logger.log` instead
+        # of self.logger._log. LoggerAdapters don't have a _log.
+        if self.isEnabledFor(level):
+            msg, kwargs = self.process(msg, kwargs)
+            self.logger.log(level, msg, *args, **kwargs)
 
 
 class Message:
@@ -90,11 +121,23 @@ class StyleAdapter(PassingLoggerAdapter):
     Logging adapter that encapsulate messages in :class:`Message`, allowing
     ``{}`` style formatting.
     """
-    def log(self, lvl, msg, *args, **kwargs):
-        msg, kwargs = self.process(msg, kwargs)
+    def process(self, msg, kwargs):
+        msg, kwargs = super().process(msg, kwargs)
+        # Find all kwargs we have to pass along
         chain_kwargs = {key: val for key, val in kwargs.items()
                         if key in self.child_kwargs}
-        self.logger.log(lvl, Message(msg, args, kwargs), **chain_kwargs)
+        return msg, chain_kwargs
+
+    def log(self, level, msg, *args, **kwargs):
+        # We need a different `log` method, since `Message` needs the args
+        # as well as the kwargs. Otherwise it could've been done in process.
+        # You can probably work around that by giving Message a __mod__ method,
+        # but that's too much effort for now.
+        msg, chain_kwargs = self.process(msg, kwargs)
+        # Give *all* kwargs to Message, since '{}'.format can deal with
+        # non-consumed arguments. Give only kwargs that we know the rest of the
+        # chain needs to the next.
+        super().log(level, Message(msg, args, kwargs), **chain_kwargs)
 
 
 class TypeAdapter(PassingLoggerAdapter):
@@ -112,17 +155,15 @@ class TypeAdapter(PassingLoggerAdapter):
         The type of the messages if none is given.
     """
     def __init__(self, logger, extra=None, default_type='general'):
-        self.default_type = default_type
         super().__init__(logger, extra)
+        self.default_type = default_type
 
-    def log(self, *args, type=None, **kwargs):  # pylint: disable=arguments-differ
-        if type is None:
-            type = self.default_type
-        if 'extra' not in kwargs:
-            kwargs['extra'] = dict(type=type)
-        elif 'type' not in kwargs['extra']:
-            kwargs['extra']['type'] = type
-        self.logger.log(*args, **kwargs)
+    def process(self, msg, kwargs):
+        type_ = kwargs.pop('type', self.default_type)
+        msg, kwargs = super().process(msg, kwargs)
+        if 'type' not in kwargs['extra']:
+            kwargs['extra']['type'] = type_
+        return msg, kwargs
 
 
 def get_logger(name):
