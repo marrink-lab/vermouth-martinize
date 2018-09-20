@@ -473,7 +473,7 @@ class AnnotateResidues(Processor):
         Name of the node attribute to populate.
     sequence: collections.abc.Sequence
         Per-residue sequence.
-    molecule_selector: callable
+    molecule_selector: collections.abc.Callable
         Function that takes an instance of :class:`vermouth.molecule.Molecule`
         as argument and returns `True` if the molecule should be considered,
         else `False`.
