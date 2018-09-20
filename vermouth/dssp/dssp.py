@@ -25,6 +25,7 @@ from ..pdb import pdb
 from ..system import System
 from ..processors.processor import Processor
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
+from .. import utils
 
 
 class DSSPError(Exception):
@@ -384,7 +385,7 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
         sequence = sequence * len(residues)
     elif len(sequence) != len(residues):
         msg = ('The sequence length does not match the number of residues. '
-               'The sequence has {} element for {} residues.')
+               'The sequence has {} elements for {} residues.')
         raise ValueError(msg.format(len(sequence), len(residues)))
     for residue_nodes, value in zip(residues, sequence):
         for node_name in residue_nodes:
@@ -453,6 +454,30 @@ class AnnotateMartiniSecondaryStructures(Processor):
 
 
 class AnnotateResidues(Processor):
+    """
+    Set an attribute of the nodes from a sequence with one element per residue.
+
+    Read a sequence with one element per residue and assign an attribute of
+    each node based on that sequence, so each node has the value corresponding
+    to its residue. In most cases, the length of the sequence has to match the
+    total number of residues in the system. The sequence must be ordered in the
+    same way as the residues in the system. If all the molecules have the same
+    number of residues, and if the length of the sequence corresponds to the
+    number of residue of one molecule, then the sequence is repeated to all
+    molecules. If the sequence contains only one element, then it is repeated
+    to all the residues ofthe system.
+
+    Parameters
+    ----------
+    attribute: str
+        Name of the node attribute to populate.
+    sequence: collections.abc.Sequence
+        Per-residue sequence.
+    molecule_selector: callable
+        Function that takes an instance of :class:`vermouth.molecule.Molecule`
+        as argument and returns `True` if the molecule should be considered,
+        else `False`.
+    """
     name = 'AnnotateResidues'
 
     def __init__(self, attribute, sequence,
@@ -462,6 +487,73 @@ class AnnotateResidues(Processor):
         self.molecule_selector = molecule_selector
 
     def run_molecule(self, molecule):
+        """
+        Run the processor on a single molecule.
+
+        Parameters
+        ----------
+        molecule: vermouth.molecule.Molecule
+
+        Returns
+        -------
+        vermouth.molecule.Molecule
+        """
         if self.molecule_selector(molecule):
             annotate_residues_from_sequence(molecule, self.attribute, self.sequence)
         return molecule
+
+    def run_system(self, system):
+        """
+        Run the processor on a system.
+
+        Parameters
+        ----------
+        system: vermouth.system.System
+
+        Returns
+        -------
+        vermouth.system.System
+        """
+        # Test and adjust the length of the sequence. There are 3 valid scenarios:
+        # * the length of the sequence matchesthe number of residues in the
+        #   selection;
+        # * all the molecules in the selection have the same number of residues
+        #   and the sequence length matches the number of residue of one
+        #   molecule; in this case the equence is repeated for each molecule;
+        # * the sequence has a length of one; in this case the sequence is
+        #   repeated for each residue.
+        # The case were there is no molecule in the selection is only valid if
+        # the sequence is empty. Then we are in the first valid scenario.
+        molecule_lengths = [
+            len(list(molecule.iter_residues()))
+            for molecule in system.molecules
+            if self.molecule_selector(molecule)
+        ]
+        if self.sequence and not molecule_lengths:
+            raise ValueError('There is no molecule to which '
+                             'to apply the sequence.')
+        if (molecule_lengths
+                and len(self.sequence) == molecule_lengths[0]
+                and utils.are_all_equal(molecule_lengths)):
+            sequence = list(self.sequence) * len(molecule_lengths)
+        elif len(self.sequence) == 1:
+            sequence = list(self.sequence) * sum(molecule_lengths)
+        elif len(self.sequence) != sum(molecule_lengths):
+            raise ValueError(
+                'The length of the sequence ({}) does not match the '
+                'number of residues in the selection ({}).'
+                .format(len(self.sequence), sum(molecule_lengths))
+            )
+        else:
+            sequence = self.sequence
+
+        end = 0
+        begin = 0
+        for molecule, nres in zip(system.molecules, molecule_lengths):
+            end += nres
+            annotate_residues_from_sequence(
+                molecule,
+                self.attribute,
+                sequence[begin:end]
+            )
+            begin += nres
