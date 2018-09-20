@@ -49,7 +49,11 @@ def read_mapping_file(lines):
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
 
     # Throw away everything before [ molecule ]
-    line_number = 1
+    # If `lines` is empty, then `line_number` is never set by the loop and
+    # pylint really does not like it. It should not matter that `line_number`
+    # is not set, because it means an exception will be raised anyway. It does
+    # not hust to define the variable before the loop, though.
+    line_number = None
     for line_number, line in enumerate(lines, start=1):
         cleaned = line.split(';', 1)[0].strip()
         if (cleaned.startswith('[')
@@ -82,12 +86,13 @@ def _default_to_dict(mappings):
     """
     Convert a mapping collection from a defaultdict to a dict.
     """
-    new_mappings = {}
-    for from_ff, from_dict in mappings.items():
-        new_mappings[from_ff] = {}
-        for to_ff, to_dict in from_dict.items():
-            new_mappings[from_ff][to_ff] = dict(to_dict)
-    return new_mappings
+    if isinstance(mappings, dict):
+        return {
+            key: _default_to_dict(value)
+            for key, value in mappings.items()
+        }
+    else:
+        return mappings
 
 
 def _compute_weights(mapping, name):
@@ -141,13 +146,13 @@ def _compute_weights(mapping, name):
     for to_atom, from_weights in null_weights.items():
         null_keys = set(from_weights.keys())
         non_null_keys = set(weights.get(to_atom, {}).keys())
-        redifined_keys = null_keys & non_null_keys
-        if redifined_keys:
+        redefined_keys = null_keys & non_null_keys
+        if redefined_keys:
             msg = ('Atom(s) {} is mapped to "{}" with and without a weight '
                    'in the molecule "{}". '
                    'There cannot be the same target atom name with and '
                    'without a "!" prefix on a same line.')
-            raise IOError(msg.format(redifined_keys, to_atom, name))
+            raise IOError(msg.format(redefined_keys, to_atom, name))
         weights[to_atom] = weights.get(to_atom, {})
         weights[to_atom].update(from_weights)
 

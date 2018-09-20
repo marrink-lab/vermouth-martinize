@@ -18,6 +18,14 @@
 Unit tests for the mapping file parser and its utilities.
 """
 
+# We call "private" methods and functions as part of the tests, which pylint
+# does not like. Because we want to test these methods and functions, we have
+# to call them outside of there normal "scope".
+# pylint: disable=protected-access
+
+# Pylint wrongly complains about the use of pytest fixtures.
+# pylint: disable=redefined-outer-name
+
 import collections
 import itertools
 import textwrap
@@ -207,7 +215,7 @@ def test_read_mapping_partial(case):
     """
     Test that regular mapping files are read as expected.
     """
-    full_mapping = vermouth.map_input._read_mapping_partial(case.string.split('\n'), 1)  # pylint: disable=protected-access
+    full_mapping = vermouth.map_input._read_mapping_partial(case.string.split('\n'), 1)
     name, from_ff, to_ff, mapping, weights, extra, _ = full_mapping
     assert name == case.name
     assert from_ff == case.from_ff
@@ -256,7 +264,7 @@ def test_read_mapping_errors(content):
     Test that syntax error are caught when reading a mapping.
     """
     with pytest.raises(IOError):
-        vermouth.map_input._read_mapping_partial(content.split('\n'), 1)  # pylint: disable=protected-access
+        vermouth.map_input._read_mapping_partial(content.split('\n'), 1)
 
 
 @pytest.mark.parametrize(
@@ -272,7 +280,7 @@ def test_read_mapping_file(case):
         reference[from_ff][to_ff][case.name] = (
             case.mapping, case.weights, case.extra
         )
-    reference = vermouth.map_input._default_to_dict(reference)  # pylint: disable=protected-access
+    reference = vermouth.map_input._default_to_dict(reference)
 
     mappings = vermouth.map_input.read_mapping_file(
         ['[ molecule ]'] + case.string.split('\n')
@@ -300,6 +308,7 @@ def reference_multi():
         ; Some mess between two molecules.
 
         [ molecule ]
+        ; A comment just after the molecule section.
         dummy_1
 
         [ atoms ]
@@ -321,7 +330,7 @@ def reference_multi():
     return content, reference
 
 
-def test_read_mapping_file_multiple(reference_multi):  # pylint: disable=redefined-outer-name
+def test_read_mapping_file_multiple(reference_multi):
     """
     Test that read_mapping_file can read more than one molecule.
     """
@@ -382,7 +391,7 @@ def ref_mapping_directory(tmpdir_factory):
     return Path(str(basedir)), mappings
 
 
-def test_read_mapping_directory(ref_mapping_directory):  # pylint: disable=redefined-outer-name
+def test_read_mapping_directory(ref_mapping_directory):
     """
     Test that mapping files from a directory are propely found and read.
     """
@@ -544,7 +553,7 @@ def base_mappings():
         }}}
     ),
 ))
-def test_combine_mappings(base_mappings, partial_mappings, expected):  # pylint: disable=redefined-outer-name
+def test_combine_mappings(base_mappings, partial_mappings, expected):
     """
     Test that :func:`vermouth.map_input.combine_mappings` works as expected.
     """
