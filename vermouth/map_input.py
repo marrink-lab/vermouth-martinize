@@ -20,88 +20,105 @@ Read force field to force field mappings.
 
 from pathlib import Path
 import collections
+import itertools
 
 
-def read_mapping(lines):
+def read_mapping_file(lines):
     """
     Partial reader for modified Backward mapping files.
 
-    ..warning::
+    Read mappings from a Backward mapping file. Not all fields are supported,
+    only the "molecule" and the "atoms" fields are read. If not explicitly
+    specified, the origin force field for a molecule is assumed to be
+    "universal", and the destination force field is assumed to be "martini22".
 
-        This parser is a limited proof of concept. It must be replaced! See
-        [issue #5](https://github.com/jbarnoud/martinize2/issues/5).
-
-    Read mapping from a Backward mapping file. Not all fields are supported,
-    only the "molecule" and the "atoms" fields are read. The origin force field
-    is assumed to be "universal", and the destination force field is assumed to
-    be "martini22".
-
-    The reader assumes only one molecule per file.
+    The mapping collection is a 3 level dictionary where the first key is the
+    name of the initial force field, the second key is the name of the
+    destination force field, and the third key is the name of the molecule.
 
     Parameters
     ----------
     lines: collections.abc.Iterable[str]
         Collection of lines to read.
 
-    Returns
-    -------
-    name: str
-        The name of the fragment as read in the "molecule" field.
-    from_ff: list[str]
-        A list of force field origins. Each force field is referred by name.
-    to_ff: list[str]
-        A list of force field destinations. Each force field is referred by name.
-    mapping: dict[tuple[int, str], list[tuple[int, str]]]
-        The mapping. The keys of the dictionary are pairs of residue indices
-        and the atom names in the origin force field as tupples (resid,
-        atomname); the values are lists of resid, and atom names pairs
-        in the destination force field.
-    weights: dict
-    extra: list
-        Unmapped atoms to be added.
+    Return
+    ------
+    dict
     """
-    from_ff = []
-    to_ff = []
-    mapping = {}
-    rev_mapping = collections.defaultdict(list)
-    extra = []
-    context = None
-    name = None
+    lines = iter(lines)
+    mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
 
+    # Throw away everything before [ molecule ]
+    # If `lines` is empty, then `line_number` is never set by the loop and
+    # pylint really does not like it. It should not matter that `line_number`
+    # is not set, because it means an exception will be raised anyway. It does
+    # not hust to define the variable before the loop, though.
+    line_number = None
     for line_number, line in enumerate(lines, start=1):
         cleaned = line.split(';', 1)[0].strip()
-        if not cleaned:
-            continue
-        elif cleaned.startswith('['):
-            if not cleaned.endswith(']'):
-                raise IOError('Format error at line {}.'.format(line_number))
-            context = cleaned[1:-1].strip()
-        elif context == 'molecule':
-            name = cleaned
-        elif context == 'atoms':
-            _, from_atom, *to_atoms = cleaned.split()
-            if from_atom in mapping:
-                msg = ('At line {}, the atom "{}", that is already defined, '
-                       'get defined again.')
-                raise IOError(msg.format(line_number, from_atom))
-            mapping[from_atom] = to_atoms
-            for to_atom in to_atoms:
-                rev_mapping[to_atom].append(from_atom)
-        elif context in ['from', 'mapping']:
-            from_ff.extend(cleaned.split())
-        elif context == 'to':
-            to_ff.extend(cleaned.split())
-        elif context == 'extra':
-            extra.extend(cleaned.split())
-
-    if context is None:
+        if (cleaned.startswith('[')
+                and cleaned.endswith(']')
+                and cleaned[1:-1].strip() == 'molecule'):
+            break
+    else:  # no break
         msg = ('No mapping defined. '
                'A mapping must start with a [ molecule ] section.')
         raise IOError(msg)
-    if name is None:
-        msg = ('The mapping is defined without a name. '
-               'The block name must follow the [ molecule ] section.')
-        raise IOError(msg)
+
+    # At this point the last line read was [ molecule ] or else we would have
+    # raised an exception.
+    while True:
+        full_mapping = _read_mapping_partial(lines, line_number + 1)
+        name, from_ff_list, to_ff_list, mapping, weights, extra, line_number = full_mapping
+        if name is not None:
+            for from_ff, to_ff in itertools.product(from_ff_list, to_ff_list):
+                mappings[from_ff][to_ff][name] = (mapping, weights, extra)
+        else:
+            break
+
+    # We do not want to return defaultdicts.
+    mappings = _default_to_dict(mappings)
+
+    return mappings
+
+
+def _default_to_dict(mappings):
+    """
+    Convert a mapping collection from a defaultdict to a dict.
+    """
+    if isinstance(mappings, dict):
+        return {
+            key: _default_to_dict(value)
+            for key, value in mappings.items()
+        }
+    else:
+        return mappings
+
+
+def _compute_weights(mapping, name):
+    """
+    Calculate the mapping weights from a preliminary mapping.
+
+    The preliminary mapping refers to atoms by their names instead of the tuple
+    ``(resid, name)`` used in a final mapping. Target atoms with null weights
+    are prefixed with a '!'. The result dictionary also refers to atoms
+    directly by name.
+
+    Parameters
+    ----------
+    mapping: dict[str, list[str]]
+        Preliminary mapping.
+    name: str
+        Molecule name. Used to generate error messages.
+
+    Returns
+    -------
+    dict
+    """
+    rev_mapping = collections.defaultdict(list)
+    for from_atom, to_atoms in mapping.items():
+        for to_atom in to_atoms:
+            rev_mapping[to_atom].append(from_atom)
 
     # Atoms can be mapped with a null weight by prefixing the target particle
     # with a "!". We first set the non-null weights.
@@ -129,15 +146,123 @@ def read_mapping(lines):
     for to_atom, from_weights in null_weights.items():
         null_keys = set(from_weights.keys())
         non_null_keys = set(weights.get(to_atom, {}).keys())
-        redifined_keys = null_keys & non_null_keys
-        if redifined_keys:
+        redefined_keys = null_keys & non_null_keys
+        if redefined_keys:
             msg = ('Atom(s) {} is mapped to "{}" with and without a weight '
                    'in the molecule "{}". '
                    'There cannot be the same target atom name with and '
                    'without a "!" prefix on a same line.')
-            raise IOError(msg.format(redifined_keys, to_atom, name))
+            raise IOError(msg.format(redefined_keys, to_atom, name))
         weights[to_atom] = weights.get(to_atom, {})
         weights[to_atom].update(from_weights)
+
+    return weights
+
+
+def _read_mapping_partial(lines, start_line):
+    """
+    Partial reader for modified Backward mapping files.
+
+    Read mapping from a Backward mapping file. Not all fields are supported,
+    only the "molecule" and the "atoms" fields are read. The origin force field
+    is assumed to be "universal", and the destination force field is assumed to
+    be "martini22".
+
+    The content is assumed to start just *after* the '[ molecule  ]' line. The
+    function consumes the iterator until, and including, the next
+    '[ molecule ]' line if any.
+
+    Parameters
+    ----------
+    lines: collections.abc.Iterator[str]
+        Collection of lines to read.
+    start_line: int
+        The first line number. Starts at 1.
+
+    Returns
+    -------
+    name: str
+        The name of the fragment as read in the "molecule" field.
+    from_ff: list[str]
+        A list of force field origins. Each force field is referred by name.
+    to_ff: list[str]
+        A list of force field destinations. Each force field is referred by name.
+    mapping: dict[tuple[int, str], list[tuple[int, str]]]
+        The mapping. The keys of the dictionary are pairs of residue indices
+        and the atom names in the origin force field as tupples (resid,
+        atomname); the values are lists of resid, and atom names pairs
+        in the destination force field.
+    weights: dict
+    extra: list
+        Unmapped atoms to be added.
+    line_number: int
+        The number of the last line consumed.
+    """
+    from_ff = []
+    to_ff = []
+    mapping = {}
+    extra = []
+    context = 'molecule'
+    name = None
+
+    has_content = False
+    line_number = None
+    for line_number, line in enumerate(lines, start=start_line):
+        cleaned = line.split(';', 1)[0].strip()
+        if not cleaned:
+            continue
+        elif cleaned.startswith('['):
+            if not cleaned.endswith(']'):
+                raise IOError('Format error at line {}.'.format(line_number))
+            context = cleaned[1:-1].strip()
+            if context == 'molecule':
+                if not has_content:
+                    # This detects cases where the file looks like:
+                    # [ molecule ]
+                    # [ molecule ]
+                    #
+                    # Then the partial function gets:
+                    # [ molecule ]
+                    #
+                    # as the first section header is consimed by the parent
+                    # function.
+                    raise IOError('Mapping starting at line {} is empty.'
+                                  .format(start_line))
+                break
+        elif context == 'molecule':
+            if name is None:
+                name = cleaned
+            else:
+                msg = ('Line {} tries to redefine the name of the molecule '
+                       'starting at line {}.')
+                raise IOError(msg.format(line_number, start_line))
+        elif context == 'atoms':
+            _, from_atom, *to_atoms = cleaned.split()
+            if from_atom in mapping:
+                msg = ('At line {}, the atom "{}", that is already defined, '
+                       'get defined again.')
+                raise IOError(msg.format(line_number, from_atom))
+            mapping[from_atom] = to_atoms
+        elif context in ['from', 'mapping']:
+            from_ff.extend(cleaned.split())
+        elif context == 'to':
+            to_ff.extend(cleaned.split())
+        elif context == 'extra':
+            extra.extend(cleaned.split())
+        # else: we are dealing with a section that we should ignore.
+        has_content = True
+
+    if name is None and context != 'molecule':
+        # At this point, there are two cases where the name can be None:
+        # either it was not defined, or there was no content to read. In the
+        # later case, the context was not changed from its initial value.
+        # Here, we are in the former case, and the name was not defined. This
+        #case is an erroroneous one.
+        msg = ('The mapping starting at line {} is defined without a name. '
+               'The block name must follow the [ molecule ] section.')
+        raise IOError(msg.format(start_line))
+
+    weights = _compute_weights(mapping, name)
 
     # While it is not supported by the file format, mappings can contain
     # residue information. Atom identifiers in all the outputs must be formated
@@ -163,7 +288,7 @@ def read_mapping(lines):
     if not to_ff:
         to_ff = ['martini22', ]
 
-    return name, from_ff, to_ff, mapping, weights, extra
+    return name, from_ff, to_ff, mapping, weights, extra, line_number
 
 
 def read_mapping_directory(directory):
@@ -197,19 +322,11 @@ def read_mapping_directory(directory):
     for path in directory.glob('**/*.map'):
         with open(str(path)) as infile:
             try:
-                name, all_from_ff, all_to_ff, mapping, weights, extra = read_mapping(infile)
+                new_mappings = read_mapping_file(infile)
             except IOError:
                 raise IOError('An error occured while reading "{}".'.format(path))
-        for from_ff in all_from_ff:
-            to_ff = None
-            for to_ff in all_to_ff:
-                mappings[from_ff][to_ff][name] = (mapping, weights, extra)
-            if to_ff is not None:
-                # If all_to_ff is empty, then to_ff will not be redefined by
-                # the above for loop.
-                mappings[from_ff][to_ff] = dict(mappings[from_ff][to_ff])
-    for from_ff in mappings:
-        mappings[from_ff] = dict(mappings[from_ff])
+            else:
+                combine_mappings(mappings, new_mappings)
     return dict(mappings)
 
 
@@ -231,9 +348,7 @@ def generate_self_mappings(blocks):
     -------
     mappings: dict[str, tuple]
         A dictionary of mappings where the keys are the names of the blocks,
-        and the values are tuples like (mapping, weights, extra). The elements
-        of these tuples are formatted as the corresponding output of the
-        :func:`read_mapping` function.
+        and the values are tuples like (mapping, weights, extra).
 
     Raises
     ------
@@ -242,7 +357,7 @@ def generate_self_mappings(blocks):
 
     See Also
     --------
-    read_mapping
+    read_mapping_file
         Read a mapping from a file.
     generate_all_self_mappings
         Generate self mappings for a list of force fields.
@@ -293,8 +408,7 @@ def combine_mappings(known_mappings, partial_mapping):
     similar to the output of the :func:`read_mapping_directory` function. They
     are dictionary with 3 levels of keys: the name of the initial force field,
     the name of the target force field, and the name of the block. The values
-    in the third level dictionary are tuples of (mapping, weights, extra) as
-    described in the :func:`read_mapping`.
+    in the third level dictionary are tuples of (mapping, weights, extra).
 
     If a force field appears in 'partial_mapping' that is not in
     'known_mappings', then it is added. For existing pairs of initial and
