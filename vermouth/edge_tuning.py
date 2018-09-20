@@ -279,6 +279,8 @@ def pairs_under_threshold(molecules, threshold,
     coordinates_b = []
     for key in selection_b:
         coordinates_b.append(molecules[key[0]].nodes[key[1]][attribute])
+    if not coordinates_a or not coordinates_b:
+        return
     kdtree = KDTree(coordinates_a)
     for idx, jdx_multi in enumerate(kdtree.query_ball_point(coordinates_b, threshold)):
         for jdx in jdx_multi:

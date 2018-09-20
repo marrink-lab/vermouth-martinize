@@ -478,6 +478,15 @@ class TestPairsUnderThreshold:
         """
         assert len(list(assymetric_pair_selected)) == 4
 
+    def test_empty_selection(multi_molecules):
+        """
+        Make sure :func:`edge_tuning.pairs_under_threshold` is not failing on
+        empty selections.
+        """
+        assert not list(edge_tuning.pairs_under_threshold(
+            multi_molecules, 2.0, [], [], attribute='coords'
+        ))
+
 
 class TestAddEdgesThreshold:
     """
