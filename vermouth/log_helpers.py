@@ -18,8 +18,26 @@
 Provide some helper classes to allow new style brace formatting for logging and
 processing the `type` keyword.
 """
+from collections import defaultdict
 import inspect
 import logging
+
+
+class Message:
+    """
+    Class that defers string formatting until it's ``__str__`` method is
+    called.
+    """
+    def __init__(self, fmt, args, kwargs):
+        self.fmt = fmt
+        self.args = args
+        self.kwargs = kwargs
+
+    def __str__(self):
+        return self.fmt.format(*self.args, **self.kwargs)
+
+    def __repr__(self):
+        return '"{}".format(*{}, **{})'.format(self.fmt, self.args, self.kwargs)
 
 
 class PassingLoggerAdapter(logging.LoggerAdapter):
@@ -99,23 +117,6 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
             self.logger.log(level, msg, *args, **kwargs)
 
 
-class Message:
-    """
-    Class that defers string formatting until it's ``__str__`` method is
-    called.
-    """
-    def __init__(self, fmt, args, kwargs):
-        self.fmt = fmt
-        self.args = args
-        self.kwargs = kwargs
-
-    def __str__(self):
-        return self.fmt.format(*self.args, **self.kwargs)
-
-    def __repr__(self):
-        return '"{}".format(*{}, **{})'.format(self.fmt, self.args, self.kwargs)
-
-
 class StyleAdapter(PassingLoggerAdapter):
     """
     Logging adapter that encapsulate messages in :class:`Message`, allowing
@@ -164,6 +165,70 @@ class TypeAdapter(PassingLoggerAdapter):
         if 'type' not in kwargs['extra']:
             kwargs['extra']['type'] = type_
         return msg, kwargs
+
+
+class BipolarFormatter:
+    """
+    A logging formatter that formats using either `low_formatter` or
+    `high_formatter` depending on the `logger`'s effective loglevel.
+
+    Parameters
+    ----------
+    low_formatter: logging.Formatter
+        The formatter used if `cutoff` <= `logger.getEffectiveLevel()`.
+    high_formatter: logging.Formatter
+        The formatter used if `cutoff` > `logger.getEffectiveLevel()`.
+    cutoff: int
+        The cutoff used to decide whether the low or high formatter is used.
+    logger: logging.Logger
+        The logger whose effective loglevel is used. Defaults to
+        ``logging.getLogger()``.
+    """
+    def __init__(self, low_formatter, high_formatter, cutoff, logger=None):
+        self.detailed_formatter = low_formatter
+        self.pretty_formatter = high_formatter
+        self.cutoff = cutoff
+        if logger is None:
+            logger = logging.getLogger()
+        self.logger = logger
+
+    def format(self, record):
+        """
+        Dispatches to either pretty_formatter or detailed_formatter.
+        """
+        if self.logger.getEffectiveLevel() <= self.cutoff:
+            return self.detailed_formatter.format(record)
+        else:
+            return self.pretty_formatter.format(record)
+
+    def __getattr__(self, item):
+        # Pretend to be the detailed_formatter
+        return getattr(self.detailed_formatter, item)
+
+
+class CountingHandler(logging.NullHandler):
+    """
+    A logging handler that counts the number of times a specific type of
+    message is logged per loglevel.
+
+    Parameters
+    ----------
+    type_attribute: str
+        The name of the attribute carrying the type.
+    default_type: str
+        The type of message if none is provided.
+
+    """
+    def __init__(self, *args, type_attribute='type', default_type='general', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.counts = defaultdict(lambda: defaultdict(int))
+        self.default_type = default_type
+        self.type_attr = type_attribute
+
+    def handle(self, record):
+        record_level = record.levelno
+        record_type = getattr(record, self.type_attr, self.default_type)
+        self.counts[record_level][record_type] += 1
 
 
 def get_logger(name):
