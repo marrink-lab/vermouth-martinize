@@ -164,10 +164,9 @@ def test_style_type_adapter(logger, args, kwargs, type_, default_type, extra):
     handler.set_test(test)
     fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
     fmt = ' '.join(fmt)
+    print('-'*60)
 
     note('fmt={}'.format(fmt))
-    print('New Test')
-    print('--------')
     if type_ is None:
         logger.info(fmt, *args, **kwargs)
         event('type is None')
@@ -200,7 +199,6 @@ def test_style_adapter(logger, args, kwargs, extra):
 
     note('fmt={}'.format(fmt))
     expected = fmt.format(*args, **kwargs)
-
     logger.info(fmt, *args, **kwargs)
 
 
@@ -236,6 +234,9 @@ def test_message(args, kwargs):
 
 
 def test_bipolar_formatter():
+    """
+    Make sure the bipolar formatter calls the correct formatter.
+    """
     low_counter = FormatCounter('')
     low_formatter = logging.Formatter(fmt=low_counter)
     high_counter = FormatCounter('')
@@ -264,3 +265,24 @@ def test_bipolar_formatter():
     print(low_counter.get_count(), high_counter.get_count())
     assert low_counter.get_count() == 2
     assert high_counter.get_count() == 1
+
+
+def test_counter():
+    """Make sure the CountingHandler has learned how to count"""
+    logger = logging.getLogger('test_counter')
+    handler = CountingHandler(default_type='0')
+    logger.addHandler(handler)
+    logger.setLevel(1)
+    logger = TypeAdapter(logger)
+
+    logger.info('')
+    logger.info('')
+    logger.warning('', type='a')
+    logger.error('', type='a')
+    logger.debug('', type='b')
+    logger.debug('', type='b')
+    expected = {logging.DEBUG: {'b': 2},
+                logging.INFO: {'general': 2},
+                logging.WARNING: {'a': 1},
+                logging.ERROR: {'a': 1}}
+    assert handler.counts == expected

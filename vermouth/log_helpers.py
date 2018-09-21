@@ -19,7 +19,6 @@ Provide some helper classes to allow new style brace formatting for logging and
 processing the `type` keyword.
 """
 from collections import defaultdict
-import inspect
 import logging
 
 
@@ -42,71 +41,34 @@ class Message:
 
 class PassingLoggerAdapter(logging.LoggerAdapter):
     """
-    Helper class that figures out which keyword arguments are known by the log
-    method of this :class:`logging.LoggerAdapter`, and it's `logger` (which
-    might be another :class:`logging.LoggerAdapter`). Subclasses can use this
-    information to remove unknown keywords from their `super().log` calls.
-
-    Attributes
-    ----------
-    known_kwargs: set[str]
-        A union of all keywords known by this object's `log` method and
-        :attr:`child_kwargs`.
-    child_kwargs: set[str]
-        A set of all keywords known by this object's `logger`'s `log` method.
+    Helper class that is actually capable of chaining multiple LoggerAdapters.
     """
     def __init__(self, logger, extra=None):
         if extra is None:
             extra = {}
-
         # These are all set by the logger.setter property. Which
         # super().__init__ calls.
-        self.known_kwargs = set()
-        self.child_kwargs = set()
-        self._logger = None
         super().__init__(logger, extra)
         # A LoggerAdapter does not have a manager, but logging.Logger.log needs
         # it to see if logging is enabled.
         self.manager = self.logger.manager
 
-    @property
-    def logger(self):  # pylint: disable=missing-docstring
-        return self._logger
-
-    @logger.setter
-    def logger(self, new_val):
-        current_logger = self._logger
-        self._logger = new_val
-        if new_val is not current_logger:
-            self._find_kwargs()
-
-    def _find_kwargs(self):
-        my_kwargs = self._get_fixed_params(self.log)
-        if isinstance(self._logger, logging.Logger):
-            # logging.Logger.log uses *args and **kwargs, so look deeper
-            child_kwargs = self._get_fixed_params(self.logger._log)  # pylint: disable=protected-access
-        else:
-            child_kwargs = self._get_fixed_params(self.logger.log)
-        self.known_kwargs = my_kwargs.union(child_kwargs)
-        self.child_kwargs = child_kwargs
-
-    @staticmethod
-    def _get_fixed_params(method):
-        parameters = inspect.signature(method).parameters
-        param_names = set(name for name, param in parameters.items()
-                          if param.kind not in [param.VAR_POSITIONAL, param.VAR_KEYWORD])
-        return param_names
-
     def process(self, msg, kwargs):
+        # The documentation is a lie and the original implementation clobbers
+        # 'extra' that is set by other LoggerAdapters in the chain.
+        # LoggerAdapter's process method is FUBARed, and aliases kwargs and
+        # self.extra. And that's all it does. So we do it here by hand to make
+        # sure we actually have an 'extra' attribute.
+        # It should maybe be noted that generally this method gets executed
+        # multiple times, so occasionally self.extra items are very persistent.
+        if 'extra' not in kwargs:
+            kwargs['extra'] = {}
+        kwargs['extra'].update(self.extra)
         try:
             # logging.Logger does not have a process.
             msg, kwargs = self.logger.process(msg, kwargs)
         except AttributeError:
-            msg, kwargs = super().process(msg, kwargs)
-        # The documentation is a lie and the original implementation clobbers
-        # 'extra' that is set by other LoggerAdapters in the chain.
-        kwargs['extra'] = kwargs.get('extra', {})
-        kwargs['extra'].update(self.extra)
+            pass
         return msg, kwargs
 
     def log(self, level, msg, *args, **kwargs):
@@ -114,7 +76,14 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
         # of self.logger._log. LoggerAdapters don't have a _log.
         if self.isEnabledFor(level):
             msg, kwargs = self.process(msg, kwargs)
-            self.logger.log(level, msg, *args, **kwargs)
+            if isinstance(self.logger, logging.Logger):
+                # logging.Logger.log throws a hissy fit if it gets too many
+                # kwargs, so leave just the ones known.
+                kwargs = {key: val for key, val in kwargs.items()
+                          if key in ['level', 'msg', 'exc_info', 'stack_info', 'extra']}
+                self.logger._log(level, msg, args, **kwargs)
+            else:
+                self.logger.log(level, msg, *args, **kwargs)
 
 
 class StyleAdapter(PassingLoggerAdapter):
@@ -122,23 +91,13 @@ class StyleAdapter(PassingLoggerAdapter):
     Logging adapter that encapsulate messages in :class:`Message`, allowing
     ``{}`` style formatting.
     """
-    def process(self, msg, kwargs):
-        msg, kwargs = super().process(msg, kwargs)
-        # Find all kwargs we have to pass along
-        chain_kwargs = {key: val for key, val in kwargs.items()
-                        if key in self.child_kwargs}
-        return msg, chain_kwargs
-
     def log(self, level, msg, *args, **kwargs):
         # We need a different `log` method, since `Message` needs the args
         # as well as the kwargs. Otherwise it could've been done in process.
         # You can probably work around that by giving Message a __mod__ method,
         # but that's too much effort for now.
-        msg, chain_kwargs = self.process(msg, kwargs)
-        # Give *all* kwargs to Message, since '{}'.format can deal with
-        # non-consumed arguments. Give only kwargs that we know the rest of the
-        # chain needs to the next.
-        super().log(level, Message(msg, args, kwargs), **chain_kwargs)
+        msg, kwargs = self.process(msg, kwargs)
+        super().log(level, Message(msg, args, kwargs), **kwargs)
 
 
 class TypeAdapter(PassingLoggerAdapter):
@@ -160,8 +119,8 @@ class TypeAdapter(PassingLoggerAdapter):
         self.default_type = default_type
 
     def process(self, msg, kwargs):
-        type_ = kwargs.pop('type', self.default_type)
         msg, kwargs = super().process(msg, kwargs)
+        type_ = kwargs.pop('type', self.default_type)
         if 'type' not in kwargs['extra']:
             kwargs['extra']['type'] = type_
         return msg, kwargs
