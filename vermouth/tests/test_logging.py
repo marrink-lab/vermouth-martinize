@@ -24,7 +24,8 @@ from hypothesis import given, note, event, example
 import pytest
 
 from vermouth.log_helpers import (get_logger, TypeAdapter, StyleAdapter,
-                                  PassingLoggerAdapter, Message)
+                                  PassingLoggerAdapter, Message,
+                                  BipolarFormatter, CountingHandler)
 
 # Pylint does *not* like pytest fixtures... Also, sometimes you just need more
 # data
@@ -44,9 +45,16 @@ class FormatCounter:
         self.__format_count += 1
         return self.payload.format(*args, **kwargs)
 
+    def __mod__(self, args):
+        self.__format_count += 1
+        return self.payload % args
+
     def get_count(self):
         """Returns the current value of the counter"""
         return self.__format_count
+
+    def __getattr__(self, name):
+        return getattr(self.payload, name)
 
 
 class LogHandler(logging.NullHandler):
@@ -225,3 +233,34 @@ def test_message(args, kwargs):
     assert counter.get_count() == 0
     assert str(msg) == fmt.format(*args, **kwargs)
     assert counter.get_count() == 1
+
+
+def test_bipolar_formatter():
+    low_counter = FormatCounter('')
+    low_formatter = logging.Formatter(fmt=low_counter)
+    high_counter = FormatCounter('')
+    high_formatter = logging.Formatter(fmt=high_counter)
+    logger = logging.getLogger('test_bipolar_formatter')
+    formatter = BipolarFormatter(low_formatter, high_formatter,
+                                 logging.INFO, logger=logger)
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.setLevel(1)
+
+    logger.info('boo')
+    logger.error('baa')
+    # Logger level <= cutoff, so both should go to low_counter
+    print(low_counter.get_count(), high_counter.get_count())
+    assert low_counter.get_count() == 2
+    assert high_counter.get_count() == 0
+
+    logger.setLevel(logging.WARNING)
+    logger.info('boo')
+    logger.warning('baa')
+    # Logger level > cutoff, so both should go to high_counter, but one of the
+    # messages is too low priority to be shown.
+    print(low_counter.get_count(), high_counter.get_count())
+    assert low_counter.get_count() == 2
+    assert high_counter.get_count() == 1
