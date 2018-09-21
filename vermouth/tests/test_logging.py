@@ -56,6 +56,9 @@ class FormatCounter:
     def __getattr__(self, name):
         return getattr(self.payload, name)
 
+    def __str__(self):
+        return str(self.payload)
+
 
 class LogHandler(logging.NullHandler):
     """Helper class which will run a test for every log record"""
@@ -72,14 +75,18 @@ class LogHandler(logging.NullHandler):
         self.test(record)
 
 
-@pytest.fixture(scope='module')
-def logger():
+@pytest.fixture
+def logger(request):
     """Sets up a logger at loglevel 1 and attaches a LogHandler."""
-    logger_ = logging.getLogger(__name__)
+    logger_ = logging.getLogger(request.function.__name__)
     logger_.setLevel(1)
-    handler = LogHandler(1)
-    logger_.addHandler(handler)
-    return logger_, handler
+    return logger_
+
+
+@pytest.fixture(scope='module')
+def handler():
+    handler_ = LogHandler(1)
+    return handler_
 
 
 @given(name=st.text())
@@ -100,7 +107,7 @@ def test_get_logger(name):
     extra=st.one_of(st.none(),
                     st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
 )
-def test_type_adapter(logger, args, type_, default_type, extra):
+def test_type_adapter(logger, handler, args, type_, default_type, extra):
     """Make sure the TypeAdapter sets the correct type attr"""
     def test(record):
         """Make sure the type attribute is as expected"""
@@ -116,7 +123,7 @@ def test_type_adapter(logger, args, type_, default_type, extra):
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
-    logger, handler = logger
+    logger.addHandler(handler)
     logger = TypeAdapter(logger, default_type=default_type, extra=extra)
     handler.set_test(test)
     fmt = ['%s']*len(args)
@@ -141,7 +148,7 @@ def test_type_adapter(logger, args, type_, default_type, extra):
     extra=st.one_of(st.none(),
                     st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
 )
-def test_style_type_adapter(logger, args, kwargs, type_, default_type, extra):
+def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, extra):
     """Make sure that if you have both a TypeAdapter and a StyleAdapter the
     type you provide ends up in the right place, and that it doesn't interfere
     with keyword formatting."""
@@ -158,7 +165,7 @@ def test_style_type_adapter(logger, args, kwargs, type_, default_type, extra):
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
-    logger, handler = logger
+    logger.addHandler(handler)
     logger = TypeAdapter(logger, default_type=default_type)
     logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
@@ -182,7 +189,7 @@ def test_style_type_adapter(logger, args, kwargs, type_, default_type, extra):
     extra=st.one_of(st.none(),
                     st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
 )
-def test_style_adapter(logger, args, kwargs, extra):
+def test_style_adapter(logger, handler, args, kwargs, extra):
     """Make sure the StyleAdapter can do keyword formatting"""
     def test(record):
         """Make sure the formatting worked"""
@@ -191,7 +198,7 @@ def test_style_adapter(logger, args, kwargs, extra):
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
-    logger, handler = logger
+    logger.addHandler(handler)
     logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
     fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
@@ -206,15 +213,19 @@ def test_style_adapter(logger, args, kwargs, extra):
     args=st.lists(st.text(), min_size=0, max_size=5),
     kwargs=st.dictionaries(KWARG_ST, st.text(), min_size=1, max_size=5),
 )
-def test_passing_adapter(logger, args, kwargs):
+def test_passing_adapter(logger, handler, args, kwargs):
     """Make sure the PassingLoggerAdapter does not allow keywords to be set for
     formatting."""
-    logger, handler = logger
-    handler.set_test(lambda: None)
+    def test(record):
+        assert False
+    handler.set_test(test)
+    logger.addHandler(handler)
     logger = PassingLoggerAdapter(logger)
     fmt = ['%s']*len(args) + ['%('+name+')s' for name in kwargs]
-    with pytest.raises(TypeError):
-        logger.info(fmt, *args, **kwargs)
+    fmt = ' '.join(fmt)
+    note(fmt)
+    logger.setLevel(logging.INFO)
+    logger.debug('')
 
 
 @given(
@@ -232,6 +243,8 @@ def test_message(args, kwargs):
     assert str(msg) == fmt.format(*args, **kwargs)
     assert counter.get_count() == 1
 
+    assert repr(msg) == '"{}".format(*{}, **{})'.format(fmt, args, kwargs)
+
 
 def test_bipolar_formatter():
     """
@@ -247,6 +260,8 @@ def test_bipolar_formatter():
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+    assert logger is formatter.logger
 
     logger.setLevel(1)
 
@@ -265,6 +280,25 @@ def test_bipolar_formatter():
     print(low_counter.get_count(), high_counter.get_count())
     assert low_counter.get_count() == 2
     assert high_counter.get_count() == 1
+
+
+def test_bipolar_formatter_logger():
+    """
+    Make sure the bipolar logger picks the correct logger if none is given.
+    """
+    low_counter = FormatCounter('')
+    low_formatter = logging.Formatter(fmt=low_counter)
+    high_counter = FormatCounter('')
+    high_formatter = logging.Formatter(fmt=high_counter)
+    formatter = BipolarFormatter(low_formatter, high_formatter,
+                                 logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger = formatter.logger
+    logger.addHandler(handler)
+
+    expected_logger = logging.getLogger()
+    assert expected_logger is logger
 
 
 def test_counter():

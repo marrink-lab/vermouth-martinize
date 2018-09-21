@@ -151,18 +151,14 @@ class BipolarFormatter:
             logger = logging.getLogger()
         self.logger = logger
 
-    def format(self, record):
-        """
-        Dispatches to either pretty_formatter or detailed_formatter.
-        """
-        if self.logger.getEffectiveLevel() <= self.cutoff:
-            return self.detailed_formatter.format(record)
-        else:
-            return self.pretty_formatter.format(record)
-
     def __getattr__(self, item):
-        # Pretend to be the detailed_formatter
-        return getattr(self.detailed_formatter, item)
+        # Delegate to pretty formatter if the loglevel is high enough, and the
+        # detailed formatter otherwise
+        loglevel = self.logger.getEffectiveLevel()
+        if loglevel > self.cutoff:
+            return getattr(self.pretty_formatter, item)
+        else:
+            return getattr(self.detailed_formatter, item)
 
 
 class CountingHandler(logging.NullHandler):
