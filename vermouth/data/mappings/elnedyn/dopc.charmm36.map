@@ -12,6 +12,9 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+DOPC
+
 [from]
 universal
 
@@ -22,8 +25,6 @@ elnedyn22p
 
 ; Mapping file created 15/03/2013 by Kri
 
-[ molecule ]
-DOPC
 ;
 ; NC3-PO4-GL1-C1A-C2A-D3A-C4A-C5A
 ;         |

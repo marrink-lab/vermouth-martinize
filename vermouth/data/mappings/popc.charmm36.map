@@ -12,16 +12,15 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+POPC
+
 [from]
 universal
 
 [to]
 martini22
 martini22p
-
-; latest revision TAW 20160213
-[ molecule ]
-POPC
 
 [ martini ]
 NC3 PO4 GL1 GL2 C1A D2A C3A C4A C1B C2B C3B C4B 

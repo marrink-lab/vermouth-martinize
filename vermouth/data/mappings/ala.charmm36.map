@@ -12,15 +12,15 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+ALA
+
 [from]
 universal
 
 [to]
 martini22
 martini22p
-
-[ molecule ]
-ALA
 
 [ martini ]
 BB

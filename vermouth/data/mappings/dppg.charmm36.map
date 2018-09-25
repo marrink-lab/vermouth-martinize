@@ -12,6 +12,9 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+DPPG
+
 [from]
 universal
 
@@ -20,9 +23,6 @@ martini22
 martini22p
 
 ; Created by Jagannath Mondal
-
-[ molecule ]
-DPPG
 
 [ martini ]
 GL0 PO4 GL1 GL2 C1A C2A C3A C4A C1B C2B C3B C4B 

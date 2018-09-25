@@ -12,14 +12,14 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+MET
+
 [from]
 universal
 
 [to]
 martini30
-
-[ molecule ]
-MET
 
 [ martini ]
 BB SC1

@@ -12,14 +12,14 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+LEU
+
 [from]
 universal
 
 [to]
 martini30
-
-[ molecule ]
-LEU
 
 [ martini ]
 BB SC1

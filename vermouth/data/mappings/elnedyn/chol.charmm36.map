@@ -11,6 +11,10 @@
 ; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
+
+[ molecule ]
+CHOL
+
 [from]
 universal
 
@@ -18,10 +22,6 @@ universal
 elnedyn
 elnedyn22
 elnedyn22p
-
-; latest revision Kri 12.3.2013
-[ molecule ]
-CHOL
 
 [ martini ]
 ROH R1 R2 R3 R4 R5 C1 C2

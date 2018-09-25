@@ -12,6 +12,9 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+POPS
+
 [from]
 universal
 
@@ -19,9 +22,6 @@ universal
 elnedyn
 elnedyn22
 elnedyn22p
-
-[ molecule ]
-POPS
 
 [ martini ]
 CNO PO4 GL1 GL2 C1A C2A C3A C4A C1B C2B D3B C4B C5B
