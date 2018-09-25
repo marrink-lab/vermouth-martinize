@@ -515,7 +515,7 @@ class AnnotateResidues(Processor):
         vermouth.system.System
         """
         # Test and adjust the length of the sequence. There are 3 valid scenarios:
-        # * the length of the sequence matchesthe number of residues in the
+        # * the length of the sequence matches the number of residues in the
         #   selection;
         # * all the molecules in the selection have the same number of residues
         #   and the sequence length matches the number of residue of one

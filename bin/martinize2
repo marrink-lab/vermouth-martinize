@@ -244,7 +244,7 @@ def entry():
                           help='Additional repository for mapping files.')
 
     posres_group = parser.add_argument_group('Position restraints')
-    posres_group.add_argument('-p', dest='posres', type=lambda x: x.lower(),
+    posres_group.add_argument('-p', dest='posres', type=str.lower,
                               choices=('none', 'all', 'backbone'), default='none',
                               help='Output position restraints (none/all/backbone)')
     posres_group.add_argument('-pf', dest='posres_fc', type=float, default=1000,
@@ -253,7 +253,7 @@ def entry():
     secstruct_exclusion = secstruct_group.add_mutually_exclusive_group()
     secstruct_exclusion.add_argument('-dssp', nargs='?', const='dssp',
                                      help='DSSP executable for determining structure')
-    secstruct_exclusion.add_argument('-ss', dest='ss', type=lambda x: x.upper(),
+    secstruct_exclusion.add_argument('-ss', dest='ss', type=str.upper,
                                      metavar='SEQUENCE',
                                      help=('Manually set the secondary '
                                            'structure of the proteins.'))

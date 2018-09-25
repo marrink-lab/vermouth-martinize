@@ -170,7 +170,7 @@ class TestAnnotateResidues:
         found = self.sequence_from_system(multi_mol_system_regular, 'test')
         assert found == expected
 
-    def test_sigle_molecules_cycle_one(self, single_mol_system):
+    def test_single_molecules_cycle_one(self, single_mol_system):
         """
         One molecule and a one element sequence to repeat over all residues of
         the molecule.
