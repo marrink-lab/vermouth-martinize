@@ -35,7 +35,7 @@ from vermouth.dssp.dssp import (
     AnnotateResidues,
 )
 from vermouth.log_helpers import (StyleAdapter, BipolarFormatter,
-                                  CountingHandler)
+                                  CountingHandler, TypeAdapter)
 from vermouth import selectors
 from vermouth.map_input import (
     read_mapping_directory,
@@ -46,7 +46,7 @@ from vermouth.map_input import (
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
 # not work as intended. Investigation required.
 
-LOGGER = logging.getLogger('vermouth')
+LOGGER = TypeAdapter(logging.getLogger('vermouth'))
 
 PRETTY_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {type} - {message}',
                                      style='{')
@@ -99,13 +99,16 @@ def pdb_to_universal(system, delete_unknown=False,
     """
     canonicalized = system.copy()
     canonicalized.force_field = force_field
+    LOGGER.info('Guessing the bonds.', type='step')
     vermouth.MakeBonds().run_system(canonicalized)
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
+    LOGGER.info('Repairing the graph.', type='step')
     vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
     if write_repair is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_repair),
                                omit_charges=True, nan_missing_pos=True)
+    LOGGER.info('Dealing with modifications.', type='step')
     vermouth.CanonicalizeModifications().run_system(canonicalized)
     if write_canon is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_canon),
@@ -118,13 +121,18 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     """
     Convert a system from one force field to an other at lower resolution.
     """
+    LOGGER.info('Creating the graph at the target resolution.', type='step')
     vermouth.DoMapping(mappings=mappings,
                        to_ff=to_ff,
                        delete_unknown=delete_unknown,
                        attribute_keep=('cgsecstruct', )).run_system(system)
+    LOGGER.info('Averaging the coordinates.', type='step')
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
+    LOGGER.info('Applying the blocks.', type='step')
     vermouth.ApplyBlocks().run_system(system)
+    LOGGER.info('Applying the links.', type='step')
     vermouth.DoLinks().run_system(system)
+    LOGGER.info('Placing the charge dummies.', type='step')
     vermouth.LocateChargeDummies().run_system(system)
     return system
 
@@ -418,6 +426,7 @@ def entry():
 
     # Apply a rubber band elastic network is required.
     if args.elastic:
+        LOGGER.info('Setting the rubber bands.', type='step')
         if args.rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
@@ -439,6 +448,7 @@ def entry():
 
     # Apply position restraints if required.
     if args.posres != 'none':
+        LOGGER.info('Applying position restraints.', type='step')
         node_selectors = {'all': selectors.select_all,
                           'backbone': selectors.select_backbone}
         node_selector = node_selectors[args.posres]
@@ -449,6 +459,7 @@ def entry():
         for chain_set in args.merge_chains:
             vermouth.MergeChains(chain_set).run_system(system)
 
+    LOGGER.info('Writing output.', type='step')
     # Write the topology if requested
     header = [
         'This file was generated using the following command:',

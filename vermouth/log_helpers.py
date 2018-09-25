@@ -95,6 +95,9 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
             else:
                 self.logger.log(level, msg, *args, **kwargs)
 
+    def addHandler(self, *args, **kwargs):
+        self.logger.addHandler(*args, **kwargs)
+
 
 class StyleAdapter(PassingLoggerAdapter):
     """
