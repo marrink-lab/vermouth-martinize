@@ -85,6 +85,7 @@ def logger(request):
 
 @pytest.fixture(scope='module')
 def handler():
+    """Sets up a LogHandler"""
     handler_ = LogHandler(1)
     return handler_
 
@@ -216,7 +217,7 @@ def test_style_adapter(logger, handler, args, kwargs, extra):
 def test_passing_adapter(logger, handler, args, kwargs):
     """Make sure the PassingLoggerAdapter does not allow keywords to be set for
     formatting."""
-    def test(record):
+    def test(_):
         assert False
     handler.set_test(test)
     logger.addHandler(handler)

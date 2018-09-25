@@ -51,7 +51,17 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
         super().__init__(logger, extra)
         # A LoggerAdapter does not have a manager, but logging.Logger.log needs
         # it to see if logging is enabled.
-        self.manager = self.logger.manager
+
+    @property
+    def manager(self):
+        """
+        .. autoattribute:: logging.Logger.manager
+        """
+        return self.logger.manager
+
+    @manager.setter
+    def manager(self, new_value):
+        self.logger.manager = new_value
 
     def process(self, msg, kwargs):
         # The documentation is a lie and the original implementation clobbers
@@ -81,7 +91,7 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
                 # kwargs, so leave just the ones known.
                 kwargs = {key: val for key, val in kwargs.items()
                           if key in ['level', 'msg', 'exc_info', 'stack_info', 'extra']}
-                self.logger._log(level, msg, args, **kwargs)
+                self.logger._log(level, msg, args, **kwargs)  # pylint: disable=protected-access
             else:
                 self.logger.log(level, msg, *args, **kwargs)
 
@@ -126,7 +136,7 @@ class TypeAdapter(PassingLoggerAdapter):
         return msg, kwargs
 
 
-class BipolarFormatter:
+class BipolarFormatter:  # pylint: disable=too-few-public-methods
     """
     A logging formatter that formats using either `low_formatter` or
     `high_formatter` depending on the `logger`'s effective loglevel.
