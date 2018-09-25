@@ -86,7 +86,6 @@ def make_reference(mol):
             matches = isomorphism(residue, reference)
             matches = [{v: k for k, v in match.items()} for match in matches]
         if not matches:
-            # DEBUG
             LOGGER.debug('Doing MCS matching for residue {}{}', resname, resid,
                          type='performance')
             # The problem is that some residues (termini in particular) will
@@ -110,15 +109,18 @@ def make_reference(mol):
             matches = isomorphism(reference, res)
         # TODO: matches is sorted by isomorphism. So we should probably use
         #       that with e.g. itertools.takewhile.
-        matches = maxes(matches, key=lambda m: rate_match(reference, residue, m))
         if not matches:
-            raise ValueError("Can't find isomorphism between {}{} and it's "
-                             "reference.".format(resname, resid))
-        elif len(matches) > 1:
+            LOGGER.error("Can't find isomorphism between {}{} and it's "
+                         "reference.", resname, resid, type='inconsistent-data')
+            continue
+
+        matches = maxes(matches, key=lambda m: rate_match(reference, residue, m))
+        if len(matches) > 1:
             LOGGER.warning("More than one way to fit {}{} on it's reference."
                            " I'm picking one arbitrarily. You might want to"
                            " fix at least some atomnames.", resname, resid,
                            type='bad-atom-names')
+
         match = matches[0]
         reference_graph.add_node(residx, chain=chain, reference=reference,
                                  found=residue, resname=resname, resid=resid,
@@ -215,7 +217,6 @@ def repair_residue(molecule, ref_residue):
             assert neighbours != 0
     if missing:
         for ref_idx in missing:
-            # WARNING?
             LOGGER.error('Could not reconstruct atom {}{}:{}',
                          reference.nodes[ref_idx]['resname'],
                          reference.nodes[ref_idx]['resid'],
@@ -300,7 +301,6 @@ class RepairGraph(Processor):
                 else:
                     LOGGER.warning("Can't recognize molecule {}. Deleting.",
                                    idx, type='unknown-residue')
-                    # TODO: raise a loud warning here
             else:
                 mols.append(new_molecule)
         system.molecules = mols

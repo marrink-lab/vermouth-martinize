@@ -131,8 +131,6 @@ CONSOLE_HANDLER.setFormatter(FORMATTER)
 LOGGER.addHandler(CONSOLE_HANDLER)
 LOGGER.addHandler(COUNTER)
 
-LOGGER.setLevel(logging.DEBUG)
-
 LOGGER = StyleAdapter(LOGGER)
 
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
@@ -391,8 +389,14 @@ def entry():
                                    'resulting file may contain "nan" '
                                    'coordinates making it unreadable by most '
                                    'softwares.'))
+    debug_group.add_argument('-v', dest='verbosity', action='count',
+                             help='Enable debug logging output. Can be given '
+                                  'multiple times.', default=0)
 
     args = parser.parse_args()
+
+    loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
+    LOGGER.setLevel(loglevels[args.verbosity])
 
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / 'force_fields'
@@ -526,4 +530,3 @@ def entry():
 
 if __name__ == '__main__':
     entry()
-    print(COUNTER.counts)

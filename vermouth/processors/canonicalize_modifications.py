@@ -292,7 +292,6 @@ def fix_ptm(molecule):
                     to_replace.update(ptm_node.get('replace', dict()))
                     for attr_name, val in to_replace.items():
                         if attr_name == 'atomname' and val is None:
-                            # DEBUG output
                             LOGGER.debug('Removing atom {}',
                                          format_atom_string(mol_node),
                                          type='remove-atom')
@@ -300,7 +299,6 @@ def fix_ptm(molecule):
                             n_idxs.remove(mol_idx)
                             break
                         if mol_node.get(attr_name) != val:
-                            # DEBUG output
                             fmt = 'Changing attribute {} from {} to {} for atom {}'
                             LOGGER.debug(fmt, attr_name, mol_node[attr_name],
                                          val, format_atom_string(mol_node),

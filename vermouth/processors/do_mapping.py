@@ -344,7 +344,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                            [format_atom_string(molecule.nodes[idx]) for idx in shared_atoms],
                            [format_atom_string(graph_out.nodes[idx]) for idx in shared_out_atoms],
                            type='inconsistent-data')
-    # TODO: These should be turned into warnings.
+
+    # Sanity check the results
     if any(v > 1 for v in blocks_per_atom.values()):
         LOGGER.warning('These atoms are covered by multiple blocks. This is a '
                        'bad idea: {}', {format_atom_string(molecule.nodes[k]): v
@@ -352,8 +353,10 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                        type='inconsistent-data')
     uncovered_atoms = set(molecule.nodes.keys()) - set(mol_to_out.keys())
     if uncovered_atoms:
-        uncovered_hydrogens = {idx for idx in uncovered_atoms if molecule.nodes[idx].get('element', '') == 'H'}
+        uncovered_hydrogens = {idx for idx in uncovered_atoms
+                               if molecule.nodes[idx].get('element', '') == 'H'}
         if uncovered_hydrogens:
+            # Maybe this should be info?
             LOGGER.debug('These hydrogen atoms are not covered by a mapping.'
                          ' This is not the best idea. {}',
                          [format_atom_string(molecule.nodes[idx])
