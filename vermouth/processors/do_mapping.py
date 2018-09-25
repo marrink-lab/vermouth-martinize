@@ -17,7 +17,7 @@
 Provides a processor that can perform a resolution transformation on a
 molecule.
 """
-from collections import defaultdict
+from collections import defaultdict, Counter
 from functools import partial
 from itertools import product, combinations
 import logging
@@ -259,9 +259,11 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
         for match in matches:
             all_matches.append((match, resname, mapping))
     mol_to_out = defaultdict(list)
+    blocks_per_atom = Counter()
     # Sort by lowest node key per residue. We need to do this, since
     # merge_molecule creates new resid's in order.
     for match, name, mapping in sorted(all_matches, key=lambda x: min(x[0].keys())):
+        blocks_per_atom.update(match.keys())
         if graph_out.nrexcl is None:
             graph_out.nrexcl = mapping.block_to.nrexcl
         try:
@@ -332,10 +334,14 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                            " particles in your output and/or erroneous bonds."
                            " {}. They've end up in the following output atoms:"
                            " {}.",
-                           [molecule.nodes(idx, data=True) for idx in shared_atoms],
-                           [graph_out.nodes(idx, data=True) for idx in shared_out_atoms])
+                           [molecule.nodes[idx] for idx in shared_atoms],
+                           [graph_out.nodes[idx] for idx in shared_out_atoms])
     # TODO: These should be turned into warnings.
-    LOGGER.debug('double covered: {}', {k: len(v) for k, v in mol_to_out.items() if len(v) > 1})
+    LOGGER.debug('double covered: {}', {k: v for k, v in blocks_per_atom.items() if v > 1})
+    for node_idx, v in blocks_per_atom.items():
+        if v > 1:
+            LOGGER.debug('{}', molecule.nodes[node_idx]['atomname'])
+        
     LOGGER.debug('uncovered: {}', set(molecule.nodes.keys()) - set(mol_to_out.keys()))
     return graph_out
 
