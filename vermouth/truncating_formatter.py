@@ -83,7 +83,6 @@ class TruncFormatter(string.Formatter):
 
         # We know len(result) > width. So there's no fill characters.
         # We also have at least width, type and align at this point.
-        # print(spec)
         # We should probably do something special when it's a number with a
         # magic formatting prefix (0b, 0o, 0x) or if it has a sign. Idem for
         # exponent notation. Maybe, for numerical types we should round instead

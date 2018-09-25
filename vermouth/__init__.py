@@ -18,6 +18,12 @@ VerMoUTH: The Very Modular Universal Transformation Helper
 Provides functionality for creating MD topologies from coordinate files. Powers
 the CLI tool martinize2.
 """
+import logging
+from .log_helpers import StyleAdapter, get_logger
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+LOGGER = StyleAdapter(get_logger(__name__))
+
 
 # Find the data directory once.
 try:
@@ -37,8 +43,11 @@ del pbr
 try:
     from scipy.spatial import cKDTree as KDTree
 except ImportError:
-    print('Using redistributed KDTree')
+    LOGGER.info('Using redistributed KDTree. Some functionality might be slow.'
+                ' Install scipy for better performance.', type='performance')
     from .redistributed.kdtree import KDTree
+
+del LOGGER
 
 from .molecule import Molecule
 from .processors import *

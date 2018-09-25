@@ -21,6 +21,10 @@ import itertools
 import networkx as nx
 
 from .processor import Processor
+from ..log_helpers import StyleAdapter, get_logger
+from ..utils import format_atom_string
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
@@ -256,9 +260,23 @@ def fix_ptm(molecule):
         options = allowed_ptms(residue, res_ptms, known_PTMs)
         # TODO/FIXME: This includes anchors in sorting by size.
         options = sorted(options, key=lambda opt: len(opt[0]), reverse=True)
-        identified = identify_ptms(residue, res_ptms, options)
-        # INFO output: Identified modification X.
-        print('Today your answer is: {}!'.format([out[0].graph['name'] for out in identified]))
+        try:
+            identified = identify_ptms(residue, res_ptms, options)
+        except KeyError:
+            LOGGER.exception('Could not identify the modifications for'
+                             ' residues {}, involving atoms {}', 
+                             ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
+                              for resid in resids],
+                             ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
+                              for idxs in res_ptms for idx in idxs[0]],
+                             type='unknown-input')
+            raise
+        # Why this mess? There can be multiple PTMs for a single (set of)
+        # residue(s); and a single PTM can span multiple residues.
+        LOGGER.info("Identified the modifications {} on residues {}",
+                    [out[0].graph['name'] for out in identified],
+                    ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
+                     for resid in resids])
         for ptm, match in identified:
             for mol_idx, ptm_idx in match.items():
                 ptm_node = ptm.nodes[ptm_idx]
@@ -274,15 +292,17 @@ def fix_ptm(molecule):
                     to_replace.update(ptm_node.get('replace', dict()))
                     for attr_name, val in to_replace.items():
                         if attr_name == 'atomname' and val is None:
-                            # DEBUG output
-                            print('Removing node {}, {}'.format(mol_idx, mol_node['atomname']))
+                            LOGGER.debug('Removing atom {}',
+                                         format_atom_string(mol_node),
+                                         type='remove-atom')
                             molecule.remove_node(mol_idx)
                             n_idxs.remove(mol_idx)
                             break
                         if mol_node.get(attr_name) != val:
-                            # DEBUG output
-                            fmt = 'Changing attribute {} from {} to {}'
-                            print(fmt.format(attr_name, mol_node[attr_name], val))
+                            fmt = 'Changing attribute {} from {} to {} for atom {}'
+                            LOGGER.debug(fmt, attr_name, mol_node[attr_name],
+                                         val, format_atom_string(mol_node),
+                                         type='change-atom')
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
                 molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])

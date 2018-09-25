@@ -17,10 +17,15 @@ Provides a class that can be used to write to temporary files, which should be
 moved to a specified location if no errors occured.
 """
 
-
+import logging
 import os
 import sys
 import tempfile
+
+from .log_helpers import StyleAdapter
+
+LOGGER = StyleAdapter(logging.getLogger(__name__))
+
 
 # TODO: replace with pathlib.replace, and add pathlib2 to requirements for py2.7.
 # from https://stupidpythonideas.blogspot.nl/2014/07/getting-atomic-writes-right.html
@@ -96,7 +101,7 @@ def replace_with_backup(file_in, file_out, suffix='bak'):
     """
     if os.path.exists(file_out):
         file_out_bak = find_next_filename(file_out, suffix=suffix)
-        print('Backing up {} to {}'.format(file_out, file_out_bak))
+        LOGGER.info('Backing up {} to {}', file_out, file_out_bak)
         replace(file_out, file_out_bak)
     return replace(file_in, file_out)
 

@@ -20,6 +20,10 @@ import networkx as nx
 
 from .processor import Processor
 from ..graph_utils import *
+from ..log_helpers import StyleAdapter, get_logger
+from ..utils import format_atom_string
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 def make_reference(mol):
@@ -71,7 +75,6 @@ def make_reference(mol):
         resname = residues.node[residx]['resname']
         resid = residues.node[residx]['resid']
         chain = residues.node[residx]['chain']
-        # print("{}{}".format(resname, resid), flush=True)
         residue = residues.node[residx]['graph']
         reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
@@ -83,8 +86,8 @@ def make_reference(mol):
             matches = isomorphism(residue, reference)
             matches = [{v: k for k, v in match.items()} for match in matches]
         if not matches:
-            # DEBUG
-            print('Doing MCS matching for residue {}{}'.format(resname, resid))
+            LOGGER.debug('Doing MCS matching for residue {}{}', resname, resid,
+                         type='performance')
             # The problem is that some residues (termini in particular) will
             # contain more atoms than they should according to the reference.
             # Furthermore they will have too little atoms because X-Ray is
@@ -106,15 +109,18 @@ def make_reference(mol):
             matches = isomorphism(reference, res)
         # TODO: matches is sorted by isomorphism. So we should probably use
         #       that with e.g. itertools.takewhile.
-        matches = maxes(matches, key=lambda m: rate_match(reference, residue, m))
         if not matches:
-            raise ValueError("Can't find isomorphism between {}{} and it's "
-                             "reference.".format(resname, resid))
-        elif len(matches) > 1:
-            # WARNING
-            print("More than one way to fit {}{} on it's reference. I'm "
-                  "picking one arbitrarily. You might want to fix at least "
-                  "some atomnames.".format(resname, resid))
+            LOGGER.error("Can't find isomorphism between {}{} and it's "
+                         "reference.", resname, resid, type='inconsistent-data')
+            continue
+
+        matches = maxes(matches, key=lambda m: rate_match(reference, residue, m))
+        if len(matches) > 1:
+            LOGGER.warning("More than one way to fit {}{} on it's reference."
+                           " I'm picking one arbitrarily. You might want to"
+                           " fix at least some atomnames.", resname, resid,
+                           type='bad-atom-names')
+
         match = matches[0]
         reference_graph.add_node(residx, chain=chain, reference=reference,
                                  found=residue, resname=resname, resid=resid,
@@ -148,10 +154,14 @@ def repair_residue(molecule, ref_residue):
             # be better to try and figure why found is not a reference, but meh
             found.nodes[res_idx].update(reference.nodes[ref_idx])
         else:
-            # if reference.nodes[ref_idx]['element'] != 'H':
-            # INFO
-            print(match)
-            print('Missing atom {}{}:{}'.format(resname, resid, reference.nodes[ref_idx]['atomname']))
+            message = 'Missing atom {}{}:{}'
+            args = (resname, resid, reference.nodes[ref_idx]['atomname'])
+            if reference.nodes[ref_idx]['element'] != 'H':
+                LOGGER.info(message, *args, type='missing-atom')
+            else:
+                # These are logged *below* debug level. Otherwise your screen
+                # fills up pretty fast.
+                LOGGER.log(5, message, *args, type='missing-atom')
             missing.append(ref_idx)
     # Step 2: try to add all missing atoms one by one. As long as we added
     # *something* the situation changed, and we might be able to place another.
@@ -180,11 +190,20 @@ def repair_residue(molecule, ref_residue):
                 if key not in ('match', 'found', 'reference'):
                     node[key] = val
             node.update(reference.nodes[ref_idx])
+            node['atomid'] = res_idx + 1
 
             match[ref_idx] = res_idx
             molecule.add_node(res_idx, **node)
             found.add_node(res_idx, **node)
-            # print("Adding {}{}:{}".format(resname, resid, node['atomname']))
+
+            message = "Adding {}"
+            args = format_atom_string(node)
+            if node['element'] != 'H':
+                LOGGER.debug(message, *args, type='missing-atom')
+            else:
+                # These are logged *below* debug level. Otherwise your screen
+                # fills up pretty fast.
+                LOGGER.log(5, message, args, type='missing-atom')
 
             neighbours = 0
             for neighbour_ref_idx in reference[ref_idx]:
@@ -198,10 +217,11 @@ def repair_residue(molecule, ref_residue):
             assert neighbours != 0
     if missing:
         for ref_idx in missing:
-            # WARNING?
-            print('Could not reconstruct atom {}{}:{}'.format(reference.nodes[ref_idx]['resname'],
-                                                              reference.nodes[ref_idx]['resid'],
-                                                              reference.nodes[ref_idx]['atomname']))
+            LOGGER.error('Could not reconstruct atom {}{}:{}',
+                         reference.nodes[ref_idx]['resname'],
+                         reference.nodes[ref_idx]['resid'],
+                         reference.nodes[ref_idx]['atomname'],
+                         type='missing-atom')
 
 
 def repair_graph(molecule, reference_graph):
@@ -272,15 +292,15 @@ class RepairGraph(Processor):
 
     def run_system(self, system):
         mols = []
-        for molecule in system.molecules:
+        for idx, molecule in enumerate(system.molecules):
             try:
                 new_molecule = self.run_molecule(molecule)
             except KeyError as err:
                 if not self.delete_unknown:
                     raise err
                 else:
-                    print("Can't recognize, deleting")
-                    # TODO: raise a loud warning here
+                    LOGGER.warning("Can't recognize molecule {}. Deleting.",
+                                   idx, type='unknown-residue')
             else:
                 mols.append(new_molecule)
         system.molecules = mols

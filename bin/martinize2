@@ -34,6 +34,8 @@ from vermouth.dssp.dssp import (
     AnnotateMartiniSecondaryStructures,
     AnnotateResidues,
 )
+from vermouth.log_helpers import (StyleAdapter, BipolarFormatter,
+                                  CountingHandler)
 from vermouth import selectors
 from vermouth.map_input import (
     read_mapping_directory,
@@ -41,6 +43,31 @@ from vermouth.map_input import (
     combine_mappings
 )
 
+# TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
+# not work as intended. Investigation required.
+
+LOGGER = logging.getLogger('vermouth')
+
+PRETTY_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {type} - {message}',
+                                     style='{')
+DETAILED_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {type} - {name} - {message}',
+                                       style='{')
+
+COUNTER = CountingHandler()
+
+# Control above what level message we want to count
+COUNTER.setLevel(logging.WARNING)
+
+CONSOLE_HANDLER = logging.StreamHandler()
+FORMATTER = BipolarFormatter(DETAILED_FORMATTER,
+                             PRETTY_FORMATTER,
+                             logging.DEBUG,
+                             logger=LOGGER)
+CONSOLE_HANDLER.setFormatter(FORMATTER)
+LOGGER.addHandler(CONSOLE_HANDLER)
+LOGGER.addHandler(COUNTER)
+
+LOGGER = StyleAdapter(LOGGER)
 
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
 
@@ -298,8 +325,14 @@ def entry():
                                    'resulting file may contain "nan" '
                                    'coordinates making it unreadable by most '
                                    'softwares.'))
+    debug_group.add_argument('-v', dest='verbosity', action='count',
+                             help='Enable debug logging output. Can be given '
+                                  'multiple times.', default=0)
 
     args = parser.parse_args()
+
+    loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
+    LOGGER.setLevel(loglevels[args.verbosity])
 
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / 'force_fields'

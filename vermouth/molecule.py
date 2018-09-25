@@ -1018,22 +1018,3 @@ def interaction_match(molecule, interaction, template_interaction):
                 return False
         return attributes_match(interaction.meta, template_interaction.meta)
     return False
-
-
-# if __name__ == '__main__':
-#     mol = Molecule()
-#     mol.add_edge(0, 1)
-#     mol.add_edge(1, 2)
-#     nx.subgraph(mol, (0, 1))
-#
-#     mol.add_interaction('bond', (0, 1), tuple((1, 2)))
-#     mol.add_interaction('bond', (1, 2), tuple((10, 20)))
-#     mol.add_angle((0, 1, 2), tuple([10, 2, 3]))
-#
-#     print(mol.interactions)
-#     print(mol.get_interaction('bond'))
-#     print(mol.get_bonds())
-#     print(mol.get_angles())
-#
-#     mol.remove_interaction('bond', (0, 3))
-#     print(mol.get_bonds())
