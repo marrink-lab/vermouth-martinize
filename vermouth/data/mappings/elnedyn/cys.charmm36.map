@@ -12,6 +12,9 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+CYS
+
 [from]
 universal
 
@@ -19,9 +22,6 @@ universal
 elnedyn
 elnedyn22
 elnedyn22p
-
-[ molecule ]
-CYS
 
 [ martini ]
 BB SC1

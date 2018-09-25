@@ -12,14 +12,14 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+TYR
+
 [from]
 universal
 
 [to]
 martini30
-
-[ molecule ]
-TYR
 
 [ mapping ]
 charmm27 charmm36

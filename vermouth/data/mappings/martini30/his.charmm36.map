@@ -12,14 +12,14 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+HIS  ;;;; is in fact HSP but if one of hydrogen on a nitrogen is missing in the input topology file, will become HSE or HSD automatically
+
 [from]
 universal
 
 [to]
 martini30
-
-[ molecule ]
-HIS  ;;;; is in fact HSP but if one of hydrogen on a nitrogen is missing in the input topology file, will become HSE or HSD automatically
 
 [ martini ]
 BB SC1 SC2 SC3

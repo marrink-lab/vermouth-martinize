@@ -12,14 +12,14 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+THR
+
 [from]
 universal
 
 [to]
 elnedyn22p
-
-[ molecule ]
-THR
 
 [ martini ]
 BB SC1
