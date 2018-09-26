@@ -646,9 +646,14 @@ class Molecule(nx.Graph):
             A list of tuples of edges in this molecule. The first element of
             the tuple will be in `n_bunch1`, the second element in `n_bunch2`.
         """
-        return [(node1, node2)
-                for node1, node2 in itertools.product(n_bunch1, n_bunch2)
-                if self.has_edge(node1, node2)]
+        result = []
+        set_1 = set(n_bunch1)
+        set_2 = set(n_bunch2)
+        for node1 in set_1:
+            cross = set_2 & set(self[node1])
+            for node2 in cross:
+                result.append((node1, node2))
+        return result
 
 
 class Block(Molecule):

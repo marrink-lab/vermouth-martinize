@@ -132,3 +132,58 @@ def test_link_predicate_match():
     lp = vermouth.molecule.LinkPredicate(None)
     with pytest.raises(NotImplementedError):
         lp.match(1, 2)
+
+
+@pytest.fixture
+def edges_between_molecule():
+    """
+    Build an empty molecule with known connectivity.
+
+    The molecule does not have any node attribute nor any molecule metadata. It
+    only has a bare graph with a few nodes and edges.
+
+    The graph looks like::
+
+        0 - 1 - 3 - 4 - 5 - 7 - 8     9 - 10 - 11 - 12
+            |           |
+            2           6
+
+    """
+    molecule = vermouth.molecule.Molecule()
+    molecule.add_edges_from((
+        (0, 1), (1, 2), (1, 3), (3, 4), (4, 5), (5, 6), (5, 7), (7, 8),
+        (9, 10), (10, 11), (11, 12),
+    ))
+    return molecule
+
+
+@pytest.fixture
+def edges_between_selections():
+    """
+    Build a static list of selections of nodes from :func:`edges_between_molecule`.
+    """
+    return [
+        (0, 1, 2, 3),
+        (5, 6, 7, 8),
+        (9, 10, 11, 12),
+        (3, 4, 5, 6),
+        (7, 8, 9, 10),
+    ]
+
+
+@pytest.mark.parametrize('bunch1, bunch2, expected', (
+    (0, 1, []), (0, 2, []), (0, 4, []), (1, 2, []), (2, 3, []),  # non-overlapping
+    (0, 3, [(1, 3), (3, 4)]), (1, 3, [(4, 5), (5, 6), (5, 6), (5, 7)]),
+    (1, 4, [(5, 7), (7, 8), (7, 8)]), (2, 4, [(9, 10), (9, 10), (10, 11)]),
+))
+def test_edges_between(edges_between_molecule, edges_between_selections,
+                       bunch1, bunch2, expected):
+    """
+    Test :meth:`vermouth.molecule.Molecule.edges_between`.
+    """
+    selection_1 = edges_between_selections[bunch1]
+    selection_2 = edges_between_selections[bunch2]
+    found = edges_between_molecule.edges_between(selection_1, selection_2)
+    sorted_found = sorted(sorted(edge) for edge in found)
+    sorted_expected = sorted(sorted(edge) for edge in expected)
+    assert sorted_found == sorted_expected
