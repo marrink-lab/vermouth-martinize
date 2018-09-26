@@ -1,5 +1,11 @@
 # Copyright Anne M. Archibald 2008
 # Released under the scipy license
+
+
+# KDTree.sparse_distance_matrix has been added as part of the vermouth library.
+# It does not exactly match the scipy corresponding function from the cKDTree
+# module.
+
 from __future__ import division, print_function, absolute_import
 
 import sys
@@ -693,6 +699,38 @@ class KDTree(object):
         traverse_checking(self.tree, Rectangle(self.maxes, self.mins),
                           other.tree, Rectangle(other.maxes, other.mins))
         return results
+
+    def sparse_distance_matrix(self, other, max_distance, p=2.0):
+        """
+        Emulate :meth:`scipy.spacial.KDtree.sparse_distance_matrix` without scipy.
+
+        The return value is a dictionary instead of scipy sparse matrix.
+
+        Notes
+        -----
+        This is not the original scipy method!
+
+        Parameters
+        ----------
+        other: KDTree
+        max_distance: positive float
+        p: float, optional
+
+        Returns
+        -------
+        dict
+            Pseudo `dok_matrix` where the keys are
+            `(index_in_self, index_in_other)` and the values are distances.
+        """
+        result = {}
+        pairs = self.query_ball_tree(other, max_distance, p=p)
+        for idx1, neighbors in enumerate(pairs):
+            for idx2 in neighbors:
+                dist = minkowski_distance(self.data[idx1], other.data[idx2], p=p)
+                if dist <= max_distance:
+                    result[(idx1, idx2)] = dist
+        return result
+
 
     def query_pairs(self, r, p=2., eps=0):
         """

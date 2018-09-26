@@ -62,6 +62,10 @@ def bonds_from_distance(system, fudge=1.1):
     The possible distance between nodes is determined by values in
     `VDW_RADII`.
 
+    Notes
+    -----
+    Elements that are not in `VMD_RADII` do not make bonds.
+
     Parameters
     ----------
     system: :class:`~vermouth.system.System`
@@ -76,25 +80,36 @@ def bonds_from_distance(system, fudge=1.1):
         certain distance from each other. It is probably disconnected.
     """
     system = nx.compose_all(system.molecules)
-    idx_to_nodenum = {idx: n for idx, n in enumerate(system)}
+    idx_to_nodenum = {
+        idx: n
+        for idx, n in enumerate(
+                subn
+                for subn in system
+                if system.nodes[subn].get('element') in VDW_RADII
+        )
+    }
     max_dist = max(VDW_RADII.get(node.get('element'), 0.2) for node in system.nodes.values())
-    positions = np.array([system.node[n]['position'] for n in system], dtype=float)
+    positions = np.array([
+        node['position']
+        for node in system.nodes.values()
+        if node.get('element') in VDW_RADII
+    ], dtype=float)
     tree = KDTree(positions)
-    pairs = tree.query_pairs(2*max_dist*fudge)  # eps=fudge-1?
+    pairs = tree.sparse_distance_matrix(tree, max_dist * fudge)
 
-    for idx1, idx2 in pairs:
+    for (idx1, idx2), dist in pairs.items():
+        if idx1 >= idx2:
+            continue
         node_idx1 = idx_to_nodenum[idx1]
         node_idx2 = idx_to_nodenum[idx2]
         atom1 = system.node[node_idx1]
         atom2 = system.node[node_idx2]
         element1 = atom1['element']
         element2 = atom2['element']
-        if element1 in VDW_RADII and element2 in VDW_RADII:
-            # Elements we do not know never make bonds.
-            dist = distance(atom1['position'], atom2['position'])
-            bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
-            if dist <= bond_distance * fudge:
-                system.add_edge(node_idx1, node_idx2, distance=dist)
+
+        bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
+        if dist <= bond_distance * fudge:
+            system.add_edge(node_idx1, node_idx2, distance=dist)
     return system
 
 
