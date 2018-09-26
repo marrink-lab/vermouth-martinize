@@ -348,30 +348,45 @@ class Molecule(nx.Graph):
             node_attr = self.node[node]
             yield node, node_attr
 
-    def copy(self, as_view=False):
-        '''
+    def copy(self):
+        """
         Creates a copy of the molecule.
 
-        See Also
-        --------
-        :meth:`networkx.Graph.copy`
-        '''
-        copy = super().copy(as_view)
-        if not as_view:
-            copy = self.__class__(copy)
-        copy._force_field = self.force_field
-        copy.meta = self.meta.copy()
-        return copy
+        Returns
+        -------
+        Molecule
+        """
+        return self.subgraph(self.nodes)
 
-    def subgraph(self, *args, **kwargs):
-        '''
+    def subgraph(self, nodes):
+        """
         Creates a subgraph from the molecule.
 
-        See Also
-        --------
-        :meth:`networkx.Graph.subgraph`
-        '''
-        return self.__class__(super().subgraph(*args, **kwargs))
+
+        Returns
+        -------
+        Molecule
+        """
+        subgraph = self.__class__()
+        subgraph.meta = copy.copy(self.meta)
+        subgraph._force_field = self._force_field
+        subgraph.nrexcl = self.nrexcl
+
+        node_copies = [(node, copy.copy(self.nodes[node])) for node in nodes]
+        subgraph.add_nodes_from(node_copies)
+
+        nodes = set(nodes)
+
+        edges_to_add = [edge for edge in self.edges
+                        if edge[0] in nodes and edge[1] in nodes]
+        subgraph.add_edges_from(edges_to_add)
+
+        for interaction_type, interactions in self.interactions.items():
+            for interaction in interactions:
+                if all(atom in nodes for atom in interaction.atoms):
+                    subgraph.interactions[interaction_type].append(interaction)
+
+        return subgraph
 
     def add_interaction(self, type_, atoms, parameters, meta=None):
         """

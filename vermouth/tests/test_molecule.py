@@ -44,7 +44,7 @@ def molecule():
 
 @pytest.fixture
 def molecule_copy(molecule):
-    return molecule.copy(as_view=False)
+    return molecule.copy()
 
 
 @pytest.fixture
@@ -52,7 +52,6 @@ def molecule_subgraph(molecule):
     return molecule.subgraph([2, 0])
 
 
-@pytest.mark.xfail(reason='issue #61')
 def test_copy(molecule, molecule_copy):
     assert molecule_copy is not molecule
     assert molecule_copy.meta == molecule.meta
@@ -93,7 +92,6 @@ def test_copy_edge_mod(molecule, molecule_copy):
     assert 'attribute' not in molecule.edges[(0, 1)]
 
 
-@pytest.mark.xfail(reason='issue #61')
 def test_copy_interactions_mod(molecule, molecule_copy):
     molecule_copy.add_interaction(
         type_='bonds',
@@ -105,23 +103,13 @@ def test_copy_interactions_mod(molecule, molecule_copy):
     n_bonds_copy = len(molecule_copy.interactions['bonds'])
     assert n_bonds_copy > n_bonds
 
-    molecule_copy.add_interaction(
-        type_='angles',
-        atoms=(0, 2, 3),
-        parameters=['5', '6'],
-        meta={'unmutable': 2},
-    )
-    assert 'angles' not in molecule.interactions
 
-
-@pytest.mark.xfail(reason='issue #60')
 def test_subgraph_base(molecule_subgraph):
     assert tuple(molecule_subgraph) == (2, 0)  # order matters!
     assert (0, 2) in molecule_subgraph.edges
     assert (0, 1) not in molecule_subgraph.edges  # node 1 is not there
 
 
-@pytest.mark.xfail(reason='issue #61')
 def test_subgraph_interactions(molecule_subgraph):
     bond_atoms = [bond.atoms for bond in molecule_subgraph.interactions['bonds']]
     assert (0, 2) in bond_atoms
