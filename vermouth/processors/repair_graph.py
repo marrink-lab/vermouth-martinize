@@ -110,7 +110,7 @@ def make_reference(mol):
         # TODO: matches is sorted by isomorphism. So we should probably use
         #       that with e.g. itertools.takewhile.
         if not matches:
-            LOGGER.error("Can't find isomorphism between {}{} and it's "
+            LOGGER.error("Can't find isomorphism between {}{} and its "
                          "reference.", resname, resid, type='inconsistent-data')
             continue
 
