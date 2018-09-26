@@ -29,6 +29,7 @@ import sys
 import vermouth
 from vermouth.forcefield import FORCE_FIELDS
 from vermouth import DATA_PATH
+from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
     AnnotateDSSP,
     AnnotateMartiniSecondaryStructures,
@@ -278,19 +279,24 @@ def entry():
                           help='Additional repository for mapping files.')
 
     posres_group = parser.add_argument_group('Position restraints')
-    posres_group.add_argument('-p', dest='posres', type=lambda x: x.lower(),
+    posres_group.add_argument('-p', dest='posres', type=str.lower,
                               choices=('none', 'all', 'backbone'), default='none',
                               help='Output position restraints (none/all/backbone)')
     posres_group.add_argument('-pf', dest='posres_fc', type=float, default=1000,
                               help='Position restraints force constant in kJ/mol/nm^2')
     secstruct_group = parser.add_argument_group('Secondary structure handling')
-    secstruct_group.add_argument('-dssp', nargs='?', const='dssp',
-                                 help='DSSP executable for determining structure')
+    secstruct_exclusion = secstruct_group.add_mutually_exclusive_group()
+    secstruct_exclusion.add_argument('-dssp', nargs='?', const='dssp',
+                                     help='DSSP executable for determining structure')
+    secstruct_exclusion.add_argument('-ss', dest='ss', type=str.upper,
+                                     metavar='SEQUENCE',
+                                     help=('Manually set the secondary '
+                                           'structure of the proteins.'))
+    secstruct_exclusion.add_argument('-collagen', action='store_true', default=False,
+                                     help='Use collagen parameters')
     secstruct_group.add_argument('-ed', dest='extdih', action='store_true', default=False,
                                  help=('Use dihedrals for extended regions '
                                        'rather than elastic bonds'))
-    secstruct_group.add_argument('-collagen', action='store_true', default=False,
-                                 help='Use collagen parameters')
 
     rb_group = parser.add_argument_group('Protein elastic network')
     rb_group.add_argument('-elastic', action='store_true', default=False,
@@ -393,6 +399,10 @@ def entry():
     if args.dssp is not None:
         AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
+    elif args.ss is not None:
+        AnnotateResidues(attribute='secstruct', sequence=args.ss,
+                         molecule_selector=selectors.is_protein).run_system(system)
+        AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.collagen:
         if not target_ff.has_feature('collagen'):
             logging.warning('The force field "{}" does not have specific '
@@ -410,6 +420,12 @@ def entry():
                         'parameters for neutral termini (-nt).'
                         .format(target_ff.name))
     vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
+
+    ss_sequence = list(itertools.chain(*(
+        dssp.sequence_from_residues(molecule, 'secstruct')
+        for molecule in system.molecules
+        if selectors.is_protein(molecule)
+    )))
 
     if args.cystein_bridge == 'none':
         vermouth.RemoveCysteinBridgeEdges().run_system(system)
@@ -466,6 +482,13 @@ def entry():
         ' '.join(sys.argv),
         VERSION,
     ]
+    if None not in ss_sequence:
+        header += [
+            'The following sequence of secondary structure ',
+            'was used for the full system:',
+            ''.join(ss_sequence),
+        ]
+
     if args.top_path is not None:
         write_gmx_topology(system, args.top_path,
                            deduplicate=not args.keep_duplicate_itp,
