@@ -27,7 +27,31 @@ from ..molecule import Molecule
 from .processor import Processor
 from ..utils import distance
 
-COVALENT_RADII = {'H': 0.031, 'C': 0.076, 'N': 0.071, 'O': 0.066, 'S': 0.105}
+# Van der Waals radii from A. Bondi, J. Phys. Chem., 68, 441-452, 1964.
+# https://doi.org/10.1021/j100785a001
+# For hydrogen, we use R.S. Rowland & R. Taylor, J.Phys.Chem., 100, 7384-7391, 1996.
+# https://doi.org/10.1021/jp953141
+VDW_RADII = {  # in nm
+    'H': 0.120,
+    'He': 0.140,
+    'C': 0.170,
+    'N': 0.155,
+    'O': 0.152,
+    'F': 0.147,
+    'Ne': 0.154,
+    'Si': 0.210,
+    'P': 0.180,
+    'S': 0.180,
+    'Cl': 0.175,
+    'Ar': 0.188,
+    'As': 0.185,
+    'Se': 1.90,
+    'Br': 0.185,
+    'Kr': 0.202,
+    'Te': 0.206,
+    'I': 0.198,
+    'Xe': 0.216,
+}
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
 
 
@@ -36,7 +60,7 @@ def bonds_from_distance(system, fudge=1.1):
     Creates edges between nodes of molecules in system based on a distance
     criterion. Nodes in system must have `position` and `element` attributes.
     The possible distance between nodes is determined by values in
-    `COVALENT_RADII`.
+    `VDW_RADII`.
 
     Parameters
     ----------
@@ -53,7 +77,7 @@ def bonds_from_distance(system, fudge=1.1):
     """
     system = nx.compose_all(system.molecules)
     idx_to_nodenum = {idx: n for idx, n in enumerate(system)}
-    max_dist = max(COVALENT_RADII.values())
+    max_dist = max(VDW_RADII.get(node.get('element'), 0.2) for node in system.nodes.values())
     positions = np.array([system.node[n]['position'] for n in system], dtype=float)
     tree = KDTree(positions)
     pairs = tree.query_pairs(2*max_dist*fudge)  # eps=fudge-1?
@@ -65,11 +89,11 @@ def bonds_from_distance(system, fudge=1.1):
         atom2 = system.node[node_idx2]
         element1 = atom1['element']
         element2 = atom2['element']
-        if element1 in COVALENT_RADII and element2 in COVALENT_RADII:
+        if element1 in VDW_RADII and element2 in VDW_RADII:
             # Elements we do not know never make bonds.
             dist = distance(atom1['position'], atom2['position'])
-            bond_distace = COVALENT_RADII[element1] + COVALENT_RADII[element2]
-            if dist <= bond_distace * fudge:
+            bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
+            if dist <= bond_distance * fudge:
                 system.add_edge(node_idx1, node_idx2, distance=dist)
     return system
 
