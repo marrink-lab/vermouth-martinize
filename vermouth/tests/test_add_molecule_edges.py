@@ -96,5 +96,8 @@ def test_add_molecule_edges_distance(short_dna_edges):
         (51, 76),
         (33, 93),
         (11, 115),
+        (73, 74),
+        (52, 76),
     ])
+    found = set(short_dna_edges.molecules[0].edges)
     assert set(short_dna_edges.molecules[0].edges) == expected

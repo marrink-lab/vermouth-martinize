@@ -35,7 +35,7 @@ DNA_ACCEPTORS = [
     {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': Choice(['N3', 'O2'])},
     {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': Choice(['O2', 'O4'])},
 ]
-DNA_HB_DIST = 0.3
+DNA_HB_DIST = 0.36
 
 
 class AddMoleculeEdgesAtDistance(Processor):
@@ -61,11 +61,13 @@ class AddMoleculeEdgesAtDistance(Processor):
     --------
     vermouth.molecule.attributes_match
     """
-    def __init__(self, threshold, templates_from, templates_to, attribute='position'):
+    def __init__(self, threshold, templates_from, templates_to,
+                 attribute='position', min_edges=0):
         self.threshold = threshold
         self.templates_from = templates_from
         self.templates_to = templates_to
         self.attribute = attribute
+        self.min_edges = min_edges
 
     def run_system(self, system):
         """
@@ -77,6 +79,7 @@ class AddMoleculeEdgesAtDistance(Processor):
             templates_a=self.templates_from,
             templates_b=self.templates_to,
             attribute=self.attribute,
+            min_edges=self.min_edges,
         )
         return system
 
@@ -107,5 +110,6 @@ class MergeNucleicStrands(AddMoleculeEdgesAtDistance):
             threshold=threshold,
             templates_from=templates_donnors,
             templates_to=templates_acceptors,
-            attribute=attribute
+            attribute=attribute,
+            min_edges=4
         )

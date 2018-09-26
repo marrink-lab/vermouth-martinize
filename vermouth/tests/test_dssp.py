@@ -17,6 +17,7 @@ Test the functions required to use DSSP.
 """
 
 import os
+import itertools
 
 import pytest
 

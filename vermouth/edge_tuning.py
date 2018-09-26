@@ -227,7 +227,7 @@ def add_inter_molecule_edges(molecules, edges):
 
 def pairs_under_threshold(molecules, threshold,
                           selection_a, selection_b,
-                          attribute='position'):
+                          attribute='position', min_edges=0):
     """
     List pairs of nodes from a selection that are closer than a threshold.
 
@@ -240,6 +240,9 @@ def pairs_under_threshold(molecules, threshold,
 
     All nodes from the selection must have a position accessible under the key
     given as the 'attribute' argument. That key is 'position' by default.
+
+    With the `min_edges` argument, one can prevent pairs to be selected if the
+    two nodes are connected by less than a given number of edges.
 
     Parameters
     ----------
@@ -257,6 +260,9 @@ def pairs_under_threshold(molecules, threshold,
     attribute: str
         The dictionary key under which the node positions are stored in the
         nodes.
+    min_edges: int
+        Do not select pairs that are connected by less than that number of
+        edges.
 
     Yields
     ------
@@ -284,16 +290,30 @@ def pairs_under_threshold(molecules, threshold,
     kdtree = KDTree(coordinates_a)
     for idx, jdx_multi in enumerate(kdtree.query_ball_point(coordinates_b, threshold)):
         for jdx in jdx_multi:
-            node_a = selection_a[idx]
-            node_b = selection_b[jdx]
-            distance_between = distance(
-                molecules[node_a[0]].nodes[node_a[1]][attribute],
-                molecules[node_b[0]].nodes[node_b[1]][attribute],
-            )
+            key_a = selection_a[idx]
+            key_b = selection_b[jdx]
+            node_a = molecules[key_a[0]].nodes[key_a[1]]
+            node_b = molecules[key_b[0]].nodes[key_b[1]]
+            distance_between = distance(node_a[attribute], node_b[attribute])
             # Not sure why I need the distance test. I expected KDTree to deal
             # with it by itself.
-            if node_a != node_b and distance_between < threshold:
-                yield (node_a, node_b)
+            if key_a != key_b and distance_between < threshold:
+                if not _are_close(min_edges, molecules, key_a, key_b):
+                    yield (key_a, key_b)
+
+
+def _are_close(threshold, molecules, key_a, key_b):
+    if not threshold:
+        return False
+    if key_a[0] == key_b[0]:
+        try:
+            length = nx.shortest_path_length(
+                molecules[key_a[0]], key_a[1], key_b[1]
+            )
+        except nx.exception.NetworkXNoPath:
+            return False
+        else:
+            return length < threshold
 
 
 def select_nodes_multi(molecules, selector):
@@ -325,7 +345,7 @@ def select_nodes_multi(molecules, selector):
 
 def add_edges_threshold(molecules, threshold,
                         templates_a, templates_b,
-                        attribute='position'):
+                        attribute='position', min_edges=0):
     """
     Add edges between two selections when under a given threshold.
 
@@ -348,6 +368,8 @@ def add_edges_threshold(molecules, threshold,
     attribute: str
         Name of the key in the node dictionaries under which the coordinates
         are stored.
+    min_edges: int
+        Minimum number of edges between to nodes for an edge to be added.
 
     Returns
     -------
@@ -364,6 +386,6 @@ def add_edges_threshold(molecules, threshold,
     selection_b = list(select_nodes_multi(molecules, selector_b))
     edges = pairs_under_threshold(molecules, threshold,
                                   selection_a, selection_b,
-                                  attribute)
+                                  attribute, min_edges=min_edges)
     new_molecules = add_inter_molecule_edges(molecules, edges)
     return new_molecules
