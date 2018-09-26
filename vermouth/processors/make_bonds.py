@@ -28,7 +28,9 @@ from .processor import Processor
 from ..utils import distance
 
 # Van der Waals radii from A. Bondi, J. Phys. Chem., 68, 441-452, 1964.
+# https://doi.org/10.1021/j100785a001
 # For hydrogen, we use R.S. Rowland & R. Taylor, J.Phys.Chem., 100, 7384-7391, 1996.
+# https://doi.org/10.1021/jp953141
 VDW_RADII = {  # in nm
     'H': 0.120,
     'He': 0.140,
