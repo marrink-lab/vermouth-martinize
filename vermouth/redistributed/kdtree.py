@@ -702,7 +702,7 @@ class KDTree(object):
 
     def sparse_distance_matrix(self, other, max_distance, p=2.0):
         """
-        Emulate :meth:`scipy.spacial.KDtree.sparse_distance_matrix` without scipy.
+        Emulate :meth:`scipy.spacial.cKDtree.sparse_distance_matrix` without scipy.
 
         The return value is a dictionary instead of scipy sparse matrix.
 

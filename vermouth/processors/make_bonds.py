@@ -64,7 +64,7 @@ def bonds_from_distance(system, fudge=1.1):
 
     Notes
     -----
-    Elements that are not in `VMD_RADII` do not make bonds.
+    Elements that are not in `VDW_RADII` do not make bonds.
 
     Parameters
     ----------
@@ -80,6 +80,12 @@ def bonds_from_distance(system, fudge=1.1):
         certain distance from each other. It is probably disconnected.
     """
     system = nx.compose_all(system.molecules)
+    # We filter out the nodes for which we do not know the radius. Indeed, we
+    # consider these nodes cannot make bonds. The filtering is done before we
+    # enter the KDTree; we only provide to the KDTree the position of the nodes
+    # that could make a bond. `idx_to_nodenum` make the link between the
+    # indices in the `positions` array, and the node keys in the `system`
+    # graph.
     idx_to_nodenum = {
         idx: n
         for idx, n in enumerate(
@@ -88,7 +94,11 @@ def bonds_from_distance(system, fudge=1.1):
                 if system.nodes[subn].get('element') in VDW_RADII
         )
     }
-    max_dist = max(VDW_RADII.get(node.get('element'), 0.2) for node in system.nodes.values())
+    max_dist = max(
+        VDW_RADII[node.get('element')]
+        for node in system.nodes.values()
+        if node.get('element') in VDW_RADII
+    )
     positions = np.array([
         node['position']
         for node in system.nodes.values()
