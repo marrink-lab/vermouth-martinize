@@ -8,8 +8,11 @@ env:
     - VERMOUTH_TEST_DSSP=mkdssp
     - SKIP_GENERATE_AUTHORS=1
     - SKIP_WRITE_GIT_CHANGELOG=1
+  matrix:
+    - WITH_SCIPY=true
 install:
   - pip install --upgrade setuptools pip
+  - if [[ ${WITH_SCIPY} == true ]]; then pip install scipy; fi
   - pip install --upgrade -r requirements-tests.txt
   - pip install --upgrade .
 script:
@@ -42,6 +45,7 @@ jobs:
       sudo: true
     - python: "3.8-dev"
       sudo: true
+      env: WITH_SCIPY=false
 
     - stage: docs
       python: "3.5"

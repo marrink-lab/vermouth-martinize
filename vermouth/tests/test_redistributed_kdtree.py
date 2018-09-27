@@ -19,9 +19,16 @@ Test the modifications made to the redistributed KDTree.
 
 import numpy as np
 
-from scipy.spatial import cKDTree as scipyKDTree
+try:
+    from scipy.spatial import cKDTree as scipyKDTree
+except ImportError:
+    # scipy is not available
+    HAS_SCIPY = False
+else:
+    HAS_SCIPY = True
 from vermouth.redistributed.kdtree import KDTree as redisKDTree
 
+import pytest
 import hypothesis
 from hypothesis import strategies as st
 import hypothesis.extra.numpy as hnp
@@ -44,6 +51,7 @@ def dict_close(left, right):
     return np.allclose(values_left, values_right)
 
 
+@pytest.mark.skipif(not HAS_SCIPY, reason="Scipy is not available.")
 @hypothesis.given(
     coordinates=hnp.arrays(
         dtype=st.sampled_from((np.float32, np.float64)),

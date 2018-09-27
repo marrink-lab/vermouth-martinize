@@ -197,4 +197,6 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
         but the graph has metadata.
     """
     subgraph = edges_between_molecule.subgraph(edges_between_selections[selidx])
-    assert tuple(subgraph.edges) == expected
+    sorted_found = sorted(sorted(edge) for edge in subgraph.edges)
+    sorted_expected = sorted(sorted(edge) for edge in expected)
+    assert sorted_found == sorted_expected
