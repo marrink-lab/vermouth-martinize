@@ -105,7 +105,7 @@ def pdb_to_universal(system, delete_unknown=False,
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
     LOGGER.info('Repairing the graph.', type='step')
-    vermouth.RepairGraph(delete_unknown=delete_unknown).run_system(canonicalized)
+    vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(canonicalized)
     if write_repair is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_repair),
                                omit_charges=True, nan_missing_pos=True)

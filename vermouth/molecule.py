@@ -348,30 +348,48 @@ class Molecule(nx.Graph):
             node_attr = self.node[node]
             yield node, node_attr
 
-    def copy(self, as_view=False):
-        '''
+    def copy(self):
+        """
         Creates a copy of the molecule.
 
-        See Also
-        --------
-        :meth:`networkx.Graph.copy`
-        '''
-        copy = super().copy(as_view)
-        if not as_view:
-            copy = self.__class__(copy)
-        copy._force_field = self.force_field
-        copy.meta = self.meta.copy()
-        return copy
+        Returns
+        -------
+        Molecule
+        """
+        return self.subgraph(self.nodes)
 
-    def subgraph(self, *args, **kwargs):
-        '''
+    def subgraph(self, nodes):
+        """
         Creates a subgraph from the molecule.
 
-        See Also
-        --------
-        :meth:`networkx.Graph.subgraph`
-        '''
-        return self.__class__(super().subgraph(*args, **kwargs))
+
+        Returns
+        -------
+        Molecule
+        """
+        subgraph = self.__class__()
+        subgraph.meta = copy.copy(self.meta)
+        subgraph._force_field = self._force_field
+        subgraph.nrexcl = self.nrexcl
+
+        node_copies = [(node, copy.copy(self.nodes[node])) for node in nodes]
+        subgraph.add_nodes_from(node_copies)
+
+        nodes = set(nodes)
+
+        #edges_to_add = [
+        #    (node, node2)
+        #    for node in nodes
+        #    for node2 in set(self[node]) & nodes
+        #]
+        subgraph.add_edges_from(self.edges_between(nodes, nodes, data=True))
+
+        for interaction_type, interactions in self.interactions.items():
+            for interaction in interactions:
+                if all(atom in nodes for atom in interaction.atoms):
+                    subgraph.interactions[interaction_type].append(interaction)
+
+        return subgraph
 
     def add_interaction(self, type_, atoms, parameters, meta=None):
         """
@@ -628,7 +646,7 @@ class Molecule(nx.Graph):
         residue_graph = graph_utils.make_residue_graph(self)
         return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
 
-    def edges_between(self, n_bunch1, n_bunch2):
+    def edges_between(self, n_bunch1, n_bunch2, data=False):
         """
         Returns all edges in this molecule between nodes in `n_bunch1` and
         `n_bunch2`.
@@ -646,9 +664,15 @@ class Molecule(nx.Graph):
             A list of tuples of edges in this molecule. The first element of
             the tuple will be in `n_bunch1`, the second element in `n_bunch2`.
         """
-        return [(node1, node2)
-                for node1, node2 in itertools.product(n_bunch1, n_bunch2)
-                if self.has_edge(node1, node2)]
+        set_1 = set(n_bunch1)
+        set_2 = set(n_bunch2)
+        for node1 in set_1:
+            cross = set_2 & set(self[node1])
+            for node2 in cross:
+                if not data:
+                    yield (node1, node2)
+                else:
+                    yield (node1, node2, self.edges[node1, node2])
 
 
 class Block(Molecule):

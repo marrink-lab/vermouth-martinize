@@ -129,7 +129,7 @@ def make_reference(mol):
     return reference_graph
 
 
-def repair_residue(molecule, ref_residue):
+def repair_residue(molecule, ref_residue, include_graph):
     """
     Rebuild missing atoms and canonicalize atomnames
     """
@@ -147,8 +147,8 @@ def repair_residue(molecule, ref_residue):
         if ref_idx in match:
             res_idx = match[ref_idx]
             node = molecule.nodes[res_idx]
-            # Copy, because there are references everywhere.
-            node['graph'] = molecule.subgraph([res_idx]).copy()
+            if include_graph:
+                node['graph'] = molecule.subgraph([res_idx])
             node.update(reference.nodes[ref_idx])
             # Update found as well to keep found and molecule in line. It would
             # be better to try and figure why found is not a reference, but meh
@@ -224,7 +224,7 @@ def repair_residue(molecule, ref_residue):
                          type='missing-atom')
 
 
-def repair_graph(molecule, reference_graph):
+def repair_graph(molecule, reference_graph, include_graph=True):
     """
     Repairs a molecule graph produced based on the information in
     ``reference_graph``. Missing atoms will be added and atom- and residue-
@@ -234,6 +234,9 @@ def repair_graph(molecule, reference_graph):
     `molecule` is modified in place. Missing atoms (as per `reference_graph`)
     are added, atom and residue names are canonicalized, and PTM atoms are
     marked.
+
+    If `include_graph` is `True`, then the subgraph corresponding to each node
+    is included in the node under the "graph" attribute.
 
     Parameters
     ----------
@@ -256,10 +259,13 @@ def repair_graph(molecule, reference_graph):
         :match: A dictionary describing how the reference corresponds
             with the provided graph. Keys are node indices of the
             reference, values are node indices of the provided graph.
+
+    include_graph: bool
+        Include the subgraph in the nodes.
     """
     for residx in reference_graph:
         residue = reference_graph.nodes[residx]
-        repair_residue(molecule, residue)
+        repair_residue(molecule, residue, include_graph=include_graph)
         # Atomnames are canonized, and missing atoms added
         found = reference_graph.nodes[residx]['found']
         match = reference_graph.nodes[residx]['match']
@@ -280,14 +286,15 @@ def repair_graph(molecule, reference_graph):
 
 
 class RepairGraph(Processor):
-    def __init__(self, delete_unknown=False):
+    def __init__(self, delete_unknown=False, include_graph=True):
         super().__init__()
         self.delete_unknown = delete_unknown
+        self.include_graph=include_graph
 
     def run_molecule(self, molecule):
         molecule = molecule.copy()
         reference_graph = make_reference(molecule)
-        repair_graph(molecule, reference_graph)
+        repair_graph(molecule, reference_graph, include_graph=self.include_graph)
         return molecule
 
     def run_system(self, system):

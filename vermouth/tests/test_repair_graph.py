@@ -129,9 +129,9 @@ def system_mod(forcefield_with_mods):
     return system
 
 
-@pytest.fixture
-def repaired_graph(system_mod):
-    vermouth.RepairGraph().run_system(system_mod)
+@pytest.fixture(params=(True, False))
+def repaired_graph(request, system_mod):
+    vermouth.RepairGraph(include_graph=request.param).run_system(system_mod)
     return system_mod
 
 
