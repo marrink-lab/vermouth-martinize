@@ -27,6 +27,11 @@ from .processor import Processor
 
 
 class PDBInput(Processor):
-    def run_system(self, system, filename):
-        molecule = read_pdb(filename)
+    def __init__(self, filename, exclude=()):
+        super().__init__()
+        self.filename = filename
+        self.exclude = exclude
+
+    def run_system(self, system):
+        molecule = read_pdb(self.filename, exclude=self.exclude)
         system.add_molecule(molecule)

@@ -73,7 +73,7 @@ LOGGER = StyleAdapter(LOGGER)
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
 
 
-def read_system(path):
+def read_system(path, ignore_resnames=()):
     """
     Read a system from a PDB or GRO file.
 
@@ -84,9 +84,9 @@ def read_system(path):
     system = vermouth.System()
     file_extension = path.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ['PDB', 'ENT']:
-        vermouth.PDBInput().run_system(system, str(path))
+        vermouth.PDBInput(str(path), exclude=ignore_resnames).run_system(system)
     elif file_extension in ['GRO']:
-        vermouth.GROInput().run_system(system, str(path))
+        vermouth.GROInput(str(path), exclude=ignore_resnames).run_system(system)
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
@@ -265,6 +265,8 @@ def entry():
     file_group.add_argument('-merge', dest='merge_chains',
                             type=lambda x: x.split(','), action='append',
                             help='Merge chains: e.g. -merge A,B,C (+)')
+    file_group.add_argument('-ignore', dest='ignore_res', action='append',
+                            help='Ignore residues with that name.')
 
     ff_group = parser.add_argument_group('Force field selection')
     ff_group.add_argument('-ff', dest='to_ff', default='martini22',
@@ -385,7 +387,7 @@ def entry():
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
     # For now at least, we silently delete molecules with unknown blocks.
-    system = read_system(args.inpath)
+    system = read_system(args.inpath, ignore_resnames=args.ignore_res)
     system = pdb_to_universal(
         system,
         delete_unknown=True,
