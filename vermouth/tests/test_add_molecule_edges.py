@@ -28,7 +28,7 @@ import vermouth
 from vermouth.molecule import Choice
 from vermouth.pdb.pdb import read_pdb
 from vermouth.processors.add_molecule_edges import (
-    DNA_ACCEPTORS, DNA_DONNORS, DNA_HB_DIST,
+    DNA_ACCEPTORS, DNA_DONORS, DNA_HB_DIST,
 )
 from .datafiles import SHORT_DNA
 
@@ -52,7 +52,7 @@ def short_dna_general(short_dna):
     :class:`vermouth.AddMoleculeEdgesAtDistance`.
     """
     processor = vermouth.AddMoleculeEdgesAtDistance(
-        DNA_HB_DIST, DNA_DONNORS, DNA_ACCEPTORS
+        DNA_HB_DIST, DNA_DONORS, DNA_ACCEPTORS
     )
     system = processor.run_system(short_dna)
     return system
