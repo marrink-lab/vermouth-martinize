@@ -194,7 +194,8 @@ def add_inter_molecule_edges(molecules, edges):
         List of molecules to link.
     edges: collections.abc.Iterable
         List of edges in a ``(molecule_index, node_key)`` format as described
-        above.
+        above. Edges can have a third element, it is then a dictionary of
+        attributes to be attached to the edge.
 
     Returns
     -------
@@ -236,6 +237,12 @@ def add_inter_molecule_edges(molecules, edges):
             'The two ends of the edge are not part of the same molecule.'
         molecule_index = new_edge[0][0]
         new_molecules[molecule_index].add_edge(new_edge[0][1], new_edge[1][1])
+        if len(edge) > 2:
+            in_mol_edge = (
+                new_molecules[molecule_index]
+                .edges[new_edge[0][1], new_edge[1][1]]
+            )
+            in_mol_edge.update(edge[2])
 
     return new_molecules
 
@@ -250,8 +257,8 @@ def pairs_under_threshold(molecules, threshold,
     that are closer than the given threshold. The molecules are given as a list
     of molecules, the selection is a list of nodes each of them a tuple
     ``(index of the molecule in the list, key of the node in the molecule)``.
-    The result of the function is a generator of node pairs, each node formated
-    as in the selection.
+    The result of the function is a generator of node pairs followed by the
+    distance between the nodes, each node formated as in the selection.
 
     All nodes from the selection must have a position accessible under the key
     given as the 'attribute' argument. That key is 'position' by default.
@@ -283,7 +290,8 @@ def pairs_under_threshold(molecules, threshold,
     Yields
     ------
     tuple
-        Pairs of node closer than the threshold in the format described above.
+        Pairs of node closer than the threshold in the format described above
+        and the distance between the nodes.
 
     Raises
     ------
@@ -306,15 +314,14 @@ def pairs_under_threshold(molecules, threshold,
     kdtree_a = KDTree(coordinates_a)
     kdtree_b = KDTree(coordinates_b)
     sparse_distance_matrix = kdtree_a.sparse_distance_matrix(kdtree_b, threshold)
-    for idx, jdx_multi, distance_between in enumerate(sparse_distance_matrix):
-        for jdx in jdx_multi:
-            key_a = selection_a[idx]
-            key_b = selection_b[jdx]
-            node_a = molecules[key_a[0]].nodes[key_a[1]]
-            node_b = molecules[key_b[0]].nodes[key_b[1]]
-            if key_a != key_b and distance_between < threshold:
-                if not _are_close(min_edges, molecules, key_a, key_b):
-                    yield (key_a, key_b)
+    for (idx, jdx), distance_between in sparse_distance_matrix.items():
+        key_a = selection_a[idx]
+        key_b = selection_b[jdx]
+        node_a = molecules[key_a[0]].nodes[key_a[1]]
+        node_b = molecules[key_b[0]].nodes[key_b[1]]
+        if key_a != key_b and distance_between < threshold:
+            if not _are_close(min_edges, molecules, key_a, key_b):
+                yield (key_a, key_b, distance_between)
 
 
 def _are_close(threshold, molecules, key_a, key_b):
@@ -402,5 +409,9 @@ def add_edges_threshold(molecules, threshold,
     edges = pairs_under_threshold(molecules, threshold,
                                   selection_a, selection_b,
                                   attribute, min_edges=min_edges)
+    edges = (
+        (node1, node2, {'distance': distance})
+        for node1, node2, distance in edges
+    )
     new_molecules = add_inter_molecule_edges(molecules, edges)
     return new_molecules

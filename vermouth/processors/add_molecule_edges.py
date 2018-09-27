@@ -35,7 +35,7 @@ DNA_ACCEPTORS = [
     {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': Choice(['N3', 'O2'])},
     {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': Choice(['O2', 'O4'])},
 ]
-DNA_HB_DIST = 0.36
+DNA_HB_DIST = 0.30
 
 
 class AddMoleculeEdgesAtDistance(Processor):

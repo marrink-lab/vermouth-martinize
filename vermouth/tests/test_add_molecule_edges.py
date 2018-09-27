@@ -48,7 +48,7 @@ def short_dna():
 
 def short_dna_general(short_dna):
     """
-    DNA double strands with hydrogen bonds dded using
+    DNA double strands with hydrogen bonds added using
     :class:`vermouth.AddMoleculeEdgesAtDistance`.
     """
     processor = vermouth.AddMoleculeEdgesAtDistance(
@@ -97,7 +97,11 @@ def test_add_molecule_edges_distance(short_dna_edges):
         (33, 93),
         (11, 115),
         (73, 74),
-        (52, 76),
+        (32, 33),
+        (52, 54),
+        (93, 95),
+        (114, 115),
+        (11, 13),
     ])
     found = set(short_dna_edges.molecules[0].edges)
     assert set(short_dna_edges.molecules[0].edges) == expected
