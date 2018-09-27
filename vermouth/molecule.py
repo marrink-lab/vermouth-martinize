@@ -377,8 +377,11 @@ class Molecule(nx.Graph):
 
         nodes = set(nodes)
 
-        edges_to_add = [edge for edge in self.edges
-                        if edge[0] in nodes and edge[1] in nodes]
+        edges_to_add = [
+            (node, node2)
+            for node in nodes
+            for node2 in set(self[node]) & nodes
+        ]
         subgraph.add_edges_from(edges_to_add)
 
         for interaction_type, interactions in self.interactions.items():

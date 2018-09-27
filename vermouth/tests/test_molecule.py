@@ -175,3 +175,26 @@ def test_edges_between(edges_between_molecule, edges_between_selections,
     sorted_found = sorted(sorted(edge) for edge in found)
     sorted_expected = sorted(sorted(edge) for edge in expected)
     assert sorted_found == sorted_expected
+
+
+@pytest.mark.parametrize('selidx, expected', (
+    (0, ((0, 1), (1, 2), (1, 3))),
+    (1, ((5, 6), (5, 7), (7, 8))),
+    (2, ((9, 10), (10, 11), (11, 12))),
+    (3, ((3, 4), (4, 5), (5, 6))),
+    (4, ((7, 8), (9, 10))),
+))
+def test_subgraph_edges(edges_between_molecule, edges_between_selections,
+                        selidx, expected):
+    """
+    :meth:`vermouth.molecule.Molecule.subgraph` select the expected edges.
+
+    See Also
+    --------
+    test_subgraph_base
+        This test deals with a larger graph, but no metadata; while the graph
+        in :func:`test_subgraph_base` uses a very small and simple selection
+        but the graph has metadata.
+    """
+    subgraph = edges_between_molecule.subgraph(edges_between_selections[selidx])
+    assert tuple(subgraph.edges) == expected
