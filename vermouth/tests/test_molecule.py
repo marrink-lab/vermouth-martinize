@@ -142,6 +142,9 @@ def edges_between_molecule():
         (0, 1), (1, 2), (1, 3), (3, 4), (4, 5), (5, 6), (5, 7), (7, 8),
         (9, 10), (10, 11), (11, 12),
     ))
+    for node1, node2, attributes in molecule.edges(data=True):
+        attributes['arbitrary'] = '{} - {}'.format(min(node1, node2),
+                                                   max(node1, node2))
     return molecule
 
 
@@ -159,22 +162,36 @@ def edges_between_selections():
     ]
 
 
+@pytest.mark.parametrize('data', [True, False])
 @pytest.mark.parametrize('bunch1, bunch2, expected', (
     (0, 1, []), (0, 2, []), (0, 4, []), (1, 2, []), (2, 3, []),  # non-overlapping
     (0, 3, [(1, 3), (3, 4)]), (1, 3, [(4, 5), (5, 6), (5, 6), (5, 7)]),
     (1, 4, [(5, 7), (7, 8), (7, 8)]), (2, 4, [(9, 10), (9, 10), (10, 11)]),
 ))
 def test_edges_between(edges_between_molecule, edges_between_selections,
-                       bunch1, bunch2, expected):
+                       bunch1, bunch2, expected, data):
     """
     Test :meth:`vermouth.molecule.Molecule.edges_between`.
     """
     selection_1 = edges_between_selections[bunch1]
     selection_2 = edges_between_selections[bunch2]
-    found = edges_between_molecule.edges_between(selection_1, selection_2)
-    sorted_found = sorted(sorted(edge) for edge in found)
+    found = list(edges_between_molecule.edges_between(
+        selection_1, selection_2, data=data
+    ))
+    sorted_found = sorted(sorted(edge[:2]) for edge in found)
     sorted_expected = sorted(sorted(edge) for edge in expected)
     assert sorted_found == sorted_expected
+    if data:
+        found_attributes = [
+            edge[2]
+            for edge in sorted(found, key=lambda x: x[:2])
+        ]
+        expected_attributes = [
+            edges_between_molecule.edges[edge[0], edge[1]]
+            for edge in sorted_expected
+        ]
+        assert found_attributes == expected_attributes
+
 
 
 @pytest.mark.parametrize('selidx, expected', (
@@ -200,3 +217,13 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
     sorted_found = sorted(sorted(edge) for edge in subgraph.edges)
     sorted_expected = sorted(sorted(edge) for edge in expected)
     assert sorted_found == sorted_expected
+
+    found_attributes = [
+        subgraph.edges[edge[0], edge[1]]
+        for edge in sorted_expected
+    ]
+    expected_attributes = [
+        edges_between_molecule.edges[edge[0], edge[1]]
+        for edge in sorted_expected
+    ]
+    assert found_attributes == expected_attributes

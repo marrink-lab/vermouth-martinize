@@ -377,12 +377,12 @@ class Molecule(nx.Graph):
 
         nodes = set(nodes)
 
-        edges_to_add = [
-            (node, node2)
-            for node in nodes
-            for node2 in set(self[node]) & nodes
-        ]
-        subgraph.add_edges_from(edges_to_add)
+        #edges_to_add = [
+        #    (node, node2)
+        #    for node in nodes
+        #    for node2 in set(self[node]) & nodes
+        #]
+        subgraph.add_edges_from(self.edges_between(nodes, nodes, data=True))
 
         for interaction_type, interactions in self.interactions.items():
             for interaction in interactions:
@@ -646,7 +646,7 @@ class Molecule(nx.Graph):
         residue_graph = graph_utils.make_residue_graph(self)
         return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
 
-    def edges_between(self, n_bunch1, n_bunch2):
+    def edges_between(self, n_bunch1, n_bunch2, data=False):
         """
         Returns all edges in this molecule between nodes in `n_bunch1` and
         `n_bunch2`.
@@ -664,14 +664,15 @@ class Molecule(nx.Graph):
             A list of tuples of edges in this molecule. The first element of
             the tuple will be in `n_bunch1`, the second element in `n_bunch2`.
         """
-        result = []
         set_1 = set(n_bunch1)
         set_2 = set(n_bunch2)
         for node1 in set_1:
             cross = set_2 & set(self[node1])
             for node2 in cross:
-                result.append((node1, node2))
-        return result
+                if not data:
+                    yield (node1, node2)
+                else:
+                    yield (node1, node2, self.edges[node1, node2])
 
 
 class Block(Molecule):
