@@ -126,9 +126,9 @@ def proto_multi_templates(node, templates, ignore_keys=()):
     ----------
     node: dict
         The atom/node to consider.
-    templates: list[dict]
+    templates: collections.abc.Iterable[dict]
         A list of node templates to compare to the node.
-    ignore_keys: list
+    ignore_keys: collections.abc.Collection
         List of keys to ignore from the templates.
 
     Returns
@@ -139,10 +139,10 @@ def proto_multi_templates(node, templates, ignore_keys=()):
     --------
     vermouth.molecule.attributes_match
     """
-    for template in templates:
-        if attributes_match(node, template, ignore_keys):
-            return True
-    return False
+    return any(
+        attributes_match(node, template, ignore_keys)
+        for template in templates
+    )
 
 
 def filter_minimal(molecule, selector):

@@ -60,7 +60,7 @@ def short_dna_general(short_dna):
 
 def short_dna_strands(short_dna):
     """
-    DNA double strands with hydrogen bonds dded using
+    DNA double strands with hydrogen bonds added using
     :class:`vermouth.MergeNucleicStrands`.
     """
     processor = vermouth.MergeNucleicStrands()

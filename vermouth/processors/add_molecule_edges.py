@@ -23,7 +23,7 @@ from .. import edge_tuning
 from ..molecule import Choice
 
 # TODO: this should be defined in te force fields
-DNA_DONNORS = [
+DNA_DONORS = [
     {'resname': Choice(['DA', 'DA3', 'DA5']), 'atomname': Choice(['C2', 'N6'])},
     {'resname': Choice(['DG', 'DG3', 'DG5']), 'atomname': Choice(['N1', 'N2'])},
     {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': 'N4'},
@@ -103,7 +103,7 @@ class MergeNucleicStrands(AddMoleculeEdgesAtDistance):
         Name of the attribute under which are store the node coordinates.
     """
     def __init__(self, threshold=DNA_HB_DIST,
-                 templates_donnors=DNA_DONNORS,
+                 templates_donnors=DNA_DONORS,
                  templates_acceptors=DNA_ACCEPTORS,
                  attribute='position'):
         super().__init__(

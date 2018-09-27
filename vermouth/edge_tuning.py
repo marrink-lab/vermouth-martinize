@@ -30,7 +30,17 @@ from .utils import distance
 
 def _edge_is_between_selections(edge, selection_a, selection_b):
     """
-    Returs ``True`` is the edge has one end in each selection.
+    Returns ``True`` is the edge has one end in each selection.
+
+    Parameters
+    ----------
+    edge: tuple[int, int]
+    selection_a: collections.abc.Container
+    selection_b: collections.abc.Container
+
+    Returns
+    -------
+    bool
     """
     return (
         (edge[0] in selection_a and edge[1] in selection_b)
@@ -49,9 +59,9 @@ def prune_edges_between_selections(molecule, selection_a, selection_b):
     ----------
     molecule: networkx.Graph
         Molecule to prune in-place.
-    selection_a: list
+    selection_a: collections.abc.Iterable
         List of node keys from the molecule.
-    selection_b: list
+    selection_b: collections.abc.Iterable
         List of node keys from the molecule.
 
     See Also
@@ -114,8 +124,8 @@ def add_edges_at_distance(molecule, threshold,
 
     All nodes that are part of 'selection_a' or 'selection_b' must have a
     position stored under the attribute which key is given with the 'attribute'
-    argument. That key is 'position' by default. If at least one node is
-    missing a :exc:`KeyError` is raised.
+    argument. That key is 'position' by default. If at least one node has the
+    position missing, then a :exc:`KeyError` is raised.
 
     Parameters
     ----------
@@ -124,11 +134,11 @@ def add_edges_at_distance(molecule, threshold,
     threshold: float
         The distance threshold under which edges will be created. The distance
         is expressed in nm.
-    selection_a: list
+    selection_a: collections.abc.Iterable
         List of node keys from the molecule.
-    selection_b: list
+    selection_b: collections.abc.Iterable
         List of node keys from the molecule.
-    attribute: str
+    attribute: collections.abc.Hashable
         Name of the key in the node dictionaries under which the coordinates
         are stored.
 
@@ -150,7 +160,11 @@ def add_edges_at_distance(molecule, threshold,
 
     distance_matrix = geometry.distance_matrix(coordinates_a, coordinates_b)
     index_a, index_b = np.where(distance_matrix < threshold)
-    edges = zip(keys_a[index_a], keys_b[index_b])
+    edges = (
+        (node1, node2, {'distance': distance})
+        for node1, node2, distance
+        in zip(keys_a[index_a], keys_b[index_b], distance_matrix[index_a, index_b])
+    )
 
     molecule.add_edges_from(edges)
 
@@ -163,8 +177,8 @@ def add_inter_molecule_edges(molecules, edges):
     provided as a tuple of two nodes, each node being a tuple of the molecule
     index in the list of molecule, and the node key in that molecule. An edge
     therefore looks like ``((0, 10), (2, 20))`` where ``1`` and ``2`` are
-    molecules, ``10`` is a key of ``molecules[0]``, and ``20`` is a key of
-    ``molecules[2]``.
+    indices of molecules in `molecules`, ``10`` is the key of a node from
+    ``molecules[0]``, and ``20`` is the key of a node from ``molecules[2]``.
 
     The function **can** create edges within a molecule if the same molecule
     index is given for both ends of edges.
@@ -176,9 +190,9 @@ def add_inter_molecule_edges(molecules, edges):
 
     Parameters
     ----------
-    molecules: list
+    molecules: collections.abc.Collection
         List of molecules to link.
-    edges: list
+    edges: collections.abc.Iterable
         List of edges in a ``(molecule_index, node_key)`` format as described
         above.
 
@@ -218,7 +232,8 @@ def add_inter_molecule_edges(molecules, edges):
     # Create the edges
     for edge in edges:
         new_edge = (correspondance[edge[0]], correspondance[edge[1]])
-        assert new_edge[0][0] == new_edge[1][0]
+        assert new_edge[0][0] == new_edge[1][0], \
+            'The two ends of the edge are not part of the same molecule.'
         molecule_index = new_edge[0][0]
         new_molecules[molecule_index].add_edge(new_edge[0][1], new_edge[1][1])
 
@@ -241,8 +256,9 @@ def pairs_under_threshold(molecules, threshold,
     All nodes from the selection must have a position accessible under the key
     given as the 'attribute' argument. That key is 'position' by default.
 
-    With the `min_edges` argument, one can prevent pairs to be selected if the
-    two nodes are connected by less than a given number of edges.
+    With the `min_edges` argument, one can prevent pairs to be selected if
+    there is a path between two nodes that is shorter than a given number of
+    edges.
 
     Parameters
     ----------
@@ -251,13 +267,13 @@ def pairs_under_threshold(molecules, threshold,
     threshold: float
         A distance threshold in nm. Pairs are return if the nodes are closer
         than this threshold.
-    selection_a: list
+    selection_a: collections.abc.Iterable
         List of nodes to consider at one end of the pairs. The format is
         described above.
-    selection_b: list
+    selection_b: collections.abc.Iterable
         List of nodes to consider at the other end of the pairs. The format is
         described above.
-    attribute: str
+    attribute: collections.abc.Hashable
         The dictionary key under which the node positions are stored in the
         nodes.
     min_edges: int
@@ -287,16 +303,15 @@ def pairs_under_threshold(molecules, threshold,
         coordinates_b.append(molecules[key[0]].nodes[key[1]][attribute])
     if not coordinates_a or not coordinates_b:
         return
-    kdtree = KDTree(coordinates_a)
-    for idx, jdx_multi in enumerate(kdtree.query_ball_point(coordinates_b, threshold)):
+    kdtree_a = KDTree(coordinates_a)
+    kdtree_b = KDTree(coordinates_b)
+    sparse_distance_matrix = kdtree_a.sparse_distance_matrix(kdtree_b, threshold)
+    for idx, jdx_multi, distance_between in enumerate(sparse_distance_matrix):
         for jdx in jdx_multi:
             key_a = selection_a[idx]
             key_b = selection_b[jdx]
             node_a = molecules[key_a[0]].nodes[key_a[1]]
             node_b = molecules[key_b[0]].nodes[key_b[1]]
-            distance_between = distance(node_a[attribute], node_b[attribute])
-            # Not sure why I need the distance test. I expected KDTree to deal
-            # with it by itself.
             if key_a != key_b and distance_between < threshold:
                 if not _are_close(min_edges, molecules, key_a, key_b):
                     yield (key_a, key_b)
@@ -327,7 +342,7 @@ def select_nodes_multi(molecules, selector):
 
     Parameters
     ----------
-    molecule: list[Molecule]
+    molecule: collections.abc.Iterable[Molecule]
         A list of molecules.
     selector: collections.abc.Callable
         A selector function.
@@ -351,11 +366,11 @@ def add_edges_threshold(molecules, threshold,
 
     Edges are added within and between the molecules and connect nodes that
     match the given template. Molecules that get connected by an edge are
-    merged and the new list of molecules is retureturned.
+    merged and the new list of molecules is returned.
 
     Parameters
     ----------
-    molecules: list
+    molecules: collections.abc.Sequence[Molecule]
         A list of molecules.
     threshold: float
         The distance threshold in nanometers under which an edge is created.
