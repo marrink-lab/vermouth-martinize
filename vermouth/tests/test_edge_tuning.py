@@ -437,7 +437,7 @@ class TestPairsUnderThreshold:
         Test that :func:`edge_tuning.pairs_under_threshold` select the
         expected pairs when provided twice the same selection.
         """
-        assert edge in list(pair_selected)
+        assert edge in list(pair[:2] for pair in pair_selected)
 
     @staticmethod
     def test_pairs_under_threshold_symetric_nedges(pair_selected):
@@ -452,11 +452,14 @@ class TestPairsUnderThreshold:
     @staticmethod
     def test_distance_under_threshold(multi_molecules, assymetric_pair_selected):
         distances = []
-        for ((mol_a, key_a), (mol_b, key_b)) in assymetric_pair_selected:
+        found_distances = []
+        for ((mol_a, key_a), (mol_b, key_b), dist) in assymetric_pair_selected:
             node_a = multi_molecules[mol_a].nodes[key_a]
             node_b = multi_molecules[mol_b].nodes[key_b]
             distances.append(distance(node_a['coords'], node_b['coords']))
+            found_distances.append(dist)
         assert all(d <= 2.0 for d in distances)
+        assert np.allclose(found_distances, distances)
 
     @staticmethod
     @pytest.mark.parametrize('edge', [
@@ -468,7 +471,7 @@ class TestPairsUnderThreshold:
         Test that :func:`edge_tuning.pairs_under_threshold` select the
         expected pairs when provided two different selections.
         """
-        assert edge in list(assymetric_pair_selected)
+        assert edge in list(pair[:2] for pair in assymetric_pair_selected)
 
     @staticmethod
     def test_pairs_under_threshold_assymetric_nedges(assymetric_pair_selected):
