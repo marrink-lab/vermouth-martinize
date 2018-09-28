@@ -18,7 +18,6 @@ Provides a processor that can add edges to a graph based on geometric criteria.
 """
 
 
-
 import networkx as nx
 import numpy as np
 
@@ -55,7 +54,7 @@ VDW_RADII = {  # in nm
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
 
 
-def bonds_from_distance(system, fudge=1.1):
+def bonds_from_distance(system, fudge=1.2):
     """
     Creates edges between nodes of molecules in system based on a distance
     criterion. Nodes in system must have `position` and `element` attributes.
