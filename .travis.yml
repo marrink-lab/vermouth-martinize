@@ -9,7 +9,7 @@ env:
     - SKIP_GENERATE_AUTHORS=1
     - SKIP_WRITE_GIT_CHANGELOG=1
   matrix:
-    - WITH_SCIPY=true
+    - WITH_SCIPY=true WITH_CODECOV=true
 install:
   - pip install --upgrade setuptools pip
   - if [[ ${WITH_SCIPY} == true ]]; then pip install scipy; fi
@@ -18,7 +18,7 @@ install:
 script:
   - pytest -vv --cov=vermouth vermouth --hypothesis-show-statistics
 after_success:
-  - codecov
+  - if [[ ${WITH_CODECOV} == true ]]; then codecov; fi
 addons:
   apt:
     packages:
@@ -45,7 +45,8 @@ jobs:
       sudo: true
     - python: "3.8-dev"
       sudo: true
-      env: WITH_SCIPY=false
+      env: WITH_SCIPY=false WITH_CODECOV=false
+
 
     - stage: docs
       python: "3.5"
