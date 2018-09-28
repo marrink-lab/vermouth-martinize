@@ -35,8 +35,8 @@ def _edge_is_between_selections(edge, selection_a, selection_b):
     Parameters
     ----------
     edge: tuple[int, int]
-    selection_a: collections.abc.Container
-    selection_b: collections.abc.Container
+    selection_a: collections.abc.Container[collections.abc.Hashable]
+    selection_b: collections.abc.Container[collections.abc.Hashable]
 
     Returns
     -------
@@ -59,9 +59,9 @@ def prune_edges_between_selections(molecule, selection_a, selection_b):
     ----------
     molecule: networkx.Graph
         Molecule to prune in-place.
-    selection_a: collections.abc.Iterable
+    selection_a: collections.abc.Iterable[collections.abc.Hashable]
         List of node keys from the molecule.
-    selection_b: collections.abc.Iterable
+    selection_b: collections.abc.Iterable[collections.abc.Hashable]
         List of node keys from the molecule.
 
     See Also
@@ -134,9 +134,9 @@ def add_edges_at_distance(molecule, threshold,
     threshold: float
         The distance threshold under which edges will be created. The distance
         is expressed in nm.
-    selection_a: collections.abc.Iterable
+    selection_a: collections.abc.Iterable[collections.abc.Hashable]
         List of node keys from the molecule.
-    selection_b: collections.abc.Iterable
+    selection_b: collections.abc.Iterable[collections.abc.Hashable]
         List of node keys from the molecule.
     attribute: collections.abc.Hashable
         Name of the key in the node dictionaries under which the coordinates
@@ -190,9 +190,9 @@ def add_inter_molecule_edges(molecules, edges):
 
     Parameters
     ----------
-    molecules: collections.abc.Collection
+    molecules: collections.abc.Sequence[vermouth.molecule.Molecule]
         List of molecules to link.
-    edges: collections.abc.Iterable
+    edges: collections.abc.Iterable[tuple[int, collections.abc.Hashable]]
         List of edges in a ``(molecule_index, node_key)`` format as described
         above. Edges can have a third element, it is then a dictionary of
         attributes to be attached to the edge.
@@ -269,15 +269,15 @@ def pairs_under_threshold(molecules, threshold,
 
     Parameters
     ----------
-    molecules: list
+    molecules: collections.abc.Collection[vermouth.molecule.Molecule]
         A list of :class:`vermouth.molecule.Molecule`.
     threshold: float
         A distance threshold in nm. Pairs are return if the nodes are closer
         than this threshold.
-    selection_a: collections.abc.Iterable
+    selection_a: collections.abc.Iterable[collections.abc.Hashable]
         List of nodes to consider at one end of the pairs. The format is
         described above.
-    selection_b: collections.abc.Iterable
+    selection_b: collections.abc.Iterable[collections.abc.Hashable]
         List of nodes to consider at the other end of the pairs. The format is
         described above.
     attribute: collections.abc.Hashable
@@ -289,7 +289,7 @@ def pairs_under_threshold(molecules, threshold,
 
     Yields
     ------
-    tuple
+    tuple[collections.abc.Hashable, collections.abc.Hashable, float]
         Pairs of node closer than the threshold in the format described above
         and the distance between the nodes.
 
@@ -356,7 +356,7 @@ def select_nodes_multi(molecules, selector):
 
     Yields
     ------
-    tuple
+    tuple[int, collections.abc.Hashable]
         Molecule/key identifier for the selected nodes.
     """
     for molecule_idx, molecule in enumerate(molecules):
@@ -395,7 +395,7 @@ def add_edges_threshold(molecules, threshold,
 
     Returns
     -------
-    list
+    list[vermouth.molecule.Molecule]
         A new list of molecules.
     """
     selector_a = functools.partial(
