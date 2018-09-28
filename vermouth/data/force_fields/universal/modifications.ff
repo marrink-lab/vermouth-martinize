@@ -33,3 +33,30 @@ HE1 {"element": "H", "PTM_atom": true}
 CD OE1
 CD OE2
 OE1 HE1
+
+[ modification ]
+HSD
+[ atoms ]
+ND1 {"resname": "HIS", "element": "N"}
+HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+ND1 HD1
+
+[ modification ]
+HSE
+[ atoms ]
+NE1 {"resname": "HIS", "element": "N"}
+HE1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+NE1 HE1
+
+[ modification ]
+HSP
+[ atoms ]
+NE1 {"resname": "HIS", "element": "N"}
+HE1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+ND1 {"resname": "HIS", "element": "N"}
+HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+NE1 HE1
+ND1 HD1
