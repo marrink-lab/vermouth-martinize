@@ -588,24 +588,6 @@ resname $protein_resnames
 [ link ]
 resname $protein_resnames
 [ angles ]
--BB BB +BB 2 134 25 {"group": "BBB angles"}
-[ patterns ]
--BB BB {"cgsecstruct": "E"} +BB 
--BB {"cgsecstruct": "E"} BB +BB 
--BB  BB +BB {"cgsecstruct": "E"}
-
-[ link ]
-resname $protein_resnames
-[ angles ]
--BB BB +BB 2 130 20 {"group": "BBB angles"}
-[ patterns ]
--BB BB {"cgsecstruct": "S"} +BB 
--BB {"cgsecstruct": "S"} BB +BB 
--BB  BB +BB {"cgsecstruct": "S"}
-
-[ link ]
-resname $protein_resnames
-[ angles ]
 -BB BB +BB 2 119.2 150 {"group": "BBB angles"}
 [ patterns ]
 -BB BB {"cgsecstruct": "F"} +BB 
@@ -619,6 +601,16 @@ resname $protein_resnames
 -BB BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} +BB 
 -BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} BB +BB 
 -BB  BB +BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"}
+
+
+[ link ]
+resname $protein_resnames
+[ angles ]
+-BB BB +BB 2 134 25 {"group": "BBB angles"}
+[ patterns ]
+-BB BB {"cgsecstruct": "E"} +BB 
+-BB {"cgsecstruct": "E"} BB +BB 
+-BB  BB +BB {"cgsecstruct": "E"}
 
 [ link ]
 [ angles ]
@@ -652,6 +644,14 @@ resname $protein_resnames
 -BB {"cgsecstruct": "T", "resname": "PRO|HYP"} BB +BB 
 -BB  BB +BB {"cgsecstruct": "T", "resname": "PRO|HYP"}
 
+[ link ]
+resname $protein_resnames
+[ angles ]
+-BB BB +BB 2 130 20 {"group": "BBB angles"}
+[ patterns ]
+-BB BB {"cgsecstruct": "S"} +BB 
+-BB {"cgsecstruct": "S"} BB +BB 
+-BB  BB +BB {"cgsecstruct": "S"}
 
 [ link ]
 [ angles ]
