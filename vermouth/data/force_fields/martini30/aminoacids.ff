@@ -746,3 +746,11 @@ BB -BB
 BB {"replace": {"atype": "Qn", "charge": -1}}
 [ non-edges ]
 BB +BB
+
+;; Cystein bridge
+[ link ]
+resname "CYS"
+[ constraints ]
+SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
+[ features ]
+disulfide
