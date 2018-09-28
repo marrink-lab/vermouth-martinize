@@ -324,6 +324,9 @@ def entry():
     prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,
                             help='Set neutral termini (charged is default)')
+    prot_group.add_argument('-scfix', dest='scfix',
+                            action='store_true', default=False,
+                            help='Apply side chain corrections.')
     prot_group.add_argument('-cys', dest='cystein_bridge',
                             type=_cys_argument,
                             default='none', help='Cystein bonds')
@@ -423,6 +426,11 @@ def entry():
                         'parameters for neutral termini (-nt).'
                         .format(target_ff.name))
     vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
+    if args.scfix and not target_ff.has_feature('scfix'):
+        logging.warning('The force field "{}" does not define angle and '
+                        'torsion for the side chain corrections (-scfix).'
+                        .format(target_ff.name))
+    vermouth.SetMoleculeMeta(scfix=args.scfix).run_system(system)
 
     ss_sequence = list(itertools.chain(*(
         dssp.sequence_from_residues(molecule, 'secstruct')
