@@ -12,16 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-import itertools
+"""
+Test the functions required to use DSSP.
+"""
+
 import os
+import itertools
+
+import pytest
+
 import vermouth
-import vermouth.dssp.dssp as dssp
+from vermouth.dssp import dssp
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
     PDB_PROTEIN,
-    PDB_NOT_PROTEIN,
-    PDB_PARTIALLY_PROTEIN,
     DSSP_OUTPUT,
 )
 
@@ -296,51 +300,11 @@ class TestAnnotateResidues:
         assert found[0] is None
 
 
-@pytest.mark.parametrize(
-    'molecule, reference_answer',
-    [(read_pdb(str(path)), answer) for path, answer in [
-        (PDB_PROTEIN, True),
-        (PDB_NOT_PROTEIN, False),
-        (PDB_PARTIALLY_PROTEIN, False),
-    ]]
-)
-def test_is_protein(molecule, reference_answer):
-    """
-    Make sure that proteins are correctly identified as such.
-    """
-    assert vermouth.selectors.is_protein(molecule) == reference_answer
-
-
-@pytest.mark.parametrize(
-    'atom, reference_answer',
-    (
-        ({'position': [0, 0, 0]}, True),
-        ({'position': None}, False),
-        ({}, False),
-    )
-)
-def test_selector_no_position(atom, reference_answer):
-    assert vermouth.selectors.selector_has_position(atom) == reference_answer
-
-
-def test_filter_minimal():
-    # Build a molecule that has all even atoms with no positions.
-    molecule = read_pdb(str(PDB_PROTEIN))
-    for atom in list(molecule.nodes.values())[::2]:
-        atom['position'] = None
-    # This means that we want to keep the odd atoms
-    to_keep = list(molecule.nodes)[1::2]
-
-    filtered = vermouth.selectors.filter_minimal(
-        molecule,
-        selector=vermouth.selectors.selector_has_position
-    )
-
-    # Do we keep the right atoms?
-    assert list(filtered) == to_keep
-    
-
 def test_read_dssp2():
+    """
+    Test that :func:`vermouth.dssp.dssp.read_dssp2` returns the expected
+    secondary structure sequence.
+    """
     with open(str(DSSP_OUTPUT)) as infile:
         secondary_structure = dssp.read_dssp2(infile)
     assert secondary_structure == SECSTRUCT_1BTA
@@ -348,6 +312,10 @@ def test_read_dssp2():
 
 @pytest.mark.parametrize('savefile', [True, False])
 def test_run_dssp(savefile, tmpdir):
+    """
+    Test that :func:`vermouth.molecule.dssp.dssp.run_dssp` runs as expected and
+    generate a save file only if requested.
+    """
     # The test runs twice, once with the savefile set to True so we test with
     # savinf the DSSP output to file, and once with savefile set t False so we
     # do not generate the file. The "savefile" argument is set by

@@ -16,8 +16,8 @@ Provides helper function for selecting part of a system, e.g. all proteins, or
 protein backbones.
 """
 
-
 import numpy as np
+from .molecule import attributes_match
 
 
 # TODO: Make that list part of the force fields
@@ -116,6 +116,33 @@ def proto_select_attribute_in(node, attribute, values):
     bool
     """
     return node.get(attribute) in values
+
+
+def proto_multi_templates(node, templates, ignore_keys=()):
+    """
+    Return `True` is the node matched one of the templates.
+
+    Parameters
+    ----------
+    node: dict
+        The atom/node to consider.
+    templates: collections.abc.Iterable[dict]
+        A list of node templates to compare to the node.
+    ignore_keys: collections.abc.Collection
+        List of keys to ignore from the templates.
+
+    Returns
+    -------
+    bool
+
+    See Also
+    --------
+    vermouth.molecule.attributes_match
+    """
+    return any(
+        attributes_match(node, template, ignore_keys)
+        for template in templates
+    )
 
 
 def filter_minimal(molecule, selector):

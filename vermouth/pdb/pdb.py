@@ -251,7 +251,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
             slices.append(slice(start, start + width))
         start = start + abs(width)
 
-    with open(file_name) as pdb:
+    with open(str(file_name)) as pdb:
         for line in pdb:
             record = line[:6]
             if record == 'ENDMDL':
