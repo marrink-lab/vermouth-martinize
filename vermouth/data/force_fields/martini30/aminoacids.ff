@@ -736,12 +736,20 @@ BB +++BB 1 0.970 2500
 
 ;; Protein terminii. These links should be applied last.
 [ link ]
+[ molmeta ]
+neutral_termini not(true)
+[ features ]
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qp", "charge": 1}}
 [ non-edges ]
 BB -BB
 
 [ link ]
+[ molmeta ]
+neutral_termini not(true)
+[ features ]
+neutral_termini
 [ atoms ]
 BB {"replace": {"atype": "Qn", "charge": -1}}
 [ non-edges ]
