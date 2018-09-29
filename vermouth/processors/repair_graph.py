@@ -306,8 +306,9 @@ class RepairGraph(Processor):
                 if not self.delete_unknown:
                     raise err
                 else:
-                    LOGGER.warning("Can't recognize molecule {}. Deleting.",
-                                   idx, type='unknown-residue')
+                    LOGGER.warning("Cannot recognize residue {} in  molecule {}. "
+                                   "Deleting the molecule.",
+                                   str(err), idx, type='unknown-residue')
             else:
                 mols.append(new_molecule)
         system.molecules = mols
