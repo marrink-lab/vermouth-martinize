@@ -413,23 +413,23 @@ def entry():
         if not target_ff.has_feature('collagen'):
             LOGGER.warning('The force field "{}" does not have specific '
                            'parameters for collagen (-collagen).',
-                           target_ff.name)
+                           target_ff.name, type='missing-feature')
         AnnotateResidues(attribute='cgsecstruct', sequence='F',
                          molecule_selector=selectors.is_protein).run_system(system)
     if args.extdih and not target_ff.has_feature('extdih'):
         LOGGER.warning('The force field "{}" does not define dihedral '
                        'angles for extended regions of proteins (-extdih).',
-                       target_ff.name)
+                       target_ff.name, type='missing-feature')
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
     if args.neutral_termini and not target_ff.has_feature('neutral_termini'):
         LOGGER.warning('The force field "{}" does not have specific '
                        'parameters for neutral termini (-nt).',
-                       target_ff.name)
+                       target_ff.name, type='missing-feature')
     vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
     if args.scfix and not target_ff.has_feature('scfix'):
         LOGGER.warning('The force field "{}" does not define angle and '
                        'torsion for the side chain corrections (-scfix).',
-                       target_ff.name)
+                       target_ff.name, type='missing-feature')
     vermouth.SetMoleculeMeta(scfix=args.scfix).run_system(system)
 
     ss_sequence = list(itertools.chain(*(
