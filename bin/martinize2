@@ -267,6 +267,7 @@ def entry():
                             type=lambda x: x.split(','), action='append',
                             help='Merge chains: e.g. -merge A,B,C (+)')
     file_group.add_argument('-ignore', dest='ignore_res', action='append',
+                            default=[],
                             help='Ignore residues with that name.')
 
     ff_group = parser.add_argument_group('Force field selection')
