@@ -31,17 +31,22 @@ charmm27 charmm36
     1     N    BB
     2    HN    BB
     3    CA    BB
-    4    CB   SC1
-    5    CG   SC1
-    6    CD   SC1 
-    7   OE1   SC1
-    8   NE2   SC1
-    9  HE21   SC1
-   10  HE22   SC1
-   11  HE11   SC1
-   12  HE12   SC1
-   13     C    BB
-   14     O    BB
+    4    HA    !BB
+    5    CB   SC1
+    6   HB1   !SC1
+    7   HB2   !SC1
+    8    CG   SC1
+    9   HG1   !SC1
+   10   HG2   !SC1
+   11    CD   SC1 
+   12   OE1   SC1
+   13   NE2   SC1
+   14  HE21   SC1
+   15  HE22   SC1
+   16  HE11   SC1
+   17  HE12   SC1
+   18     C    BB
+   19     O    BB
 
 [ chiral ]
   CB     CA    N    C
