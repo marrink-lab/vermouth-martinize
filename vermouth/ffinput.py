@@ -318,7 +318,7 @@ def _split_node_key(key):
 def _get_order_and_prefix_from_attributes(attributes):
     prefix_from_attributes = ''
     order_from_attributes = None
-    Sequence = collections.Sequence  # pylint: disable=invalid-name
+    Sequence = collections.abc.Sequence  # pylint: disable=invalid-name
     if attributes.get('order') is not None:
         order = attributes['order']
         order_from_attributes = order
