@@ -297,6 +297,7 @@ def fix_ptm(molecule):
                                          type='remove-atom')
                             molecule.remove_node(mol_idx)
                             n_idxs.remove(mol_idx)
+                            resid_to_idxs[mol_node['resid']].remove(mol_idx)
                             break
                         if mol_node.get(attr_name) != val:
                             fmt = 'Changing attribute {} from {} to {} for atom {}'
