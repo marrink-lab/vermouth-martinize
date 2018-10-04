@@ -266,7 +266,7 @@ def fix_ptm(molecule):
             LOGGER.exception('Could not identify the modifications for'
                              ' residues {}, involving atoms {}', 
                              ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
-                              for resid in set(resids)],
+                              for resid in sorted(set(resids))],
                              ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
                               for idxs in res_ptms for idx in idxs[0]],
                              type='unknown-input')
