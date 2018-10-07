@@ -55,7 +55,7 @@ def do_average_bead(molecule, ignore_missing_graphs=False, weight=None):
     ignore_missing_graphs: bool
         If `True`, skip the atoms that do not have a `graph` attribute; else
         fail if not all the atoms in the molecule have a `graph` attribute.
-    weight: collections.abc.Hashable, optional
+    weight: collections.abc.Hashable
         The name of the attribute used to weight the position of the node. The
         attribute is read from the underlying atoms.
     """
