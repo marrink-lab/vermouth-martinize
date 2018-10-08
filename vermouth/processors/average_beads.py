@@ -21,7 +21,7 @@ import numpy as np
 from .processor import Processor
 
 
-def do_average_bead(molecule, ignore_missing_graphs=False):
+def do_average_bead(molecule, ignore_missing_graphs=False, weight=None):
     """
     Set the position of the particles to the mean of the underlying atoms.
 
@@ -36,6 +36,13 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
     atomname from the underlying graph as keys, and the weights as values.
     Atoms without a weight set use a default weight of 1.
 
+    The average can also be weighted using an arbitrary node attribute by
+    giving the attribute name with the `weight` keyword argument. This can be
+    used to get the center of mass for instance; assuming the mass of the
+    underlying atoms is stored under the "mass" attribute, setting `weight` to
+    "mass" will place the bead at the center of mass. By default, `weight` is
+    set to `None` and the center of geometry is used.
+
     The atoms in the underlying graph must have a position. If they do not,
     they are ignored from the average.
 
@@ -48,12 +55,22 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
     ignore_missing_graphs: bool
         If `True`, skip the atoms that do not have a `graph` attribute; else
         fail if not all the atoms in the molecule have a `graph` attribute.
+    weight: collections.abc.Hashable
+        The name of the attribute used to weight the position of the node. The
+        attribute is read from the underlying atoms.
     """
     # Make sure the molecule fullfill the requirements.
     missing = []
     for node in molecule.nodes.values():
         if 'graph' not in node:
             missing.append(node)
+        elif weight is not None:
+            have_all_weights =  all(
+                weight in subnode for subnode in node['graph'].nodes.values()
+            )
+            if not have_all_weights:
+                raise KeyError('Not all underlying atoms have an attribute {}.'
+                               .format(weight))
     if missing and not ignore_missing_graphs:
         raise ValueError('{} particles are missing the graph attribute'
                          .format(len(missing)))
@@ -66,7 +83,7 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
                 if subnode.get('position') is not None
             ])
             weights = np.array([
-                node.get('mapping_weights', {}).get(subnode_key, 1) * subnode['mass']
+                node.get('mapping_weights', {}).get(subnode_key, 1) * subnode.get(weight, 1)
                 for subnode_key, subnode in node['graph'].nodes.items()
                 if subnode.get('position') is not None
             ])
@@ -76,9 +93,16 @@ def do_average_bead(molecule, ignore_missing_graphs=False):
 
 
 class DoAverageBead(Processor):
-    def __init__(self, ignore_missing_graphs=False):
+    def __init__(self, ignore_missing_graphs=False, weight=None):
         super().__init__()
         self.ignore_missing_graphs = ignore_missing_graphs
+        self.weight = weight
 
     def run_molecule(self, molecule):
-        return do_average_bead(molecule, self.ignore_missing_graphs)
+        if self.weight is None:
+            weight = molecule.force_field.variables.get('center_weight', None)
+        elif self.weight is False:
+            weight = None
+        else:
+            weight = self.weight
+        return do_average_bead(molecule, self.ignore_missing_graphs, weight=weight)
