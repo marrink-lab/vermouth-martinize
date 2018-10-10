@@ -173,7 +173,7 @@ def write_molecule_itp(molecule, outfile, header=()):
                 outfile.write('{} {}\n'.format(conditional_key, conditional[0]))
             if group:
                 outfile.write('; {}\n'.format(group))
-            for interaction in interactions_in_group:
+            for interaction in sorted(interactions_in_group, key=lambda x: x.atoms):
                 atoms = ['{atom_idx:>{max_length[idx]}}'
                          .format(atom_idx=correspondence[x],
                                  max_length=max_length)

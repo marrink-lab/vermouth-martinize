@@ -37,7 +37,7 @@ class LinkGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
 
 
 def _atoms_match(node1, node2):
-    return attributes_match(node1, node2, ignore_keys=('order', 'replace'))
+    return attributes_match(node1, node2, ignore_keys=('order', 'n_order', 'replace'))
 
 
 def _is_valid_non_edges(molecule, link, rev_raw_match):
@@ -238,6 +238,7 @@ def match_link(molecule, link):
         if link.patterns and (not any_pattern_match):
             continue
         order_match = {}
+        n_order_match = {}
         for mol_idx, link_idx in raw_match.items():
             mol_node = molecule.nodes[mol_idx]
             link_node = link.nodes[link_idx]
@@ -249,13 +250,35 @@ def match_link(molecule, link):
                 # Assert all orders correspond to the same resid
                 elif order in order_match and order_match[order] != resid:
                     break
+            if 'n_order' in link_node:
+                n_order = link_node['n_order']
+                if n_order not in n_order_match:
+                    n_order_match[n_order] = mol_idx
+                # Assert all orders correspond to the same resid
+                elif n_order in n_order_match and n_order_match[n_order] != mol_idx:
+                    print('look at me', n_order, n_order_match)
+                    break
+
         else:  # No break
+            print('youhou', n_order_match)
+            order_ok = True
             for ((order1, resid1), (order2, resid2)) in combinations(order_match.items(), 2):
                 # Assert the differences between resids correspond to what
                 # the orders require.
                 if not match_order(order1, resid1, order2, resid2):
+                    order_ok = False
                     break
-            else:  # No break
+
+            n_order_ok = True
+            for ((order1, key1), (order2, key2)) in combinations(n_order_match.items(), 2):
+                print((order1, key1), (order2, key2), match_order(order1, key1, order2, key2))
+                # Assert the differences between resids correspond to what
+                # the orders require.
+                if not match_order(order1, key1, order2, key2):
+                    n_order_ok = False
+                    break
+
+            if order_ok and n_order_ok:
                 # raw_match is molecule -> link. The other way around is more
                 # useful
                 yield {v: k for k, v in raw_match.items()}
@@ -280,10 +303,16 @@ class DoLinks(Processor):
         for link in links:
             matches = match_link(molecule, link)
             for match in matches:
+                to_remove = []
                 for node, node_attrs in link.nodes.items():
                     if 'replace' in node_attrs:
                         node_mol = molecule.nodes[match[node]]
                         node_mol.update(node_attrs['replace'])
+                        if ('atomname' in node_attrs['replace']
+                                and node_attrs['replace']['atomname'] is None):
+                            to_remove.append(match[node])
+                            print('klonk')
+                print('remove', to_remove)
                 for inter_type, interactions in link.removed_interactions.items():
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
@@ -295,4 +324,5 @@ class DoLinks(Processor):
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
                         molecule.add_or_replace_interaction(inter_type, *interaction)
+        molecule.remove_nodes_from(to_remove)
         return molecule

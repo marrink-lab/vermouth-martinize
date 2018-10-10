@@ -479,6 +479,8 @@ def _treat_link_interaction_atoms(atoms, context, section):
                                              value, context_atom[key]))
             context_atom.update(attributes)
         else:
+            if attributes['atomname'] is None:
+                del attributes['atomname']
             context.add_node(prefixed_reference, **attributes)
 
 
