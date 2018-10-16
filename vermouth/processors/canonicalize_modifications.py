@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Provides a Processor that identifies unexpected atoms such as PTMs and
+protonations, and canonicalizes their attributes based on modifications known
+in the forcefield.
+"""
 
 from collections import defaultdict
 import itertools
@@ -28,9 +33,9 @@ LOGGER = StyleAdapter(get_logger(__name__))
 
 
 class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    """
+    Implements matching logic for PTMs
+    """
     # G1 >= G2; G1 is the found residue; G2 the PTM reference
     def semantic_feasibility(self, node1, node2):
         """
@@ -52,7 +57,7 @@ class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
             return False
 
 
-def find_PTM_atoms(molecule):
+def find_ptm_atoms(molecule):
     """
     Finds all atoms in molecule that have the node attribute ``PTM_atom`` set
     to a value that evaluates to ``True``. ``molecule`` will be traversed
@@ -77,7 +82,7 @@ def find_PTM_atoms(molecule):
     # In addition, unrecognized atoms have been labeled with the PTM attribute.
     extra_atoms = set(n_idx for n_idx in molecule
                       if molecule.nodes[n_idx].get('PTM_atom', False))
-    PTMs = []
+    ptms = []
     while extra_atoms:
         # First PTM atom we'll look at
         first = next(iter(extra_atoms))
@@ -102,12 +107,19 @@ def find_PTM_atoms(molecule):
             if not to_see:
                 # We've traversed the interesting bit of the tree
                 break
+        # Although we know how far our tree spans we may still have work to do
+        # for terminal nodes. There has to be a more elegant solution though.
+        for node in to_see:
+            if node in extra_atoms:
+                atoms.add(node)
+            else:
+                anchors.add(node)
         extra_atoms -= atoms
-        PTMs.append((atoms, anchors))
-    return PTMs
+        ptms.append((atoms, anchors))
+    return ptms
 
 
-def identify_ptms(residue, residue_ptms, known_PTMs):
+def identify_ptms(residue, residue_ptms, known_ptms):
     """
     Identifies all PTMs in ``known_PTMs`` nescessary to describe all PTM atoms in
     ``residue_ptms``. Will take PTMs such that all PTM atoms in ``residue``
@@ -128,7 +140,7 @@ def identify_ptms(residue, residue_ptms, known_PTMs):
         The nodes in the graph must have the `PTM_atom` attribute (True or
         False). It should be True for atoms that are not part of the PTM
         itself, but describe where it is attached to the molecule.
-        In addition, it's nodes must have the `atomname` attribute, which will
+        In addition, its nodes must have the `atomname` attribute, which will
         be used to recognize where the PTM  is anchored, or to correct the
         atomnames. Lastly, the nodes may have a `replace` attribute, which
         is a dictionary of ``{attribute_name: new_value}`` pairs. The special
@@ -148,34 +160,43 @@ def identify_ptms(residue, residue_ptms, known_PTMs):
     KeyError
         Not all PTM atoms in ``residue`` can be covered with ``known_PTMs``.
     """
-    # BASECASE: residue_ptms is empty
-    if not any(res_ptm[0] for res_ptm in residue_ptms):
+    to_cover = set()
+    for res_ptm in residue_ptms:
+        to_cover.update(res_ptm[0])
+        to_cover.update(res_ptm[1])
+    return _cover_graph(residue, to_cover, known_ptms)
+
+
+def _cover_graph(graph, to_cover, fragments):
+    # BASECASE: to_cover is empty
+    if not to_cover:
         return []
-    # REDUCTION: Apply one of known_PTMs, remove those atoms from residue_ptms
+
+    # All non-PTM atoms in residue are always available for matching...
+    available = set(n_idx for n_idx in graph
+                    if not graph.nodes[n_idx].get('PTM_atom', False))
+    # ... and add those we still need to cover
+    available.update(to_cover)
+
+    # REDUCTION: Apply one of fragments, remove those atoms from to_cover
     # COMBINATION: add the applied option to the output.
-    for idx, option in enumerate(known_PTMs):
-        ptm, matcher = option
+    for idx, option in enumerate(fragments):
+        graphlet, matcher = option
         matches = list(matcher.subgraph_isomorphisms_iter())
-        # Matches: [{res_idxs: ptm_idxs}, {...}, ...]
-        # All non-PTM atoms in residue are always available for matching...
-        available = set(n_idx for n_idx in residue
-                        if not residue.nodes[n_idx].get('PTM_atom', False))
-        # ... and only add non consumed PTM atoms
-        for res_ptm in residue_ptms:
-            available.update(res_ptm[0])
+        # Matches: [{graph_idxs: fragment_idxs}, {...}, ...]
         for match in matches:
             matching = set(match.keys())
-            has_anchor = any(m in r[1] for m in matching for r in residue_ptms)
-            if matching.issubset(available) and has_anchor:
-                new_res_ptms = []
-                for res_ptm in residue_ptms:
-                    new_res_ptms.append((res_ptm[0] - matching, res_ptm[1]))
+            # TODO: one of the matching atoms must be an anchor. Should be
+            # handled by PTMGraphMatcher already, assuming every PTM graph has
+            # at least one non-ptm atom specified
+            if matching <= available:
                 # Continue with the remaining ptm atoms, and try just this
                 # option and all smaller.
                 try:
-                    return [(ptm, match)] + identify_ptms(residue, new_res_ptms, known_PTMs[idx:])
+                    rest_cover = _cover_graph(graph, to_cover - matching, fragments[idx:])
                 except KeyError:
                     continue
+                return [(graphlet, match)] + rest_cover
     raise KeyError('Could not identify PTM')
 
 
@@ -219,13 +240,13 @@ def fix_ptm(molecule):
         could not be recognized must be labeled with the attribute
         PTM_atom=True.
     '''
-    PTM_atoms = find_PTM_atoms(molecule)
+    ptm_atoms = find_ptm_atoms(molecule)
 
     def key_func(ptm_atoms):
         node_idxs = ptm_atoms[-1]  # The anchors
         return sorted(molecule.nodes[idx]['resid'] for idx in node_idxs)
 
-    ptm_atoms = sorted(PTM_atoms, key=key_func)
+    ptm_atoms = sorted(ptm_atoms, key=key_func)
 
     resid_to_idxs = defaultdict(list)
     for n_idx in molecule:
@@ -233,7 +254,7 @@ def fix_ptm(molecule):
         resid_to_idxs[residx].append(n_idx)
     resid_to_idxs = dict(resid_to_idxs)
 
-    known_PTMs = molecule.force_field.modifications
+    known_ptms = molecule.force_field.modifications
 
     for resids, res_ptms in itertools.groupby(ptm_atoms, key_func):
         # How to solve this graph covering problem
@@ -257,14 +278,14 @@ def fix_ptm(molecule):
         # TODO: Maybe use graph_utils.make_residue_graph? Or rewrite that
         #       function?
         residue = molecule.subgraph(n_idxs)
-        options = allowed_ptms(residue, res_ptms, known_PTMs)
+        options = allowed_ptms(residue, res_ptms, known_ptms)
         # TODO/FIXME: This includes anchors in sorting by size.
         options = sorted(options, key=lambda opt: len(opt[0]), reverse=True)
         try:
             identified = identify_ptms(residue, res_ptms, options)
         except KeyError:
             LOGGER.exception('Could not identify the modifications for'
-                             ' residues {}, involving atoms {}', 
+                             ' residues {}, involving atoms {}',
                              ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
                               for resid in resids],
                              ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
@@ -308,7 +329,6 @@ def fix_ptm(molecule):
             for n_idx in n_idxs:
                 molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])
                 molecule.nodes[n_idx]['modifications'].append(ptm)
-    return None
 
 
 class CanonicalizeModifications(Processor):
