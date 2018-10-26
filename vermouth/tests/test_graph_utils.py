@@ -463,7 +463,7 @@ def test_isomorphism(node_data1, edges1, node_data2, edges2):
         {(0, 1): {}},
         [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
         {(0, 1): {}},
-        [{0:0, 1:1}, {0:1, 1:0}]
+        [{0:0, 1:1}]
     ),
     (
         [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
@@ -479,7 +479,7 @@ def test_isomorphism(node_data1, edges1, node_data2, edges2):
         {(0, 1): {}, (1, 2): {}},
         [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
         {(0, 1): {}},
-        [{0: 0, 1: 1}, {0: 1, 1: 0}, {1: 0, 2: 1}, {1: 1, 2: 0}]
+        [{0: 0, 1: 1}, {1: 0, 2: 1}]
     ),
     (
         [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
@@ -488,7 +488,7 @@ def test_isomorphism(node_data1, edges1, node_data2, edges2):
         [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
          {'atomname': 0, 'element': 0}],
         {(0, 1): {}, (1, 2): {}},
-        [{0: 0, 1: 1, 2: 2}]
+        [{0: 0, 1: 1, 2: 2}, {0: 0, 1: 1, 3: 2}, {1: 1, 2: 0, 3: 2}]
     ),
 ])
 def test_isomorphism_known_outcome(node_data1, edges1, node_data2, edges2, expected):
