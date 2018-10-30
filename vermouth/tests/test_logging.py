@@ -34,30 +34,22 @@ from vermouth.log_helpers import (get_logger, TypeAdapter, StyleAdapter,
 KWARG_ST = st.text(alphabet=string.ascii_letters, min_size=1)
 
 
-class FormatCounter:
-    """Helper class that counts how often it's format method is called"""
-    def __init__(self, payload):
-        self.payload = payload
-        self.__format_count = 0
+class FormatCounter(str):
+    def __init__(self, *args, **kwargs):
+        self._format_count = 0
 
     def format(self, *args, **kwargs):
-        """"Increments the counter, and delegates the call to payload."""
-        self.__format_count += 1
-        return self.payload.format(*args, **kwargs)
+        """"Increments the counter, and format self."""
+        self._format_count += 1
+        return self.__class__(super().format(*args, **kwargs))
 
     def __mod__(self, args):
-        self.__format_count += 1
-        return self.payload % args
-
+        self._format_count += 1
+        return self.__class__(super().__mod__(args))
+    
     def get_count(self):
         """Returns the current value of the counter"""
-        return self.__format_count
-
-    def __getattr__(self, name):
-        return getattr(self.payload, name)
-
-    def __str__(self):
-        return str(self.payload)
+        return self._format_count
 
 
 class LogHandler(logging.NullHandler):
@@ -251,9 +243,9 @@ def test_bipolar_formatter():
     """
     Make sure the bipolar formatter calls the correct formatter.
     """
-    low_counter = FormatCounter('')
+    low_counter = FormatCounter('%(message)s')
     low_formatter = logging.Formatter(fmt=low_counter)
-    high_counter = FormatCounter('')
+    high_counter = FormatCounter('%(message)s')
     high_formatter = logging.Formatter(fmt=high_counter)
     logger = logging.getLogger('test_bipolar_formatter')
     formatter = BipolarFormatter(low_formatter, high_formatter,
@@ -269,7 +261,6 @@ def test_bipolar_formatter():
     logger.info('boo')
     logger.error('baa')
     # Logger level <= cutoff, so both should go to low_counter
-    print(low_counter.get_count(), high_counter.get_count())
     assert low_counter.get_count() == 2
     assert high_counter.get_count() == 0
 
@@ -278,7 +269,6 @@ def test_bipolar_formatter():
     logger.warning('baa')
     # Logger level > cutoff, so both should go to high_counter, but one of the
     # messages is too low priority to be shown.
-    print(low_counter.get_count(), high_counter.get_count())
     assert low_counter.get_count() == 2
     assert high_counter.get_count() == 1
 
@@ -287,9 +277,9 @@ def test_bipolar_formatter_logger():
     """
     Make sure the bipolar logger picks the correct logger if none is given.
     """
-    low_counter = FormatCounter('')
+    low_counter = FormatCounter('%(message)s')
     low_formatter = logging.Formatter(fmt=low_counter)
-    high_counter = FormatCounter('')
+    high_counter = FormatCounter('%(message)s')
     high_formatter = logging.Formatter(fmt=high_counter)
     formatter = BipolarFormatter(low_formatter, high_formatter,
                                  logging.INFO)
