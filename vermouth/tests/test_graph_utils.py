@@ -133,7 +133,7 @@ def test_add_element_attr_errors(node_data_in, exception):
         [{'a': 1}, {'b': 2}],
         [{'b': 2}, {'c': 3}],
         ['b'],
-        {(1, 0): {'b': (2, 2)}}
+        {(1, 0): {'b': (2, 2)}, (0, 1): {'a': (1, None), 'c': (None, 3)}}
     ),
     (
         [{'a': 1, 'b': 1}, {'b': 2}],

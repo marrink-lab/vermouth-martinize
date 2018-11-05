@@ -20,13 +20,17 @@ Contains unittests for vermouth.ismags.
 # protected-access because it's tests.
 # pylint: disable=no-member, redefined-outer-name, protected-access
 
-import hypothesis.strategies as st
-from hypothesis import given, note, settings
+from time import perf_counter
 
+import hypothesis.strategies as st
+from hypothesis import given, note, settings, event
 from hypothesis_networkx import graph_builder
+
 import networkx as nx
 import pytest
+
 import vermouth.ismags
+from vermouth.graph_utils import categorical_maximum_common_subgraph as MCS
 
 from .helper_functions import make_into_set
 
@@ -108,9 +112,11 @@ ISO_DATA = st.dictionaries(keys=st.sampled_from(ATTRNAMES),
 ISO_BUILDER = graph_builder(node_data=ISO_DATA, min_nodes=0, max_nodes=MAX_NODES,
                             edge_data=ISO_DATA,
                             node_keys=st.integers(max_value=MAX_NODES, min_value=0))
+MCS_BUILDER = graph_builder(node_data=ISO_DATA, min_nodes=0, max_nodes=6,
+                            node_keys=st.integers(max_value=MAX_NODES, min_value=0))
 
 
-@settings(max_examples=500)
+@settings(max_examples=250)
 @given(subgraph=ISO_BUILDER, attrs=st.one_of(st.none(), ATTRS))
 def test_hypo_symmetric_self_isomorphism(subgraph, attrs):
     """
@@ -134,7 +140,7 @@ def test_hypo_symmetric_self_isomorphism(subgraph, attrs):
     assert found == make_into_set([{n: n for n in subgraph}])
 
 
-@settings(max_examples=500)
+@settings(max_examples=250)
 @given(graph=ISO_BUILDER, subgraph=ISO_BUILDER, attrs=st.one_of(st.none(), ATTRS))
 def test_isomorphism_nonmatch(graph, subgraph, attrs):
     """
@@ -152,18 +158,34 @@ def test_isomorphism_nonmatch(graph, subgraph, attrs):
     note(("Subgraph nodes", subgraph.nodes(data=True)))
     note(("Subgraph edges", subgraph.edges(data=True)))
 
+    ref_time = perf_counter()
     matcher = nx.isomorphism.GraphMatcher(graph, subgraph, node_match=node_match,
                                           edge_match=node_match)
     expected = make_into_set(matcher.subgraph_isomorphisms_iter())
+    ref_time -= perf_counter()
+
+
+    a_ism_time = perf_counter()
     ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match,
                                     edge_match=node_match)
-
     asymmetric = make_into_set(ismags.find_subgraphs(False))
+    a_ism_time -= perf_counter()
+    s_ism_time = perf_counter()
+    ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match,
+                                    edge_match=node_match)
     symmetric = make_into_set(ismags.find_subgraphs(True))
+    s_ism_time -= perf_counter()
 
     note(("Symmetric", symmetric))
     note(("Asymmetric", asymmetric))
     note(("Expected", expected))
+
+    if a_ism_time < ref_time:
+        event('Asymmetric ISMAGS faster than reference')
+    if s_ism_time < a_ism_time:
+        event('Symmetric ISMAGS faster than asymmetric')
+    if s_ism_time < ref_time:
+        event('Symmetric ISMAGS faster than reference')
 
     assert asymmetric == expected
     assert symmetric <= asymmetric
@@ -171,9 +193,12 @@ def test_isomorphism_nonmatch(graph, subgraph, attrs):
         assert ismags.analyze_symmetry(subgraph,
                                        ismags._sgn_partitions,
                                        ismags._sge_colors) == ([], {})
+    elif symmetric != asymmetric:
+        assert ismags.analyze_symmetry(subgraph, ismags._sgn_partitions,
+                                       ismags._sge_colors) != ([], {})
 
 
-@settings(max_examples=500)
+@settings(max_examples=250)
 @given(st.data())
 def test_isomorphism_match(data):
     """
@@ -186,7 +211,6 @@ def test_isomorphism_match(data):
     else:
         node_match = nx.isomorphism.categorical_node_match(attrs, [None]*len(attrs))
 
-
     graph = data.draw(ISO_BUILDER)
     nodes = data.draw(st.sets(st.sampled_from(list(graph.nodes)),
                               max_size=len(graph)))
@@ -197,18 +221,33 @@ def test_isomorphism_match(data):
     note(("Subgraph nodes", subgraph.nodes(data=True)))
     note(("Subgraph edges", subgraph.edges(data=True)))
 
+    ref_time = perf_counter()
     matcher = nx.isomorphism.GraphMatcher(graph, subgraph, node_match=node_match,
                                           edge_match=node_match)
     expected = make_into_set(matcher.subgraph_isomorphisms_iter())
+    ref_time -= perf_counter()
+
+    a_ism_time = perf_counter()
     ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match,
                                     edge_match=node_match)
-
     asymmetric = make_into_set(ismags.find_subgraphs(False))
+    a_ism_time -= perf_counter()
+    s_ism_time = perf_counter()
+    ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match,
+                                    edge_match=node_match)
     symmetric = make_into_set(ismags.find_subgraphs(True))
+    s_ism_time -= perf_counter()
 
     note(("Symmetric", symmetric))
     note(("Asymmetric", asymmetric))
     note(("Expected", expected))
+
+    if a_ism_time < ref_time:
+        event('Asymmetric ISMAGS faster than reference')
+    if s_ism_time < a_ism_time:
+        event('Symmetric ISMAGS faster than asymmetric')
+    if s_ism_time < ref_time:
+        event('Symmetric ISMAGS faster than reference')
 
     assert asymmetric == expected
     assert symmetric <= asymmetric
@@ -216,3 +255,112 @@ def test_isomorphism_match(data):
         assert ismags.analyze_symmetry(subgraph,
                                        ismags._sgn_partitions,
                                        ismags._sge_colors) == ([], {})
+    elif symmetric != asymmetric:
+        assert ismags.analyze_symmetry(subgraph, ismags._sgn_partitions,
+                                       ismags._sge_colors) != ([], {})
+
+
+@settings(max_examples=100)
+@given(graph=MCS_BUILDER, subgraph=MCS_BUILDER, attrs=st.one_of(st.none(), ATTRS))
+def test_mcs_nonmatch(graph, subgraph, attrs):
+    """
+    Test against networkx reference implementation using graphs that are
+    probably not subgraphs without considering symmetry.
+    """
+    if attrs is None:
+        node_match = lambda n1, n2: True
+        attrs = []
+    else:
+        node_match = nx.isomorphism.categorical_node_match(attrs, [None]*len(attrs))
+
+    note(("Graph nodes", graph.nodes(data=True)))
+    note(("Graph edges", graph.edges(data=True)))
+    note(("Subgraph nodes", subgraph.nodes(data=True)))
+    note(("Subgraph edges", subgraph.edges(data=True)))
+
+    ref_time = perf_counter()
+    expected = make_into_set(MCS(graph, subgraph, attributes=attrs))
+    ref_time -= perf_counter()
+
+    a_ism_time = perf_counter()
+    ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match)
+    asymmetric = make_into_set(ismags.largest_common_subgraph(False))
+    a_ism_time -= perf_counter()
+    s_ism_time = perf_counter()
+    ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match)
+    symmetric = make_into_set(ismags.largest_common_subgraph(True))
+    s_ism_time -= perf_counter()
+
+    note(("Symmetric", symmetric))
+    note(("Asymmetric", asymmetric))
+    note(("Expected", expected))
+
+    if a_ism_time < ref_time:
+        event('Asymmetric ISMAGS faster than reference')
+    if s_ism_time < a_ism_time:
+        event('Symmetric ISMAGS faster than asymmetric')
+    if s_ism_time < ref_time:
+        event('Symmetric ISMAGS faster than reference')
+
+    assert asymmetric == expected or not expected
+    assert symmetric <= asymmetric
+#    if symmetric == asymmetric and expected:
+#        assert ismags.analyze_symmetry(subgraph,
+#                                       ismags._sgn_partitions,
+#                                       ismags._sge_colors) == ([], {})
+
+
+@settings(max_examples=100)
+@given(st.data())
+def test_mcs_match(data):
+    """
+    Test against networkx reference implementation using graphs that are
+    subgraphs without considering symmetry.
+    """
+    attrs = data.draw(st.one_of(st.none(), ATTRS))
+    if attrs is None:
+        node_match = lambda n1, n2: True
+        attrs = []
+    else:
+        node_match = nx.isomorphism.categorical_node_match(attrs, [None]*len(attrs))
+
+    graph = data.draw(MCS_BUILDER)
+    nodes = data.draw(st.sets(st.sampled_from(list(graph.nodes)),
+                              max_size=len(graph)))
+    subgraph = graph.subgraph(nodes)
+
+    note(("Graph nodes", graph.nodes(data=True)))
+    note(("Graph edges", graph.edges(data=True)))
+    note(("Subgraph nodes", subgraph.nodes(data=True)))
+    note(("Subgraph edges", subgraph.edges(data=True)))
+
+    ref_time = perf_counter()
+    expected = make_into_set(MCS(graph, subgraph, attributes=attrs))
+    ref_time -= perf_counter()
+
+    a_ism_time = perf_counter()
+    ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match)
+    asymmetric = make_into_set(ismags.largest_common_subgraph(False))
+    a_ism_time -= perf_counter()
+    s_ism_time = perf_counter()
+    ismags = vermouth.ismags.ISMAGS(graph, subgraph, node_match=node_match)
+    symmetric = make_into_set(ismags.largest_common_subgraph(True))
+    s_ism_time -= perf_counter()
+
+    note(("Symmetric", symmetric))
+    note(("Asymmetric", asymmetric))
+    note(("Expected", expected))
+
+    if a_ism_time < ref_time:
+        event('Asymmetric ISMAGS faster than reference')
+    if s_ism_time < a_ism_time:
+        event('Symmetric ISMAGS faster than asymmetric')
+    if s_ism_time < ref_time:
+        event('Symmetric ISMAGS faster than reference')
+
+    assert asymmetric == expected or not expected
+    assert symmetric <= asymmetric
+#    if symmetric == asymmetric and expected:
+#        assert ismags.analyze_symmetry(subgraph,
+#                                       ismags._sgn_partitions,
+#                                       ismags._sge_colors) == ([], {})

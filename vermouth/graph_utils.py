@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
 import itertools
 import networkx as nx
 
@@ -44,7 +43,8 @@ def categorical_cartesian_product(graph1, graph2, attributes=tuple()):
     for idx1, idx2 in itertools.product(graph1, graph2):
         node1 = graph1.nodes[idx1]
         node2 = graph2.nodes[idx2]
-        if all(attr in node1 and attr in node2 and node1[attr] == node2[attr] for attr in attributes):
+        if all((attr in node1 and attr in node2 and node1[attr] == node2[attr])
+               or (attr not in node1 and attr not in node2) for attr in attributes):
             attrs = {}
             for attr in set(node1.keys()) | set(node2.keys()):
                 attrs[attr] = (node1.get(attr, None), node2.get(attr, None))
@@ -91,7 +91,8 @@ def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
     for g1_node, g2_node in itertools.product(graph1, graph2):
         node1 = graph1.nodes[g1_node]
         node2 = graph2.nodes[g2_node]
-        if all(attr in node1 and attr in node2 and node1[attr] == node2[attr] for attr in attributes):
+        if all((attr in node1 and attr in node2 and node1[attr] == node2[attr])
+               or (attr not in node1 and attr not in node2) for attr in attributes):
             if graph1.degree(g1_node) != 1 and graph2.degree(g2_node) != 1:
                 product.add_node((g1_node, g2_node))
     for (g1_node1, g2_node1), (g1_node2, g2_node2) in itertools.combinations(product.nodes(), 2):
@@ -126,7 +127,8 @@ def maximum_common_subgraph(graph1, graph2, attributes=tuple()):
             # nodes from graph graph1 to graph graph2 to see whether their neighbours
             # correspond.
             if (graph1.degree(g1_node) <= 1 or graph2.degree(g2_node) <= 1) and\
-                    all(attr in node1 and attr in node2 and node1[attr] == node2[attr] for attr in attributes):
+                    all((attr in node1 and attr in node2 and node1[attr] == node2[attr])
+                            or (attr not in node1 and attr not in node2) for attr in attributes):
                 g1_neighbors = [match.get(n, None) for n in graph1.neighbors(g1_node)]
                 # If no neighbors are found for g1_node, or if any of them are
                 # the same in graph2, they're compatible.
@@ -193,17 +195,17 @@ def isomorphism(reference, residue):
         keys and node indices of ``residue`` as values. Is an empty list if
         ``residue`` is not a subgraph of ``reference``.
     """
-    
+
     new_residue_names = {name: idx for idx, name in enumerate(sorted(residue, key=lambda jdx: residue.nodes[jdx].get('atomname', '')))}
     new_reference_names = {name: idx for idx, name in enumerate(sorted(reference, key=lambda jdx: reference.nodes[jdx].get('atomname', '')))}
     old_res_names = {v: k for k, v in new_residue_names.items()}
     old_ref_names = {v: k for k, v in new_reference_names.items()}
-    
+
     node_matcher = nx.isomorphism.categorical_node_match('element', None)
-    
+
     reference = nx.relabel_nodes(reference, new_reference_names, copy=True)
     residue = nx.relabel_nodes(residue, new_residue_names, copy=True)
-    
+
     ism = ISMAGS(reference, residue, node_match=node_matcher)
     matches = ism.find_subgraphs(symmetry=True)
     matches = sorted(matches,
