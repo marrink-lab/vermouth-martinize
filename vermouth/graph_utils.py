@@ -207,7 +207,7 @@ def isomorphism(reference, residue):
     residue = nx.relabel_nodes(residue, new_residue_names, copy=True)
 
     ism = ISMAGS(reference, residue, node_match=node_matcher)
-    matches = ism.find_subgraphs(symmetry=True)
+    matches = ism.subgraph_isomorphisms_iter(symmetry=True)
     matches = sorted(matches,
                      key=lambda m: rate_match(reference, residue, m),
                      reverse=True)
