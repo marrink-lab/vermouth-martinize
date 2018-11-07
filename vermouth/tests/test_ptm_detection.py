@@ -22,6 +22,7 @@ import pytest
 
 import vermouth
 import vermouth.processors.canonicalize_modifications as canmod
+from vermouth.ismags import ISMAGS
 
 # pylint: disable=redefined-outer-name
 

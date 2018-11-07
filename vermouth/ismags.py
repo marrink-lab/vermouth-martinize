@@ -219,6 +219,8 @@ class ISMAGS:
         `edge1` is an edge in `graph1`, and `edge2` an edge in `graph2`.
         Constructed from the argument `edge_match`.
     """
+    _symmetry_cache = {}
+
     def __init__(self, graph, subgraph, node_match=None, edge_match=None):
         """
         Parameters
@@ -257,8 +259,6 @@ class ISMAGS:
 
         self._node_compat_ = None
         self._edge_compat_ = None
-
-        self._symmetry_cache = {}
 
         if node_match is None:
             self.node_equality = self._node_match_maker(lambda n1, n2: True)
@@ -478,7 +478,7 @@ class ISMAGS:
                                                  node_partitions,
                                                  node_partitions,
                                                  edge_colors)
-        self._symmetry_cache[key] = permutations, cosets
+        self.__class__._symmetry_cache[key] = permutations, cosets
         return permutations, cosets
 
     def is_isomorphic(self, symmetry=False):
@@ -504,7 +504,7 @@ class ISMAGS:
         # symmetry=False, since we only need to know whether there is any
         # example; figuring out all symmetry elements probably costs more time
         # than it gains.
-        isom = next(self.find_subgraphs(symmetry=symmetry), None)
+        isom = next(self.subgraph_isomorphisms_iter(symmetry=symmetry), None)
         return isom is not None
 
     def isomorphisms_iter(self, symmetry=True):

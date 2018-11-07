@@ -20,6 +20,7 @@ import networkx as nx
 
 from .processor import Processor
 from ..graph_utils import *
+from ..ismags import ISMAGS
 from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string
 
@@ -79,39 +80,50 @@ def make_reference(mol):
         reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
         add_element_attr(residue)
-        # Assume reference >= residue
-        matches = isomorphism(reference, residue)
-        if not matches:
-            # Maybe reference < residue? I.e. PTM or protonation
-            matches = isomorphism(residue, reference)
-            matches = [{v: k for k, v in match.items()} for match in matches]
-        if not matches:
-            LOGGER.debug('Doing MCS matching for residue {}{}', resname, resid,
-                         type='performance')
-            # The problem is that some residues (termini in particular) will
-            # contain more atoms than they should according to the reference.
-            # Furthermore they will have too little atoms because X-Ray is
-            # supposedly hard. This means we can't do the subgraph isomorphism
-            # like we're used to. Instead, identify the atoms in the largest
-            # common subgraph, and do the subgraph isomorphism/alignment on
-            # those. MCS is ridiculously expensive, so we only do it when we
-            # have to.
-            try:
-                mcs_match = max(maximum_common_subgraph(reference, residue, ['element']),
-                                key=lambda m: rate_match(reference, residue, m))
-            except ValueError:
-                raise ValueError('No common subgraph found between {} and '
-                                 'reference {}.'.format(resname, resname))
-            # We could seed the isomorphism calculation with the knowledge from
-            # the mcs_match, but thats to much effort for now.
-            # TODO: see above
-            res = residue.subgraph(mcs_match.values())
-            matches = isomorphism(reference, res)
-        # TODO: matches is sorted by isomorphism. So we should probably use
-        #       that with e.g. itertools.takewhile.
+        # We are going to sort the nodes of reference and residue by atomname.
+        # We do this, because the ISMAGS algorithm prefers to match nodes with
+        # lower IDs. Note that short names sort before long names, so if there
+        # are nodes missing it may still give the "wrong" answer.
+        new_residue_names = {name: idx for idx, name in enumerate(sorted(residue, key=lambda jdx: residue.nodes[jdx].get('atomname', '')))}
+        new_reference_names = {name: idx for idx, name in enumerate(sorted(reference, key=lambda jdx: reference.nodes[jdx].get('atomname', '')))}
+        old_res_names = {v: k for k, v in new_residue_names.items()}
+        old_ref_names = {v: k for k, v in new_reference_names.items()}
+
+        res_copy = nx.relabel_nodes(residue, new_residue_names, copy=True)
+        ref_copy = nx.relabel_nodes(reference, new_reference_names, copy=True)
+
+        # Fun fact. If we assume res_copy > ref_copy, the tests run ~30 times
+        # faster, and without failures. But, in real life examples, assuming
+        # ref_copy > res_copy is a far better idea.
+        ismags = ISMAGS(ref_copy, res_copy, node_match=nx.isomorphism.categorical_node_match('element', None))
+        # Finding the largest common subgraph is expensive, but the first step
+        # is to try and find a subgraph isomorphism between
+        # residue >= reference, so best case it makes no difference, and worst
+        # case we avoid trying to find that isomorphism twice.
+        match_iter = ismags.largest_common_subgraph()
+        matches = []
+        best_score = None
+        warned = False
+        for match in match_iter:
+            if not warned and len(match) != len(residue):
+                LOGGER.debug('Doing MCS matching for residue {}{}', resname,
+                             resid, type='performance')
+                warned = True
+            score = rate_match(ref_copy, res_copy, match)
+            if best_score is None or score > best_score:
+                best_score = score
+                matches = [match]
+            elif score == best_score:
+                matches.append(match)
+        for idx, match in enumerate(matches):
+            # "unsort" the matches
+            matches[idx] = {old_ref_names[ref]: old_res_names[res]
+                            for ref, res in match.items()}
+
         if not matches:
             LOGGER.error("Can't find isomorphism between {}{} and its "
                          "reference.", resname, resid, type='inconsistent-data')
+            raise ValueError
             continue
 
         matches = maxes(matches, key=lambda m: rate_match(reference, residue, m))

@@ -195,8 +195,10 @@ def test_PTM_atom_false(repaired_graph, node_key):
 def test_uniq_names_repaired(repaired_graph):
     assert len(repaired_graph.molecules) == 1
     molecule = repaired_graph.molecules[0]
+    # Only for non-PTM atoms, since those names are not touched by repair graph
     atoms = [(node['resid'], node['atomname'])
-             for node in molecule.nodes.values()]
+             for node in molecule.nodes.values()
+             if not node.get('PTM_atom', False)]
     deduplicated = set(atoms)
     assert len(atoms) == len(deduplicated)
 

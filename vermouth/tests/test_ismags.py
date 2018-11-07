@@ -20,6 +20,7 @@ Contains unittests for vermouth.ismags.
 # protected-access because it's tests.
 # pylint: disable=no-member, redefined-outer-name, protected-access
 
+from pprint import pprint
 from time import perf_counter
 
 import hypothesis.strategies as st
@@ -33,6 +34,21 @@ import vermouth.ismags
 from vermouth.graph_utils import categorical_maximum_common_subgraph as MCS
 
 from .helper_functions import make_into_set
+
+
+def basic_molecule(node_data, edge_data=None):
+    """
+    Construct a simple Molecule based with specified nodes and edges.
+    """
+    if edge_data is None:
+        edge_data = {}
+
+    mol = vermouth.Molecule()
+    for idx, node in enumerate(node_data):
+        mol.add_node(idx, **node)
+    for (idx, jdx), data in edge_data.items():
+        mol.add_edge(idx, jdx, **data)
+    return mol
 
 
 @pytest.fixture(params=[
@@ -384,3 +400,133 @@ def test_mcs_match(data):
 #        assert ismags.analyze_symmetry(subgraph,
 #                                       ismags._sgn_partitions,
 #                                       ismags._sge_colors) == ([], {})
+
+
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2, attrs, expected', [
+    ([], {}, [], {}, ['id'], [{}]),
+    (
+        [{'id': 1}], {},
+        [{'id': 1}], {},
+        ['id'],
+        [{0: 0}]
+    ),
+    (
+        [{'id': 1}, {'id': 2}], {},
+        [{'id': 1}, {'id': 2}], {},
+        ['id'],
+        [{0: 0, 1: 1}]
+    ),
+    (
+        [{'id': 1}, {'id': 2}], {(0, 1): {}},
+        [{'id': 1}, {'id': 2}], {},
+        ['id'],
+        [{0: 0}, {1: 1}]
+    ),
+    (
+        [{'id': 1}], {},
+        [{'id': 1}, {'id': 1}], {(0, 1): {}},
+        ['id'],
+        [{0: 0}, {0: 1}]
+    ),
+    (
+        [{'id': 1}, {'id': 1}], {(0, 1): {}},
+        [{'id': 1}], {},
+        ['id'],
+        [{0: 0}, {1: 0}]
+    ),
+    (
+        [{'id': 0}, {'id': 1}, {'id': 2}, {'id': 3}, {'id': 2}],
+        {(0, 1): {}, (1, 2): {}, (2, 3): {}, (3, 4): {}},
+        [{'id': 1}, {'id': 2}, {'id': 3}, {'id': 4}, {'id': 5}],
+        {(0, 1): {}, (1, 2): {}, (2, 3): {}, (1, 4): {}},
+        ['id'],
+        [{1: 0, 2: 1, 3: 2}]
+    ),
+    (
+        [{}, {}, {}, {}, {}],
+        {(0, 1): {}, (1, 2): {}, (2, 3): {}, (2, 4): {}},
+        [{}, {}, {}, {}, {}],
+        {(0, 1): {}, (1, 2): {}, (2, 3): {}, (3, 4): {}},
+        [],
+        [{3: 2, 4: 0, 2: 1, 0: 4},
+         {0: 0, 1: 1, 4: 3, 2: 2},
+         {2: 2, 1: 3, 4: 1, 0: 4},
+         {0: 1, 3: 4, 1: 2, 2: 3},
+         {3: 0, 0: 3, 2: 1, 1: 2},
+         {3: 2, 0: 0, 2: 3, 4: 4},
+         {1: 2, 0: 3, 2: 1, 4: 0},
+         {2: 2, 1: 3, 3: 1, 0: 4},
+         {2: 2, 0: 0, 3: 3, 1: 1},
+         {4: 2, 0: 0, 3: 4, 2: 3},
+         {0: 1, 4: 4, 2: 3, 1: 2},
+         {3: 0, 4: 2, 2: 1, 0: 4}]
+
+    ),
+])
+def test_maximum_common_subgraph_known_outcome(node_data1, edges1, node_data2, edges2, attrs, expected):
+    """
+    Tests for the function ``maximum_common_subgraph``.
+    """
+    graph1 = basic_molecule(node_data1, edges1)
+    graph2 = basic_molecule(node_data2, edges2)
+    ism = vermouth.ismags.ISMAGS(graph1, graph2, node_match=nx.isomorphism.categorical_node_match(attrs, [None]*len(attrs)))
+    found = ism.largest_common_subgraph(False)
+    found = make_into_set(found)
+    expected = make_into_set(expected)
+    print("Number of found answers", len(found))
+    print("Number of expected answers", len(expected))
+
+    pprint(("Found answers", found))
+    pprint(("Expected answers", expected))
+
+    pprint(("Expected answers that are not found", expected - found))
+    assert found == expected
+
+
+@pytest.mark.parametrize('node_data1, edges1, node_data2, edges2, expected', [
+    (
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
+        {(0, 1): {}},
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
+        {(0, 1): {}},
+        [{0:0, 1:1}]
+    ),
+    (
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
+         {'atomname': 0, 'element': 0}],
+        {(0, 1): {}, (1, 2): {}},
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
+         {'atomname': 0, 'element': 0}],
+        {(0, 1): {}, (1, 2): {}},
+        [{0: 0, 1: 1, 2: 2}]),
+    (
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
+         {'atomname': 0, 'element': 0}],
+        {(0, 1): {}, (1, 2): {}},
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
+        {(0, 1): {}},
+        [{0: 0, 1: 1}, {1: 0, 2: 1}]
+    ),
+    (
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
+         {'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0}],
+        {(0, 1): {}, (1, 2): {}, (1, 3): {}},
+        [{'atomname': 0, 'element': 0}, {'atomname': 0, 'element': 0},
+         {'atomname': 0, 'element': 0}],
+        {(0, 1): {}, (1, 2): {}},
+        [{0: 0, 1: 1, 2: 2}, {0: 0, 1: 1, 3: 2}, {1: 1, 2: 0, 3: 2}]
+    ),
+])
+def test_isomorphism_known_outcome(node_data1, edges1, node_data2, edges2, expected):
+    """
+    Tests for the function ``isomorphism``. May give a false failure (!) if
+    a different (but still correct) answer is returned due to an implementation
+    change.
+    """
+    reference = basic_molecule(node_data1, edges1)
+    graph = basic_molecule(node_data2, edges2)
+    ism = vermouth.ismags.ISMAGS(reference, graph, node_match=nx.isomorphism.categorical_node_match('element', None))
+    found = list(ism.subgraph_isomorphisms_iter())
+    found = make_into_set(found)
+    expected = make_into_set(expected)
+    assert found == expected

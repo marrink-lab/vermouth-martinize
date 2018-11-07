@@ -28,6 +28,7 @@ import networkx as nx
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string
+from ..ismags import ISMAGS
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -39,8 +40,8 @@ def ptm_node_matcher(node1, node2):
     atoms, the elements need to match, and otherwise, the atomnames must
     match.
     """
-    if node1.get('PTM_atom', False) == node2['PTM_atom']:
-        if node2['PTM_atom']:
+    if node1.get('PTM_atom', False) == node2.get('PTM_atom', False):
+        if node2.get('PTM_atom', False):
             # elements must match
             return node1['element'] == node2['element']
         else:
@@ -216,7 +217,15 @@ def allowed_ptms(residue, res_ptms, known_ptms):
     for ptm in known_ptms:
         ptm_graph_matcher = nx.isomorphism.GraphMatcher(residue, ptm, node_match=ptm_node_matcher)
         if ptm_graph_matcher.subgraph_is_isomorphic():
-            yield ptm, ptm_graph_matcher
+            # `subgraph_is_isomorphic` consumes an isomorphism, so make a new
+            # ismags object, and give it some of the more expensive things to
+            # calculate
+            new_matcher = ISMAGS(residue, ptm, node_match=ptm_node_match)
+            new_matcher._sgn_partitions_ = ptm_graph_matcher._sgn_partitions_
+            new_matcher._gn_partitions_ = ptm_graph_matcher._gn_partitions_
+            new_matcher._sge_partitions_ = ptm_graph_matcher._sge_partitions_
+            new_matcher._ge_partitions_ = ptm_graph_matcher._ge_partitions_
+            yield ptm, new_matcher
 
 
 def fix_ptm(molecule):
@@ -271,9 +280,14 @@ def fix_ptm(molecule):
         # TODO: Maybe use graph_utils.make_residue_graph? Or rewrite that
         #       function?
         residue = molecule.subgraph(n_idxs)
+
+        # TODO: Sort residue and all known_ptms by atomname. Unsort the matches
+        # further down.
+
         options = allowed_ptms(residue, res_ptms, known_ptms)
-        # TODO/FIXME: This includes anchors in sorting by size.
-        options = sorted(options, key=lambda opt: len(opt[0]), reverse=True)
+        options = sorted(options,
+                         key=lambda opt: len([n for n in opt[0] if opt[0].nodes[n].get('PTM_atom', False)]),
+                         reverse=True)
         try:
             identified = identify_ptms(residue, res_ptms, options)
         except KeyError:
@@ -292,6 +306,7 @@ def fix_ptm(molecule):
                     ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
                      for resid in resids])
         for ptm, match in identified:
+            # TODO: Unsort match here
             for mol_idx, ptm_idx in match.items():
                 ptm_node = ptm.nodes[ptm_idx]
                 mol_node = molecule.nodes[mol_idx]
