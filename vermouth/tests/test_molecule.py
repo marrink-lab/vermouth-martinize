@@ -47,6 +47,10 @@ def molecule_copy(molecule):
     return molecule.copy()
 
 
+def molecule_remove_node(molecule, node):
+    return molecule.remove_node(node)
+
+
 @pytest.fixture
 def molecule_subgraph(molecule):
     return molecule.subgraph([2, 0])

@@ -337,7 +337,7 @@ class Molecule(nx.Graph):
     def atoms(self):
         """
         All atoms in this molecule. Alias for `nodes`.
-        
+
         See Also
         --------
         :attr:`networkx.Graph.nodes`
@@ -673,6 +673,19 @@ class Molecule(nx.Graph):
                     yield (node1, node2)
                 else:
                     yield (node1, node2, self.edges[node1, node2])
+
+        def remove_node(self, node):
+            super(Molecule, self).remove_node(node)
+            for name, interaction in Molecule.interactions.items():
+                if node in interaction.atoms:
+                    del Molecule.interactions[name]
+
+        def remove_nodes_from(self, nodes):
+            super(Molecule, self).remove_nodes_from(nodes)
+            for node in nodes:
+                for name, interaction in Molecule.interactions.items():
+                    if node in interaction.atoms:
+                        del Molecule.interactions[name]
 
 
 class Block(Molecule):
