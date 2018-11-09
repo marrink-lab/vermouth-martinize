@@ -47,9 +47,22 @@ def molecule_copy(molecule):
     return molecule.copy()
 
 
-def molecule_remove_node(molecule, node):
-    return molecule.remove_node(node)
+@pytest.mark.parametrize('atoms, bonds, interactions, removed, expected',[
+    ([], [], [], [], {}),  # empty molecule
+    ([1, 2, 3], [(1, 2), (2, 3)], [], [2], {}),  # Nodes but no interactions
+    ([1, 2], [(1, 2)], [('bond', (1, 2), {})], [2], {}),  # interactions that all need to be removed
+    ([1,2,3,4,5,6,7],[(1,2), (3,4), (5, (1,2))],[('bond', (5,4), {}), ('bond', (1,2), {})], [5], {'bond': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})]}),
+    # ...  # etc.
+])
+def test_remove_node(atoms, bonds, interactions, removed, expected):
+    molecule = vermouth.molecule.Molecule()
+    molecule.add_nodes_from(atoms)
+    molecule.add_edges_from(bonds)
+    for type_, atoms, params in interactions:
+        molecule.add_interaction(type_, atoms, params)
 
+    molecule.remove_nodes_from(removed)
+    assert molecule.interactions == expected
 
 @pytest.fixture
 def molecule_subgraph(molecule):
