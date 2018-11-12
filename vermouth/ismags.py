@@ -98,91 +98,11 @@ References
     .. [2] https://en.wikipedia.org/wiki/Maximum_common_induced_subgraph
 """
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 from functools import reduce, wraps
 import itertools
 
 from .utils import are_all_equal
-
-
-def make_partitions(items, test):
-    """
-    Partitions items into sets based on the outcome of ``test(item1, item2)``.
-    Pairs of items for which `test` returns `True` end up in the same set.
-
-    Parameters
-    ----------
-    items : collections.abc.Iterable[collections.abc.Hashable]
-        Items to partition
-    test : collections.abc.Callable[collections.abc.Hashable, collections.abc.Hashable]
-        A function that will be called with 2 arguments, taken from items.
-        Should return `True` if those 2 items need to end up in the same
-        partition, and `False` otherwise.
-
-    Returns
-    -------
-    list[set]
-        A list of sets, with each set containing part of the items in `items`,
-        such that ``all(test(*pair) for pair in  itertools.combinations(set, 2))
-        == True``
-
-    Notes
-    -----
-    The function `test` is assumed to be transitive: if ``test(a, b)`` and
-    ``test(b, c)`` return ``True``, then ``test(a, c)`` must also be ``True``.
-    """
-    partitions = []
-    for item in items:
-        for partition in partitions:
-            p_item = next(iter(partition))
-            if test(item, p_item):
-                partition.add(item)
-                break
-        else:  # No break
-            partitions.append(set((item,)))
-    return partitions
-
-
-def partition_to_color(partitions):
-    """
-    Creates a dictionary with for every item in partition for every partition
-    in partitions the index of partition in partitions.
-
-    Parameters
-    ----------
-    partitions: collections.abc.Sequence[collections.abc.Iterable]
-        As returned by :func:`make_partitions`.
-
-    Returns
-    -------
-    dict
-    """
-    colors = dict()
-    for color, keys in enumerate(partitions):
-        for key in keys:
-            colors[key] = color
-    return colors
-
-
-def intersect(collection_of_sets):
-    """
-    Given an collection of sets, returns the intersection of those sets.
-
-    Parameters
-    ----------
-    collection_of_sets: collections.abc.Collection[set]
-        A collection of sets.
-
-    Returns
-    -------
-    set
-        An intersection of all sets in `collection_of_sets`. Will have the same
-        type as the item initially taken from `collection_of_sets`.
-    """
-    collection_of_sets = list(collection_of_sets)
-    first = collection_of_sets.pop()
-    out = reduce(set.intersection, collection_of_sets, set(first))
-    return type(first)(out)
 
 
 class ISMAGS:
@@ -227,24 +147,32 @@ class ISMAGS:
         ----------
         graph: networkx.Graph
         subgraph: networkx.Graph
-        node_match: collections.abc.Callable
-            Function used to determine whether two nodes are equivalent. It's
+        node_match: collections.abc.Callable or None
+            Function used to determine whether two nodes are equivalent. Its
             signature should look like ``f(n1: dict, n2: dict) -> bool``, with
             `n1` and `n2` node property dicts. See also
             :func:`~networkx.algorithms.isomorphism.categorical_node_match` and
             friends.
-        edge_match: collections.abc.Callable
-            Function used to determine whether two edges are equivalent. It's
+            If `None`, all nodes are considered equal. 
+        edge_match: collections.abc.Callable or None
+            Function used to determine whether two edges are equivalent. Its
             signature should look like ``f(e1: dict, e2: dict) -> bool``, with
             `e1` and `e2` edge property dicts. See also
             :func:`~networkx.algorithms.isomorphism.categorical_edge_match` and
             friends.
+            If `None`, all edges are considered equal.
         """
         # TODO: graph and subgraph setter methods that invalidate the caches.
         # TODO: allow for precomputed partitions and colors
         self.graph = graph
         self.subgraph = subgraph
-
+        # Naming conventions are taken from the original paper. For your
+        # sanity:
+        #   sg: subgraph
+        #   g: graph
+        #   e: edge(s)
+        #   n: node(s)
+        # So: sgn means "subgraph nodes".
         self._sgn_partitions_ = None
         self._sge_partitions_ = None
 
@@ -406,6 +334,11 @@ class ISMAGS:
             constraints = []
 
         candidates = self._find_nodecolor_candidates()
+        la_candidates = self._get_lookahead_candidates()
+        for sgn in self.subgraph:
+            extra_candidates = la_candidates[sgn]
+            if extra_candidates:
+                candidates[sgn] = candidates[sgn] | {frozenset(extra_candidates)}
 
         if any(candidates.values()):
             start_sgn = min(candidates, key=lambda n: min(candidates[n], key=len))
@@ -413,6 +346,55 @@ class ISMAGS:
             yield from self._map_nodes(start_sgn, candidates, constraints)
         else:
             return
+
+    @staticmethod
+    def _find_neighbor_color_count(graph, node, node_color, edge_color):
+        """
+        For `node` in `graph`, count the number of edges of a specific color
+        it has to nodes of a specific color.
+        """
+        counts = Counter()
+        neighbors = graph[node]
+        for neighbor in neighbors:
+            n_color = node_color[neighbor]
+            if (node, neighbor) in edge_color:
+                e_color = edge_color[node, neighbor]
+            else:
+                e_color = edge_color[neighbor, node]
+            counts[e_color, n_color] += 1
+        return counts
+
+    def _get_lookahead_candidates(self):
+        """
+        Returns a mapping of {subgraph node: collection of graph nodes} for
+        which the graph nodes are feasible candidates for the subgraph node, as
+        determined by looking ahead one edge.
+        """
+        g_counts = {}
+        for gn in self.graph:
+            g_counts[gn] = self._find_neighbor_color_count(self.graph, gn,
+                                                           self._gn_colors,
+                                                           self._ge_colors)
+        candidates = defaultdict(set)
+        for sgn in self.subgraph:
+            sg_count = self._find_neighbor_color_count(self.subgraph, sgn,
+                                                       self._sgn_colors,
+                                                       self._sge_colors)
+            new_sg_count = Counter()
+            for (sge_color, sgn_color), count in sg_count.items():
+                try:
+                    ge_color = self._edge_compatibility[sge_color]
+                    gn_color = self._node_compatibility[sgn_color]
+                except KeyError:
+                    pass
+                else:
+                    new_sg_count[ge_color, gn_color] = count
+            
+            for gn, g_count in g_counts.items():
+                if all(new_sg_count[x] <= g_count[x] for x in new_sg_count):
+                    # Valid candidate
+                    candidates[sgn].add(gn)
+        return candidates
 
     def largest_common_subgraph(self, symmetry=True):
         """
@@ -460,12 +442,13 @@ class ISMAGS:
 
         Returns
         -------
-        tuple[set[frozenset], dict]
-            The found permutations and co-sets. Permutations is a set of
-            frozenset of pairs of node keys which can be exchanged without
-            changing :attr:`subgraph`. The co-sets is a dictionary of node key:
-            set of node keys. Every key, value describes which values can be
-            interchanged while keeping all nodes less than the key the same.
+        set[frozenset]
+            The found permutations. This is a set of frozenset of pairs of node
+            keys which can be exchanged without changing :attr:`subgraph`.
+        dict[collections.abc.Hashable, set[collections.abc.Hashable]]
+            The found co-sets. The co-sets is a dictionary of {node key:
+            set of node keys}. Every key-value pair describes which `values`
+            can be interchanged without changing nodes less than `key`.
         """
         key = hash((tuple(graph.nodes), tuple(graph.edges),
                     tuple(map(tuple, node_partitions)), tuple(edge_colors.items())))
@@ -476,10 +459,16 @@ class ISMAGS:
                                                             edge_colors))
         assert len(node_partitions) == 1
         node_partitions = node_partitions[0]
-        permutations, cosets = self._process_opp(graph,
-                                                 node_partitions,
-                                                 node_partitions,
-                                                 edge_colors)
+        permutations, cosets = self._process_ordered_pair_partitions(graph,
+                                                                     node_partitions,
+                                                                     node_partitions,
+                                                                     edge_colors)
+        # ! This may cause a memory leak !
+        # But we're stuck with the networkx API for this class (modelled after
+        # their VF2 isomorphism class). Instead of making 1 instance and
+        # calling that with multiple graph/subgraph combinations the paradigm
+        # is to create a new instance for every graph/subgraph pair. This makes
+        # it harder to cache things.
         self.__class__._symmetry_cache[key] = permutations, cosets
         return permutations, cosets
 
@@ -553,7 +542,7 @@ class ISMAGS:
         for node_i, node_ts in cosets.items():
             for node_t in node_ts:
                 if node_i != node_t:
-                    # Node i must be smaller then node t.
+                    # Node i must be smaller than node t.
                     constraints.append((node_i, node_t))
         return constraints
 
@@ -709,7 +698,7 @@ class ISMAGS:
                 continue
 
             new_candidates = candidates.copy()
-            sgn_neighbours = self.subgraph[sgn]
+            sgn_neighbours = set(self.subgraph[sgn])
             not_gn_neighbours = set(self.graph.nodes) - set(self.graph[gn])
             for sgn2 in self.subgraph:
                 if sgn2 not in sgn_neighbours:
@@ -763,7 +752,11 @@ class ISMAGS:
             # There's no point in trying to find isomorphisms of
             # graph >= subgraph if subgraph has more nodes than graph.
 
-            for nodes in to_be_mapped:
+            # Try the isomorphism first with the nodes with lowest ID. So sort
+            # them. Those are more likely to be part of the final
+            # correspondence. This makes finding the first answer(s) faster. In
+            # theory.
+            for nodes in sorted(to_be_mapped, key=sorted):
                 # Find the isomorphism between subgraph[to_be_mapped] <= graph
                 next_sgn = min(nodes, key=lambda n: min(candidates[n], key=len))
                 isomorphs = self._map_nodes(next_sgn, candidates, constraints,
@@ -897,8 +890,9 @@ class ISMAGS:
         for bot in new_bottom_partitions:
             yield list(new_top_partitions), bot
 
-    def _process_opp(self, graph, top_partitions, bottom_partitions,
-                     edge_colors, orbits=None, cosets=None):
+    def _process_ordered_pair_partitions(self, graph, top_partitions,
+                                         bottom_partitions, edge_colors,
+                                         orbits=None, cosets=None):
         """
         Processes ordered pair partitions as per the reference paper. Finds and
         returns all permutations and cosets that leave the graph unchanged.
@@ -949,7 +943,7 @@ class ISMAGS:
             for opp in partitions:
                 new_top_partitions, new_bottom_partitions = opp
 
-                new_perms, new_cosets = self._process_opp(graph,
+                new_perms, new_cosets = self._process_ordered_pair_partitions(graph,
                                                           new_top_partitions,
                                                           new_bottom_partitions,
                                                           edge_colors,
@@ -963,10 +957,90 @@ class ISMAGS:
                   for k in top if len(top) == 1 and top == bottom}
         ks = {k for k in graph.nodes if k < node}
         # Have all nodes with ID < node been mapped?
-        find_coset = ks <= mapped
+        find_coset = ks <= mapped and node not in cosets
         if find_coset:
             # Find the orbit that contains node
             for orbit in orbits:
                 if node in orbit:
                     cosets[node] = orbit.copy()
         return permutations, cosets
+
+
+def make_partitions(items, test):
+    """
+    Partitions items into sets based on the outcome of ``test(item1, item2)``.
+    Pairs of items for which `test` returns `True` end up in the same set.
+
+    Parameters
+    ----------
+    items : collections.abc.Iterable[collections.abc.Hashable]
+        Items to partition
+    test : collections.abc.Callable[collections.abc.Hashable, collections.abc.Hashable]
+        A function that will be called with 2 arguments, taken from items.
+        Should return `True` if those 2 items need to end up in the same
+        partition, and `False` otherwise.
+
+    Returns
+    -------
+    list[set]
+        A list of sets, with each set containing part of the items in `items`,
+        such that ``all(test(*pair) for pair in  itertools.combinations(set, 2))
+        == True``
+
+    Notes
+    -----
+    The function `test` is assumed to be transitive: if ``test(a, b)`` and
+    ``test(b, c)`` return ``True``, then ``test(a, c)`` must also be ``True``.
+    """
+    partitions = []
+    for item in items:
+        for partition in partitions:
+            p_item = next(iter(partition))
+            if test(item, p_item):
+                partition.add(item)
+                break
+        else:  # No break
+            partitions.append(set((item,)))
+    return partitions
+
+
+def partition_to_color(partitions):
+    """
+    Creates a dictionary with for every item in partition for every partition
+    in partitions the index of partition in partitions.
+
+    Parameters
+    ----------
+    partitions: collections.abc.Sequence[collections.abc.Iterable]
+        As returned by :func:`make_partitions`.
+
+    Returns
+    -------
+    dict[collections.abc.Hashable, int]
+    """
+    colors = dict()
+    for color, keys in enumerate(partitions):
+        for key in keys:
+            colors[key] = color
+    return colors
+
+
+def intersect(collection_of_sets):
+    """
+    Given an collection of sets, returns the intersection of those sets.
+
+    Parameters
+    ----------
+    collection_of_sets: collections.abc.Collection[set]
+        A collection of sets.
+
+    Returns
+    -------
+    set
+        An intersection of all sets in `collection_of_sets`. Will have the same
+        type as the item initially taken from `collection_of_sets`.
+    """
+    collection_of_sets = list(collection_of_sets)
+    first = collection_of_sets.pop()
+    out = reduce(set.intersection, collection_of_sets, set(first))
+    return type(first)(out)

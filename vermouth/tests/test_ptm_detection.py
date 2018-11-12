@@ -22,7 +22,6 @@ import pytest
 
 import vermouth
 import vermouth.processors.canonicalize_modifications as canmod
-from vermouth.ismags import ISMAGS
 
 # pylint: disable=redefined-outer-name
 
@@ -186,7 +185,7 @@ def test_identify_ptms(known_ptm_graphs, atoms, edges, expected):
     molecule = make_molecule(atoms, edges)
 
     ptms = canmod.find_ptm_atoms(molecule)
-    known_ptms = [(ptm_graph, nx.isomorphism.GraphMatcher(molecule, ptm_graph, node_match=canmod.ptm_node_matcher))
+    known_ptms = [(ptm_graph, canmod.PTMGraphMatcher(molecule, ptm_graph))
                   for ptm_graph in known_ptm_graphs]
 
     found = canmod.identify_ptms(molecule, ptms, known_ptms)

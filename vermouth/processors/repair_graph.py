@@ -27,6 +27,29 @@ from ..utils import format_atom_string
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
+def get_default(dictionary, attr, default):
+    """
+    Functions like :meth:`dict.get`, except that when `attr` is in `dictionary`
+    and `dictionary[attr]` is `None`, it will return `default`.
+
+    Parameters
+    ----------
+    dictionary: dict
+    attr: collections.abc.Hashable
+    default
+
+    Returns
+    -------
+    object
+        The value of `dictionary[attr]` if `attr` is in `dictionary` and
+        `dictionary[attr]` is not None. `default otherwise.`
+    """
+    item = dictionary.get(attr, None)
+    if item is None:
+        item = default
+    return item
+
+
 def make_reference(mol):
     """
     Takes an molecule graph (e.g. as read from a PDB file), and finds and
@@ -69,7 +92,6 @@ def make_reference(mol):
 
     for residx in residues:
         # TODO: make separate function for just one residue.
-        # TODO: multiprocess this loop?
         # TODO: Merge degree 1 nodes (hydrogens!) with the parent node. And
         # check whether the node degrees match?
 
@@ -83,11 +105,13 @@ def make_reference(mol):
         # We are going to sort the nodes of reference and residue by atomname.
         # We do this, because the ISMAGS algorithm prefers to match nodes with
         # lower IDs.
-        # Get a \uFFFF for every node that doesn't have an atomname attribute,
-        # since that sorts higher than letters, giving them the lowest priority
-        # in ISMAGS.
-        res_names = {idx: residue.nodes[idx].get('atomname', '\uFFFF') for idx in residue}
-        ref_names = {idx: reference.nodes[idx].get('atomname', '\uFFFF') for idx in reference}
+        # Get a \uFFFF for every node that doesn't have an atomname attribute
+        # or when it's None, since that sorts higher than letters, giving them
+        # the lowest priority in ISMAGS.
+
+        res_names = {idx: get_default(residue.nodes[idx], 'atomname', '\uFFFF') for idx in residue}
+        ref_names = {idx: get_default(reference.nodes[idx], 'atomname', '\uFFFF') for idx in reference}
+
         # Sort the nodes such that any atomnames that are common to both
         # reference and residue are first, and then the rest.
         # Also, sort it all by atomname. This is combined in one by sorting by
@@ -99,6 +123,12 @@ def make_reference(mol):
         # ISMAGS does quite a lot of inequality comparisons, and those are way
         # faster for str/int. So, sacrifice the memory, and relabel by making a
         # new copy.
+
+        # TODO: include a geometric alignment in the sorting. Humans are really
+        #       good at solving isomorphism problems iff graphs look alike. We
+        #       can do a similar trick here by rot+trans aligning the given
+        #       residue with a reference conformation. And then sort by
+        #       distance
         new_residue_names = {old: new for new, old in enumerate(sorted(residue,
                              key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])))}
         new_reference_names = {old: new for new, old in enumerate(sorted(reference,
@@ -109,10 +139,6 @@ def make_reference(mol):
 
         # It would be nice if we were able to relabel them in-place, but it
         # seems to make everything slower. See above.
-        #nx.relabel_nodes(residue, new_residue_names, copy=False)
-        #x.relabel_nodes(reference, new_reference_names, copy=False)
-        #res_copy = residue
-        #ref_copy = reference
         res_copy = nx.relabel_nodes(residue, new_residue_names, copy=True)
         ref_copy = nx.relabel_nodes(reference, new_reference_names, copy=True)
 
@@ -124,45 +150,25 @@ def make_reference(mol):
         # residue <= reference, so best case it makes no difference, and worst
         # case we avoid trying to find that isomorphism twice.
         match_iter = ismags.largest_common_subgraph()
-        matches = []
-        best_score = None
-        warned = False
-        for match in match_iter:
-            if not warned and len(match) != len(residue):
-                # At this point we've already found the first largest common
-                # subgraph, so the warning is a little late, maybe.
-                LOGGER.debug('Doing maximum common subgraph matching for'
-                             ' residue {}{}', resname, resid,
-                             type='performance')
-                warned = True
-            score = rate_match(ref_copy, res_copy, match)
-            if best_score is None or score > best_score:
-                best_score = score
-                matches = [match]
-            elif score == best_score:
-                matches.append(match)
-        for idx, match in enumerate(matches):
-            # "unsort" the matches
-            matches[idx] = {old_ref_names[ref]: old_res_names[res]
-                            for ref, res in match.items()}
-
-        # Unsort graphs
-        #nx.relabel_nodes(residue, old_res_names, copy=False)
-        #nx.relabel_nodes(reference, old_ref_names, copy=False)
-
-        if not matches:
+        try:
+            # We take only the first found match, since because the nodes are
+            # sorted by atomname, and ISMAGS prefers to take nodes with low ID,
+            # that match should have most matching atomnames.
+            match = next(match_iter)
+        except StopIteration:
             LOGGER.error("Can't find isomorphism between {}{} and its "
                          "reference.", resname, resid, type='inconsistent-data')
-            raise ValueError
             continue
+        # TODO: Since we only have one isomorphism we don't know whether the
+        # assigment we're making is ambiguous. So iff the residue is small
+        # enough (or a flag is set, whatever), also find the second isomorphism
+        # and check whether it has the same number of correct atomnames. If so,
+        # issue a warning and carry on. We can't do this for all residues,
+        # since that takes a cup of coffee.
 
-        if len(matches) > 1:
-            LOGGER.warning("More than one way to fit {}{} on it's reference."
-                           " I'm picking one arbitrarily. You might want to"
-                           " fix at least some atomnames.", resname, resid,
-                           type='bad-atom-names')
+        # "unsort" the matches
+        match = {old_ref_names[ref]: old_res_names[res] for ref, res in match.items()}
 
-        match = matches[0]
         reference_graph.add_node(residx, chain=chain, reference=reference,
                                  found=residue, resname=resname, resid=resid,
                                  match=match)

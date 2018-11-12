@@ -28,27 +28,36 @@ import networkx as nx
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string
-from ..ismags import ISMAGS
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
-def ptm_node_matcher(node1, node2):
+class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
     """
-    Returns True iff node1 and node2 should be considered equal. This means
-    they are both either marked as PTM_atom, or not. If they both are PTM
-    atoms, the elements need to match, and otherwise, the atomnames must
-    match.
+    Implements matching logic for PTMs
     """
-    if node1.get('PTM_atom', False) == node2.get('PTM_atom', False):
-        if node2.get('PTM_atom', False):
-            # elements must match
-            return node1['element'] == node2['element']
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    # G1 >= G2; G1 is the found residue; G2 the PTM reference
+    def semantic_feasibility(self, node1, node2):
+        """
+        Returns True iff node1 and node2 should be considered equal. This means
+        they are both either marked as PTM_atom, or not. If they both are PTM
+        atoms, the elements need to match, and otherwise, the atomnames must
+        match.
+        """
+        node1 = self.G1.nodes[node1]
+        node2 = self.G2.nodes[node2]
+        if node1.get('PTM_atom', False) == node2['PTM_atom']:
+            if node2['PTM_atom']:
+                # elements must match
+                return node1['element'] == node2['element']
+            else:
+                # atomnames must match
+                return node1['atomname'] == node2['atomname']
         else:
-            # atomnames must match
-            return node1['atomname'] == node2['atomname']
-    else:
-        return False
+            return False
 
 
 def find_ptm_atoms(molecule):
@@ -215,17 +224,9 @@ def allowed_ptms(residue, res_ptms, known_ptms):
     """
     # TODO: filter by element count first
     for ptm in known_ptms:
-        ptm_graph_matcher = nx.isomorphism.GraphMatcher(residue, ptm, node_match=ptm_node_matcher)
+        ptm_graph_matcher = PTMGraphMatcher(residue, ptm)
         if ptm_graph_matcher.subgraph_is_isomorphic():
-            # `subgraph_is_isomorphic` consumes an isomorphism, so make a new
-            # ismags object, and give it some of the more expensive things to
-            # calculate
-            new_matcher = ISMAGS(residue, ptm, node_match=ptm_node_match)
-            new_matcher._sgn_partitions_ = ptm_graph_matcher._sgn_partitions_
-            new_matcher._gn_partitions_ = ptm_graph_matcher._gn_partitions_
-            new_matcher._sge_partitions_ = ptm_graph_matcher._sge_partitions_
-            new_matcher._ge_partitions_ = ptm_graph_matcher._ge_partitions_
-            yield ptm, new_matcher
+            yield ptm, ptm_graph_matcher
 
 
 def fix_ptm(molecule):
@@ -280,10 +281,6 @@ def fix_ptm(molecule):
         # TODO: Maybe use graph_utils.make_residue_graph? Or rewrite that
         #       function?
         residue = molecule.subgraph(n_idxs)
-
-        # TODO: Sort residue and all known_ptms by atomname. Unsort the matches
-        # further down.
-
         options = allowed_ptms(residue, res_ptms, known_ptms)
         options = sorted(options,
                          key=lambda opt: len([n for n in opt[0] if opt[0].nodes[n].get('PTM_atom', False)]),
@@ -306,7 +303,6 @@ def fix_ptm(molecule):
                     ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
                      for resid in resids])
         for ptm, match in identified:
-            # TODO: Unsort match here
             for mol_idx, ptm_idx in match.items():
                 ptm_node = ptm.nodes[ptm_idx]
                 mol_node = molecule.nodes[mol_idx]
