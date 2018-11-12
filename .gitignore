@@ -10,5 +10,8 @@ test.pdb
 .coverage
 .hypothesis
 
+htmlcov
+
 doc/build
 doc/source/api
+doc/source/.doctrees
