@@ -48,27 +48,39 @@ def molecule_copy(molecule):
 
 
 @pytest.mark.parametrize('atoms, bonds, interactions, removed, expected',[
-    ([], [], [], [], {}),  # empty molecule
-    ([1, 2, 3], [(1, 2), (2, 3)], [], [2], {}),  # Nodes but no interactions
-    ([1, 2], [(1, 2)], [('bond', (1, 2), {})], [2], {}),  # interactions that all need to be removed
-    ([1,2,3,4,5,6,7],[(1,2), (3,4), (5, (1,2))],[('bond', (5,4), {}), ('bond', (1,2), {})], [5]
-     , {'bond': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})]}),  # Molecule with interactions of
-                                                                                         # which some need to be removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2))], [('bond', (5, 4), {}), ('bond', (1, 2), {})], []
+
+    # empty molecule
+    ([], [], [], [], {}),
+
+    # Nodes but no interactions
+    ([1, 2, 3], [(1, 2), (2, 3)], [], [2], {}),
+
+    # interactions that all need to be removed
+    ([1, 2], [(1, 2)], [('bond', (1, 2), {})], [2], {}),
+
+    # Molecule with interactions of which some need to be removed
+    ([1,2,3,4,5,6,7],[(1,2), (3,4), (5,7)],[('bond', (5,4), {}), ('bond', (1,2), {})], [5]
+     , {'bond': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})]}),
+
+    # Molecule with interactions of which none need to be removed
+    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4)], [('bond', (5, 4), {}), ('bond', (1, 2), {})], [6, 7]
      , {'bond': [vermouth.molecule.Interaction(atoms=(5, 4), meta={}, parameters={})
-        , vermouth.molecule.Interaction(atoms=(1, 2), meta={}, parameters={})]}),  # Molecule with interactions of which
-                                                                                   # none need to be removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2)), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
-        , ('angle', (1, 2), {})], [1, 5], {}),  # Molecule with interactions of different types of which all need to be
-                                                # removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2)), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
+        , vermouth.molecule.Interaction(atoms=(1, 2), meta={}, parameters={})]}),
+
+    # Molecule with interactions of different types of which all need to be removed
+    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5,7), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
+        , ('angle', (1, 2), {})], [1, 5], {}),
+
+    # Molecule with interactions of different types of which some need to be removed
+    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5,7), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
     , ('angle', (1, 2), {})], [5], {'angle': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})],
-    'bond':[vermouth.molecule.Interaction(atoms=(1,6), meta={}, parameters={})]}),  # Molecule with interactions of
-    # different types of which some need to be removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2)), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
-    , ('angle', (1, 2), {})], [1,5], {}),  # Molecule with interactions of different types of which none need to be
-                                           # removed
-    # ...  # etc.
+    'bond':[vermouth.molecule.Interaction(atoms=(1,6), meta={}, parameters={})]}),
+
+    # Molecule with interactions of different types of which none need to be removed
+    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5,7), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
+    , ('angle', (1, 2), {})], [], {'angle': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})],
+    'bond':[vermouth.molecule.Interaction(atoms=(1,6), meta={}, parameters={}), vermouth.molecule.Interaction
+        (atoms=(5,4), meta={}, parameters={})]}),
 ])
 def test_remove_nodes_from(atoms, bonds, interactions, removed, expected):
     molecule = vermouth.molecule.Molecule()
@@ -82,27 +94,30 @@ def test_remove_nodes_from(atoms, bonds, interactions, removed, expected):
 
 
 @pytest.mark.parametrize('atoms, bonds, interactions, removed, expected',[
-    ([], [], [], [], {}),  # empty molecule
-    ([1, 2, 3], [(1, 2), (2, 3)], [], [2], {}),  # Nodes but no interactions
-    ([1, 2], [(1, 2)], [('bond', (1, 2), {})], [2], {}),  # interactions that all need to be removed
-    ([1,2,3,4,5,6,7],[(1,2), (3,4), (5, (1,2))],[('bond', (5,4), {}), ('bond', (1,2), {})], [5]
-     , {'bond': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})]}),  # Molecule with interactions of
-                                                                                         # which some need to be removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2))], [('bond', (5, 4), {}), ('bond', (1, 2), {})], []
-     , {'bond': [vermouth.molecule.Interaction(atoms=(5, 4), meta={}, parameters={})
-        , vermouth.molecule.Interaction(atoms=(1, 2), meta={}, parameters={})]}),  # Molecule with interactions of which
-                                                                                   # none need to be removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2)), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
-        , ('angle', (1, 2), {})], [1, 5], {}),  # Molecule with interactions of different types of which all need to be
-                                                # removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2)), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
-    , ('angle', (1, 2), {})], [5], {'angle': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})],
-    'bond':[vermouth.molecule.Interaction(atoms=(1,6), meta={}, parameters={})]}),  # Molecule with interactions of
-    # different types of which some need to be removed
-    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5, (1, 2)), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
-    , ('angle', (1, 2), {})], [1,5], {}),  # Molecule with interactions of different types of which none need to be
-                                           # removed
-    # ...  # etc.
+
+    # empty molecule
+    ([], [], [], None, {}),
+
+    # Nodes but no interactions
+    ([1, 2, 3], [(1, 2), (2, 3)], [], 2, {}),
+
+    # interactions that all need to be removed
+    ([1, 2], [(1, 2)], [('bond', (1, 2), {})], 2, {}),
+
+    # Molecule with interactions of which some need to be removed
+    ([1,2,3,4,5,6,7],[(1,2), (3,4), (5,7)],[('bond', (5,4), {}), ('bond', (1,2), {})], 5
+     , {'bond': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})]}),
+
+    # Molecule with interactions of different types of which some need to be removed
+    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5,7), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
+    , ('angle', (1, 2), {})], 5, {'angle': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})],
+    'bond':[vermouth.molecule.Interaction(atoms=(1,6), meta={}, parameters={})]}),
+
+    # Molecule with interactions of different types of which none need to be removed
+    ([1, 2, 3, 4, 5, 6, 7], [(1, 2), (3, 4), (5,7), (6, 7)], [('bond', (1, 6), {}), ('bond', (5, 4), {})
+    , ('angle', (1, 2), {})], None, {'angle': [vermouth.molecule.Interaction(atoms=(1,2), meta={}, parameters={})],
+    'bond':[vermouth.molecule.Interaction(atoms=(1,6), meta={}, parameters={}), vermouth.molecule.Interaction
+        (atoms=(5,4), meta={}, parameters={})]}),
 ])
 def test_remove_node(atoms, bonds, interactions, removed, expected):
     molecule = vermouth.molecule.Molecule()
@@ -111,8 +126,9 @@ def test_remove_node(atoms, bonds, interactions, removed, expected):
     for type_, atoms, params in interactions:
         molecule.add_interaction(type_, atoms, params)
 
-    for to_remove in removed:
-        molecule.remove_node(to_remove)
+    if removed:
+        molecule.remove_node(removed)
+
     assert molecule.interactions == expected
 
 @pytest.fixture

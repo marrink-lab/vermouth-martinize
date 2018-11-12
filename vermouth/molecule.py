@@ -673,7 +673,13 @@ class Molecule(nx.Graph):
                 else:
                     yield (node1, node2, self.edges[node1, node2])
 
-    def iterate_over_interactions(self, node):
+    def _remove_interactions_with_node(self, node):
+        """
+        We iterate through the different interactions we have and
+        remove the interactions where the atoms to be deleted are present.
+        Further we also delete the entire interaction_type if it is
+        empty after all the necessary interactions have been deleted.
+        """
         for name, interactions in self.interactions.items():
             for interaction in interactions:
                 if node in interaction.atoms:
@@ -689,7 +695,7 @@ class Molecule(nx.Graph):
            separately which is not a part of the graph and hence does not
            get deleted.'''
         super().remove_node(node)
-        self.iterate_over_interactions(node)
+        self._remove_interactions_with_node(node)
 
     def remove_nodes_from(self, nodes):
         '''Overriding the remove_nodes_from method of networkx
@@ -698,7 +704,7 @@ class Molecule(nx.Graph):
            the graph and hence does not get deleted.'''
         super().remove_nodes_from(nodes)
         for node in nodes:
-            self.iterate_over_interactions(node)
+            self._remove_interactions_with_node(node)
 
 class Block(Molecule):
     """
