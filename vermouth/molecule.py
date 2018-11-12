@@ -673,10 +673,7 @@ class Molecule(nx.Graph):
                 else:
                     yield (node1, node2, self.edges[node1, node2])
 
-    def remove_node(self, node):
-        '''Overriding the remove_node method of networkx as we have to delete the interaction from the interactions list
-         separately which is not a part of the graph and hence does not get deleted.'''
-        super().remove_node(node)
+    def iterate_over_interactions(self, node):
         for name, interactions in self.interactions.items():
             for interaction in interactions:
                 if node in interaction.atoms:
@@ -686,19 +683,22 @@ class Molecule(nx.Graph):
             if not self.interactions[i]:
                 self.interactions.pop(i)
 
+    def remove_node(self, node):
+        '''Overriding the remove_node method of networkx
+           as we have to delete the interaction from the interactions list
+           separately which is not a part of the graph and hence does not
+           get deleted.'''
+        super().remove_node(node)
+        self.iterate_over_interactions(node)
+
     def remove_nodes_from(self, nodes):
-        '''Overriding the remove_nodes_from method of networkx as we have to delete the interaction from the
-        interactions list separately which is not a part of the graph and hence does not get deleted.'''
+        '''Overriding the remove_nodes_from method of networkx
+           as we have to delete the interaction from the
+           interactions list separately which is not a part of
+           the graph and hence does not get deleted.'''
         super().remove_nodes_from(nodes)
         for node in nodes:
-            for name, interactions in self.interactions.items():
-                for interaction in interactions:
-                    if node in interaction.atoms:
-                        self.interactions[name].remove(interaction)
-
-            for i in self.interactions.copy():
-                if not self.interactions[i]:
-                    self.interactions.pop(i)
+            self.iterate_over_interactions(node)
 
 class Block(Molecule):
     """
