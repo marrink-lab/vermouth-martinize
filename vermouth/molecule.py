@@ -685,23 +685,27 @@ class Molecule(nx.Graph):
                 if node in interaction.atoms:
                     self.interactions[name].remove(interaction)
 
-        for i in self.interactions.copy():
-            if not self.interactions[i]:
-                self.interactions.pop(i)
+        for interaction_type in list(self.interactions):
+            if not self.interactions[interaction_type]:
+                self.interactions.pop(interaction_type)
 
     def remove_node(self, node):
-        '''Overriding the remove_node method of networkx
-           as we have to delete the interaction from the interactions list
-           separately which is not a part of the graph and hence does not
-           get deleted.'''
+        """
+        Overriding the remove_node method of networkx
+        as we have to delete the interaction from the interactions list
+        separately which is not a part of the graph and hence does not
+        get deleted.
+        """
         super().remove_node(node)
         self._remove_interactions_with_node(node)
 
     def remove_nodes_from(self, nodes):
-        '''Overriding the remove_nodes_from method of networkx
-           as we have to delete the interaction from the
-           interactions list separately which is not a part of
-           the graph and hence does not get deleted.'''
+        """
+        Overriding the remove_nodes_from method of networkx
+        as we have to delete the interaction from the
+        interactions list separately which is not a part of
+        the graph and hence does not get deleted.
+        """
         super().remove_nodes_from(nodes)
         for node in nodes:
             self._remove_interactions_with_node(node)
