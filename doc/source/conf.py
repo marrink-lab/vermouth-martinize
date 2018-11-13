@@ -83,7 +83,7 @@ pygments_style = 'sphinx'
 
 nitpick_ignore = [
         ('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'),
-        ('py:class', 'networkx.algorithms.isomorphism.isomorphvf2.GraphMatcher'),
+        ('py:class', 'networkx.isomorphism.GraphMatcher'),
         ('py:class', 'networkx.classes.graph.Graph'),
         ]
 
@@ -187,8 +187,8 @@ autodoc_default_options = {'members': None,
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-                       'python': ('https://docs.python.org/', None),
+                       'python': ('https://docs.python.org', None),
                        'networkx': ('https://networkx.github.io/documentation/latest', None),
-                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy', None),
                        'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
                       }

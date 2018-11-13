@@ -158,7 +158,7 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     return graph_mapping_collection
 
 
-class MappingGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
+class MappingGraphMatcher(nx.isomorphism.GraphMatcher):
     def __init__(self, *args, edge_match=None, node_match=None, **kwargs):
         self.edge_match = edge_match
         self.node_match = node_match
