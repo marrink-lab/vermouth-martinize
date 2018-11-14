@@ -16,7 +16,6 @@
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
 from functools import partial
-import itertools
 
 import networkx as nx
 import numpy as np
@@ -337,7 +336,7 @@ class Molecule(nx.Graph):
     def atoms(self):
         """
         All atoms in this molecule. Alias for `nodes`.
-        
+
         See Also
         --------
         :attr:`networkx.Graph.nodes`
@@ -674,6 +673,42 @@ class Molecule(nx.Graph):
                 else:
                     yield (node1, node2, self.edges[node1, node2])
 
+    def _remove_interactions_with_node(self, node):
+        """
+        We iterate through the different interactions we have and
+        remove the interactions where the atoms to be deleted are present.
+        Further we also delete the entire interaction_type if it is
+        empty after all the necessary interactions have been deleted.
+        """
+        for name, interactions in self.interactions.items():
+            for interaction in interactions:
+                if node in interaction.atoms:
+                    self.interactions[name].remove(interaction)
+
+        for interaction_type in list(self.interactions):
+            if not self.interactions[interaction_type]:
+                self.interactions.pop(interaction_type)
+
+    def remove_node(self, node):
+        """
+        Overriding the remove_node method of networkx
+        as we have to delete the interaction from the interactions list
+        separately which is not a part of the graph and hence does not
+        get deleted.
+        """
+        super().remove_node(node)
+        self._remove_interactions_with_node(node)
+
+    def remove_nodes_from(self, nodes):
+        """
+        Overriding the remove_nodes_from method of networkx
+        as we have to delete the interaction from the
+        interactions list separately which is not a part of
+        the graph and hence does not get deleted.
+        """
+        super().remove_nodes_from(nodes)
+        for node in nodes:
+            self._remove_interactions_with_node(node)
 
 class Block(Molecule):
     """
