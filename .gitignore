@@ -3,6 +3,8 @@ test.pdb
 **.pyc
 **.bak
 
+**.lprof
+
 .eggs/**
 *.swp
 .pytest_cache
