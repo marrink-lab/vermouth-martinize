@@ -24,8 +24,14 @@ import networkx as nx
 import copy
 
 
-@pytest.fixture
-def forcefield_with_mods():
+def build_forcefield_with_mods():
+    """
+    Build a force field that describe some modifications.
+
+    Returns
+    -------
+    vermouth.ForceField
+    """
     nter = nx.Graph(name='N-ter')
     nter.add_nodes_from((
         (0, {'atomname': 'CA', 'PTM_atom': False, 'element': 'C'}),
@@ -58,8 +64,24 @@ def forcefield_with_mods():
     return forcefield
 
 
-@pytest.fixture
-def system_mod(forcefield_with_mods):
+def build_system_mod(force_field):
+    """
+    Build a system with a molecule that comprises modifications.
+
+    Parameters
+    ----------
+    force_field: vermouth.ForceField
+        A force field based on "universal" that desribed the "GLU-H", "C-ter"
+        and "N-ter" modifications.
+    
+    Returns
+    -------
+    vermouth.System
+
+    See Also
+    --------
+    build_forcefield_with_mods
+    """
     molecule = vermouth.molecule.Molecule()
     # When the name must be fixed, the expected name is stored under 'expected'.
     # If more than one value is acceptable, then 'expected' is a tuple.
@@ -125,9 +147,18 @@ def system_mod(forcefield_with_mods):
         molecule.nodes[node]['atomid'] = node
     system = vermouth.System()
     system.molecules = [molecule]
-    system.force_field = forcefield_with_mods
+    system.force_field = force_field
     return system
 
+
+@pytest.fixture
+def forcefield_with_mods():
+    return build_forcefield_with_mods()
+
+
+@pytest.fixture
+def system_mod(forcefield_with_mods):
+    return build_system_mod(forcefield_with_mods)
 
 @pytest.fixture(params=(True, False))
 def repaired_graph(request, system_mod):
@@ -180,7 +211,7 @@ def test_uniq_names_canonicalize(canonicalized_graph):
 
 
 def _list_expected_names():
-    molecule = system_mod(forcefield_with_mods()).molecules[0]
+    molecule = build_system_mod(build_forcefield_with_mods()).molecules[0]
     for key, node in molecule.nodes.items():
         if 'expected' in node:
             expected = node['expected']
