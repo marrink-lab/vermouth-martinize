@@ -277,13 +277,17 @@ def _build_link_interaction_from(molecule, interaction, match):
 class DoLinks(Processor):
     def run_molecule(self, molecule):
         links = molecule.force_field.links
+        _nodes_to_remove = []
         for link in links:
             matches = match_link(molecule, link)
             for match in matches:
                 for node, node_attrs in link.nodes.items():
                     if 'replace' in node_attrs:
-                        node_mol = molecule.nodes[match[node]]
-                        node_mol.update(node_attrs['replace'])
+                        if node_attrs['replace']['atomname'] is None:
+                            _nodes_to_remove.append(match[node])
+                        else:
+                            node_mol = molecule.nodes[match[node]]
+                            node_mol.update(node_attrs['replace'])
                 for inter_type, interactions in link.removed_interactions.items():
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
@@ -295,4 +299,6 @@ class DoLinks(Processor):
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
                         molecule.add_or_replace_interaction(inter_type, *interaction)
+
+            molecule.remove_nodes_from(_nodes_to_remove)
         return molecule
