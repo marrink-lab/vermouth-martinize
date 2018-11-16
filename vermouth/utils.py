@@ -34,8 +34,13 @@ except ImportError:
     distance = _distance
 
 
-def format_atom_string(node):
-    return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**node)
+def format_atom_string(node, atomid=None):
+    if atomid is None:
+        atomid = node['atomid']
+    node = node.copy()
+    if 'atomid' in node:
+        del node['atomid']
+    return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**node, atomid=atomid)
 
 
 def maxes(iterable, key=lambda x: x):

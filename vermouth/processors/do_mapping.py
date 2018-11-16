@@ -158,11 +158,14 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     return graph_mapping_collection
 
 
-class MappingGraphMatcher(nx.isomorphism.GraphMatcher):
+# We can't inherit from nx.isomorphism.GraphMatcher to override
+# `semantic_feasibility`. That implementation will clobber this one's method.
+class MappingGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
     def __init__(self, *args, edge_match=None, node_match=None, **kwargs):
         self.edge_match = edge_match
         self.node_match = node_match
         super().__init__(*args, **kwargs)
+        self.G1_adj = self.G1.adj
 
     def semantic_feasibility(self, G1_node, G2_node):
         """
@@ -182,7 +185,7 @@ class MappingGraphMatcher(nx.isomorphism.GraphMatcher):
             core_1 = self.core_1
             edge_match = self.edge_match
 
-            for neighbor in self.G1.adj[G1_node]:
+            for neighbor in self.G1_adj[G1_node]:
                 # G1_node is not in core_1, so we must handle R_self separately
                 if neighbor == G1_node:
                     if not edge_match(G1_node, G1_node, G2_node, G2_node):
@@ -341,14 +344,14 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                            " particles in your output and/or erroneous bonds."
                            " {}. They've end up in the following output atoms:"
                            " {}.",
-                           [format_atom_string(molecule.nodes[idx]) for idx in shared_atoms],
-                           [format_atom_string(graph_out.nodes[idx]) for idx in shared_out_atoms],
+                           [format_atom_string(molecule.nodes[idx], atomid=idx) for idx in shared_atoms],
+                           [format_atom_string(graph_out.nodes[idx], atomid=idx) for idxs in shared_out_atoms for idx in idxs],
                            type='inconsistent-data')
 
     # Sanity check the results
     if any(v > 1 for v in blocks_per_atom.values()):
         LOGGER.warning('These atoms are covered by multiple blocks. This is a '
-                       'bad idea: {}', {format_atom_string(molecule.nodes[k]): v
+                       'bad idea: {}', {format_atom_string(molecule.nodes[k], atomid=k): v
                                         for k, v in blocks_per_atom.items() if v > 1},
                        type='inconsistent-data')
     uncovered_atoms = set(molecule.nodes.keys()) - set(mol_to_out.keys())
