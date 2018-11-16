@@ -35,12 +35,10 @@ except ImportError:
 
 
 def format_atom_string(node, atomid=None):
-    if atomid is None:
-        atomid = node['atomid']
     node = node.copy()
-    if 'atomid' in node:
-        del node['atomid']
-    return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**node, atomid=atomid)
+    if atomid is not None:
+        node['atomid'] = atomid
+    return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**node)
 
 
 def maxes(iterable, key=lambda x: x):
