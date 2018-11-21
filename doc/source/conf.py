@@ -82,9 +82,7 @@ pygments_style = 'sphinx'
 
 
 nitpick_ignore = [
-        ('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'),
         ('py:class', 'networkx.algorithms.isomorphism.isomorphvf2.GraphMatcher'),
-        ('py:class', 'networkx.classes.graph.Graph'),
         ]
 
 # -- Options for HTML output -------------------------------------------------
@@ -187,8 +185,41 @@ autodoc_default_options = {'members': None,
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-                       'python': ('https://docs.python.org/', None),
+                       'python': ('https://docs.python.org', None),
                        'networkx': ('https://networkx.github.io/documentation/latest', None),
-                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy', None),
                        'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
                       }
+
+
+# Borrowed from https://github.com/sphinx-doc/sphinx/issues/5603
+# On top of that, networkx.isomorphism.GraphMatcher is not documented, so link
+# to the VF2 isomorphism module instead.
+# See https://github.com/networkx/networkx/issues/3239
+intersphinx_aliases = {
+        ('py:class', 'networkx.classes.graph.Graph'): ('py:class', 'networkx.Graph'),
+        #('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:class', 'networkx.isomorphism.GraphMatcher'),
+        ('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2'),
+        ('py:class', 'networkx.isomorphism.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2')
+        }
+
+def add_intersphinx_aliases_to_inv(app):
+    from sphinx.ext.intersphinx import InventoryAdapter
+    inventories = InventoryAdapter(app.builder.env)
+
+    for alias, target in app.config.intersphinx_aliases.items():
+        alias_domain, alias_name = alias
+        target_domain, target_name = target
+        try:
+            found = inventories.main_inventory[target_domain][target_name]
+            try:
+                inventories.main_inventory[alias_domain][alias_name] = found
+            except KeyError:
+                continue
+        except KeyError:
+            continue
+
+
+def setup(app):
+    app.add_config_value('intersphinx_aliases', {}, 'env')
+    app.connect('builder-inited', add_intersphinx_aliases_to_inv)

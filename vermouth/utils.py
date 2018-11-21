@@ -34,7 +34,9 @@ except ImportError:
     distance = _distance
 
 
-def format_atom_string(node):
+def format_atom_string(node, **kwargs):
+    node = node.copy()
+    node.update(kwargs)
     return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**node)
 
 

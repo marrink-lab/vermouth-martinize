@@ -24,18 +24,6 @@ from ..molecule import attributes_match
 from .processor import Processor
 
 
-class LinkGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def semantic_feasibility(self, node1_name, node2_name):
-        # TODO: implement (partial) wildcards
-        # Node2 is the link
-        node1 = self.G1.nodes[node1_name]
-        node2 = self.G2.nodes[node2_name]
-        return _atoms_match(node1, node2)
-
-
 def _atoms_match(node1, node2):
     return attributes_match(node1, node2, ignore_keys=('order', 'replace'))
 
@@ -225,7 +213,7 @@ def match_link(molecule, link):
     if not attributes_match(molecule.meta, link.molecule_meta):
         return
 
-    GM = LinkGraphMatcher(molecule, link)
+    GM = nx.isomorphism.GraphMatcher(molecule, link, node_match=_atoms_match)
 
     raw_matches = GM.subgraph_isomorphisms_iter()
     for raw_match in raw_matches:
