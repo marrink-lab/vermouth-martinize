@@ -3,6 +3,8 @@ test.pdb
 **.pyc
 **.bak
 
+**.lprof
+
 .eggs/**
 *.swp
 .pytest_cache
@@ -10,5 +12,8 @@ test.pdb
 .coverage
 .hypothesis
 
+htmlcov
+
 doc/build
 doc/source/api
+doc/source/.doctrees
