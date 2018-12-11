@@ -243,8 +243,10 @@ def make_link(mol_nodes, mol_edges=[]):
     (
         [(0, {'atomname': 'a'}), (1, {'atomname': 'b'}), (2, {'atomname': 'c'})],
         [(0, 1), (1, 2)],
-        [[(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': None}})],
-         [(0, {'atomname': 'a1', 'replace': {'atomname': 'a2'}}), (1, {'atomname': 'b'})]],
+        [
+            [(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': None}})],
+            [(0, {'atomname': 'a1', 'replace': {'atomname': 'a2'}}), (1, {'atomname': 'b'})]
+        ],
         [[(0, 1)], [(0, 1)]],
         [(0, {'atomname': 'a1'}), (2, {'atomname': 'c'})],
         [],
@@ -252,12 +254,14 @@ def make_link(mol_nodes, mol_edges=[]):
     (
         [(0, {'atomname': 'a'}), (1, {'atomname': 'b'}), (2, {'atomname': 'c'})],
         [(0, 1), (1, 2)],
-        [[(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': None}})],
-         [(0, {'atomname': 'b'}), (1, {'atomname': 'c', 'replace': {'atomname': 'c1'}})]],
+        [
+            [(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': 'b1'}})],
+            [(0, {'atomname': 'c', 'replace': {'atomname': 'c1'}}), (1, {'atomname': 'b1', 'replace': {'atomname': 'b2'}})]
+        ],
         [[(0, 1)], [(0, 1)]],
-        [(0, {'atomname': 'a1'}), (2, {'atomname': 'c'})],
-        [],
-    )
+        [(0, {'atomname': 'a1'}), (1, {'atomname': 'b2'}), (2, {'atomname': 'c1'})],
+        [(0, 1), (1, 2)],
+    ),
 ))
 def test_link_processor(mol_nodes, mol_edges, link_nodes, link_edges,
                         expected_nodes, expected_edges):
