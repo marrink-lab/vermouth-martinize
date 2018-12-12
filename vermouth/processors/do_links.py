@@ -283,7 +283,7 @@ class DoLinks(Processor):
             for match in matches:
                 for node, node_attrs in link.nodes.items():
                     if 'replace' in node_attrs:
-                        if node_attrs['replace']['atomname'] is None:
+                        if node_attrs['replace'].get('atomname', False):
                             _nodes_to_remove.append(match[node])
                         else:
                             node_mol = molecule.nodes[match[node]]
