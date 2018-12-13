@@ -16,7 +16,9 @@
 
 import pytest
 import numpy as np
-from vermouth.processors import do_links
+from vermouth.processors import do_links, DoLinks
+from vermouth.molecule import Molecule, Link
+import vermouth.forcefield
 
 @pytest.mark.parametrize(
     "orders, resids, answer", (
@@ -199,3 +201,76 @@ def test_interpret_order(order, ref_order_type, ref_order_value):
     order_type, order_value = do_links._interpret_order(order)
     assert order_type == ref_order_type
     assert order_value == ref_order_value
+
+def make_mol(mol_nodes, mol_edges=[], **kwargs):
+    mol = Molecule(**kwargs)
+    mol.add_nodes_from(mol_nodes)
+    mol.add_edges_from(mol_edges)
+    return mol
+
+def make_link(mol_nodes, mol_edges=[]):
+    mol = Link()
+    mol.add_nodes_from(mol_nodes)
+    mol.add_edges_from(mol_edges)
+    return mol
+
+
+@pytest.mark.parametrize('mol_nodes, mol_edges, link_nodes, link_edges, expected_nodes, expected_edges', (
+    (
+        [(0, {'atomname': 'a'}), (1, {'atomname': 'b'}), (2, {'atomname': 'c'})],
+        [(0, 1), (1, 2)],
+        [[(0, {'atomname': 'a'}), (1, {'atomname': 'b'}), (2, {'atomname': 'c', 'replace': {'atomname': None}})]],
+        [[(0, 1), (1, 2)]],
+        [(0, {'atomname': 'a'}), (1, {'atomname': 'b'})],
+        [(0, 1)],
+    ),
+    (
+        [(0, {'atomname': 'a'}), (1, {'atomname': 'b'})],
+        [(0, 1)],
+        [[(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': None}})]],
+        [[(0, 1)]],
+        [(0, {'atomname': 'a1'})],
+        [],
+    ),
+    (
+        [(0, {'atomname': 'a'}), (1, {'atomname': 'b'}), (2, {'atomname': 'a'})],
+        [(0, 1), (1, 2)],
+        [[(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': None}})]],
+        [[(0, 1)]],
+        [(0, {'atomname': 'a1'}), (2, {'atomname': 'a1'})],
+        [],
+    ),
+    (
+        [(0, {'atomname': 'a'}), (1, {'atomname': 'b'}), (2, {'atomname': 'c'})],
+        [(0, 1), (1, 2)],
+        [
+            [(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': None}})],
+            [(0, {'atomname': 'a1', 'replace': {'atomname': 'a2'}}), (1, {'atomname': 'b'})]
+        ],
+        [[(0, 1)], [(0, 1)]],
+        [(0, {'atomname': 'a1'}), (2, {'atomname': 'c'})],
+        [],
+    ),
+    (
+        [(0, {'atomname': 'a'}), (1, {'atomname': 'b'}), (2, {'atomname': 'c'})],
+        [(0, 1), (1, 2)],
+        [
+            [(0, {'atomname': 'a', 'replace': {'atomname': 'a1'}}), (1, {'atomname': 'b', 'replace': {'atomname': 'b1'}})],
+            [(0, {'atomname': 'c', 'replace': {'atomname': 'c1'}}), (1, {'atomname': 'b1', 'replace': {'atomname': 'b2'}})]
+        ],
+        [[(0, 1)], [(0, 1)]],
+        [(0, {'atomname': 'a1'}), (1, {'atomname': 'b2'}), (2, {'atomname': 'c1'})],
+        [(0, 1), (1, 2)],
+    ),
+))
+def test_link_processor(mol_nodes, mol_edges, link_nodes, link_edges,
+                        expected_nodes, expected_edges):
+    links = [make_link(nodes, edges) for nodes, edges in zip(link_nodes, link_edges)]
+    ff = vermouth.forcefield.FORCE_FIELDS['universal']
+    ff.links = links
+
+    mol = make_mol(mol_nodes, mol_edges, force_field=ff)
+
+    out = DoLinks().run_molecule(mol)
+    assert dict(out.nodes(data=True)) == dict(expected_nodes)
+    assert set(out.edges(data=False)) == set(expected_edges)
