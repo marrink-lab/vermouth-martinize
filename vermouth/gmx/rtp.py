@@ -370,6 +370,7 @@ def _split_block_and_link(pre_block):
     # Filter the particles from neighboring residues out of the block.
     for atom in pre_block.atoms:
         if not atom['atomname'].startswith('+-'):
+            atom['resname'] = pre_block.name
             block.add_atom(atom)
         link.add_node(atom['atomname'])
 

@@ -946,4 +946,5 @@ def read_ff(lines, force_field):
 
     force_field.blocks.update(blocks)
     force_field.links.extend(links)
-    force_field.modifications.extend(modifications)
+    modifications = {mod.name: mod for mod in modifications}
+    force_field.modifications.update(modifications)

@@ -1,0 +1,54 @@
+[ macros ]
+protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASP0|GLU|GLU0|THR|SER|LYS|LYS0|ARG|ARG0|HIS|HISH|PHE|TYR|TRP"
+
+[ block ]
+[ from ]
+universal
+[ to ]
+jon
+
+[ from blocks ]
+AA1 {"resname": $protein_resnames , "resid": 1}
+AA2 {"resname": $protein_resnames , "resid": 2}
+
+[ to blocks ]
+ALA
+
+[ from nodes ]
+N   {"resid": 1, "resname": $protein_resnames}
+HN  {"resid": 1, "resname": $protein_resnames}
+CA  {"resid": 1, "resname": $protein_resnames}
+HA  {"resid": 1, "resname": $protein_resnames}
+C   {"resid": 1, "resname": $protein_resnames}
+O   {"resid": 1, "resname": $protein_resnames}
+N   {"resid": 2, "resname": $protein_resnames}
+HN  {"resid": 2, "resname": $protein_resnames}
+CA  {"resid": 2, "resname": $protein_resnames}
+HA  {"resid": 2, "resname": $protein_resnames}
+C   {"resid": 2, "resname": $protein_resnames}
+O   {"resid": 2, "resname": $protein_resnames}
+
+[from edges ]
+AA1:N   AA1:CA
+AA1:N   AA1:HN
+AA1:C   AA1:CA
+AA1:HA  AA1:CA
+AA1:C   AA1:O
+AA1:C   AA2:N
+AA2:N   AA2:CA
+AA2:N   AA2:HN
+AA1:C   AA1:CA
+AA2:C   AA2:CA
+AA2:HA  AA2:CA
+AA2:C   AA2:O
+
+[ mapping ]
+AA1:C  BB
+O   BB
+AA2:N  BB
+HN  BB  0
+CA  CA
+HA  CA  0
+
+[ reference atoms ]
+BB AA1:C

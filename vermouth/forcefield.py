@@ -52,7 +52,7 @@ class ForceField(object):
     ----------
     blocks: dict
     links: list
-    modifications: list
+    modifications: dict
     renamed_residues: dict
     name: str
     variables: dict
@@ -61,7 +61,7 @@ class ForceField(object):
     def __init__(self, directory=None, name=None):
         self.blocks = {}
         self.links = []
-        self.modifications = []
+        self.modifications = {}
         self.renamed_residues = {}
         self.variables = {}
         self.name = None

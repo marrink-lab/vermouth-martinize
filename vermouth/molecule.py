@@ -59,12 +59,8 @@ class LinkPredicate:
 
     def match(self, node, key):
         """
-        Do the comparison with the reference value.
-
-        Notes
-        -----
-        This function **must** be defined by the subclasses. This docstring
-        describe the *expected* format of the method.
+        Do the comparison with the reference value. Returns ``True`` iff
+        `node[key]` is the same type as `self`, and the values are equal.
 
         Parameters
         ----------
@@ -78,8 +74,10 @@ class LinkPredicate:
         -------
         bool
         """
+        return self == node[key]
 
-        raise NotImplementedError
+    def __eq__(self, other):
+        return other.__class__ == self.__class__ and self.value == other.value
 
     def __repr__(self):
         return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
@@ -101,7 +99,7 @@ class Choice(LinkPredicate):
         """
         Apply the comparison.
         """
-        return node.get(key) in self.value
+        return node.get(key) in self.value or super().match(node, key)
 
 
 class NotDefinedOrNot(LinkPredicate):
@@ -126,7 +124,7 @@ class NotDefinedOrNot(LinkPredicate):
         """
         Apply the comparison.
         """
-        return key not in node or node[key] != self.value
+        return key not in node or node[key] != self.value or super().match(node, key)
 
 
 class LinkParameterEffector:
@@ -424,7 +422,9 @@ class Molecule(nx.Graph):
         -------
         Molecule
         """
-        return self.subgraph(self.nodes)
+        new = self.subgraph(self.nodes)
+        new.name = self.name
+        return new
 
     def subgraph(self, nodes):
         """
@@ -440,6 +440,7 @@ class Molecule(nx.Graph):
         subgraph.meta = copy.copy(self.meta)
         subgraph._force_field = self._force_field
         subgraph.nrexcl = self.nrexcl
+        subgraph.name = self.name
 
         node_copies = [(node, copy.copy(self.nodes[node])) for node in nodes]
         subgraph.add_nodes_from(node_copies)
@@ -612,7 +613,7 @@ class Molecule(nx.Graph):
         """
         for node_idx in self:
             node = self.nodes[node_idx]
-            if all(node.get(attr, None) == val for attr, val in attrs.items()):
+            if attributes_match(node, attrs):
                 yield node_idx
 
     def __getattr__(self, name):
@@ -648,7 +649,7 @@ class Molecule(nx.Graph):
             A dict mapping the node indices of the added `molecule` to their
             new indices in this molecule.
         """
-        if self.force_field != molecule.force_field:
+        if getattr(self.force_field, 'name', '') != getattr(molecule.force_field, 'name', ''):
             raise ValueError(
                 'Cannot merge molecules with different force fields.'
             )
@@ -1117,7 +1118,7 @@ class Block(Molecule):
         return tuple(center) in all_centers
 
     def to_molecule(self, atom_offset=0, offset_resid=0, offset_charge_group=0,
-                    force_field=None):
+                    force_field=None, default_attributes=None):
         """
         Converts this block to a :class:`Molecule`.
 
@@ -1130,6 +1131,8 @@ class Block(Molecule):
         offset_charge_group: int
             The offset for the `charge_group` attributes.
         force_field: None or vermouth.forcefield.ForceField
+        default_attributes: collections.abc.Mapping[str]
+            Attributes to set to for nodes that are missing them.
 
         Returns
         -------
@@ -1138,14 +1141,16 @@ class Block(Molecule):
         """
         if force_field is None:
             force_field = self.force_field
+        if default_attributes is None:
+            default_attributes = {'resname': self.name}
         name_to_idx = {}
         mol = Molecule(force_field=force_field)
         for idx, node in enumerate(self.nodes, start=atom_offset):
             name_to_idx[node] = idx
             atom = self.nodes[node]
-            new_atom = copy.copy(atom)
+            new_atom = default_attributes.copy()
+            new_atom.update(copy.copy(atom))
             new_atom['resid'] = (new_atom.get('resid', 1) + offset_resid)
-            new_atom['resname'] = atom.get('resname', self.name)
             new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
             mol.add_node(idx, **new_atom)

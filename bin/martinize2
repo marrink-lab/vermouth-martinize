@@ -133,8 +133,8 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
                        attribute_keep=('cgsecstruct', )).run_system(system)
     LOGGER.info('Averaging the coordinates.', type='step')
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
-    LOGGER.info('Applying the blocks.', type='step')
-    vermouth.ApplyBlocks().run_system(system)
+    #LOGGER.info('Applying the blocks.', type='step')
+    #vermouth.ApplyBlocks().run_system(system)
     LOGGER.info('Applying the links.', type='step')
     vermouth.DoLinks().run_system(system)
     LOGGER.info('Placing the charge dummies.', type='step')
@@ -408,9 +408,9 @@ def entry():
         raise ValueError('Unknown force field "{}".'.format(args.to_ff))
     if args.from_ff not in known_force_fields:
         raise ValueError('Unknown force field "{}".'.format(args.from_ff))
-    if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
-        raise ValueError('No mapping known to go from "{}" to "{}".'
-                         .format(from_ff, args.to_ff))
+    #if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
+    #    raise ValueError('No mapping known to go from "{}" to "{}".'
+    #                     .format(from_ff, args.to_ff))
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the

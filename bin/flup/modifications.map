@@ -1,0 +1,40 @@
+[ modification ]
+[ from ]
+universal
+[ to ]
+jon
+[ from blocks ]
+C-ter
+[ to blocks ]
+C-ter
+[ mapping ]
+C   BB
+O1  BB
+O2  BB
+[ reference atoms ]
+BB C
+
+[ modification ]
+[from]
+universal
+[to]
+jon
+[ from blocks]
+N-ter
+[to blocks]
+N-ter
+[ from nodes ]
+CA {"element": "C", "resid": 1}
+HA {"element": "H", "resid": 1}
+[ from edges]
+N CA
+CA HA
+[mapping]
+CA  CA
+N   CA
+HN1 CA  0
+HN2 CA  0
+HN3 CA  0
+HA  CA  0
+[ reference atoms ]
+CA CA
