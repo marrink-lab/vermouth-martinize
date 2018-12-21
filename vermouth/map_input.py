@@ -18,12 +18,14 @@
 Read force field to force field mappings.
 """
 
+from .map_parser import MappingDirector, Mapping
+
 from pathlib import Path
 import collections
 import itertools
 
 
-def read_mapping_file(lines):
+def read_backmapping_file(lines, force_fields):
     """
     Partial reader for modified Backward mapping files.
 
@@ -40,6 +42,8 @@ def read_mapping_file(lines):
     ----------
     lines: collections.abc.Iterable[str]
         Collection of lines to read.
+    force_fields: dict[str, vermouth.forcefield.ForceField]
+        Dict of known force fields.
 
     Return
     ------
@@ -67,19 +71,73 @@ def read_mapping_file(lines):
 
     # At this point the last line read was [ molecule ] or else we would have
     # raised an exception.
+
+    # We're going to build a dictionary of {ff_name: {block_name: {atomname: idx}}
+    # to make building the mapping objects a little faster.
+    name_to_index = collections.defaultdict(dict)
     while True:
         full_mapping = _read_mapping_partial(lines, line_number + 1)
         name, from_ff_list, to_ff_list, mapping, weights, extra, line_number = full_mapping
-        if name is not None:
-            for from_ff, to_ff in itertools.product(from_ff_list, to_ff_list):
-                mappings[from_ff][to_ff][name] = (mapping, weights, extra)
-        else:
+        if name is None:
             break
+        for from_ff, to_ff in itertools.product(from_ff_list, to_ff_list):
+            try:
+                from_block = force_fields[from_ff].blocks[name]
+            except KeyError:
+                print("Can't find block {} for FF {}".format(name, from_ff))
+                continue
+            try:
+                to_block = force_fields[to_ff].blocks[name]
+            except KeyError:
+                print("Can't find block {} for FF {}".format(name, to_ff))
+                continue
+
+            if name not in name_to_index[from_ff]:
+                name_to_index[from_ff][name] = block_names_to_idxs(from_block)
+            if name not in name_to_index[to_ff]:
+                name_to_index[to_ff][name] = block_names_to_idxs(to_block)
+            map_obj = make_mapping_object(from_block, to_block, mapping, weights, extra, name_to_index)
+            if map_obj is not None:
+                mappings[from_ff][to_ff][name] = map_obj
 
     # We do not want to return defaultdicts.
     mappings = _default_to_dict(mappings)
-
     return mappings
+
+
+def block_names_to_idxs(block):
+    return {block.nodes[idx]['atomname']: idx for idx in block.nodes}
+
+
+def make_mapping_object(from_block, to_block, mapping, weights, extra, name_to_index):
+    map_dict = collections.defaultdict(lambda: collections.defaultdict(dict))
+    from_name_to_idx = name_to_index[from_block.force_field.name][from_block.name]
+    to_name_to_idx = name_to_index[to_block.force_field.name][to_block.name]
+    for (ridx_from, atname_from), atoms_to in mapping.items():
+        for (ridx_to, atname_to) in atoms_to:
+            weight = weights[(ridx_to, atname_to)][(ridx_from, atname_from)]
+            try:
+                idx_from = from_name_to_idx[atname_from]
+            except KeyError:
+                print("Can't find atom {} in block {} in force field {}".format(
+                        atname_from, from_block.name, from_block.force_field.name))
+                continue
+            idx_to = to_name_to_idx[atname_to]
+            map_dict[idx_from][idx_to] = weight
+
+    return Mapping(from_block, to_block, map_dict, {},
+                   ff_from=from_block.force_field, ff_to=to_block.force_field,
+                   extra=extra, normalize_weights=False,
+                   type='block', names=(from_block.name,))
+
+
+def read_mapping_file(lines, force_fields):
+    director = MappingDirector(force_fields)
+    out = collections.defaultdict(lambda: collections.defaultdict(dict))
+    mappings = director.parse(lines)
+    for mapping in mappings:
+        out[mapping.ff_from][mapping.ff_to][mapping.names] = mapping
+    return _default_to_dict(out)
 
 
 def _default_to_dict(mappings):
@@ -291,7 +349,7 @@ def _read_mapping_partial(lines, start_line):
     return name, from_ff, to_ff, mapping, weights, extra, line_number
 
 
-def read_mapping_directory(directory):
+def read_mapping_directory(directory, force_fields):
     """
     Read all the mapping files in a directory.
 
@@ -307,8 +365,10 @@ def read_mapping_directory(directory):
     Parameters
     ----------
     directory: str
-        The path to the directory to search. Files with a '.map' extension will
-        be read. There is no recursive search.
+        The path to the directory to search. Files with a '.backmap' extension
+        will be read. There is no recursive search.
+    force_fields: dict[str, ForceField]
+        Dict of known forcefields
 
     Returns
     -------
@@ -319,14 +379,25 @@ def read_mapping_directory(directory):
     if not directory.is_dir():
         raise NotADirectoryError('"{}" is not a directory.'.format(directory))
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
-    for path in directory.glob('**/*.map'):
+    # Old style mappings
+    for path in directory.glob('**/*.backmap'):
         with open(str(path)) as infile:
             try:
-                new_mappings = read_mapping_file(infile)
+                new_mappings = read_backmapping_file(infile, force_fields)
             except IOError:
                 raise IOError('An error occured while reading "{}".'.format(path))
             else:
                 combine_mappings(mappings, new_mappings)
+    # New style mappings
+    for path in directory.glob('**/*.map'):
+        with open(str(path)) as infile:
+            try:
+                new_mappings = read_mapping_file(infile, force_fields)
+            except IOError:
+                raise IOError('An error occured while reading "{}".'.format(path))
+            else:
+                combine_mappings(mappings, new_mappings)
+    
     return dict(mappings)
 
 
@@ -364,16 +435,10 @@ def generate_self_mappings(blocks):
     """
     mappings = {}
     for name, block in blocks.items():
-        mapping = {
-            (0, atom['atomname']): [(0, atom['atomname'])]
-            for atom in block.nodes.values()
-        }
-        weights = {
-            (0, atom['atomname']): {(0, atom['atomname']): 1}
-            for atom in block.nodes.values()
-        }
-        extra = []
-        mappings[name] = (mapping, weights, extra)
+        mapping = Mapping(block, block, {idx: {idx: 1} for idx in block.nodes},
+                          {}, ff_from=block.force_field, ff_to=block.force_field,
+                          extra=[], type='block', names=(name,))
+        mappings[name] = mapping
     return mappings
 
 

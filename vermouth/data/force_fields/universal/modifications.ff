@@ -3,8 +3,8 @@ C-ter
 [ atoms ]
 CA {"element": "C"}
 C {"element": "C"}
-O {"element": "O"}
-OXT {"element": "O", "PTM_atom": true, "replace": {"atomname": null}}
+O {"element": "O", "replace": {"atomname": "O1"}}
+OXT {"element": "O", "PTM_atom": true, "replace": {"atomname": "O2"}}
 [ edges ]
 CA C
 C O
@@ -15,12 +15,14 @@ N-ter
 [ atoms ]
 CA {"element": "CA"}
 N {"element": "N"}
-HN {"element": "H"}
-H {"element": "H", "PTM_atom": true, "replace": {"atomname": null}}
+HN {"element": "H", "replace": {"atomname": "HN1"}}
+HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}
+HN3 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN3"}}
 [ edges ]
 N CA
 N HN
-N H
+N HN2
+N HN3
 
 [ modification ]
 GLU-H
@@ -60,3 +62,11 @@ HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
 [ edges ]
 NE1 HE1
 ND1 HD1
+
+[ modification ]
+ASP0
+[ atoms ]
+HD2 {"resname": "ASP", "element": "H", "PTM_atom": true}
+OD2 {"resname": "ASP"}
+[ edges ]
+OD2 HD2

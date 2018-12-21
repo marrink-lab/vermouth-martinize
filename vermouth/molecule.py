@@ -74,9 +74,12 @@ class LinkPredicate:
         -------
         bool
         """
-        return self == node[key]
+        raise NotImplementedError
 
     def __eq__(self, other):
+        # Should maybe be:
+        # return (isinstance(other, self.__class__) or isinstance(self, other.__class__))\
+        #        and self.value == other.value
         return other.__class__ == self.__class__ and self.value == other.value
 
     def __repr__(self):
@@ -99,7 +102,7 @@ class Choice(LinkPredicate):
         """
         Apply the comparison.
         """
-        return node.get(key) in self.value or super().match(node, key)
+        return node.get(key) in self.value
 
 
 class NotDefinedOrNot(LinkPredicate):
@@ -124,7 +127,7 @@ class NotDefinedOrNot(LinkPredicate):
         """
         Apply the comparison.
         """
-        return key not in node or node[key] != self.value or super().match(node, key)
+        return key not in node or node[key] != self.value
 
 
 class LinkParameterEffector:
@@ -649,7 +652,7 @@ class Molecule(nx.Graph):
             A dict mapping the node indices of the added `molecule` to their
             new indices in this molecule.
         """
-        if getattr(self.force_field, 'name', '') != getattr(molecule.force_field, 'name', ''):
+        if self.force_field != molecule.force_field:
             raise ValueError(
                 'Cannot merge molecules with different force fields.'
             )
@@ -1149,7 +1152,7 @@ class Block(Molecule):
             name_to_idx[node] = idx
             atom = self.nodes[node]
             new_atom = default_attributes.copy()
-            new_atom.update(copy.copy(atom))
+            new_atom.update(atom)
             new_atom['resid'] = (new_atom.get('resid', 1) + offset_resid)
             new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
@@ -1304,11 +1307,11 @@ def attributes_match(attributes, template_attributes, ignore_keys=()):
     for attr, value in template_attributes.items():
         if attr in ignore_keys:
             continue
-        if isinstance(value, LinkPredicate):
-            if not value.match(attributes, attr):
-                return False
-        elif attributes.get(attr) != value:
+        if attributes.get(attr) != value:
             return False
+        elif isinstance(value, LinkPredicate):
+            if not value.match(attributes, attr) and attributes.get(attr) != value:
+                return False
     return True
 
 

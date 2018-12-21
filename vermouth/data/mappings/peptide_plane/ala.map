@@ -5,7 +5,7 @@ protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASP0|GLU|GLU0|
 [ from ]
 universal
 [ to ]
-jon
+pepplane
 
 [ from blocks ]
 AA1 {"resname": $protein_resnames , "resid": 1}

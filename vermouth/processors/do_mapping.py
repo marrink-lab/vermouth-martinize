@@ -33,8 +33,26 @@ LOGGER = StyleAdapter(get_logger(__name__))
 
 
 def build_graph_mapping_collection(from_ff, to_ff, mappings):
-    # FIXME!
-    return parse_mapping_file('jon.map')
+    """
+    Function that produces a collection of :class:`vermouth.map_parser.Mapping`
+    objects.
+    Hereby deprecated.
+
+    Parameters
+    ----------
+    from_ff: vermouth.forcefield.ForceField
+        Origin force field.
+    to_ff: vermouth.forcefield.ForceField
+        Destination force field.
+    mappings: dict[str, dict[str, vermouth.map_parser.Mapping]]
+        All known mappings
+
+    Returns
+    -------
+    collections.abc.Iterable
+        A collection of mappings that map from `from_ff` to `to_ff`.
+    """
+    return mappings[from_ff.name][to_ff.name].values()
 
 
 def edge_matcher(graph1, graph2, node11, node12, node21, node22):
@@ -94,12 +112,20 @@ def cover(to_cover, options):
     return None
 
 
-def get_mod_mappings(from_ff):
+def get_mod_mappings(mappings):
     """
     Returns a dict of all known modification mappings.
+
+    Parameters
+    ----------
+    mappings: collections.abc.Iterable[vermouth.map_parser.Mapping]
+        All known mappings.
+
+    Returns
+    -------
+    dict[tuple[str], vermouth.map_parser.Mapping]
+        All mappings that describe a modification mapping.
     """
-    # FIXME!
-    mappings = parse_mapping_file('modifications.map')
     out = {}
     for mapping in mappings:
         if mapping.type == 'modification':
@@ -107,7 +133,29 @@ def get_mod_mappings(from_ff):
     return out
 
 
-def map_modifications(molecule, graph_out, mol_to_out, out_to_mol):
+def modification_matches(molecule, mappings):
+    """
+    Returns a minimal combination of modification mappings and where they
+    should be applied that describes all modifications in `molecule`.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        The molecule whose modifications should be treated. Modifications are
+        described by the 'modifications' node attribute.
+    mappings: collections.abc.Iterable[vermouth.map_parser.Mapping]
+        All known mappings.
+
+    Returns
+    -------
+    list[tuple[dict, vermouth.molecule.Link, dict]]
+        A list with the following items:
+            Dict describing the correspondence of node keys in `molecule` to
+                node keys in the modification.
+            The modification.
+                Dict with all reference atoms, mapping modification nodes to
+                    nodes in `molecule`.
+    """
     modified_nodes = set()  # This will contain whole residues.
     for idx, node in molecule.nodes.items():
         if node.get('modifications', []):
@@ -123,7 +171,7 @@ def map_modifications(molecule, graph_out, mol_to_out, out_to_mol):
         found_ptm_groups.update(modifications)
 
     needed_mod_mappings = set()
-    known_mod_mappings = get_mod_mappings(molecule.force_field)
+    known_mod_mappings = get_mod_mappings(mappings)
     for group in found_ptm_groups:
         # known_mod_mappings is a dict[tuple[str], Mapping]. We want to know
         # the minimal combination of those needed to cover all the PTMs found
@@ -133,6 +181,12 @@ def map_modifications(molecule, graph_out, mol_to_out, out_to_mol):
         # TODO?
         covered_by = cover([ptm.name for ptm in group],
                            sorted(known_mod_mappings, key=len, reverse=True))
+        if covered_by is None:
+            LOGGER.warning("Can't find modification mappings for the "
+                           "modifications {}. The following modification "
+                           "mappings are known: {}",
+                           [ptm.name for ptm in group], known_mod_mappings)
+            return []
         needed_mod_mappings.update(covered_by)
 
     # type: atoms: modifications
@@ -163,78 +217,204 @@ def map_modifications(molecule, graph_out, mol_to_out, out_to_mol):
                 LOGGER.warning('Overlapping modification mappings')
             modified_nodes -= set(mol_to_mod)
 
-            mod_to_out = {}
-            # Some nodes of modification will already exist. The question is
-            # which, and which index they have in graph_out.
-            for mod_idx in modification:
-                # FIXME: Bad way of detecting whether the node should already
-                #        exist!
-                if modification.nodes[mod_idx].get('PTM_atom', False):
-                    # New node
-                    out_idx = max(graph_out) + 1
-                    mod_to_out[mod_idx] = out_idx
-                    graph_out.add_node(out_idx, **modification.nodes[mod_idx])
-                    if mod_idx in references:
-                        ref = references[mod_idx]
-                        for attr in molecule.nodes[ref]:
-                            if attr not in graph_out.nodes[out_idx]:
-                                graph_out.nodes[out_idx][attr] = molecule.nodes[ref][attr]
-                    else:
-                        print("Don't know where to get attributes for {}"
-                              "".format(graph_out.nodes[out_idx]))
-                else:
-                    # Node should already exists.
-                    # Find the other mol nodes that map to this bead according
-                    # to the mod mapping...
-                    mol_idxs = mod_to_mol[mod_idx]
-                    # ...and make sure those all map to the same output node.
-                    out_idxs = set()
-                    for mol_idx in mol_idxs:
-                        out_idxs.update(mol_to_out.get(mol_idx, {}))
-                    assert len(out_idxs) == 1
-                    out_idx = next(iter(out_idxs))
-                    mod_to_out[mod_idx] = out_idx
-                    if 'replace' in modification.nodes[mod_idx]:
-                        if out_idx in touched_atoms:
-                            # TODO: better message
-                            LOGGER.warning('Multiple modifications changed atom', type='inconsistent-data')
-                        remove_atom = modification.nodes[mod_idx]['replace'].get('atomname', False) is None
-                        if remove_atom:
-                            to_remove.add(out_idx)
-                        else:
-                            graph_out.nodes[out_idx].update(modification.nodes[mod_idx]['replace'])
-                        touched_atoms[out_idx].append(modification)
-                out_idx = mod_to_out[mod_idx]
-                graph_out.nodes[out_idx]['mapping_weights'] = mod_to_mol[mod_idx]
-                graph_out.nodes[out_idx]['graph'] = molecule.subgraph(mod_to_mol[mod_idx].keys())
-            for mol_idx in mol_to_mod:
-                for mod_idx, weight in mol_to_mod[mol_idx].items():
-                    out_idx = mod_to_out[mod_idx]
-                    if mol_idx not in mol_to_out:
-                        mol_to_out[mol_idx] = {}
-                    mol_to_out[mol_idx][out_idx] = weight
-                    if out_idx not in out_to_mol:
-                        out_to_mol[out_idx] = {}
-                    out_to_mol[out_idx][mol_idx] = weight
+    return matches
 
-            # Apply interactions
-            for interaction_type, interactions in modification.interactions.items():
-                for interaction in interactions:
-                    atoms = [mod_to_mol[mod_idx] for mod_idx in interaction.atoms]
-                    interaction = interaction._replace(atoms=atoms)
-                    applied_interactions[interaction_type][atoms].append(modification)
-                    graph_out.add_interaction(interaction_type, **interaction._asdict())
-            # Done applying this modification to all possible positions
-        # Done applying all modifications of this type
-    graph_out.remove_nodes_from(to_remove)
-    for interaction_type in applied_interactions:
-        for atoms, modifications in applied_interactions[interaction_type].items():
-            if len(modifications) != 1:
-                # TODO: better message
-                LOGGER.warning('Interaction set by multiple modification '
-                               'mappings', type='inconsistent-data')
 
-    return all_matches
+def apply_block_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
+    """
+    Performs a mapping operation for a "block". `match` is a tuple of 3
+    elements that describes what nodes in `molecule` should correspond to
+    a :class:`vermouth.molecule.Block` that should be added to `graph_out`, and
+    any atoms that should be used a references.
+    Add the required :class:`vermouth.molecule.Block` to `graph_out`, and
+    updates `mol_to_out` and `out_to_mol` *in-place*.
+
+    Parameters
+    ----------
+    match
+    molecule: networkx.Graph
+        The original molecule
+    graph_out: vermouth.molecule.Molecule
+        The newly created graph that describes `molecule` at a different
+        resolution.
+    mol_to_out: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
+        A dict mapping nodes in `molecule` to nodes in `graph_out` with the
+        associated weights.
+    out_to_mol: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
+        A dict mapping nodes in `graph_out` to nodes in `molecule` with the
+        associated weights.
+
+    Returns
+    -------
+    set
+        A set of all overlapping nodes that were already mapped before.
+    set
+        A set of none-to-one mappings. I.e. nodes that were created without
+        nodes mapping to them.
+    dict
+        A dict of reference atoms, mapping `graph_out` nodes to nodes in
+        `molecule`.
+    """
+    mol_to_block, blocks_to, references = match
+    if graph_out.nrexcl is None:
+        graph_out.nrexcl = blocks_to.nrexcl
+    try:
+        # merge_molecule will return a dict mapping the node keys of the
+        # added block to the ones in graph_out
+        # FIXME: Issue #154 lives here.
+        block_to_out = graph_out.merge_molecule(blocks_to)
+    except ValueError:
+        # This probably means the nrexcl of the block is different from the
+        # others. This means the user messed up their data. Or there are
+        # different forcefields in the same forcefield folder...
+        LOGGER.exception('Residue(s) {} is not compatible with the others',
+                         set(nx.get_node_attributes(blocks_to, 'resname').values()),
+                         type='inconsistent-data')
+        raise
+    # overlap does not have to be a dict, since the values in block_to_out are
+    # guaranteed to be unique in graph_out. So we can look them up in
+    # mol_to_out
+    overlap = set(mol_to_out.keys()) & set(mol_to_block.keys())
+    for mol_idx in mol_to_block:
+        for block_idx, weight in mol_to_block[mol_idx].items():
+            out_idx = block_to_out[block_idx]
+            mol_to_out[mol_idx][out_idx] = weight
+            out_to_mol[out_idx][mol_idx] = weight
+
+    none_to_one_mappings = set()
+    mapped_block_idxs = {block_idx
+                         for mol_idx in mol_to_block
+                         for block_idx in mol_to_block[mol_idx]}
+    for spawned in set(blocks_to.nodes) - mapped_block_idxs:
+        # These nodes come from "nowhere", so, let's pretend they come from
+        # all nodes in the block. This helps with setting attributes such
+        # as 'chain'
+        # "None to one" mapping - this is fine. This happens with e.g.
+        # charge dummies.
+        spawned = block_to_out[spawned]
+        none_to_one_mappings.add(spawned)
+        for mol_idx in mol_to_block:
+            mol_to_out[mol_idx][spawned] = 0
+            out_to_mol[spawned][mol_idx] = 0
+
+    new_references = {block_to_out[mod_idx]: mol_idx for mod_idx, mol_idx in references.items()}
+    return overlap, none_to_one_mappings, new_references
+
+
+def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
+    """
+    Performs the mapping operation for a modification.
+
+    Parameters
+    ----------
+    match
+    molecule: networkx.Graph
+        The original molecule
+    graph_out: vermouth.molecule.Molecule
+        The newly created graph that describes `molecule` at a different
+        resolution.
+    mol_to_out: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
+        A dict mapping nodes in `molecule` to nodes in `graph_out` with the
+        associated weights.
+    out_to_mol: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
+        A dict mapping nodes in `graph_out` to nodes in `molecule` with the
+        associated weights.
+
+    Returns
+    -------
+    dict[str, dict[tuple, vermouth.molecule.Link]]
+        A dict of all modifications that have been applied by this modification
+        mapping operations. Maps interaction type to involved atoms to the
+        modification responsible.
+    dict
+        A dict of reference atoms, mapping `graph_out` nodes to nodes in
+        `molecule`.
+    """
+    mol_to_mod, modification, references = match
+    LOGGER.info('Applying modification mapping {}', modification.name, type='general')
+    mod_to_mol = defaultdict(dict)
+    for mol_idx, mod_idxs in mol_to_mod.items():
+        for mod_idx in mod_idxs:
+            mod_to_mol[mod_idx][mol_idx] = mol_to_mod[mol_idx][mod_idx]
+    mod_to_mol = dict(mod_to_mol)
+    mod_to_out = {}
+    # Some nodes of modification will already exist. The question is
+    # which, and which index they have in graph_out.
+    for mod_idx in modification:
+        # FIXME: Bad way of detecting whether the node should already
+        #        exist!
+        if modification.nodes[mod_idx].get('PTM_atom', False):
+            # Node does not exist yet.
+            if not graph_out.nodes:
+                out_idx = 0
+            else:
+                out_idx = max(graph_out) + 1
+            mod_to_out[mod_idx] = out_idx
+            graph_out.add_node(out_idx, **modification.nodes[mod_idx])
+        else:
+            # Node should already exist
+            # We need to find the out_index of this node. Since the
+            # node already exists, there is at least one mol_idx in
+            # mol_to_out that refers to the correct out_idx. What we do
+            # is try to find those mol indices by looking at
+            # mod_to_mol.
+            # Find the other mol nodes that map to this bead according
+            # to the mod mapping...
+            mol_idxs = mod_to_mol[mod_idx]
+            # ...and make the node with the correct attributes.
+            out_idxs = set()
+            for mol_idx in mol_idxs:
+                out_idxs.update(mol_to_out.get(mol_idx, {}))
+            for out_idx in out_idxs:
+                out_node = graph_out.nodes[out_idx]
+                if modification.nodes[mod_idx]['atomname'] == out_node['atomname']:
+                    break
+            else:  # No break, so no matching node found
+                raise ValueError("No node found in molecule with "
+                                 "atomname {}".format(modification.nodes[mod_idx]['atomname']))
+            mod_to_out[mod_idx] = out_idx
+            # FIXME: modify out_node as required. We will lose access to
+            #        "modification" after this.
+    for mol_idx in mol_to_mod:
+        for mod_idx, weight in mol_to_mod[mol_idx].items():
+            out_idx = mod_to_out[mod_idx]
+            if mol_idx not in mol_to_out:
+                mol_to_out[mol_idx] = {}
+            mol_to_out[mol_idx][out_idx] = weight
+            if out_idx not in out_to_mol:
+                out_to_mol[out_idx] = {}
+            out_to_mol[out_idx][mol_idx] = weight
+
+    new_references = {mod_to_out[mod_idx]: mol_idx for mod_idx, mol_idx in references.items()}
+
+    # Apply interactions
+    applied_interactions = defaultdict(dict)
+    for interaction_type, interactions in modification.interactions.items():
+        for interaction in interactions:
+            atoms = [mod_to_mol[mod_idx] for mod_idx in interaction.atoms]
+            interaction = interaction._replace(atoms=atoms)
+            applied_interactions[interaction_type][tuple(atoms)].append(modification)
+            graph_out.add_interaction(interaction_type, **interaction._asdict())
+    return dict(applied_interactions), new_references
+
+
+def attrs_from_node(node, attrs):
+    """
+    Helper function that applies a "replace" operations on the node if
+    required, and then returns a dict of the attributes listed in `attrs`.
+
+    Parameters
+    ----------
+    node: dict
+    attrs: collections.abc.Container
+        Attributes that should be in the output.
+    Returns
+    -------
+    dict
+    """
+    if 'replace' in node:
+        node = node.copy().update(node['replace'])
+    return {attr: val for attr, val in node.items() if attr in attrs}
 
 
 def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
@@ -267,6 +447,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
         A new molecule, created by transforming `molecule` to `to_ff` according
         to `mappings`.
     """
+    attribute_keep = tuple(attribute_keep)
+    attribute_must = tuple(attribute_must)
     # Transfering the meta maybe should be a copy, or a deep copy...
     # If it breaks we look at this line.
     graph_out = Molecule(force_field=to_ff, meta=molecule.meta)
@@ -371,7 +553,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=()):
                     # nx.get_node_attributes doesn't take a default.
                     graph_out.nodes[out_idx][attr] = None
 
-    mod_matches = map_modifications(molecule, graph_out, mol_to_out, out_to_mol)
+    mod_matches = map_modifications(molecule, graph_out, mol_to_out, out_to_mol, mappings)
     all_matches.extend(mod_matches)
 
     # We need to add edges between residues. Within residues comes from the

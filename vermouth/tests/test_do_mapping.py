@@ -19,8 +19,8 @@ from collections import defaultdict
 from vermouth.processors.do_mapping import do_mapping
 import vermouth.forcefield
 from vermouth.molecule import Molecule, Block
-import networkx.algorithms.isomorphism as iso
-
+from vermouth.map_parser import Mapping
+from vermouth.tests.helper_functions import equal_graphs
 
 FF_MARTINI = vermouth.forcefield.get_native_force_field(name='martini22')
 FF_UNIVERSAL = vermouth.forcefield.get_native_force_field(name='universal')
@@ -82,23 +82,22 @@ FF_MARTINI.blocks['IPO_large'] = block_cg
 FF_UNIVERSAL.blocks['IPO_large'] = block_aa
 
 
-def _equal_graphs(g1, g2):
-    attrs = ['resid', 'resname', 'atomname', 'chain', 'charge_group', 'atype']
-    node_equal = iso.categorical_node_match(attrs, ['']*len(attrs))
-    matcher = iso.GraphMatcher(g1, g2, node_match=node_equal)
-    return matcher.is_isomorphic()
-
-
 def test_no_residue_crossing():
     """
     Make sure we don't cross residue boundaries
     """
-    mapping = {(0, 'C1'): [(0, 'B1')], (0, 'C2'): [(0, 'B1')], (0, 'C3'): [(0, 'B1')]}
-    weights = {(0, 'B1'): {(0, 'C1'): 1, (0, 'C2'): 1, (0, 'C3'): 1, }}
+    mapping = {'C1': {'B1': 1}, 'C2': {'B1': 1}, 'C3': {'B1': 1}}
     extra = ()
-    mappings = {'universal': {'martini22': {'IPO': (mapping, weights, extra)}}}
+    mappings = {'universal': {'martini22': {'IPO': Mapping(FF_UNIVERSAL.blocks['IPO'],
+                                                           FF_MARTINI.blocks['IPO'],
+                                                           mapping=mapping,
+                                                           references={},
+                                                           ff_from=FF_UNIVERSAL,
+                                                           ff_to=FF_MARTINI,
+                                                           names=('IPO',),
+                                                           extra=extra)}}}
 
-    cg = do_mapping(AA_MOL, mappings, FF_MARTINI)
+    cg = do_mapping(AA_MOL, mappings, FF_MARTINI, attribute_keep=['chain'])
 
     expected = Molecule(force_field=FF_MARTINI)
     expected.add_nodes_from((
@@ -113,23 +112,28 @@ def test_no_residue_crossing():
     print('-'*80)
     print(expected.nodes(data=True))
     print(expected.edges())
-    assert _equal_graphs(cg, expected)
+    assert equal_graphs(cg, expected)
 
 
 def test_residue_crossing():
     '''
     Make sure we do cross residue boundaries and can rename residues
     '''
-    mapping = {(0, 'C1'): [(0, 'B1')], (0, 'C2'): [(0, 'B1')], (0, 'C3'): [(0, 'B1')],
-               (1, 'C1'): [(1, 'B1')], (1, 'C2'): [(1, 'B1')], (1, 'C3'): [(1, 'B1')],
-               (2, 'C1'): [(2, 'B1')], (2, 'C2'): [(2, 'B1')], (2, 'C3'): [(2, 'B1')]}
-    weights = {(0, 'B1'): {(0, 'C1'): 1, (0, 'C2'): 1, (0, 'C3'): 1, },
-               (1, 'B1'): {(1, 'C1'): 1, (1, 'C2'): 1, (1, 'C3'): 1, },
-               (2, 'B1'): {(2, 'C1'): 1, (2, 'C2'): 1, (2, 'C3'): 1, },}
+    mapping = {'C1': {'B1': 1}, 'C2': {'B1': 1}, 'C3': {'B1': 1},
+               'C4': {'B2': 1}, 'C5': {'B2': 1}, 'C6': {'B2': 1},
+               'C7': {'B3': 1}, 'C8': {'B3': 1}, 'C9': {'B3': 1},
+               }
     extra = ()
-    mappings = {'universal': {'martini22': {'IPO_large': (mapping, weights, extra)}}}
+    mappings = {'universal': {'martini22': {'IPO_large': Mapping(FF_UNIVERSAL.blocks['IPO_large'],
+                                                           FF_MARTINI.blocks['IPO_large'],
+                                                           mapping=mapping,
+                                                           references={},
+                                                           ff_from=FF_UNIVERSAL,
+                                                           ff_to=FF_MARTINI,
+                                                           names=('IPO', 'IPO', 'IPO'),
+                                                           extra=extra)}}}
 
-    cg = do_mapping(AA_MOL, mappings, FF_MARTINI)
+    cg = do_mapping(AA_MOL, mappings, FF_MARTINI, attribute_keep=('chain',))
 
     expected = Molecule()
     expected.add_nodes_from((
@@ -144,7 +148,7 @@ def test_residue_crossing():
     print('-'*80)
     print(expected.nodes(data=True))
     print(expected.edges())
-    assert _equal_graphs(cg, expected)
+    assert equal_graphs(cg, expected)
 
 
 def _map_weights(mapping):
@@ -162,15 +166,38 @@ def test_peptide():
     """
     Test multiple cg beads in residue
     """
-    gly = {(0, 'C'): [(0, 'BB')], (0, 'N'): [(0, 'BB')], (0, 'O'): [(0, 'BB')], (0, 'CA'): [(0, 'BB')]}
-    ile = {(0, 'C'): [(0, 'BB')], (0, 'N'): [(0, 'BB')], (0, 'O'): [(0, 'BB')], (0, 'CA'): [(0, 'BB')],
-           (0, 'CB'): [(0, 'SC1')], (0, 'CG1'): [(0, 'SC1')], (0, 'CG2'): [(0, 'SC1')], (0, 'CD'): [(0, 'SC1')]}
-    leu = {(0, 'C'): [(0, 'BB')], (0, 'N'): [(0, 'BB')], (0, 'O'): [(0, 'BB')], (0, 'CA'): [(0, 'BB')],
-           (0, 'CB'): [(0, 'SC1')], (0, 'CG1'): [(0, 'SC1')], (0, 'CD1'): [(0, 'SC1')], (0, 'CD2'): [(0, 'SC1')]}
+    gly = {'C': {'BB': 1}, 'N': {'BB': 1}, 'O': {'BB': 1}, 'CA': {'BB': 1}}
+    ile = {'C': {'BB': 1}, 'N': {'BB': 1}, 'O': {'BB': 1}, 'CA': {'BB': 1},
+           'CB': {'SC1': 1}, 'CG1': {'SC1': 1}, 'CG2': {'SC1': 1}, 'CD': {'SC1': 1}}
+    leu = {'C': {'BB': 1}, 'N': {'BB': 1}, 'O': {'BB': 1}, 'CA': {'BB': 1},
+           'CB': {'SC1': 1}, 'CG': {'SC1': 1}, 'CD1': {'SC1': 1}, 'CD2': {'SC1': 1}}
     extra = ()
-    mappings = {'universal': {'martini22': {'GLY': (gly, _map_weights(gly), extra),
-                                            'ILE': (ile, _map_weights(ile), extra),
-                                            'LEU': (leu, _map_weights(leu), extra),}}}
+    
+    mappings = {'universal': {'martini22': {}}}
+    mappings['universal']['martini22']['GLY'] = Mapping(FF_UNIVERSAL.blocks['GLY'],
+                                                        FF_MARTINI.blocks['GLY'],
+                                                        mapping=gly,
+                                                        references={},
+                                                        ff_from=FF_UNIVERSAL,
+                                                        ff_to=FF_MARTINI,
+                                                        names=('GLY',),
+                                                        extra=extra)
+    mappings['universal']['martini22']['ILE'] = Mapping(FF_UNIVERSAL.blocks['ILE'],
+                                                        FF_MARTINI.blocks['ILE'],
+                                                        mapping=ile,
+                                                        references={},
+                                                        ff_from=FF_UNIVERSAL,
+                                                        ff_to=FF_MARTINI,
+                                                        names=('ILE',),
+                                                        extra=extra)
+    mappings['universal']['martini22']['LEU'] = Mapping(FF_UNIVERSAL.blocks['LEU'],
+                                                        FF_MARTINI.blocks['LEU'],
+                                                        mapping=leu,
+                                                        references={},
+                                                        ff_from=FF_UNIVERSAL,
+                                                        ff_to=FF_MARTINI,
+                                                        names=('LEU',),
+                                                        extra=extra)
     
     peptide = Molecule(force_field=FF_UNIVERSAL)
     aa = FF_UNIVERSAL.blocks['GLY'].to_molecule()
@@ -191,7 +218,7 @@ def test_peptide():
         peptide.nodes[node]['atomid'] = node + 1
         peptide.nodes[node]['chain'] = ''
 
-    cg = do_mapping(peptide, mappings, FF_MARTINI)
+    cg = do_mapping(peptide, mappings, FF_MARTINI, attribute_keep=('chain',))
 
     expected = Molecule(force_field=FF_MARTINI)
     expected.add_nodes_from({1: {'atomname': 'BB',
@@ -212,21 +239,21 @@ def test_peptide():
                                  'atype': 'AC1',
                                  'chain': '',
                                  'charge': 0.0,
-                                 'charge_group': 2,
+                                 'charge_group': 3,
                                  'resid': 2,
                                  'resname': 'ILE'},
                              4: {'atomname': 'BB',
                                  'atype': 'P5',
                                  'chain': '',
                                  'charge': 0.0,
-                                 'charge_group': 3,
+                                 'charge_group': 4,
                                  'resid': 3,
                                  'resname': 'LEU'},
                              5: {'atomname': 'SC1',
                                  'atype': 'AC1',
                                  'chain': '',
                                  'charge': 0.0,
-                                 'charge_group': 3,
+                                 'charge_group': 5,
                                  'resid': 3,
                                  'resname': 'LEU'}}.items()
                             )
@@ -234,8 +261,13 @@ def test_peptide():
     
     for node in expected:
         expected.nodes[node]['atomid'] = node + 1
-    
-    assert _equal_graphs(cg, expected)
+    print(cg.nodes(data=True))
+    print(cg.edges())
+    print('-'*80)
+    print(expected.nodes(data=True))
+    print(expected.edges())
+
+    assert equal_graphs(cg, expected)
 
 if __name__ == '__main__':
     test_peptide()

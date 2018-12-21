@@ -15,11 +15,11 @@
 """
 Contains the Mapping object and the associated parser.
 """
-from collections import defaultdict, deque
+from collections import defaultdict
 from functools import partial
 
 from .forcefield import FORCE_FIELDS
-from .ffinput import _tokenize, _parse_atom_attributes, _parse_macro, _substitute_macros
+from .ffinput import _tokenize, _parse_atom_attributes
 from .graph_utils import MappingGraphMatcher
 from .molecule import Block
 
@@ -29,31 +29,10 @@ from functools import partial
 
 from .log_helpers import StyleAdapter, get_logger
 from .molecule import Block
+from .parser_utils import SectionLineParser
 
 
 LOGGER = StyleAdapter(get_logger(__name__))
-
-
-def get_block(ff_name, type, resname):
-    """
-    Helper method that gets a a block associated with a name and a type from
-    a specific :class:`vermouth.forcefield.ForceField`.
-
-    Parameters
-    ----------
-    ff_name: str
-        The name of the force field.
-    type: str
-        The type of block to get, e.g. "block" or "modification".
-    resname: str
-        The name of the block to get.
-
-    Returns
-    -------
-    vermouth.molecule.Block or vermouth.molecule.Link
-        The found block.
-    """
-    return getattr(FORCE_FIELDS[ff_name], type+'s')[resname]
 
 
 class Mapping:
@@ -68,8 +47,9 @@ class Mapping:
         The :class:`vermouth.molecule.Block` we can transform to.
     references: collections.abc.Mapping
         A mapping of node keys in :attr:`blocks_to` to node keys in
-        :attr:`blocks_from` that describes which node from should be taken as a
-        reference when transferring node attributes.
+        :attr:`blocks_from` that describes which node in blocks_from should be
+        taken as a reference when determining node attributes for nodes in
+        blocks_to.
     ff_from: vermouth.forcefield.ForceField
         The forcefield of :attr:`blocks_from`.
     ff_to: vermouth.forcefield.ForceField
@@ -112,18 +92,19 @@ class Mapping:
     """
     def __init__(self, block_from, block_to, mapping, references,
                  ff_from=None, ff_to=None, extra=(), normalize_weights=False,
-                 names=tuple()):
-        self.blocks_from = block_from
-        self.blocks_to = block_to
-        self.blocks_to.extra = extra
+                 type='block', names=tuple()):
+        self.block_from = block_from.copy()
+        self.block_to = block_to.copy()
+        self.block_to.extra = extra
         self.references = references
         self.ff_from = ff_from
         self.ff_to = ff_to
         self.names = names
         self.mapping = mapping
+        self.type = type
         # Remove nodes not mapped from blocks_from
-        unmapped = set(self.blocks_from.nodes.keys()) - set(self.mapping.keys())
-        self.blocks_from.remove_nodes_from(unmapped)
+        unmapped = set(self.block_from.nodes.keys()) - set(self.mapping.keys())
+        self.block_from.remove_nodes_from(unmapped)
 
         # Normalize the weights
         if normalize_weights:
@@ -161,34 +142,30 @@ class Mapping:
         ----------
         graph: networkx.Graph
             The graph on which this partial mapping should be applied.
-        node_match: collections.abc.Callable
+        node_match: collections.abc.Callable or None
             A function that should take two dictionaries with node attributes,
             and return `True` if those nodes should be considered equal, and
-            `False` otherwise.
-        edge_match: collections.abc.Callable
+            `False` otherwise. If None, all nodes will be considered equal.
+        edge_match: collections.abc.Callable or None
             A function that should take six arguments: two graphs, and four
             node keys. The first two node keys will be in the first graph and
             share an edge; and the last two node keys will be in the second
             graph and share an edge. Should return `True` if a pair of edges
-            should be considered equal, and `False` otherwise.
+            should be considered equal, and `False` otherwise. If None, all
+            edges will be considered equal.
 
         Yields
         ------
-        tuple[dict, vermouth.molecule.Block, dict]
-            A tuple containing 1) the correspondence between nodes in `graph`
-            and nodes in :attr:`blocks_to`, with the associated weights; 2)
-            :attr:`blocks_to`; and 3) :attr:`references` on which
-            :attr:`mapping` has been applied.
+        dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
+            the correspondence between nodes in `graph` and nodes in
+            :attr:`blocks_to`, with the associated weights.
+        vermouth.molecule.Block
+            :attr:`blocks_to`.
+        dict
+            :attr:`references` on which :attr:`mapping` has been applied.
         """
-        if node_match is None:
-            def node_match(node1, node2):
-                return True
-
-        if edge_match is None:
-            def edge_match(node11, node12, node21, node22):
-                return True
-        else:
-            edge_match = partial(edge_match, graph, self.blocks_from)
+        if edge_match is not None:
+            edge_match = partial(edge_match, graph, self.block_from)
 
         return self._graph_map(graph, node_match, edge_match)
 
@@ -204,7 +181,7 @@ class Mapping:
         # PS. I don't really like this, because this object is becoming too
         # intelligent by also having to do the isomorphism. On the other hand,
         # it makes sense from the maths point of view.
-        matcher = MappingGraphMatcher(graph, self.blocks_from,
+        matcher = MappingGraphMatcher(graph, self.block_from,
                                       node_match=node_match,
                                       edge_match=edge_match)
         for match in matcher.subgraph_isomorphisms_iter():
@@ -215,7 +192,7 @@ class Mapping:
                 new_match[graph_idx].update(self.mapping[from_idx])
             references = {out_idx: rev_match[ref_idx]
                           for out_idx, ref_idx in self.references.items()}
-            yield dict(new_match), self.blocks_to, references
+            yield dict(new_match), self.block_to, references
 
     def _normalize_weights(self):
         """
@@ -252,8 +229,8 @@ class MappingBuilder:
         Reset the object to a clean initial state.
         """
         self.mapping = defaultdict(dict)
-        self.blocks_from = None
-        self.blocks_to = None
+        self.blocks_from = Block()
+        self.blocks_to = Block()
         self.ff_from = None
         self.ff_to = None
         self.names = []
@@ -282,8 +259,8 @@ class MappingBuilder:
     @staticmethod
     def _add_block(current_block, new_block):
         """
-        Helper method that adds `new_block` to `current_block`, if the latteris
-        not `None`. Otherwise, create a new block from `new_block`.
+        Helper method that adds `new_block` to `current_block`, if the latter
+        is not `None`. Otherwise, create a new block from `new_block`.
 
         Parameters
         ----------
@@ -295,7 +272,7 @@ class MappingBuilder:
         vermouth.molecule.Block
             The combination of `current_block` and `new_block`
         """
-        if current_block is None:
+        if not current_block:
             current_block = new_block.to_molecule(default_attributes={})
         else:
             current_block.merge_molecule(new_block)
@@ -344,7 +321,7 @@ class MappingBuilder:
         attrs: dict[str]
             The attributes the new node should have.
         """
-        if self.blocks_from is None:
+        if not self.blocks_from:
             self.blocks_from = Block()
             idx = 0
         else:
@@ -360,14 +337,14 @@ class MappingBuilder:
         attrs: dict[str]
             The attributes the new node should have.
         """
-        if self.blocks_to is None:
+        if not self.blocks_to:
             self.blocks_to = Block()
-            idx = 1
+            idx = 0
         else:
             idx = max(self.blocks_to.nodes) + 1
         self.blocks_to.add_node(idx, **attrs)
 
-    def add_edge_from(self, attrs1, attrs2):
+    def add_edge_from(self, attrs1, attrs2, edge_attrs):
         """
         Add a single edge to :attr:`blocks_from` between two nodes in
         :attr:`blocks_from` described by `attrs1` and `attrs2`. The nodes
@@ -381,14 +358,16 @@ class MappingBuilder:
         attrs2: dict[str]
             The attributes that uniquely describe a node in
             :attr:`blocks_from`
+        edge_attrs: dict[str]
+            The attributes that should be assigned to the new edge.
         """
         nodes1 = list(self.blocks_from.find_atoms(**attrs1))
         nodes2 = list(self.blocks_from.find_atoms(**attrs2))
         assert len(nodes1) == len(nodes2) == 1
         assert nodes1 != nodes2
-        self.blocks_from.add_edge(nodes1[0], nodes2[0])
+        self.blocks_from.add_edge(nodes1[0], nodes2[0], **edge_attrs)
 
-    def add_edge_to(self, attrs1, attrs2):
+    def add_edge_to(self, attrs1, attrs2, edge_attrs):
         """
         Add a single edge to :attr:`blocks_to` between two nodes in
         :attr:`blocks_to` described by `attrs1` and `attrs2`. The nodes
@@ -402,12 +381,14 @@ class MappingBuilder:
         attrs2: dict[str]
             The attributes that uniquely describe a node in
             :attr:`blocks_to`
+        edge_attrs: dict[str]
+            The attributes that should be assigned to the new edge.
         """
         nodes1 = list(self.blocks_to.find_atoms(**attrs1))
         nodes2 = list(self.blocks_to.find_atoms(**attrs2))
         assert len(nodes1) == len(nodes2) == 1
         assert nodes1 != nodes2
-        self.blocks_to.add_edge(nodes1[0], nodes2[0])
+        self.blocks_to.add_edge(nodes1[0], nodes2[0], **edge_attrs)
 
     def add_mapping(self, attrs_from, attrs_to, weight):
         """
@@ -454,7 +435,7 @@ class MappingBuilder:
         assert len(nodes_from) == 1
         self.references[node_to] = next(iter(nodes_from))
 
-    def get_mapping(self):
+    def get_mapping(self, type):
         """
         Instantiate a :class:`Mapping` object with the information accumulated
         so far, and return it.
@@ -464,19 +445,25 @@ class MappingBuilder:
         Mapping
             The mapping object made from the accumulated information.
         """
-        if self.blocks_from is None:
-            return None
+        #if self.blocks_from is None:
+        #    return None
         mapping = Mapping(self.blocks_from, self.blocks_to, dict(self.mapping),
                           self.references, ff_from=self.ff_from, ff_to=self.ff_to,
-                          names=tuple(self.names))
+                          type=type, names=tuple(self.names))
         return mapping
 
 
-class MappingDirector:
+class MappingDirector(SectionLineParser):
     """
     A director in charge of parsing the new mapping format. It constructs a new
     :class:`Mapping` object by calling methods of it's builder (default
     :class:`MappingBuilder`) with the correct arguments.
+
+    Parameters
+    ----------
+    force_fields: dict[str, ForceField]
+        Dict of known force fields.
+    builder: MappingBuilder
 
     Attributes
     ----------
@@ -485,21 +472,19 @@ class MappingDirector:
         block formats.
     RESIDUE_ATOM_SET: str
         The character that separates a residue identifier from an atomname.
-    MAP_TYPES: list[str]
-        Headers that define a type of mapping, rather than a section. They
-        signal the start of a new :class:`Mapping` object.
+    COMMENT_CHAR: str
+        The character that starts a comment.
+    NO_FETCH_BLOCK: str
+        The character that specifies no block should be fetched automatically.
     builder
         The builder used to build the :class:`Mapping` object. By default
         :class:`MappingBuilder`.
     identifiers: dict[str, dict[str]]
         All known identifiers at this point. The key is the actual identifier,
-        prefixed with either "to\_" or "from\_", and the values are the
+        prefixed with either "to\\_" or "from\\_", and the values are the
         associated node attributes.
     section: str
         The name of the section currently being processed.
-    map_type: str
-        The type of mapping currently being processed. Must be one of
-        :attr:MAP_TYPES.
     from_ff: str
         The name of the forcefield from which this mapping describes a
         transfomation.
@@ -511,151 +496,49 @@ class MappingDirector:
     """
     RESNAME_NUM_SEP = '#'
     RESIDUE_ATOM_SEP = ':'
-    MAP_TYPES = ['block', 'modification']
+    COMMENT_CHAR = ';'
+    NO_FETCH_BLOCK = '!'
+    SECTION_ENDS = ['block', 'modification']
 
-    def __init__(self, builder=None):
+    def __init__(self, force_fields, builder=None):
         if builder is None:
             self.builder = MappingBuilder()
         else:
             self.builder = builder
-        self._reset_file()
+        self.force_fields = force_fields
+        super().__init__()
+        self._reset_mapping()
 
     def _reset_mapping(self):
         """
         Reinitialize attributes for a new mapping.
         """
-        self._current_id = {'from_': None, 'to_': None}
+        self._current_id = {'from': None, 'to': None}
+        self.ff = {'to': None, 'from': None}
         self.identifiers = {}
         self.builder.reset()
-        self.from_ff = None
-        self.to_ff = None
 
-    def parse(self, file_handle):
+    def finalize_section(self, previous_section, closed_sections):
         """
-        Parse the data in `file_handle`.
+        Wraps up parsing of a single mapping.
 
-        file_handle: io.TextIOBase
-            The data stream to parse.
+        Parameters
+        ----------
+        previous_section: collections.abc.Sequence[str]
+            The previously parsed section.
+        closed_sections: collections.abc.Iterable[str]
+            The just finished sections.
 
-        Yields
-        ------
+        Returns
+        -------
         Mapping
-            The mappings described by the data.
+            The accumulated mapping.
         """
-        for lineno, line in enumerate(file_handle, 1):
-            # TODO split off comments
-            line = line.strip()
-            if not line:
-                continue
-            if self._is_section_header(line):
-                new_mapping = self._header(line)
-                if new_mapping:
-                    mapping = self.builder.get_mapping()
-                    if mapping is not None:
-                        yield mapping
-                    self._reset_mapping()
-            else:
-                self._parse_line(line, lineno)
-        mapping = self.builder.get_mapping(self.map_type)
-        if mapping is not None:
-            yield mapping
-        self._reset_mapping()
-
-    @staticmethod
-    def _is_section_header(line):
-        """
-        Parameters
-        ----------
-        line: str
-            A line of text.
-
-        Returns
-        -------
-        bool
-            ``True`` iff `line` is a section header.
-        """
-        return line.startswith('[') and line.endswith(']')
-    
-    @staticmethod
-    def _section_to_method(section):
-        method_name = '_' + section.replace(' ', '_')
-        return method_name
-
-    @staticmethod
-    def _section_to_method(section):
-        """
-        Translates `section` to a method name by replacing all spaces with
-        underscores, and prefixes it with an underscore.
-
-        Parameters
-        ----------
-        section: str
-            A line of text.
-
-        Returns
-        -------
-        str
-            The translation of `section` to a method name.
-        """
-        method_name = '_' + section.replace(' ', '_')
-        return method_name
-
-    def _parse_line(self, line, lineno):
-        """
-        Parse `line` with line number `lineno`.
-
-        Parameters
-        ----------
-        line: str
-        lineno: int
-
-        Returns
-        -------
-        None
-        """
-        line = _substitute_macros(line, self.macros)
-        method_name = self._section_to_method(self.section)
-        try:
-            getattr(self, method_name)(line)
-        except Exception:
-            LOGGER.error("Problems parsing line {}. I think it should be a '{}'"
-                         " line, but I can't parse it as such.",
-                         lineno, self.section)
-            raise
-
-    def _header(self, line):
-        """
-        Parses a section header. Sets :attr:`section` and :attr:`map_type` when
-        applicable. Does not check whether `line` is a valid section header.
-
-        Parameters
-        ----------
-        line: str
-
-        Returns
-        -------
-        bool
-            ``True`` iff the header parsed is in :attr:`MAP_TYPES`.
-
-        Raises
-        ------
-        KeyError
-            If the section header is unknown.
-        """
-        section = line.strip('[ ]').casefold()
-        method_name = self._section_to_method(section)
-        try:
-            if section not in self.MAP_TYPES:
-                getattr(self, method_name)
-        except AttributeError as err:
-            raise KeyError('Section "{}" is unknown'.format(section)) from err
-        else:
-            self.section = section
-            if section in self.MAP_TYPES:
-                self.map_type = section
-                return True
-            else:
-                return False
+        if any(closed_section in self.SECTION_ENDS for closed_section in closed_sections):
+            map_type = previous_section[0]
+            mapping = self.builder.get_mapping(map_type)
+            self._reset_mapping()
+            return mapping
 
     def _parse_blocks(self, line):
         """
@@ -670,7 +553,7 @@ class MappingDirector:
         yields
         ------
         tuple[str, dict[str]]
-            A tuple if an identifier, and it's associated attributes.
+            A tuple of an identifier, and it's associated attributes.
         """
         tokens = list(_tokenize(line))
         if len(tokens) == 2 and tokens[1].startswith('{') and tokens[1].endswith('}'):
@@ -681,6 +564,8 @@ class MappingDirector:
         else:  # It must be shorthand
             for identifier in tokens:
                 resname, resid = self._parse_block_shorthand(identifier)
+                if resname.startswith(self.NO_FETCH_BLOCK):
+                    resname = resname[len(self.NO_FETCH_BLOCK):]
                 attrs = {'resname': resname, 'resid': resid}
                 yield identifier, attrs
 
@@ -698,29 +583,29 @@ class MappingDirector:
             A tuple of a resname and a resid.
         """
         if self.RESNAME_NUM_SEP in token:
-            # PO4#3
+            # PO4#3 or ALA#2
             resname, resid = token.split(self.RESNAME_NUM_SEP)
-        elif token[-1].isdigit():
-            # ALA2
-            for idx, char in enumerate(reversed(token)):
-                if not char.isdigit():
-                    idx = len(token) - idx
-                    resname = token[:idx]
-                    resid = int(token[idx:])
-                    break
+            resid = int(resid)
         else:
             # ALA
             resname = token
             resid = 1
         return resname, resid
 
-    def _resolve_atom_spec(self, atom_str, prefix=''):
+    def _resolve_atom_spec(self, atom_str, prefix=None):
         """
-        Helper method that, given an atom token and a prefix ("to_" or "from_")
+        Helper method that, given an atom token and a prefix ("to" or "from")
         will find the associated node attributes for that atom token. It will
         either separate the given identifier and atomname and look up the
         associated node attributes in :attr:`identifiers`; or take the last
         specified identifier.
+
+        For example, if given the `atom_str` "ALA:CA" it will look up the
+        node attributes associated with the identifier "ALA" as specified in
+        the (from|to) blocks section, and add them to the attribute
+        `{"atomname": "CA"}`. If given the `atom_str` "CA", it will either take
+        the previously used identifier if available. If not, it will check
+        whether there is only one identifier defined, and use that.
 
         Parameters
         ----------
@@ -738,180 +623,242 @@ class MappingDirector:
             id_, name = None, atom_str
 
         if id_ is None:
-            options = {name for name in self.identifiers if name.startswith(prefix)}
+            options = {name[1] for name in self.identifiers if name[0] == prefix}
             if len(options) == 1:
                 id_ = next(iter(options))
-                id_ = id_[len(prefix):]
 
         if id_ is None:
             attrs = self._current_id[prefix].copy()
         else:
-            attrs = self.identifiers[prefix + id_].copy()
-            self._current_id[prefix] = self.identifiers[prefix + id_]
+            attrs = self.identifiers[(prefix, id_)].copy()
+            self._current_id[prefix] = self.identifiers[(prefix, id_)]
 
         attrs['atomname'] = name
-        if self.map_type == 'modification':
-            del attrs['resname']
+
         return attrs
 
-    def _to(self, line):
+    @SectionLineParser.section_parser('modification', 'to', direction='to')
+    @SectionLineParser.section_parser('modification', 'from', direction='from')
+    @SectionLineParser.section_parser('block', 'to', direction='to')
+    @SectionLineParser.section_parser('block', 'from', direction='from')
+    def _ff(self, line, lineno=0, direction=None):
         """
-        Parses a "to" section and sets :attr:`to_ff`.
+        Parses a "to" or "from" section and sets :attr:`ff`.
+        Every line should contain a separate forcefield name.
 
         Parameters
         ----------
         line: str
         """
-        self.to_ff = line
-        self.builder.to_ff(self.to_ff)
+        builder_methods = {'to': self.builder.to_ff,
+                           'from': self.builder.from_ff}
+        self.ff[direction] = line
+        builder_methods[direction](line)
 
-    def _from(self, line):
+    @SectionLineParser.section_parser('modification', 'from blocks',
+                                      direction='from', map_type='modification')
+    @SectionLineParser.section_parser('modification', 'to blocks',
+                                      direction='to', map_type='modification')
+    @SectionLineParser.section_parser('block', 'from blocks',
+                                      direction='from', map_type='block')
+    @SectionLineParser.section_parser('block', 'to blocks',
+                                      direction='to', map_type='block')
+    def _blocks(self, line, lineno=0, direction=None, map_type=None):
         """
-        Parses a "from" section and sets :attr:`from_ff`.
-
-        Parameters
-        ----------
-        line: str
-        """
-        self.from_ff = line
-        self.builder.from_ff(self.from_ff)
-
-    def _from_blocks(self, line):
-        """
-        Parses a "from blocks" section and add to :attr:`identifiers`. Calls
+        Parses a "from blocks" or "to_blocks" section and add to
+        :attr:`identifiers`. Calls :method:`builder.add_block_from` and
         :method:`builder.add_block_from`.
 
+        A blocks section can be in two formats: shorthand and longhand:
+            Shorthand:
+                resname_ids := <resname_id>[ <resname_ids>]
+                resname_id  := <resname>[#<resid>]
+                identifier  == resname_id
+                resname     := string that does not contain "#"
+                resid       := [0-9]+ (residue index)
+            Longhand:
+                full_res_specs := <full_res_spec>[\n<full_res_specs>]
+                full_res_spec  := [!]<identifier> <res_attrs>
+                identifier     := string that does not start with '!'
+                res_attrs      := json dict
+                An "!" signifies that no block should be fetched based on the
+                the resname automatically.
+
+        Identifier *must* be unique for this mapping/direction.
+
+        Examples
+        --------
+        Shorthand:
+            ALA#1 ALA#2
+            GLY
+        Longhand:
+            ALA1 {"resname": "ALA", "resid": 1}
+            ALA2 {"resname": "ALA", "resid": 2}
+
         Parameters
         ----------
         line: str
+        lineno: int
+        direction: str
+            Should be 'to' or 'from'
+        map_type: str
+            The type of mapping.
         """
+        builder_methods = {'to': self.builder.add_block_to,
+                           'from': self.builder.add_block_from}
         for identifier, attrs in self._parse_blocks(line):
-            if isinstance(attrs.get('resname'), str):
-                block = get_block(self.from_ff, self.map_type, attrs['resname'])
-                self.builder.add_block_from(block)
-            self.identifiers['from_' + identifier] = attrs
+            fetch = True
+            if identifier.startswith(self.NO_FETCH_BLOCK):
+                identifier = identifier[len(self.NO_FETCH_BLOCK):]
+                fetch = False
+            if fetch and attrs.get('resname') is not None:
+                block = getattr(self.force_fields[self.ff[direction]], map_type+'s')[attrs['resname']]
+                builder_methods[direction](block)
+            if map_type == 'modification' and 'resname' in attrs:
+                del attrs['resname']
+            self.identifiers[(direction, identifier)] = attrs
 
-    def _to_blocks(self, line):
+    @SectionLineParser.section_parser('modification', 'from nodes', direction='from')
+    @SectionLineParser.section_parser('modification', 'to nodes', direction='to')
+    @SectionLineParser.section_parser('block', 'from nodes', direction='from')
+    @SectionLineParser.section_parser('block', 'to nodes', direction='to')
+    def _nodes(self, line, lineno=0, direction=None):
+
         """
-        Parses a "to blocks" section and add to :attr:`identifiers`. Calls
-        :method:`builder.add_block_to`.
+        Parses a "from nodes" or "to nodes" section. Calls
+        :method:`builder.add_node_from` and :method:`builder.add_node_to`.
+
+        atoms      := <atom>[\n<atoms>]
+        atom       := [<identifier>:]<atomname>[ <atom_attrs>]
+        atomname   := string that does not contain ':'
+        atom_attrs := json dict
+
+        If no identifier is specified, the previous one used is taken. If none
+        was used before and there is only one option, that is taken. Will add a
+        new node with as attributes the union of the attributes associated with
+        the identifier and the atom attributes specified. Atom attributes take
+        precedence.
+
+        Examples
+        --------
+        AA1:N {"resname": "ALA"}
+        HN
+        AA2:CA
+        HA {"resid": 2}
 
         Parameters
         ----------
         line: str
+        lineno: int
+        direction: str
+            Should be 'to' or 'from'
         """
-        for identifier, attrs in self._parse_blocks(line):
-            if isinstance(attrs.get('resname'), str):
-                block = get_block(self.to_ff, self.map_type, attrs['resname'])
-                self.builder.add_block_to(block)
-            self.identifiers['to_' + identifier] = attrs
+        builder_methods = {'to': self.builder.add_node_to,
+                           'from': self.builder.add_node_from}
+        name, *new_attrs = _tokenize(line)
+        attrs = self._resolve_atom_spec(name, direction)
+        if new_attrs:
+            new_attrs = _parse_atom_attributes(*new_attrs)
+        else:
+            new_attrs = {}
+        attrs.update(new_attrs)
+        builder_methods[direction](attrs)
 
-    def _from_nodes(self, line):
+    @SectionLineParser.section_parser('modification', 'from edges', direction='from')
+    @SectionLineParser.section_parser('modification', 'to edges', direction='to')
+    @SectionLineParser.section_parser('block', 'from edges', direction='from')
+    @SectionLineParser.section_parser('block', 'to edges', direction='to')
+    def _edges(self, line, lineno=0, direction=None):
         """
-        Parses a "from nodes" section. Calls :method:`builder.add_node_from`.
+        Parses a "from edges" or "to edges" section. Calls
+        :method:`builder.add_edge_from` and :method:`builder.add_edge_to`.
+
+        edges      := <edge>[\n<edges>]
+        edge       := <atom> +<atom>[ <edge_attrs>]
+        atom       := [<identifier>:]<atomname>
+        edge_attrs := json dict
+
+        The combination of attributes defined by the identifier + the specified
+        atom name *must* resolve to a unique node in the block.
+
+        Example
+        -------
+        ALA#1:C ALA#2:N
 
         Parameters
         ----------
         line: str
+        lineno: int
+        direction: str
+            Should be 'to' or 'from'
         """
-        name, *attrs = _tokenize(line)
+        builder_methods = {'from': self.builder.add_edge_from,
+                           'to': self.builder.add_edge_to}
+        at1, at2, *attrs = _tokenize(line)
+        attrs1 = self._resolve_atom_spec(at1, direction)
+        attrs2 = self._resolve_atom_spec(at2, direction)
         if attrs:
             attrs = _parse_atom_attributes(*attrs)
         else:
             attrs = {}
-        if 'atomname' not in attrs:
-            attrs['atomname'] = name
-        self.builder.add_node_from(attrs)
+        builder_methods[direction](attrs1, attrs2, attrs)
 
-    def _to_nodes(self, line):
-        """
-        Parses a "to nodes" section. Calls :method:`builder.add_node_to`.
-
-        Parameters
-        ----------
-        line: str
-        """
-        name, *attrs = _tokenize(line)
-
-        if attrs:
-            attrs = _parse_atom_attributes(*attrs)
-        else:
-            attrs = {}
-        if 'atomname' not in attrs:
-            attrs['atomname'] = name
-        self.builder.add_node_to(attrs)
-
-    def _from_edges(self, line):
-        """
-        Parses a "from edges" section. Calls :method:`builder.add_edge_from`.
-
-        Parameters
-        ----------
-        line: str
-        """
-        at1, at2 = line.split()
-        attrs1 = self._resolve_atom_spec(at1, 'from_')
-        attrs2 = self._resolve_atom_spec(at2, 'from_')
-        self.builder.add_edge_from(attrs1, attrs2)
-
-    def _to_edges(self, line):
-        """
-        Parses a "to edges" section. Calls :method:`builder.add_edge_to`.
-
-        Parameters
-        ----------
-        line: str
-        """
-        at1, at2 = line.split()
-        attrs1 = self._resolve_atom_spec(at1, 'to_')
-        attrs2 = self._resolve_atom_spec(at2, 'to_')
-        self.builder.add_edge_to(attrs1, attrs2)
-
-    def _mapping(self, line):
+    @SectionLineParser.section_parser('modification', 'mapping')
+    @SectionLineParser.section_parser('block', 'mapping')
+    def _mapping(self, line, lineno=0):
         """
         Parses a "mapping" section. Calls :method:`builder.add_mapping`.
 
+        mappings := <mapping>[\n<mappings>]
+        weight   := float | int
+        mapping  := <atom from> <atom to> <weight>
+
+        <atom from> and <atom to> have the same definition as <atom> in the
+        "edges" section. See :meth:`_edges`.
+
+        Examples
+        --------
+        ALA:C    ALA:BB
+        H        BB  0
+
         Parameters
         ----------
         line: str
+        lineno: int
         """
+
         from_, to_, *weight = line.split()
         if weight:
             weight = int(weight[0])
         else:
             weight = 1
 
-        attrs_from = self._resolve_atom_spec(from_, 'from_')
-        attrs_to = self._resolve_atom_spec(to_, 'to_')
+        attrs_from = self._resolve_atom_spec(from_, 'from')
+        attrs_to = self._resolve_atom_spec(to_, 'to')
 
         self.builder.add_mapping(attrs_from, attrs_to, weight)
 
-    def _reference_atoms(self, line):
+    @SectionLineParser.section_parser('modification', 'reference atoms')
+    @SectionLineParser.section_parser('block', 'reference atoms')
+    def _reference_atoms(self, line, lineno=0):
         """
         Parses a "reference atom" section. Calls
         :method:`builder.add_reference`.
 
+        reference := <atom to> <atom from>
+
         Parameters
         ----------
         line: str
+        lineno: int
         """
         to_, from_ = line.split()
-        attrs_to = self._resolve_atom_spec(to_, 'to_')
-        attrs_from = self._resolve_atom_spec(from_, 'from_')
+        attrs_to = self._resolve_atom_spec(to_, 'to')
+        attrs_from = self._resolve_atom_spec(from_, 'from')
         self.builder.add_reference(attrs_to, attrs_from)
 
-    def _macros(self, line):
-        """
-        Parses a "macros" section. Adds to :attr:`macros`.
 
-        Parameters
-        ----------
-        line: str
-        """
-        line = deque(_tokenize(line))
-        _parse_macro(line, self.macros)
-
-def parse_mapping_file(filepath):
+def parse_mapping_file(filepath, force_fields):
     """
     Parses a mapping file.
 
@@ -919,6 +866,8 @@ def parse_mapping_file(filepath):
     ----------
     filepath: str
         The path of the file to parse.
+    force_fields: dict[str, ForceField]
+        Dict of known forcefields
 
     Returns
     -------
@@ -926,6 +875,6 @@ def parse_mapping_file(filepath):
         A list of all mappings described in the file.
     """
     with open(filepath) as map_in:
-        director = MappingDirector()
+        director = MappingDirector(force_fields)
         mappings = list(director.parse(map_in))
     return mappings

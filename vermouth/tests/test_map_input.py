@@ -15,7 +15,7 @@
 # limitations under the License.
 
 """
-Unit tests for the mapping file parser and its utilities.
+Unit tests for the backmapping file parser and its utilities.
 """
 
 # We call "private" methods and functions as part of the tests, which pylint

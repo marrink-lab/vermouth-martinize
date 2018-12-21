@@ -261,7 +261,8 @@ def test_subgraph_interactions(molecule_subgraph):
 
 def test_link_predicate_match():
     lp = vermouth.molecule.LinkPredicate(None)
-    assert not lp.match({2: None}, 2)
+    with pytest.raises(NotImplementedError):
+        lp.match(1, 2)
 
 
 @pytest.fixture

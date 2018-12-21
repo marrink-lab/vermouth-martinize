@@ -304,16 +304,11 @@ def fix_ptm(molecule):
                     for attr_name, val in to_replace.items():
                         if attr_name == 'atomname':
                             mol_node['_old_atomname'] = mol_node['atomname']
-                        # This can't be done anymore, since mapping would then
-                        # break due to missing atoms.
-                        # if attr_name == 'atomname' and val is None:
-                        #     LOGGER.debug('Removing atom {}',
-                        #                  format_atom_string(mol_node),
-                        #                  type='remove-atom')
-                        #     molecule.remove_node(mol_idx)
-                        #     n_idxs.remove(mol_idx)
-                        #     resid_to_idxs[mol_node['resid']].remove(mol_idx)
-                        #     break
+                        # We can't remove nodes which get their atomname set to
+                        # None here, since mapping would then break due to
+                        # missing atoms. Instead, the mapping processor should
+                        # make sure superfluous atoms do not get constructed in
+                        # the output resolution.
                         if mol_node.get(attr_name) != val:
                             fmt = 'Changing attribute {} from {} to {} for atom {}'
                             LOGGER.debug(fmt, attr_name, mol_node.get(attr_name),
