@@ -133,8 +133,6 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
                        attribute_keep=('cgsecstruct', )).run_system(system)
     LOGGER.info('Averaging the coordinates.', type='step')
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
-    #LOGGER.info('Applying the blocks.', type='step')
-    #vermouth.ApplyBlocks().run_system(system)
     LOGGER.info('Applying the links.', type='step')
     vermouth.DoLinks().run_system(system)
     LOGGER.info('Placing the charge dummies.', type='step')
