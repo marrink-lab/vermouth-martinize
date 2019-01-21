@@ -596,7 +596,7 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
                             parameters=[
                                 'a',
                                 vermouth.molecule.ParamDistance(
-                                    ['A', 'C'], format_spec='.2f',
+                                    ['A', 'B'], format_spec='.2f',
                                 ),
                                 '200',
                             ],
