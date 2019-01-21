@@ -316,6 +316,14 @@ class Molecule(nx.Graph):
     """
     Represents a molecule as per a specific force field. Consists of atoms
     (nodes), bonds (edges) and interactions such as angle potentials.
+
+    Two molecules are equal if:
+
+    * the exclusion distance (nrexcl) are equal
+    * the force fields are equal (but may not be the same instances)
+    * the nodes are the equals and in the same order
+    * the edges are the same (but order is not accounted for)
+    * the interactions are the same and in the same order
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
@@ -796,6 +804,9 @@ class Block(Molecule):
     """
     Residue topology template
 
+    Two blocks are equal if the underlying molecules are equal, and if the bloc
+    names are equal.
+
     Parameters
     ----------
     incoming_graph_data:
@@ -1057,6 +1068,16 @@ class Link(Block):
     """
     Template link between two residues.
 
+    Two links are equal if:
+    
+    * the underlying molecules are equal
+    * the names are equal
+    * the negative edges ("non_edges") are the equal regardless of order
+    * the interactions to remove are the same and in the same order
+    * the meta variables are equals regardless of order
+    * the pattern definitions are equals and in the same order
+    * the features are equals regardless of order
+
     Parameters
     ----------
     incoming_graph_data:
@@ -1083,11 +1104,11 @@ class Link(Block):
 
     def __eq__(self, other):
         return (super().__eq__(other)
-                and self.non_edges == other.non_edges
+                and set(self.non_edges) == set(other.non_edges)
                 and self.removed_interactions == other.removed_interactions
                 and self.molecule_meta == other.molecule_meta
                 and self.patterns == other.patterns
-                and self.features == other.features
+                and set(self.features) == set(other.features)
                 )
 
 
