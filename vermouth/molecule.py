@@ -663,7 +663,7 @@ class Molecule(nx.Graph):
     # TODO: Allow comparison of interactions betweem isomorphic molecules.
     def same_interactions(self, other):
         """
-        Returns :bool:`True` if the interactions are the same.
+        Returns `True` if the interactions are the same.
 
         To be equal, two interations must share the same node key references,
         the same interation parameters, and the same meta attributes.
@@ -685,7 +685,7 @@ class Molecule(nx.Graph):
     # instance, the assumed default for the `PTM_atom` attribute is False.
     def same_nodes(self, other, ignore_attr=()):
         """
-        Returns :bool:`True` if the nodes are the same and in the same order.
+        Returns `True` if the nodes are the same and in the same order.
 
         The equality criteria used for the attribute values are those of
         :func:`are_different`.
