@@ -688,7 +688,7 @@ class Molecule(nx.Graph):
         Returns `True` if the nodes are the same and in the same order.
 
         The equality criteria used for the attribute values are those of
-        :func:`are_different`.
+        :func:`vermouth.utils.are_different`.
 
         Parameters
         ----------
