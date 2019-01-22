@@ -36,7 +36,7 @@ def force_field_with_features(empty_force_field):
     """
     Build a force field with links describing features.
 
-    The force field is empty expect for the links. The links are empty expect
+    The force field is empty except for the links. The links are empty except
     for the feature lists.
     """
     features = (
@@ -91,10 +91,6 @@ def test_features(force_field_with_features):
     """
     Test that link features are found by the force field.
     """
-    features = (
-        ('present', True),
-        ('not present', False),
-    )
     expected = {'single_0', 'single_1', 'single_2',
                 'multi_0', 'multi_1', 'multi_2'}
     assert force_field_with_features.features == expected

@@ -276,7 +276,7 @@ def _some_atoms_left(tokens, atoms, natoms):
 
 def _parse_atom_attributes(token):
     """
-    Parse bracketted tokens.
+    Parse bracketed tokens.
 
     Parameters
     ----------
@@ -291,9 +291,9 @@ def _parse_atom_attributes(token):
         raise ValueError('The token should start with a curly bracket.')
     try:
         attributes = json.loads(token)
-    except JSONDecodeError:
+    except JSONDecodeError as error:
         raise ValueError('The following value is not a valid atom attribute token: "{}".'
-                         .format(token))
+                         .format(token)) from error
     modifications = {}
     for key, value in attributes.items():
         try:
@@ -740,7 +740,7 @@ def _parse_meta(tokens, context, context_type, section):
     Parse lines starting with '#meta'.
 
     The function expects 2 tokens. The first token is assumed to be '#meta' and
-    is ignored. The second must be a bracketted token. This second token is
+    is ignored. The second must be a bracketed token. This second token is
     parsed as a dictionary and updated the dictionary of attributes to add to
     all the nodes involved in a given type of interaction for the context.
 

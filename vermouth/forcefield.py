@@ -26,7 +26,8 @@ from . import DATA_PATH
 FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
 
 # Cache the force fields.
-# It should only be used by the get_native_force_field function, or else...
+# It should only be used by the get_native_force_field function, else it would
+# allow to request a "native" force field that is not actually native.
 _FORCE_FIELDS = {}
 
 

@@ -192,10 +192,12 @@ def test_treat_atom_prefix_error():
     ),
     ('ATOM1{attributes}ATOM2', ['ATOM1', '{attributes}', 'ATOM2']),
     ('ATOM1 {attributes} ATOM2', ['ATOM1', '{attributes}', 'ATOM2']),
-    ('{} {{}} {{}{{}}}', ['{}', '{{}}', '{{}{{}}}']),
-    ('{}{{}}{{}{{}}}', ['{}', '{{}}', '{{}{{}}}']),
+    # Note: the brackets here are NOT for str.format!
+    ('{} {{}} {{}{{}}}', ['{}', '{{}}', '{{}{{}}}']),  # not str.format
+    ('{}{{}}{{}{{}}}', ['{}', '{{}}', '{{}{{}}}']),  # not str.format
     ('', []),
     ('    ', []),
+    ('\t', []),
 ))
 def test_tokenize(line, tokens):
     """
@@ -250,6 +252,7 @@ def test_tokenize_bracket_error(token):
     ),
     ('$macro', {'macro': 'plop'}, 'plop'),  # only the macro
     ('start $macro', {'macro': 'plop'}, 'start plop'),  # end with macro
+    ('$macro end', {'macro': 'plop'}, 'plop end'),  # start with macro
 ))
 def test_substitute_macros(line, macros, expected):
     """
@@ -357,6 +360,11 @@ def test_parse_atom_attributes_error(token):
         None,
         [['4', {}], ['6', {}], ['5', {}]],
     ),
+    (
+        ['--'],
+        None,
+        [],
+    )
 ))
 def test_get_atoms(tokens, natoms, expected):
     """
@@ -434,6 +442,22 @@ def test_get_atoms_errors(tokens, natoms):
             'B': {'atomname': 'B', 'order': 0, 'attr': 'plop'},
         },
     ),
+    (
+        (('A', {'exist': 'hello'}), ('B', {}), ),
+        {'attr': 'plop', 'attr2': 'other plop'},
+        {'A': {'new': 'world', 'new2': 'globe'}},
+        {
+            'A': {
+                'atomname': 'A', 'order': 0,
+                'exist': 'hello', 'new': 'world', 'new2': 'globe',
+                'attr': 'plop', 'attr2': 'other plop',
+            },
+            'B': {
+                'atomname': 'B', 'order': 0,
+                'attr': 'plop', 'attr2': 'other plop',
+            },
+        },
+    ),
 ))
 def test_treat_link_interaction_atoms(atoms, apply_to_all, existing, expected):
     """
@@ -448,7 +472,7 @@ def test_treat_link_interaction_atoms(atoms, apply_to_all, existing, expected):
     assert found == expected
 
 
-def test_treat_link_interaction_atoms_conflix():
+def test_treat_link_interaction_atoms_conflicts():
     """
     Test that _treat_link_interaction_atoms fails when there is a conflict
     between the atoms to add ans the existing atoms.
@@ -469,6 +493,9 @@ def test_treat_link_interaction_atoms_conflix():
     ('something()', True),
     ('something(inside)', True),
     ('partial(end', False),
+    ('partialend)', False),
+    ('(something)(or_other)', False),
+    ('(something)or_other', False),
 ))
 def test_is_param_effector(token, expected):
     """
