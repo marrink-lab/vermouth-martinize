@@ -1308,10 +1308,9 @@ def attributes_match(attributes, template_attributes, ignore_keys=()):
         if attr in ignore_keys:
             continue
         if attributes.get(attr) != value:
+            if isinstance(value, LinkPredicate) and value.match(attributes, attr):
+                continue
             return False
-        elif isinstance(value, LinkPredicate):
-            if not value.match(attributes, attr) and attributes.get(attr) != value:
-                return False
     return True
 
 

@@ -8,25 +8,25 @@ universal
 pepplane
 
 [ from blocks ]
-AA1 {"resname": $protein_resnames , "resid": 1}
-AA2 {"resname": $protein_resnames , "resid": 2}
+!AA1 {"resid": 1, "resname": $protein_resnames}
+!AA2 {"resid": 2, "resname": $protein_resnames}
 
 [ to blocks ]
 ALA
 
 [ from nodes ]
-N   {"resid": 1, "resname": $protein_resnames}
-HN  {"resid": 1, "resname": $protein_resnames}
-CA  {"resid": 1, "resname": $protein_resnames}
-HA  {"resid": 1, "resname": $protein_resnames}
-C   {"resid": 1, "resname": $protein_resnames}
-O   {"resid": 1, "resname": $protein_resnames}
-N   {"resid": 2, "resname": $protein_resnames}
-HN  {"resid": 2, "resname": $protein_resnames}
-CA  {"resid": 2, "resname": $protein_resnames}
-HA  {"resid": 2, "resname": $protein_resnames}
-C   {"resid": 2, "resname": $protein_resnames}
-O   {"resid": 2, "resname": $protein_resnames}
+AA1:N
+HN
+CA
+HA
+C
+O
+AA2:N
+HN
+CA
+HA
+C
+O
 
 [from edges ]
 AA1:N   AA1:CA

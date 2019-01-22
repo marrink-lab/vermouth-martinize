@@ -65,7 +65,6 @@ class ForceField(object):
         self.renamed_residues = {}
         self.variables = {}
         self.name = None
-        self.path = None
         if directory is not None:
             self.read_from(directory)
             self.name = os.path.basename(str(directory))
@@ -82,7 +81,6 @@ class ForceField(object):
         The provided directory must contain a subdirectory with the same name
         as the force field.
         """
-        self.path = directory
         source_files = iter_force_field_files(directory)
         for source in source_files:
             extension = os.path.splitext(source)[-1]
