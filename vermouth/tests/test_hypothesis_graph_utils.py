@@ -41,7 +41,7 @@ MCS_BUILDER = graph_builder(node_data=NODE_DATA, min_nodes=0, max_nodes=MAX_NODE
                             node_keys=st.integers(max_value=MAX_NODES, min_value=0))
 
 
-@settings(max_examples=500)
+@settings(max_examples=500, deadline=None)
 @given(graph1=MCS_BUILDER, graph2=MCS_BUILDER, attrs=ATTRS)
 def test_maximum_common_subgraph(graph1, graph2, attrs):
     """
