@@ -213,7 +213,7 @@ def _substitute_macros(line, macros):
     r"""
     Substitute macros by their content.
 
-    A macro starts with a '$' and ends with one amongst ' ${}\n\t'.
+    A macro starts with a '$' and ends with one amongst ' ${}\n\t"'.
 
     Parameters
     ----------
@@ -232,7 +232,7 @@ def _substitute_macros(line, macros):
         if start < 0:
             break
         for end, char in enumerate(line[start + 1:], start=start + 1):
-            if char in ' \t\n{}$':
+            if char in ' \t\n{}$"':
                 break
         else: # no break
             end += 1
@@ -326,6 +326,7 @@ def _get_atoms(tokens, natoms):
 
 def _treat_block_interaction_atoms(atoms, context, section):
     atom_names = list(context.nodes)
+    all_references = []
     for atom in atoms:
         reference = atom[0]
         if reference.isdigit():
@@ -345,11 +346,13 @@ def _treat_block_interaction_atoms(atoms, context, section):
                 msg = ('There is no atom "{}" defined in the block "{}". '
                        'Section "{}" cannot refer to it.')
                 raise IOError(msg.format(reference, context.name, section))
-            if reference[0] in '+-':
+            if reference[0] in '+-<>':
                 msg = ('Atom names in blocks cannot be prefixed with + or -. '
                        'The name "{}", used in section "{}" of the block "{}" '
                        'is not valid in a block.')
                 raise IOError(msg.format(reference, section, context.name))
+        all_references.append(reference)
+    return all_references
 
 
 def _split_node_key(key):
@@ -526,12 +529,14 @@ def _treat_atom_prefix(reference, attributes):
 
 
 def _treat_link_interaction_atoms(atoms, context, section):
+    all_references = []
     for reference, attributes in atoms:
         intermediate = context._apply_to_all_nodes.copy()
         intermediate.update(attributes)
         attributes = intermediate
 
         prefixed_reference, attributes = _treat_atom_prefix(reference, attributes)
+        all_references.append(prefixed_reference)
 
         if prefixed_reference in context:
             context_atom = context.nodes[prefixed_reference]
@@ -546,6 +551,7 @@ def _treat_link_interaction_atoms(atoms, context, section):
             context_atom.update(attributes)
         else:
             context.add_node(prefixed_reference, **attributes)
+    return all_references
 
 
 def _parse_interaction_parameters(tokens):
@@ -604,9 +610,9 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
     #   more + or - to signify the order in the sequence
     # * interactions create nodes
     if context_type == 'block':
-        _treat_block_interaction_atoms(atoms, context, section)
+        treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
     elif context_type == 'link':
-        _treat_link_interaction_atoms(atoms, context, section)
+        treated_atoms = _treat_link_interaction_atoms(atoms, context, section)
 
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
@@ -623,7 +629,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
 
     if delete:
         interaction = DeleteInteraction(
-            atoms=[atom[0] for atom in atoms],
+            atoms=treated_atoms,
             atom_attrs=[atom[1] for atom in atoms],
             parameters=parameters,
             meta=meta,
@@ -633,7 +639,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
         context.removed_interactions[section] = interaction_list
     else:
         interaction = Interaction(
-            atoms=[atom[0] for atom in atoms],
+            atoms=treated_atoms,
             parameters=parameters,
             meta=meta,
         )
@@ -798,14 +804,14 @@ def _parse_variables(tokens, force_field, section):
     try:
         value = json.loads(value)
     except JSONDecodeError:
-        value = json.loads('"{}"'.format(value))
+        value = str(value)
     force_field.variables[key] = value
 
 
 def _parse_features(tokens, context, context_type):
     if context_type != 'link':
         raise IOError('The "features" section is only valid in links.')
-    context.features.extend(list(tokens))
+    context.features.update(set(tokens))
 
 
 def read_ff(lines, force_field):
@@ -891,6 +897,8 @@ def read_ff(lines, force_field):
                     _parse_link_atom(tokens, context,
                                      defaults={'PTM_atom': False},
                                      treat_prefix=False)
+                else:
+                    raise IOError('Unecpected [ atoms ] section.')
             elif section == 'non-edges':
                 _parse_edges(tokens, context, context_type, negate=True)
             elif section == 'edges':

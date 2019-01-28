@@ -35,6 +35,19 @@ class ForceField(object):
     """
     Description of a force field.
 
+    A force field can be created empty or read from a directory. In any case, a
+    force field must be named. If read from a directory, the base name of the
+    directory is used as force field name, unless the `name` attribute is
+    provided. If the force field is created empty, then `name` must be
+    provided.
+
+    Parameters
+    ----------
+    directory: str or pathlib.Path, optional
+        A directory to read the force field from.
+    name: str, optional
+        The name of the force field.
+
     Attributes
     ----------
     blocks: dict
@@ -54,12 +67,9 @@ class ForceField(object):
         self.name = None
         if directory is not None:
             self.read_from(directory)
-            self.name = os.path.basename(directory)
+            self.name = os.path.basename(str(directory))
         if name is not None:
             self.name = name
-        if directory is not None and name is not None:
-            msg = 'Only one of name or directory should be provided. Not both.'
-            raise TypeError(msg)
         if self.name is None:
             msg = 'At least one of `directory` or `name` must be provided.'
             raise TypeError(msg)
@@ -169,7 +179,7 @@ def iter_force_field_files(directory, extensions=FORCE_FIELD_PARSERS.keys()):
     Returns a generator over the path of all the force field files in the directory.
     """
     return itertools.chain(*(
-        glob(os.path.join(directory, '*' + extension))
+        glob(os.path.join(str(directory), '*' + extension))
         for extension in extensions
     ))
 

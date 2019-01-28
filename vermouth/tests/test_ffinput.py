@@ -253,6 +253,12 @@ def test_tokenize_bracket_error(token):
     ('$macro', {'macro': 'plop'}, 'plop'),  # only the macro
     ('start $macro', {'macro': 'plop'}, 'start plop'),  # end with macro
     ('$macro end', {'macro': 'plop'}, 'plop end'),  # start with macro
+    ('A {$key : "$value"} B',  # there *must* be a space between the
+                               # macro and the colon, otherwise the key is
+                               # 'key:' with the colon as a colon is not a
+                               # token separator.
+     {'key': '"a_key"', 'value': 'a_value'},
+     'A {"a_key" : "a_value"} B'),  # play with json dicts
 ))
 def test_substitute_macros(line, macros, expected):
     """
@@ -364,7 +370,7 @@ def test_parse_atom_attributes_error(token):
         ['--'],
         None,
         [],
-    )
+    ),
 ))
 def test_get_atoms(tokens, natoms, expected):
     """
@@ -377,6 +383,21 @@ def test_get_atoms(tokens, natoms, expected):
     # Make sure '--' is consumed if needed
     if tokens:
         assert not tokens[0] == '--'
+
+
+@pytest.mark.parametrize('token_list, remaining', (
+    (['XX', 'YY', '--', 'AA', '--', 'BB'], ['AA', '--', 'BB']),
+    (['A', 'B', '--', '--', '1', '2', '--', '3'], ['--', '1', '2', '--', '3']),
+    (['A', 'B', '--'], []),
+    (['--', 'A', 'B'], ['A', 'B']),
+))
+def test_separator(token_list, remaining):
+    """
+    _get_atoms only remove the appropriate separator.
+    """
+    tokens = collections.deque(token_list)
+    ffinput._get_atoms(tokens, None)
+    assert list(tokens) == remaining
 
 
 @pytest.mark.parametrize('tokens, natoms', (
@@ -506,11 +527,11 @@ def test_is_param_effector(token, expected):
 
 
 @pytest.mark.parametrize('tokens, existing', (
-    (['A'], []),
-    (['A', 'B'], []),
-    (['A', 'B'], ['X', 'Y']),
-    ([], []),
-    ([], ['X', 'Y']),
+    (['A'], set()),
+    (['A', 'B'], set()),
+    (['A', 'B'], {'X', 'Y'}),
+    ([], set()),
+    ([], {'X', 'Y'}),
 ))
 def test_parse_features(tokens, existing):
     """
@@ -519,7 +540,7 @@ def test_parse_features(tokens, existing):
     context = Link()
     if existing:
         context.features = existing
-    expected = existing + tokens
+    expected = existing | set(tokens)
     ffinput._parse_features(tokens, context, 'link')
     assert context.features == expected
 

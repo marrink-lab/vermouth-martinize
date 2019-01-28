@@ -197,6 +197,11 @@ class LinkParameterEffector:
             )
         self.format = format_spec
 
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__
+                and self.keys == other.keys
+                and self.format == other.format)
+
     def __call__(self, molecule, match):
         """
         Parameters
@@ -713,6 +718,7 @@ class Molecule(nx.Graph):
         for node in nodes:
             self._remove_interactions_with_node(node)
 
+
 class Block(Molecule):
     """
     Residue topology template
@@ -994,7 +1000,7 @@ class Link(Block):
             'removed_interactions': {},
             'molecule_meta': {},
             'patterns': [],
-            'features': [],
+            'features': set(),
         }
         self._set_defaults(defaults)
         self._apply_to_all_nodes = {}

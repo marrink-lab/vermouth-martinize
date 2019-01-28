@@ -18,6 +18,7 @@
 Tests for the ForceField class.
 """
 
+import pathlib
 import pytest
 import vermouth.forcefield
 import vermouth.molecule
@@ -69,24 +70,6 @@ def test_init_empty_force_field(empty_force_field, attribute, value):
     assert getattr(empty_force_field, attribute) == value
 
 
-def test_init_empty_force_field_error_neither():
-    """
-    Test that an error is raised when neither directory nor name are given to
-    ForceField.
-    """
-    with pytest.raises(TypeError):
-        vermouth.forcefield.ForceField()
-
-
-def test_init_empty_force_field_error_both():
-    """
-    Test that an error is raised when both directory and name are given to
-    ForceField.
-    """
-    with pytest.raises(TypeError):
-        vermouth.forcefield.ForceField(name='something', directory='something')
-
-
 def test_features(force_field_with_features):
     """
     Test that link features are found by the force field.
@@ -113,3 +96,50 @@ def test_has_feature_false(force_field_with_features):
     features that should not be there.
     """
     assert not force_field_with_features.has_feature('absent')
+
+
+def test_create_ff_from_dir_name(tmpdir):
+    """
+    Creates a force field from a directory AND a name, assure that the correct
+    name is used.
+
+    The name provided with the 'name' argument should be used.
+    """
+    directory = tmpdir.mkdir('dirname')
+    name = 'the_name'
+    ff = vermouth.forcefield.ForceField(
+        directory=str(directory),
+        name=name,
+    )
+    assert ff.name == name
+
+
+def test_create_ff_from_name():
+    """
+    Creates a force field by name (no directory) and make sure it has the
+    expected name.
+    """
+    name = 'the_ff_name'
+    ff = vermouth.forcefield.ForceField(name=name)
+    assert ff.name == name
+
+
+@pytest.mark.parametrize('path_type', (str, pathlib.Path))
+def test_create_ff_from_dir(tmpdir, path_type):
+    """
+    Creates a force field from a directory, assure that the name is correct.
+    """
+    ff_name = 'name'
+    # Depending on the version of python, the type of tmpdir may differ.
+    directory = path_type(str(tmpdir.mkdir(ff_name)))
+    ff = vermouth.forcefield.ForceField(directory=directory)
+    assert ff.name == ff_name
+
+
+def test_init_empty_force_field_error_neither():
+    """
+    Test that an error is raised when neither directory nor name are given to
+    ForceField.
+    """
+    with pytest.raises(TypeError):
+        vermouth.forcefield.ForceField()
