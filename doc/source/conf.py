@@ -83,6 +83,7 @@ pygments_style = 'sphinx'
 
 nitpick_ignore = [
         ('py:class', 'networkx.algorithms.isomorphism.isomorphvf2.GraphMatcher'),
+        ('py:class', 'optional'),
         ]
 
 # -- Options for HTML output -------------------------------------------------

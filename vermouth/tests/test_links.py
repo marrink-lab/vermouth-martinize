@@ -266,7 +266,7 @@ def make_link(mol_nodes, mol_edges=[]):
 def test_link_processor(mol_nodes, mol_edges, link_nodes, link_edges,
                         expected_nodes, expected_edges):
     links = [make_link(nodes, edges) for nodes, edges in zip(link_nodes, link_edges)]
-    ff = vermouth.forcefield.FORCE_FIELDS['universal']
+    ff = vermouth.forcefield.get_native_force_field('universal')
     ff.links = links
 
     mol = make_mol(mol_nodes, mol_edges, force_field=ff)

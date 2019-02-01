@@ -27,7 +27,7 @@ from pathlib import Path
 import sys
 
 import vermouth
-from vermouth.forcefield import FORCE_FIELDS
+import vermouth.forcefield
 from vermouth import DATA_PATH
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
@@ -92,12 +92,13 @@ def read_system(path, ignore_resnames=()):
     return system
 
 
-def pdb_to_universal(system, delete_unknown=False,
-                     force_field=FORCE_FIELDS['universal'],
+def pdb_to_universal(system, delete_unknown=False, force_field=None,
                      write_graph=None, write_repair=None, write_canon=None):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
+    if force_field is None:
+        force_field = vermouth.forcefield.get_native_force_field('universal')
     canonicalized = system.copy()
     canonicalized.force_field = force_field
     LOGGER.info('Guessing the bonds.', type='step')

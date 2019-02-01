@@ -33,6 +33,12 @@ from .molecule import (
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
 
+# Python 3.4 does not raise JSONDecodeError but ValueError.
+try:
+    from json import JSONDecodeError
+except ImportError:
+    JSONDecodeError = ValueError
+
 VALUE_PREDICATES = {
     'not': NotDefinedOrNot,
 }
@@ -188,8 +194,13 @@ def _tokenize(line):
         if brackets > 0:
             msg = 'Unexpected end of line. A closing bracket is missing.'
             raise IOError(msg)
+        elif brackets < 0:
+            msg = 'An opening bracket is missing.'
+            raise IOError(msg)
 
-        tokens.append(line[start:end + 1])
+        token = line[start:end + 1]
+        if token:
+            tokens.append(token)
 
         # Find the beginning of the next token.
         start = end + 1
@@ -199,13 +210,29 @@ def _tokenize(line):
 
 
 def _substitute_macros(line, macros):
+    r"""
+    Substitute macros by their content.
+
+    A macro starts with a '$' and ends with one amongst ' ${}\n\t"'.
+
+    Parameters
+    ----------
+    line: str
+        The line to fix.
+    macros: dict[str, str]
+        Keys are macro names, values are the replacement content.
+
+    Returns
+    -------
+    str
+    """
     start = None
-    while start is None or 0 <= start < len(line):
+    while True:  # stops when start < 0
         start = line.find('$', start)
         if start < 0:
             break
         for end, char in enumerate(line[start + 1:], start=start + 1):
-            if char in ' \t\n{}':
+            if char in ' \t\n{}$"':
                 break
         else: # no break
             end += 1
@@ -217,6 +244,28 @@ def _substitute_macros(line, macros):
 
 
 def _some_atoms_left(tokens, atoms, natoms):
+    """
+    Return True if the token list expected to contain atoms.
+
+    If the number of atoms is known before hand, then the function compares the
+    number of already found atoms to the expected number. If the '--' token if
+    found, it is removed from the token list and there is no atom left.
+
+    Parameters
+    ----------
+    tokens: collections.deque[str]
+        Deque of token to inspect. The deque **can be modified** in place.
+    atoms: list
+        List of already found atoms.
+    natoms: int or None
+        The number of expected atoms if known, else None.
+
+    Returns
+    -------
+    bool
+    """
+    if not tokens:
+        return False
     if tokens and tokens[0] == '--':
         tokens.popleft()
         return False
@@ -226,7 +275,25 @@ def _some_atoms_left(tokens, atoms, natoms):
 
 
 def _parse_atom_attributes(token):
-    attributes = json.loads(token)
+    """
+    Parse bracketed tokens.
+
+    Parameters
+    ----------
+    token: str
+        Token in the form of a json dictionary.
+
+    Returns
+    -------
+    dict
+    """
+    if not token.strip().startswith('{'):
+        raise ValueError('The token should start with a curly bracket.')
+    try:
+        attributes = json.loads(token)
+    except JSONDecodeError as error:
+        raise ValueError('The following value is not a valid atom attribute token: "{}".'
+                         .format(token)) from error
     modifications = {}
     for key, value in attributes.items():
         try:
@@ -259,6 +326,7 @@ def _get_atoms(tokens, natoms):
 
 def _treat_block_interaction_atoms(atoms, context, section):
     atom_names = list(context.nodes)
+    all_references = []
     for atom in atoms:
         reference = atom[0]
         if reference.isdigit():
@@ -278,11 +346,13 @@ def _treat_block_interaction_atoms(atoms, context, section):
                 msg = ('There is no atom "{}" defined in the block "{}". '
                        'Section "{}" cannot refer to it.')
                 raise IOError(msg.format(reference, context.name, section))
-            if reference[0] in '+-':
+            if reference[0] in '+-<>':
                 msg = ('Atom names in blocks cannot be prefixed with + or -. '
                        'The name "{}", used in section "{}" of the block "{}" '
                        'is not valid in a block.')
                 raise IOError(msg.format(reference, section, context.name))
+        all_references.append(reference)
+    return all_references
 
 
 def _split_node_key(key):
@@ -459,13 +529,14 @@ def _treat_atom_prefix(reference, attributes):
 
 
 def _treat_link_interaction_atoms(atoms, context, section):
+    all_references = []
     for reference, attributes in atoms:
-        if hasattr(context, '_apply_to_all_nodes'):
-            intermediate = context._apply_to_all_nodes.copy()
-            intermediate.update(attributes)
-            attributes = intermediate
+        intermediate = context._apply_to_all_nodes.copy()
+        intermediate.update(attributes)
+        attributes = intermediate
 
         prefixed_reference, attributes = _treat_atom_prefix(reference, attributes)
+        all_references.append(prefixed_reference)
 
         if prefixed_reference in context:
             context_atom = context.nodes[prefixed_reference]
@@ -480,6 +551,7 @@ def _treat_link_interaction_atoms(atoms, context, section):
             context_atom.update(attributes)
         else:
             context.add_node(prefixed_reference, **attributes)
+    return all_references
 
 
 def _parse_interaction_parameters(tokens):
@@ -538,9 +610,9 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
     #   more + or - to signify the order in the sequence
     # * interactions create nodes
     if context_type == 'block':
-        _treat_block_interaction_atoms(atoms, context, section)
+        treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
     elif context_type == 'link':
-        _treat_link_interaction_atoms(atoms, context, section)
+        treated_atoms = _treat_link_interaction_atoms(atoms, context, section)
 
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
@@ -557,7 +629,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
 
     if delete:
         interaction = DeleteInteraction(
-            atoms=[atom[0] for atom in atoms],
+            atoms=treated_atoms,
             atom_attrs=[atom[1] for atom in atoms],
             parameters=parameters,
             meta=meta,
@@ -567,7 +639,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
         context.removed_interactions[section] = interaction_list
     else:
         interaction = Interaction(
-            atoms=[atom[0] for atom in atoms],
+            atoms=treated_atoms,
             parameters=parameters,
             meta=meta,
         )
@@ -636,10 +708,12 @@ def _parse_link_atom(tokens, context, defaults=None, treat_prefix=True):
 
 
 def _parse_macro(tokens, macros):
+    if len(tokens) > 2:
+        raise IOError('Unexpected column in macro definition.')
+    elif len(tokens) < 2:
+        raise IOError('Missing column in macro definition.')
     macro_name = tokens.popleft()
     macro_value = tokens.popleft()
-    if tokens:
-        raise IOError('Unexpected column in macro definition.')
     macros[macro_name] = macro_value
 
 
@@ -668,6 +742,22 @@ def _parse_link_attribute(tokens, context, section):
 
 
 def _parse_meta(tokens, context, context_type, section):
+    """
+    Parse lines starting with '#meta'.
+
+    The function expects 2 tokens. The first token is assumed to be '#meta' and
+    is ignored. The second must be a bracketed token. This second token is
+    parsed as a dictionary and updated the dictionary of attributes to add to
+    all the nodes involved in a given type of interaction for the context.
+
+    The type of interaction is set by the `section` argument.
+
+    The context is a :class:`vermouth.molecule.Block` or a subclass such as a
+    :class:`vermouth.molecule.Link`.
+
+    The `context_type` is a string version of the first level section (i.e
+    "link", "block", or "modification").
+    """
     if len(tokens) > 2:
         msg = ('Unexpected column when defining meta attributes for section '
                '"{}" of a {}. {} tokens read instead of 2.')
@@ -711,14 +801,17 @@ def _parse_variables(tokens, force_field, section):
     elif len(tokens) < 2:
         raise IOError('Missing column in section "{}".'.format(section))
     key, value = tokens
-    value = json.loads(value)
+    try:
+        value = json.loads(value)
+    except JSONDecodeError:
+        value = str(value)
     force_field.variables[key] = value
 
 
 def _parse_features(tokens, context, context_type):
     if context_type != 'link':
         raise IOError('The "features" section is only valid in links.')
-    context.features.extend(list(tokens))
+    context.features.update(set(tokens))
 
 
 def read_ff(lines, force_field):
@@ -804,6 +897,8 @@ def read_ff(lines, force_field):
                     _parse_link_atom(tokens, context,
                                      defaults={'PTM_atom': False},
                                      treat_prefix=False)
+                else:
+                    raise IOError('Unecpected [ atoms ] section.')
             elif section == 'non-edges':
                 _parse_edges(tokens, context, context_type, negate=True)
             elif section == 'edges':

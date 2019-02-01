@@ -82,6 +82,9 @@ class LinkPredicate:
     def __repr__(self):
         return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and other.value == self.value
+
 
 class Choice(LinkPredicate):
     """
@@ -193,6 +196,11 @@ class LinkParameterEffector:
                 .format(self.__class__.__name__, self.n_keys_asked, len(keys))
             )
         self.format = format_spec
+
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__
+                and self.keys == other.keys
+                and self.format == other.format)
 
     def __call__(self, molecule, match):
         """
@@ -710,6 +718,7 @@ class Molecule(nx.Graph):
         for node in nodes:
             self._remove_interactions_with_node(node)
 
+
 class Block(Molecule):
     """
     Residue topology template
@@ -991,7 +1000,7 @@ class Link(Block):
             'removed_interactions': {},
             'molecule_meta': {},
             'patterns': [],
-            'features': [],
+            'features': set(),
         }
         self._set_defaults(defaults)
         self._apply_to_all_nodes = {}

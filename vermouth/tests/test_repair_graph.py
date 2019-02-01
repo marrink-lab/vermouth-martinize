@@ -58,7 +58,7 @@ def build_forcefield_with_mods():
     ))
     gluh.add_edges_from([[0, 1], [0, 2], [1, 3]])
 
-    forcefield = copy.copy(vermouth.forcefield.FORCE_FIELDS['universal'])
+    forcefield = copy.copy(vermouth.forcefield.get_native_force_field('universal'))
     forcefield.modifications = [nter, gluh, cter]
     forcefield.renamed_residues[('GLU', ('GLU-H', 'N-ter'))] = 'GLU0'
     return forcefield
