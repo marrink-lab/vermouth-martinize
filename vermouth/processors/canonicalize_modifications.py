@@ -32,32 +32,22 @@ from ..utils import format_atom_string
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
-class PTMGraphMatcher(nx.isomorphism.GraphMatcher):
+def ptm_node_matcher(node1, node2):
     """
-    Implements matching logic for PTMs
+    Returns True iff node1 and node2 should be considered equal. This means
+    they are both either marked as PTM_atom, or not. If they both are PTM
+    atoms, the elements need to match, and otherwise, the atomnames must
+    match.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    # G1 >= G2; G1 is the found residue; G2 the PTM reference
-    def semantic_feasibility(self, node1, node2):
-        """
-        Returns True iff node1 and node2 should be considered equal. This means
-        they are both either marked as PTM_atom, or not. If they both are PTM
-        atoms, the elements need to match, and otherwise, the atomnames must
-        match.
-        """
-        node1 = self.G1.nodes[node1]
-        node2 = self.G2.nodes[node2]
-        if node1.get('PTM_atom', False) == node2['PTM_atom']:
-            if node2['PTM_atom']:
-                # elements must match
-                return node1['element'] == node2['element']
-            else:
-                # atomnames must match
-                return node1['atomname'] == node2['atomname']
+    if node1.get('PTM_atom', False) == node2.get('PTM_atom', False):
+        if node2.get('PTM_atom', False):
+            # elements must match
+            return node1['element'] == node2['element']
         else:
-            return False
+            # atomnames must match
+            return node1['atomname'] == node2['atomname']
+    else:
+        return False
 
 
 def find_ptm_atoms(molecule):
@@ -224,7 +214,7 @@ def allowed_ptms(residue, res_ptms, known_ptms):
     """
     # TODO: filter by element count first
     for ptm in known_ptms:
-        ptm_graph_matcher = PTMGraphMatcher(residue, ptm)
+        ptm_graph_matcher = nx.isomorphism.GraphMatcher(residue, ptm, node_match=ptm_node_matcher)
         if ptm_graph_matcher.subgraph_is_isomorphic():
             yield ptm, ptm_graph_matcher
 
