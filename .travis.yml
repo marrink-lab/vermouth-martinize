@@ -34,7 +34,6 @@ jobs:
     - python: "3.8-dev"
   include:
       #- python: "2.7"
-    - python: "3.4"
     - python: "3.5"
     - python: "3.6"
     - python: "3.7"
@@ -49,7 +48,7 @@ jobs:
 
 
     - stage: docs
-      python: "3.5"
+      python: "3.7"
       addons: skip
       install:
         - pip install --upgrade -r requirements-docs.txt
@@ -59,7 +58,7 @@ jobs:
       after_success: skip
 
     - stage: pylint
-      python: "3.5"
+      python: "3.7"
       addons: skip
       install:
         - pip install --upgrade -r requirements-tests.txt
@@ -69,7 +68,7 @@ jobs:
         - python run_pylint.py --disable=fixme --fail-under=9.5 bin/martinize2
       after_success: skip
 #   - stage: deploy
-#     python: "3.5"
+#     python: "3.7"
 #     addons: skip
 #     env:
 #     script: skip
