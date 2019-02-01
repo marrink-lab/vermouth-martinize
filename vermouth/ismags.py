@@ -139,9 +139,8 @@ class ISMAGS:
         `edge1` is an edge in `graph1`, and `edge2` an edge in `graph2`.
         Constructed from the argument `edge_match`.
     """
-    _symmetry_cache = {}
-
-    def __init__(self, graph, subgraph, node_match=None, edge_match=None):
+    def __init__(self, graph, subgraph, node_match=None, edge_match=None,
+                 cache=None):
         """
         Parameters
         ----------
@@ -161,11 +160,14 @@ class ISMAGS:
             :func:`~networkx.algorithms.isomorphism.categorical_edge_match` and
             friends.
             If `None`, all edges are considered equal.
+        cache: collections.abc.Mapping
+            A cache used for caching graph symmetries.
         """
         # TODO: graph and subgraph setter methods that invalidate the caches.
         # TODO: allow for precomputed partitions and colors
         self.graph = graph
         self.subgraph = subgraph
+        self._symmetry_cache = cache
         # Naming conventions are taken from the original paper. For your
         # sanity:
         #   sg: subgraph
@@ -450,10 +452,11 @@ class ISMAGS:
             set of node keys}. Every key-value pair describes which `values`
             can be interchanged without changing nodes less than `key`.
         """
-        key = hash((tuple(graph.nodes), tuple(graph.edges),
-                    tuple(map(tuple, node_partitions)), tuple(edge_colors.items())))
-        if key in self._symmetry_cache:
-            return self._symmetry_cache[key]
+        if self._symmetry_cache is not None:
+            key = hash((tuple(graph.nodes), tuple(graph.edges),
+                        tuple(map(tuple, node_partitions)), tuple(edge_colors.items())))
+            if key in self._symmetry_cache:
+                return self._symmetry_cache[key]
         node_partitions = list(self._refine_node_partitions(graph,
                                                             node_partitions,
                                                             edge_colors))
@@ -463,13 +466,8 @@ class ISMAGS:
                                                                      node_partitions,
                                                                      node_partitions,
                                                                      edge_colors)
-        # ! This may cause a memory leak !
-        # But we're stuck with the networkx API for this class (modelled after
-        # their VF2 isomorphism class). Instead of making 1 instance and
-        # calling that with multiple graph/subgraph combinations the paradigm
-        # is to create a new instance for every graph/subgraph pair. This makes
-        # it harder to cache things.
-        self.__class__._symmetry_cache[key] = permutations, cosets
+        if self._symmetry_cache is not None:
+            self._symmetry_cache[key] = permutations, cosets
         return permutations, cosets
 
     def is_isomorphic(self, symmetry=False):

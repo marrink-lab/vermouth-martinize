@@ -89,7 +89,7 @@ def make_reference(mol):
     """
     reference_graph = nx.Graph()
     residues = make_residue_graph(mol)
-
+    symmetry_cache = {}
     for residx in residues:
         # TODO: make separate function for just one residue.
         # TODO: Merge degree 1 nodes (hydrogens!) with the parent node. And
@@ -144,7 +144,9 @@ def make_reference(mol):
 
         # If we assume residue > reference the tests run *way* faster, but the
         # actual program becomes *much* *much* slower.
-        ismags = ISMAGS(ref_copy, res_copy, node_match=nx.isomorphism.categorical_node_match('element', None))
+        ismags = ISMAGS(ref_copy, res_copy,
+                        node_match=nx.isomorphism.categorical_node_match('element', None),
+                        cache=symmetry_cache)
         # Finding the largest common subgraph is expensive, but the first step
         # is to try and find a subgraph isomorphism between
         # residue <= reference, so best case it makes no difference, and worst
