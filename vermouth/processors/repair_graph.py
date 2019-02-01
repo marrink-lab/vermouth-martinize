@@ -20,10 +20,34 @@ import networkx as nx
 
 from .processor import Processor
 from ..graph_utils import *
+from ..ismags import ISMAGS
 from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string
 
 LOGGER = StyleAdapter(get_logger(__name__))
+
+
+def get_default(dictionary, attr, default):
+    """
+    Functions like :meth:`dict.get`, except that when `attr` is in `dictionary`
+    and `dictionary[attr]` is `None`, it will return `default`.
+
+    Parameters
+    ----------
+    dictionary: dict
+    attr: collections.abc.Hashable
+    default
+
+    Returns
+    -------
+    object
+        The value of `dictionary[attr]` if `attr` is in `dictionary` and
+        `dictionary[attr]` is not None. `default otherwise.`
+    """
+    item = dictionary.get(attr, None)
+    if item is None:
+        item = default
+    return item
 
 
 def make_reference(mol):
@@ -65,10 +89,9 @@ def make_reference(mol):
     """
     reference_graph = nx.Graph()
     residues = make_residue_graph(mol)
-
+    symmetry_cache = {}
     for residx in residues:
         # TODO: make separate function for just one residue.
-        # TODO: multiprocess this loop?
         # TODO: Merge degree 1 nodes (hydrogens!) with the parent node. And
         # check whether the node degrees match?
 
@@ -79,49 +102,75 @@ def make_reference(mol):
         reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
         add_element_attr(residue)
-        # Assume reference >= residue
-        matches = isomorphism(reference, residue)
-        if not matches:
-            # Maybe reference < residue? I.e. PTM or protonation
-            matches = isomorphism(residue, reference)
-            matches = [{v: k for k, v in match.items()} for match in matches]
-        if not matches:
-            LOGGER.debug('Doing MCS matching for residue {}{}', resname, resid,
-                         type='performance')
-            # The problem is that some residues (termini in particular) will
-            # contain more atoms than they should according to the reference.
-            # Furthermore they will have too little atoms because X-Ray is
-            # supposedly hard. This means we can't do the subgraph isomorphism
-            # like we're used to. Instead, identify the atoms in the largest
-            # common subgraph, and do the subgraph isomorphism/alignment on
-            # those. MCS is ridiculously expensive, so we only do it when we
-            # have to.
-            try:
-                mcs_match = max(maximum_common_subgraph(reference, residue, ['element']),
-                                key=lambda m: rate_match(reference, residue, m))
-            except ValueError:
-                raise ValueError('No common subgraph found between {} and '
-                                 'reference {}.'.format(resname, resname))
-            # We could seed the isomorphism calculation with the knowledge from
-            # the mcs_match, but thats to much effort for now.
-            # TODO: see above
-            res = residue.subgraph(mcs_match.values())
-            matches = isomorphism(reference, res)
-        # TODO: matches is sorted by isomorphism. So we should probably use
-        #       that with e.g. itertools.takewhile.
-        if not matches:
+        # We are going to sort the nodes of reference and residue by atomname.
+        # We do this, because the ISMAGS algorithm prefers to match nodes with
+        # lower IDs.
+        # Get a \uFFFF for every node that doesn't have an atomname attribute
+        # or when it's None, since that sorts higher than letters, giving them
+        # the lowest priority in ISMAGS.
+
+        res_names = {idx: get_default(residue.nodes[idx], 'atomname', '\uFFFF') for idx in residue}
+        ref_names = {idx: get_default(reference.nodes[idx], 'atomname', '\uFFFF') for idx in reference}
+
+        # Sort the nodes such that any atomnames that are common to both
+        # reference and residue are first, and then the rest.
+        # Also, sort it all by atomname. This is combined in one by sorting by
+        # the tuple (not common, atomname). False < True.
+
+        # If we want to relabel the nodes in-place we need to find new
+        # non-overlapping labels. The easiest way of doing this is by turning
+        # them into tuples. But this makes everything slow; probably because
+        # ISMAGS does quite a lot of inequality comparisons, and those are way
+        # faster for str/int. So, sacrifice the memory, and relabel by making a
+        # new copy.
+
+        # TODO: include a geometric alignment in the sorting. Humans are really
+        #       good at solving isomorphism problems iff graphs look alike. We
+        #       can do a similar trick here by rot+trans aligning the given
+        #       residue with a reference conformation. And then sort by
+        #       distance
+        new_residue_names = {old: new for new, old in enumerate(sorted(residue,
+                             key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])))}
+        new_reference_names = {old: new for new, old in enumerate(sorted(reference,
+                               key=lambda jdx: (ref_names[jdx] not in res_names.values(), ref_names[jdx])))}
+
+        old_res_names = {v: k for k, v in new_residue_names.items()}
+        old_ref_names = {v: k for k, v in new_reference_names.items()}
+
+        # It would be nice if we were able to relabel them in-place, but it
+        # seems to make everything slower. See above.
+        res_copy = nx.relabel_nodes(residue, new_residue_names, copy=True)
+        ref_copy = nx.relabel_nodes(reference, new_reference_names, copy=True)
+
+        # If we assume residue > reference the tests run *way* faster, but the
+        # actual program becomes *much* *much* slower.
+        ismags = ISMAGS(ref_copy, res_copy,
+                        node_match=nx.isomorphism.categorical_node_match('element', None),
+                        cache=symmetry_cache)
+        # Finding the largest common subgraph is expensive, but the first step
+        # is to try and find a subgraph isomorphism between
+        # residue <= reference, so best case it makes no difference, and worst
+        # case we avoid trying to find that isomorphism twice.
+        match_iter = ismags.largest_common_subgraph()
+        try:
+            # We take only the first found match, since because the nodes are
+            # sorted by atomname, and ISMAGS prefers to take nodes with low ID,
+            # that match should have most matching atomnames.
+            match = next(match_iter)
+        except StopIteration:
             LOGGER.error("Can't find isomorphism between {}{} and its "
                          "reference.", resname, resid, type='inconsistent-data')
             continue
+        # TODO: Since we only have one isomorphism we don't know whether the
+        # assigment we're making is ambiguous. So iff the residue is small
+        # enough (or a flag is set, whatever), also find the second isomorphism
+        # and check whether it has the same number of correct atomnames. If so,
+        # issue a warning and carry on. We can't do this for all residues,
+        # since that takes a cup of coffee.
 
-        matches = maxes(matches, key=lambda m: rate_match(reference, residue, m))
-        if len(matches) > 1:
-            LOGGER.warning("More than one way to fit {}{} on it's reference."
-                           " I'm picking one arbitrarily. You might want to"
-                           " fix at least some atomnames.", resname, resid,
-                           type='bad-atom-names')
+        # "unsort" the matches
+        match = {old_ref_names[ref]: old_res_names[res] for ref, res in match.items()}
 
-        match = matches[0]
         reference_graph.add_node(residx, chain=chain, reference=reference,
                                  found=residue, resname=resname, resid=resid,
                                  match=match)

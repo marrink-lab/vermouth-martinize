@@ -1,6 +1,7 @@
 pytest
 coverage
 pytest-cov
+pylint
 hypothesis
 hypothesis-networkx
 codecov

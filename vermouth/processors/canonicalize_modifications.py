@@ -39,8 +39,8 @@ def ptm_node_matcher(node1, node2):
     atoms, the elements need to match, and otherwise, the atomnames must
     match.
     """
-    if node1.get('PTM_atom', False) == node2['PTM_atom']:
-        if node2['PTM_atom']:
+    if node1.get('PTM_atom', False) == node2.get('PTM_atom', False):
+        if node2.get('PTM_atom', False):
             # elements must match
             return node1['element'] == node2['element']
         else:
@@ -272,8 +272,9 @@ def fix_ptm(molecule):
         #       function?
         residue = molecule.subgraph(n_idxs)
         options = allowed_ptms(residue, res_ptms, known_ptms)
-        # TODO/FIXME: This includes anchors in sorting by size.
-        options = sorted(options, key=lambda opt: len(opt[0]), reverse=True)
+        options = sorted(options,
+                         key=lambda opt: len([n for n in opt[0] if opt[0].nodes[n].get('PTM_atom', False)]),
+                         reverse=True)
         try:
             identified = identify_ptms(residue, res_ptms, options)
         except KeyError:
