@@ -140,7 +140,7 @@ def test_broken_edgecase():
 # pylint: disable=no-value-for-parameter, no-member
 
 
-MAX_NODES = 10
+MAX_NODES = 5
 ATTRNAMES = ['attr1', 'attr2']
 NODE_DATA = st.dictionaries(keys=st.sampled_from(ATTRNAMES),
                             values=st.integers(min_value=0, max_value=MAX_NODES))
@@ -152,11 +152,11 @@ ISO_DATA = st.dictionaries(keys=st.sampled_from(ATTRNAMES),
 ISO_BUILDER = graph_builder(node_data=ISO_DATA, min_nodes=0, max_nodes=MAX_NODES,
                             edge_data=ISO_DATA,
                             node_keys=st.integers(max_value=MAX_NODES, min_value=0))
-MCS_BUILDER = graph_builder(node_data=ISO_DATA, min_nodes=0, max_nodes=6,
+MCS_BUILDER = graph_builder(node_data=ISO_DATA, min_nodes=0, max_nodes=5,
                             node_keys=st.integers(max_value=MAX_NODES, min_value=0))
 
 
-@settings(max_examples=250, deadline=500)
+@settings(deadline=500)
 @given(subgraph=ISO_BUILDER, attrs=st.one_of(st.none(), ATTRS))
 def test_hypo_symmetric_self_isomorphism(subgraph, attrs):
     """
