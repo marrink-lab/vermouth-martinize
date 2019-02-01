@@ -180,7 +180,7 @@ def test_hypo_symmetric_self_isomorphism(subgraph, attrs):
     assert found == make_into_set([{n: n for n in subgraph}])
 
 
-@settings(max_examples=250)
+@settings(deadline=500)
 @given(graph=ISO_BUILDER, subgraph=ISO_BUILDER, attrs=st.one_of(st.none(), ATTRS))
 def test_isomorphism_nonmatch(graph, subgraph, attrs):
     """
@@ -238,7 +238,7 @@ def test_isomorphism_nonmatch(graph, subgraph, attrs):
                                        ismags._sge_colors) != ([], {})
 
 
-@settings(max_examples=250)
+@settings(deadline=500)
 @given(st.data())
 def test_isomorphism_match(data):
     """
@@ -300,7 +300,7 @@ def test_isomorphism_match(data):
                                        ismags._sge_colors) != ([], {})
 
 
-@settings(max_examples=100)
+@settings(deadline=500)
 @given(graph=MCS_BUILDER, subgraph=MCS_BUILDER, attrs=st.one_of(st.none(), ATTRS))
 def test_mcs_nonmatch(graph, subgraph, attrs):
     """
@@ -350,7 +350,7 @@ def test_mcs_nonmatch(graph, subgraph, attrs):
 #                                       ismags._sge_colors) == ([], {})
 
 
-@settings(max_examples=100)
+@settings(deadline=500)
 @given(st.data())
 def test_mcs_match(data):
     """
