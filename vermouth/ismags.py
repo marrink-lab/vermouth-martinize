@@ -608,8 +608,8 @@ class ISMAGS:
         for partition in node_partitions:
             if not are_all_equal(node_edge_colors[node] for node in partition):
                 refined = make_partitions(partition, equal_color)
-                if branch and len(refined) != 1 and\
-                        len({len(r) for r in refined}) != len([len(r) for r in refined]):
+                if (branch and len(refined) != 1 and
+                        len({len(r) for r in refined}) != len([len(r) for r in refined])):
                     # This is where it breaks. There are multiple new cells
                     # in refined with the same length, and their order
                     # matters.
