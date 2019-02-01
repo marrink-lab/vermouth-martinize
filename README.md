@@ -23,7 +23,7 @@ PRODUCTION.**
 
 ## Installation
 
-Martinize2 and vermouth require python 3.4 or greater. They can be installed
+Martinize2 and vermouth require python 3.5 or greater. They can be installed
 using the `pip` command:
 
     pip install git+https://github.com/marrink-lab/vermouth-martinize.git#vermouth
