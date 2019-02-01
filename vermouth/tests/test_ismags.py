@@ -156,7 +156,7 @@ MCS_BUILDER = graph_builder(node_data=ISO_DATA, min_nodes=0, max_nodes=6,
                             node_keys=st.integers(max_value=MAX_NODES, min_value=0))
 
 
-@settings(max_examples=250)
+@settings(max_examples=250, deadline=500)
 @given(subgraph=ISO_BUILDER, attrs=st.one_of(st.none(), ATTRS))
 def test_hypo_symmetric_self_isomorphism(subgraph, attrs):
     """
