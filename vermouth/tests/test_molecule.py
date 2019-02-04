@@ -884,8 +884,8 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
 def attribute_dict(draw, min_size=0, max_size=None):
     keys = st.one_of(st.text(), st.integers(), st.none())
     bases = (st.text(), st.integers(), st.floats(), st.none())
-    lists = st.lists(st.one_of(*bases, attribute_dict()))
-    values = st.one_of(*bases, lists, attribute_dict())
+    lists = st.lists(st.one_of(*bases, attribute_dict(max_size=1)), max_size=3)
+    values = st.one_of(*bases, lists, attribute_dict(max_size=1))
     return draw(st.dictionaries(keys, values, min_size=min_size, max_size=max_size))
 
 
