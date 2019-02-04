@@ -956,14 +956,20 @@ def random_link(draw):
 
 @hypothesis.given(random_molecule())
 def test_molecule_equal(mol):
-    assert mol == mol
+    mol_copy = mol.copy()
+    assert mol == mol_copy
+    assert mol is not mol_copy
 
 
 @hypothesis.given(random_block())
 def test_block_equal(block):
-    assert block == block
+    block_copy = block.copy()
+    assert block == block_copy
+    assert block is not block_copy
 
 
 @hypothesis.given(random_link())
 def test_link_equal(link):
+    link_copy = link.copy()
     assert link == link
+    assert link is not link_copy

@@ -393,6 +393,7 @@ class Molecule(nx.Graph):
         Molecule
         """
         subgraph = self.__class__()
+        subgraph.name = self.name
         subgraph.meta = copy.copy(self.meta)
         subgraph._force_field = self._force_field
         subgraph.nrexcl = self.nrexcl
