@@ -23,6 +23,15 @@ import vermouth
 import vermouth.molecule
 from vermouth.molecule import Interaction, Molecule, Block, Link, DeleteInteraction
 
+# In some cases, drawing from hypothesis.strategies.text is extremely slow and
+# triggers the heath check warnings. It appears to be due to some internal
+# combinations of timers and cache. This is a workwround that forces the
+# generation, and the caching, of the character table out of any test. This
+# way, the table is cached, and the time required to build it is not accounted
+# in the health checks.
+# See <https://github.com/HypothesisWorks/hypothesis/issues/1153>.
+hypothesis.internal.charmap.charmap()
+
 
 @pytest.fixture
 def molecule():
@@ -875,9 +884,7 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
 def random_interaction(draw, graph, natoms=None,
                        interaction_class=Interaction, attrs=False):
     if natoms is None:
-        natoms = draw(st.integers(min_value=0, max_value=len(graph.nodes)))
-    # The test is only relevant with a user-provided value of natoms.
-    hypothesis.assume(0 <= natoms <= len(graph.nodes))
+        natoms = draw(st.integers(min_value=0, max_value=4))
     atoms = tuple(draw(st.sampled_from(list(graph.nodes))) for _ in range(natoms))
     # TODO: Allow for LinkParameterEffector instances.
     parameters = st.lists(elements=st.text())
@@ -898,9 +905,9 @@ def random_interaction(draw, graph, natoms=None,
 def interaction_collection(draw, graph,
                            interaction_class=Interaction, attrs=False):
     result = {}
-    ninteraction_types = draw(st.integers(min_value=0, max_value=10))
+    ninteraction_types = draw(st.integers(min_value=0, max_value=1))
     for _ in range(ninteraction_types):
-        ninteractions = draw(st.integers(min_value=0, max_value=10))
+        ninteractions = draw(st.integers(min_value=0, max_value=1))
         type_name = draw(st.text())
         if type_name not in result and ninteractions > 0:
             result[type_name] = []
@@ -915,7 +922,7 @@ def interaction_collection(draw, graph,
 @st.composite
 def random_molecule(draw, molecule_class=Molecule):
     # TODO: Allow for more complex atom attributes.
-    graph = draw(hnst.graph_builder())
+    graph = draw(hnst.graph_builder(max_nodes=5))
     # TODO: Allow for more complex meta attributes.
     meta = draw(st.one_of(st.none(), st.fixed_dictionaries({})))
     nrexcl = draw(st.one_of(st.none(), st.integers()))
