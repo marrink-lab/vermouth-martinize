@@ -881,6 +881,15 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
 
 
 @st.composite
+def attribute_dict(draw, min_size=0, max_size=None):
+    keys = st.one_of(st.text(), st.integers(), st.none())
+    bases = (st.text(), st.integers(), st.floats(), st.none())
+    lists = st.lists(st.one_of(*bases, attribute_dict()))
+    values = st.one_of(*bases, lists, attribute_dict())
+    return draw(st.dictionaries(keys, values, min_size=min_size, max_size=max_size))
+
+
+@st.composite
 def random_interaction(draw, graph, natoms=None,
                        interaction_class=Interaction, attrs=False):
     if natoms is None:
@@ -888,8 +897,7 @@ def random_interaction(draw, graph, natoms=None,
     atoms = tuple(draw(st.sampled_from(list(graph.nodes))) for _ in range(natoms))
     # TODO: Allow for LinkParameterEffector instances.
     parameters = st.lists(elements=st.text())
-    # TODO: Allow for more complex meta attributes.
-    meta = draw(st.one_of(st.none(), st.fixed_dictionaries({})))
+    meta = draw(st.one_of(st.none(), attribute_dict()))
     if attrs:
         atom_attrs = tuple(draw(st.fixed_dictionaries({})) for _ in atoms)
         return interaction_class(
@@ -921,10 +929,12 @@ def interaction_collection(draw, graph,
 
 @st.composite
 def random_molecule(draw, molecule_class=Molecule):
-    # TODO: Allow for more complex atom attributes.
-    graph = draw(hnst.graph_builder(max_nodes=5))
-    # TODO: Allow for more complex meta attributes.
-    meta = draw(st.one_of(st.none(), st.fixed_dictionaries({})))
+    graph = draw(hnst.graph_builder(
+        max_nodes=5,
+        node_data=attribute_dict(max_size=3),
+        edge_data=attribute_dict(max_size=2),
+    ))
+    meta = draw(st.one_of(st.none(), attribute_dict()))
     nrexcl = draw(st.one_of(st.none(), st.integers()))
     molecule = molecule_class(graph, meta=meta, nrexcl=nrexcl)
 
@@ -946,8 +956,7 @@ def random_link(draw):
     link.removed_interactions = draw(interaction_collection(
         link, interaction_class=DeleteInteraction, attrs=True,
     ))
-    # TODO: Allow for more complex attributes.
-    link.molecule_meta = draw(st.fixed_dictionaries({}))
+    link.molecule_meta = draw(attribute_dict())
     # TODO: Generate non_edges
     # TODO: Generate patters
     # TODO: Generate features

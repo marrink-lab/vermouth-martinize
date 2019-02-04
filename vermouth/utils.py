@@ -18,6 +18,10 @@ Provides several generic utility functions
 
 import string
 import numpy as np
+import collections.abc
+import numbers
+import itertools
+import warnings
 
 
 # Do not define in the except so the function can be tested.
@@ -32,6 +36,16 @@ try:
     from scipy.spatial.distance import euclidean as distance  # pylint: disable=unused-import
 except ImportError:
     distance = _distance
+
+
+class _Filler:
+    """
+    Utility class for :func:`are_different`.
+
+    An instance of this class is used as filler when comparing iterables that
+    may not have the same length.
+    """
+    pass
 
 
 def format_atom_string(node, **kwargs):
@@ -138,18 +152,42 @@ def are_different(left, right):
     account for rounding. In the context of this test, `nan` compares equal to
     itself, which is not the default behavior.
     """
-    if not isinstance(left, right.__class__):
+    if left.__class__ != right.__class__:
         return True
+    
+    if left is None:
+        return False
 
-    left = np.asarray(left)
-    right = np.asarray(right)
+    if isinstance(left, numbers.Number):
+        try:
+            return not np.isclose(left, right, equal_nan=True)
+        except TypeError:
+            # Some things pretend to be numbers but cannot go through isclose.
+            # It is the case of integers that overflow an int64 for instance.
+            return left != right
+    
+    if isinstance(left,(str, bytes)):
+        return left != right
 
-    if left.shape != right.shape:
-        return True
+    filler = _Filler()
 
-    # For numbers, we want an approximate comparison to account for rounding
-    # errors; it only works for numbers, though.
-    try:
-        return not np.all(np.isclose(left, right, equal_nan=True))
-    except TypeError:
-        return np.any(left != right)
+    if isinstance(left, collections.abc.Mapping):
+        zipped = itertools.zip_longest(left.items(), right.items(), fillvalue=filler)
+        return any(
+            item_left is filler
+            or item_right is filler
+            or are_different(item_left[0], item_right[0])  # keys
+            or are_different(item_left[1], item_right[1])  # values
+            for item_left, item_right in zipped
+        )
+
+    if isinstance(left, collections.abc.Iterable):
+        zipped = itertools.zip_longest(left, right, fillvalue=filler)
+        return any(
+            item_left is filler
+            or item_right is filler
+            or are_different(item_left, item_right)
+            for  item_left, item_right in zipped
+        )
+
+    return left != right
