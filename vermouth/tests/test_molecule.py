@@ -881,16 +881,46 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
 
 
 @st.composite
-def attribute_dict(draw, min_size=0, max_size=None):
+def attribute_dict(draw, min_size=0, max_size=None, max_depth=1, _recursive_depth=0):
+    """
+    Strategy that builds an attribute dictionary for meta or atoms.
+
+    Parmeters
+    ---------
+    draw:
+        Internal for hypothesis.
+    min_size: int
+        The minimum number of key-value pairs.
+    max_size: int, optional
+        The maximum number of key-value pairs. If set to `None` (default),
+        there is no bound set for the maximum size of the dictionary in the
+        same manner as :func:`hypothesis.strategies.dictionaries`.
+    max_depth: int
+        The strategy is recursive so that the values can be attribute
+        dictionaries or lists containing attribute dictionaries. This argument
+        sets the maximum depth of the recursion.
+
+    Returns
+    -------
+    hypothesis.searchstrategy.lazy.LazyStrategy
+    """
     keys = st.one_of(st.text(), st.integers(), st.none())
-    bases = (st.text(), st.integers(), st.floats(), st.none())
-    lists = st.lists(st.one_of(*bases, attribute_dict(max_size=1)), max_size=3)
-    values = st.one_of(*bases, lists, attribute_dict(max_size=1))
+    bases = [st.text(), st.integers(), st.floats(), st.none()]
+    if _recursive_depth < max_depth:
+        bases.append(attribute_dict(max_size=1, _recursive_depth=_recursive_depth + 1))
+    lists = st.lists(st.one_of(*bases), max_size=2)
+    values = st.one_of(*bases, lists)
     return draw(st.dictionaries(keys, values, min_size=min_size, max_size=max_size))
 
 
 @st.composite
 def parameter_effectors(draw):
+    """
+    Strategy that builds a :class:`~vermouth.molecule.LinkParameterEffector`.
+
+    The strategy choose one possible parameter effector class, and creates an
+    instance with random keys and format spec.
+    """
     possible_effectors = [
         vermouth.molecule.ParamDistance,
         vermouth.molecule.ParamAngle,
@@ -912,8 +942,37 @@ def parameter_effectors(draw):
 @st.composite
 def random_interaction(draw, graph, natoms=None,
                        interaction_class=Interaction, attrs=False):
+    """
+    Strategy that builds an interaction or interaction-like object.
+
+    By default, the strategy builds an instance of
+    :class:`~vermouth.molecule.Interaction`. The strategy can also build a
+    :class:`~vermouth.molecule.DeleteInteraction` by giving `DeleteInteraction`
+    to the `interaction_class` argument and `True` to the `attrs` one.
+
+    Parameters
+    ----------
+    draw:
+        Internal for hypothesis.
+    graph: networkx.Graph
+        Graph/molecule from which nodes will be drawn.
+    natoms: int, optional
+        The number of atoms involved in the interaction. If set to `None`
+        (default), a random number between 1 and 4 (included) is used.
+    interaction_class: type
+        The class to use for the interaction.
+    attrs: bool
+        Wether ot not to build an `atom_attrs` argument for the interaction.
+        This should be `False` if the interaction is a
+        :class:`~vermouth.molecule.Interaction`, and `True` if it is a
+        :class:`~vermouth.molecule.DeleteInteraction`.
+
+    Returns
+    -------
+    hypothesis.searchstrategy.lazy.LazyStrategy
+    """
     if natoms is None:
-        natoms = draw(st.integers(min_value=0, max_value=4))
+        natoms = draw(st.integers(min_value=1, max_value=4))
     atoms = tuple(draw(st.sampled_from(list(graph.nodes))) for _ in range(natoms))
     parameters = st.lists(elements=st.one_of(st.text(), parameter_effectors()))
     meta = draw(st.one_of(st.none(), attribute_dict()))
@@ -931,10 +990,23 @@ def random_interaction(draw, graph, natoms=None,
 @st.composite
 def interaction_collection(draw, graph,
                            interaction_class=Interaction, attrs=False):
+    """
+    Strategy that builds a collection of interaction-like intances.
+
+    The collection is a dictionary with any string as key, and a list of
+    :class:`~vermouth.molecule.Interaction` or
+    :class:`~vermouth.molecule.Interaction`.
+
+    The parameters are passed to :func:`random_interaction`.
+
+    See Also
+    --------
+    random_interaction
+    """
     result = {}
-    ninteraction_types = draw(st.integers(min_value=0, max_value=1))
+    ninteraction_types = draw(st.integers(min_value=0, max_value=2))
     for _ in range(ninteraction_types):
-        ninteractions = draw(st.integers(min_value=0, max_value=1))
+        ninteractions = draw(st.integers(min_value=0, max_value=2))
         type_name = draw(st.text())
         if type_name not in result and ninteractions > 0:
             result[type_name] = []
@@ -948,6 +1020,21 @@ def interaction_collection(draw, graph,
 
 @st.composite
 def random_molecule(draw, molecule_class=Molecule):
+    """
+    Strategy that builds a molecule.
+
+    Parameters
+    ----------
+    draw:
+        Internal for hypothesis.
+    molecule_class: type
+        The class of molecule to build, :class:`vermouth.molecule.Molecule` by
+        default.
+
+    Returns
+    -------
+    hypothesis.searchstrategy.lazy.LazyStrategy
+    """
     graph = draw(hnst.graph_builder(
         max_nodes=5,
         node_data=attribute_dict(max_size=3),
@@ -964,6 +1051,21 @@ def random_molecule(draw, molecule_class=Molecule):
 
 @st.composite
 def random_block(draw, block_class=Block):
+    """
+    Strategy that builds a block.
+
+    Parameters
+    ----------
+    draw:
+        Internal for hypothesis.
+    block_class: type
+        The class of block to build, :class:`vermouth.molecule.Block` by
+        default.
+
+    Returns
+    -------
+    hypothesis.searchstrategy.lazy.LazyStrategy
+    """
     block = draw(random_molecule(molecule_class=block_class))
     block.name = draw(st.one_of(st.none(), st.text()))
     return block
@@ -971,6 +1073,21 @@ def random_block(draw, block_class=Block):
 
 @st.composite
 def random_link(draw):
+    """
+    Strategy that builds a link.
+
+    Parameters
+    ----------
+    draw:
+        Internal for hypothesis.
+    link_class: type
+        The class of block to build, :class:`vermouth.molecule.Link` by
+        default.
+
+    Returns
+    -------
+    hypothesis.searchstrategy.lazy.LazyStrategy
+    """
     link = draw(random_block(block_class=Link))
     link.removed_interactions = draw(interaction_collection(
         link, interaction_class=DeleteInteraction, attrs=True,
@@ -989,6 +1106,9 @@ def random_link(draw):
 
 @hypothesis.given(random_molecule())
 def test_molecule_equal(mol):
+    """
+    Two equal molecules are equal.
+    """
     mol_copy = mol.copy()
     assert mol == mol_copy
     assert mol is not mol_copy
@@ -996,6 +1116,9 @@ def test_molecule_equal(mol):
 
 @hypothesis.given(random_block())
 def test_block_equal(block):
+    """
+    Two equal blocks are equal.
+    """
     block_copy = block.copy()
     assert block == block_copy
     assert block is not block_copy
@@ -1003,6 +1126,9 @@ def test_block_equal(block):
 
 @hypothesis.given(random_link())
 def test_link_equal(link):
+    """
+    Two equal links are equal.
+    """
     link_copy = link.copy()
     assert link == link
     assert link is not link_copy
