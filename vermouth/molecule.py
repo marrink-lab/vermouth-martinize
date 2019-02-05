@@ -16,6 +16,7 @@
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
 from functools import partial
+import itertools
 
 import networkx as nx
 import numpy as np
@@ -1105,12 +1106,57 @@ class Link(Block):
 
     def __eq__(self, other):
         return (super().__eq__(other)
-                and set(self.non_edges) == set(other.non_edges)
+                and self._same_non_edges(other)
                 and self.removed_interactions == other.removed_interactions
                 and self.molecule_meta == other.molecule_meta
                 and self.patterns == other.patterns
                 and set(self.features) == set(other.features)
                 )
+
+    def _same_non_edges(self, other):
+        """
+        Returns `True` if all the non-edges of an `other` link are equal to
+        those of this link. Returns `False` otherwise.
+        """
+        # A non-edge is a list of two elements: the key to a node in the graph
+        # that is used as achor, and a attribute dict that must match none of
+        # the atoms connected to the anchor.
+        # For the link to match, none of the non-edges must match. Therefore,
+        # their order do not matter. Though, because the attribute dicts are
+        # not hashable, non-edges cannot be put in a set.
+
+        # If the number of non-edges is not the same, we can save the hasle.
+        if len(self.non_edges) != len(other.non_edges):
+            return False
+        # If there is no non-edges, which is likely the most common case, we
+        # can also save some effort.
+        if not self.non_edges:
+            return True
+
+        # We sort the non-edges to get rid of the order. However, we cannot
+        # sort them on the attribute dict, and there may be more than one
+        # non-edge involving a given anchor. So for each anchor, we need to
+        # compare the dicts of that link with all the non already assigned
+        # dicts of the other link that share the same anchor.
+        sorted_self = sorted(self.non_edges, key=lambda x: x[0])
+        sorted_other = sorted(other.non_edges, key=lambda x: x[0])
+        zipped = zip(itertools.groupby(sorted_self),
+                     itertools.groupby(sorted_other))
+        for (key_self, attrs_self), (key_other, attrs_other) in zipped:
+            if key_self != key_other:
+                return False
+            attrs_self = list(attrs_self)
+            attrs_other = list(attrs_other)
+            if len(attrs_self) != len(attrs_other):
+                return False
+            for attr_self in attrs_self:
+                for i, attr_other in enumerate(attrs_other):
+                    if not utils.are_different(attr_self, attr_other):
+                        del attrs_other[i]
+                        break
+                else:  # no break
+                    return False
+        return True
 
 
 def attributes_match(attributes, template_attributes, ignore_keys=()):

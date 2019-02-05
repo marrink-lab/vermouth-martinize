@@ -890,16 +890,35 @@ def attribute_dict(draw, min_size=0, max_size=None):
 
 
 @st.composite
+def parameter_effectors(draw):
+    possible_effectors = [
+        vermouth.molecule.ParamDistance,
+        vermouth.molecule.ParamAngle,
+        vermouth.molecule.ParamDihedral,
+        vermouth.molecule.ParamDihedralPhase,
+    ]
+    effector = draw(st.sampled_from(possible_effectors))
+    n_keys = effector.n_keys_asked
+    keys = draw(st.lists(
+        st.text(min_size=1, max_size=4),
+        min_size=n_keys, max_size=n_keys,
+    ))
+    possible_formats = [None, '.2f', '3.0f']
+    format_spec = draw(st.sampled_from(possible_formats))
+
+    return effector_class(keys, format_spec=format_spec)
+
+
+@st.composite
 def random_interaction(draw, graph, natoms=None,
                        interaction_class=Interaction, attrs=False):
     if natoms is None:
         natoms = draw(st.integers(min_value=0, max_value=4))
     atoms = tuple(draw(st.sampled_from(list(graph.nodes))) for _ in range(natoms))
-    # TODO: Allow for LinkParameterEffector instances.
-    parameters = st.lists(elements=st.text())
+    parameters = st.lists(elements=st.one_of(st.text(), parameter_effectors()))
     meta = draw(st.one_of(st.none(), attribute_dict()))
     if attrs:
-        atom_attrs = tuple(draw(st.fixed_dictionaries({})) for _ in atoms)
+        atom_attrs = tuple(draw(attribute_dict(max_size=3)) for _ in atoms)
         return interaction_class(
             atoms=atoms,
             atom_attrs=atom_attrs,
@@ -957,9 +976,14 @@ def random_link(draw):
         link, interaction_class=DeleteInteraction, attrs=True,
     ))
     link.molecule_meta = draw(attribute_dict())
-    # TODO: Generate non_edges
-    # TODO: Generate patters
-    # TODO: Generate features
+    link.non_edges = draw(st.lists(
+        st.tuples(st.text(min_size=1, max_size=4), attribute_dict()),
+        max_size=4,
+    ))
+    link.patterns = draw(st.lists(
+        st.tuples(st.text(min_size=1, max_size=3), attribute_dict()),
+    ))
+    link.features = set(draw(st.lists(st.text(max_size=4), max_size=4)))
     return link
 
 
