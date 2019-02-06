@@ -1216,3 +1216,72 @@ def test_link_equal(link):
     link_copy = link.copy()
     assert link == link
     assert link is not link_copy
+
+
+@pytest.mark.parametrize('left, right, expected', (
+    (  # Equal edges, same order, same direction, same attributes
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        True,
+    ),
+    (  # Equal edges, but different order
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (1, 3, {'foo': 'bar'}),
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+        ],
+        True,
+    ),
+    (  # Equal edges, but different order and different direction
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (3, 1, {'foo': 'bar'}),
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+        ],
+        True,
+    ),
+    (  # Edges only differ by an attribute
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (0, 1, {'a': 0, 'b': [2, 40]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        False,
+    ),
+    (  # Edges are different
+        [
+            (0, 1, {'foo': 'bar'}),
+            (2, 3, {}),
+        ],
+        [
+            (5, 6, {'foo': 'bar'}),
+            (3, 4, {}),
+        ],
+        False,
+    ),
+))
+def test_same_edges(left, right, expected):
+    """
+    Compare edges between two molecules.
+    """
+    molecule_left = vermouth.molecule.Molecule()
+    molecule_left.add_edges_from(left)
+    molecule_right = vermouth.molecule.Molecule()
+    molecule_right.add_edges_from(right)
+    assert molecule_left.same_edges(molecule_right) == expected
+    assert molecule_right.same_edges(molecule_left) == expected

@@ -348,7 +348,7 @@ class Molecule(nx.Graph):
             self.nrexcl == other.nrexcl
             and self._force_field == other._force_field
             and self.same_nodes(other)
-            and set(self.edges) == set(other.edges)
+            and self.same_edges(other)
             and self.same_interactions(other)
         )
 
@@ -752,6 +752,42 @@ class Molecule(nx.Graph):
                 if utils.are_different(self_value, other_value):
                     return False
         return True
+
+    def same_edges(self, other):
+        """
+        Compare the edges between this molecule and an other.
+
+        Edges are unordered and undirected, but they can have attributes.
+
+        Parameters
+        ----------
+        other: networkx.Graph
+            The other molecule to compare the edges with.
+
+        Returns
+        -------
+        bool
+        """
+        # The items of `graph.edges(data=True)` are formatted as
+        # (from, to, {dict of attributes}).
+        edges_self = {
+            frozenset(edge[:2]): edge[2]
+            for edge in self.edges(data=True)
+        }
+        edges_other = {
+            frozenset(edge[:2]): edge[2]
+            for edge in other.edges(data=True)
+        }
+        # We first start with the cheapest test: if the edges do not match
+        # regardless of attributes, we can save the more costly tests.
+        if set(edges_self.keys()) != set(edges_other.keys()):
+            return False
+
+        # We know that the keys in `edges_self` and `edges_other` are the same.
+        return all(
+            not utils.are_different(edges_self[edge], edges_other[edge])
+            for edge in edges_self
+        )
 
     def iter_residues(self):
         """
