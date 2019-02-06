@@ -38,7 +38,7 @@ DIFFERENCE_USE_CASE = (
     {'a': 3, 2: 'tata'},
     {'a': 3, 2: np.array([2, 3, 4])},
     {'a': 4, 2: 'not tata'},
-    -9223372036854775809,  # beyond and int64, can cause numpy to break
+    -9223372036854775809,  # beyond an int64, can cause numpy to break
 )
 
 

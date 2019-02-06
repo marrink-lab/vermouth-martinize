@@ -321,10 +321,16 @@ class Molecule(nx.Graph):
     Two molecules are equal if:
 
     * the exclusion distance (nrexcl) are equal
-    * the force fields are equal (but may not be the same instances)
-    * the nodes are the equals and in the same order
-    * the edges are the same (but order is not accounted for)
-    * the interactions are the same and in the same order
+    * the force fields are equal (but may be different instances)
+    * the nodes are equal and in the same order
+    * the edges are the equals (but order is not accounted for)
+    * the interactions are the same and in the same order within an interaction
+      type
+
+    When comparing molecules, the order of the nodes is considered as it
+    determines in what order atoms will be written in the output. Same goes for
+    the interactions within an interaction type. The order of edges is not
+    garantied anywhere in the code, and they are not written in the output.
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
@@ -668,7 +674,8 @@ class Molecule(nx.Graph):
         Returns `True` if the interactions are the same.
 
         To be equal, two interations must share the same node key references,
-        the same interation parameters, and the same meta attributes.
+        the same interaction parameters, and the same meta attributes. Empty
+        interaction categories are ignored.
 
         Parameters
         ----------
@@ -678,7 +685,29 @@ class Molecule(nx.Graph):
         -------
         bool
         """
-        return self.interactions == other.interactions
+        keys_self = set(
+            interaction_type
+            for interaction_type, interactions
+            in self.interactions.items()
+            if interactions
+        )
+        keys_other = set(
+            interaction_type
+            for interaction_type, interactions
+            in other.interactions.items()
+            if interactions
+        )
+        # We first make sure that the two molecules share the same relevant
+        # interaction categories. A relevant category is one that actually has
+        # interactions. If the molecules share the relevant categories, then we
+        # can loop over the categories of one or the other, without issues with
+        # mismatches.
+        if keys_self != keys_other:
+            return False
+        return all(
+            self.interactions[interaction_type] == other.interactions[interaction_type]
+            for interaction_type in keys_self
+        )
 
     # TODO: Allow default values for attributes.
     # In most cases, we assume that an unspecified attribute is equivalent to
@@ -695,9 +724,8 @@ class Molecule(nx.Graph):
         Parameters
         ----------
         other: Molecule
-        ignore_attr: collections.abc.Sequence
-            Sequence of attribute keys that will not be considered in the
-            comparison.
+        ignore_attr: collections.abc.Container
+            Attribute keys that will not be considered in the comparison.
 
         Returns
         -------
@@ -806,8 +834,8 @@ class Block(Molecule):
     """
     Residue topology template
 
-    Two blocks are equal if the underlying molecules are equal, and if the bloc
-    names are equal.
+    Two blocks are equal if the underlying molecules are equal, and if the
+    block names are equal.
 
     Parameters
     ----------
@@ -1074,11 +1102,17 @@ class Link(Block):
     
     * the underlying molecules are equal
     * the names are equal
-    * the negative edges ("non_edges") are the equal regardless of order
+    * the negative edges ("non-edges") are the equal regardless of order
     * the interactions to remove are the same and in the same order
-    * the meta variables are equals regardless of order
-    * the pattern definitions are equals and in the same order
+    * the meta variables are equal
+    * the pattern definitions are equal and in the same order
     * the features are equals regardless of order
+
+    A link does not match if any of the non-edges match on the target; there
+    order therefore is not important. Same goes for features that just need to
+    be present or not. The order does matter however for interactions to remove
+    as removing the interactions in a different order may lead to a different
+    set of remaining interactions.
 
     Parameters
     ----------
@@ -1105,6 +1139,9 @@ class Link(Block):
         self._apply_to_all_nodes = {}
 
     def __eq__(self, other):
+        # TODO: There is no good reason to care about the order of patterns
+        # except for the fact that order free comparison of non hashable things
+        # is a pain.
         return (super().__eq__(other)
                 and self._same_non_edges(other)
                 and self.removed_interactions == other.removed_interactions

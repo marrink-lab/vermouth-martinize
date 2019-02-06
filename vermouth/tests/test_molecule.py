@@ -663,6 +663,75 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
         },
         False,
     ),
+    (  # Missing interaction category ("angles" is missing in one molecule)
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+        },
+        False,
+    ),
+    (  # Empty interaction category
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [],  # Empty!
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+        },
+        True,
+    ),
+
 ))
 def test_same_interactions(left, right, expected):
     """
@@ -788,6 +857,24 @@ def test_same_interactions(left, right, expected):
         ),
         False,  # expected
     ),
+    (  # same dicts as value
+        (  # left
+            (0, {'a': {'a': 0, 'b': 1}}),
+        ),
+        (  # right
+            (0, {'a': {'a': 0, 'b': 1}}),
+        ),
+        True,
+    ),
+    (  # different dicts as value
+        (  # left
+            (0, {'a': {'a': 0, 'b': 1}}),
+        ),
+        (  # right
+            (0, {'a': {'a': None, 'b': 1}}),
+        ),
+        False,
+    ),
 
 ))
 def test_same_nodes(left, right, expected):
@@ -874,7 +961,7 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
     left = left_class(left_keys)
 
     right_n_keys = right_class.n_keys_asked
-    right_keys = ['B{}'.format(idx) for idx in range(right_n_keys)]
+    right_keys = ['A{}'.format(idx) for idx in range(right_n_keys)]
     right = right_class(right_keys)
 
     assert left != right
@@ -905,7 +992,7 @@ def attribute_dict(draw, min_size=0, max_size=None, max_depth=1, _recursive_dept
     hypothesis.searchstrategy.lazy.LazyStrategy
     """
     keys = st.one_of(st.text(), st.integers(), st.none())
-    bases = [st.text(), st.integers(), st.floats(), st.none()]
+    bases = [st.none(), st.text(), st.integers(), st.floats()]
     if _recursive_depth < max_depth:
         bases.append(attribute_dict(max_size=1, _recursive_depth=_recursive_depth + 1))
     lists = st.lists(st.one_of(*bases), max_size=2)
@@ -1008,7 +1095,7 @@ def interaction_collection(draw, graph,
     for _ in range(ninteraction_types):
         ninteractions = draw(st.integers(min_value=0, max_value=2))
         type_name = draw(st.text())
-        if type_name not in result and ninteractions > 0:
+        if type_name not in result:
             result[type_name] = []
         for _ in range(ninteractions):
             interaction = draw(random_interaction(
@@ -1044,7 +1131,7 @@ def random_molecule(draw, molecule_class=Molecule):
     nrexcl = draw(st.one_of(st.none(), st.integers()))
     molecule = molecule_class(graph, meta=meta, nrexcl=nrexcl)
 
-    molecule.interations = draw(interaction_collection(graph))
+    molecule.interations = draw(interaction_collection(molecule))
     
     return molecule
 
