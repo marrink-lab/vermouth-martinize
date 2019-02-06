@@ -323,14 +323,14 @@ class Molecule(nx.Graph):
     * the exclusion distance (nrexcl) are equal
     * the force fields are equal (but may be different instances)
     * the nodes are equal and in the same order
-    * the edges are the equals (but order is not accounted for)
+    * the edges are equal (but order is not accounted for)
     * the interactions are the same and in the same order within an interaction
       type
 
     When comparing molecules, the order of the nodes is considered as it
     determines in what order atoms will be written in the output. Same goes for
     the interactions within an interaction type. The order of edges is not
-    garantied anywhere in the code, and they are not written in the output.
+    garantied anywhere in the code, and they are not writen in the output.
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
@@ -1102,13 +1102,13 @@ class Link(Block):
     
     * the underlying molecules are equal
     * the names are equal
-    * the negative edges ("non-edges") are the equal regardless of order
+    * the negative edges ("non-edges") are equal regardless of order
     * the interactions to remove are the same and in the same order
     * the meta variables are equal
     * the pattern definitions are equal and in the same order
     * the features are equals regardless of order
 
-    A link does not match if any of the non-edges match on the target; there
+    A link does not match if any of the non-edges match the target; their
     order therefore is not important. Same goes for features that just need to
     be present or not. The order does matter however for interactions to remove
     as removing the interactions in a different order may lead to a different
@@ -1117,7 +1117,7 @@ class Link(Block):
     Parameters
     ----------
     incoming_graph_data:
-        Data to initialize graph. If None (default) an empty graph is created.
+        Data to initialize graph. If `None` (default) an empty graph is created.
     attr:
         Attributes to add to graph as key=value pairs.
     """
@@ -1156,7 +1156,7 @@ class Link(Block):
         those of this link. Returns `False` otherwise.
         """
         # A non-edge is a list of two elements: the key to a node in the graph
-        # that is used as achor, and a attribute dict that must match none of
+        # that is used as anchor, and a attribute dict that must match none of
         # the atoms connected to the anchor.
         # For the link to match, none of the non-edges must match. Therefore,
         # their order do not matter. Though, because the attribute dicts are

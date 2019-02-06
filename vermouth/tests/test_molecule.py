@@ -1015,10 +1015,7 @@ def parameter_effectors(draw):
     ]
     effector = draw(st.sampled_from(possible_effectors))
     n_keys = effector.n_keys_asked
-    keys = draw(st.lists(
-        st.text(min_size=1, max_size=4),
-        min_size=n_keys, max_size=n_keys,
-    ))
+    keys = [draw(st.text(min_size=1, max_size=4)) for _ in range(n_keys)]
     possible_formats = [None, '.2f', '3.0f']
     format_spec = draw(st.sampled_from(possible_formats))
 

@@ -155,8 +155,8 @@ def are_different(left, right):
     if left.__class__ != right.__class__:
         return True
     
-    # Because we now that `left` and `right` share the same type, we also now
-    # that is `left` is `None`, then `right` is also `None`, so `left` and
+    # Because we know that `left` and `right` share the same type, we also know
+    # that if `left` is `None`, then `right` is also `None`, so `left` and
     # `right` are NOT different. It is an easy and common case, so we treat it
     # early to avoid extra work.
     if left is None:
