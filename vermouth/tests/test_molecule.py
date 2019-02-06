@@ -875,7 +875,6 @@ def test_same_interactions(left, right, expected):
         ),
         False,
     ),
-
 ))
 def test_same_nodes(left, right, expected):
     left_mol = Molecule()
@@ -1185,7 +1184,8 @@ def random_link(draw):
         max_size=4,
     ))
     link.patterns = draw(st.lists(
-        st.tuples(st.text(min_size=1, max_size=3), attribute_dict()),
+        st.tuples(st.text(min_size=1, max_size=3), attribute_dict(max_size=2)),
+        max_size=3,
     ))
     link.features = set(draw(st.lists(st.text(max_size=4), max_size=4)))
     return link
