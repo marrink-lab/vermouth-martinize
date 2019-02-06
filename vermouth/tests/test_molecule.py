@@ -967,7 +967,7 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
 
 
 @st.composite
-def attribute_dict(draw, min_size=0, max_size=None, max_depth=1, _recursive_depth=0):
+def attribute_dict(draw, min_size=0, max_size=None, max_depth=1):
     """
     Strategy that builds an attribute dictionary for meta or atoms.
 
@@ -992,8 +992,8 @@ def attribute_dict(draw, min_size=0, max_size=None, max_depth=1, _recursive_dept
     """
     keys = st.one_of(st.text(), st.integers(), st.none())
     bases = [st.none(), st.text(), st.integers(), st.floats()]
-    if _recursive_depth < max_depth:
-        bases.append(attribute_dict(max_size=1, _recursive_depth=_recursive_depth + 1))
+    if max_depth > 0:
+        bases.append(attribute_dict(max_size=1, max_depth=max_depth - 1))
     lists = st.lists(st.one_of(*bases), max_size=2)
     values = st.one_of(*bases, lists)
     return draw(st.dictionaries(keys, values, min_size=min_size, max_size=max_size))
@@ -1004,7 +1004,7 @@ def parameter_effectors(draw):
     """
     Strategy that builds a :class:`~vermouth.molecule.LinkParameterEffector`.
 
-    The strategy choose one possible parameter effector class, and creates an
+    The strategy chooses one possible parameter effector class, and creates an
     instance with random keys and format spec.
     """
     possible_effectors = [
@@ -1078,7 +1078,7 @@ def interaction_collection(draw, graph,
 
     The collection is a dictionary with any string as key, and a list of
     :class:`~vermouth.molecule.Interaction` or
-    :class:`~vermouth.molecule.Interaction`.
+    :class:`~vermouth.molecule.DeleteInteraction`.
 
     The parameters are passed to :func:`random_interaction`.
 
