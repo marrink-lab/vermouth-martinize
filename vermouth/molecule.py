@@ -330,7 +330,7 @@ class Molecule(nx.Graph):
     When comparing molecules, the order of the nodes is considered as it
     determines in what order atoms will be written in the output. Same goes for
     the interactions within an interaction type. The order of edges is not
-    garantied anywhere in the code, and they are not writen in the output.
+    garanteed anywhere in the code, and they are not writen in the output.
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
@@ -1179,14 +1179,14 @@ class Link(Block):
         # except for the fact that order free comparison of non hashable things
         # is a pain.
         return (super().__eq__(other)
-                and self._same_non_edges(other)
+                and self.same_non_edges(other)
                 and self.removed_interactions == other.removed_interactions
                 and self.molecule_meta == other.molecule_meta
                 and self.patterns == other.patterns
                 and set(self.features) == set(other.features)
                 )
 
-    def _same_non_edges(self, other):
+    def same_non_edges(self, other):
         """
         Returns `True` if all the non-edges of an `other` link are equal to
         those of this link. Returns `False` otherwise.
@@ -1213,8 +1213,8 @@ class Link(Block):
         # dicts of the other link that share the same anchor.
         sorted_self = sorted(self.non_edges, key=lambda x: x[0])
         sorted_other = sorted(other.non_edges, key=lambda x: x[0])
-        zipped = zip(itertools.groupby(sorted_self),
-                     itertools.groupby(sorted_other))
+        zipped = zip(itertools.groupby(sorted_self, key=lambda x: x[0]),
+                     itertools.groupby(sorted_other, key=lambda x: x[0]))
         for (key_self, attrs_self), (key_other, attrs_other) in zipped:
             if key_self != key_other:
                 return False

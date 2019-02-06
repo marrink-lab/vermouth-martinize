@@ -1285,3 +1285,110 @@ def test_same_edges(left, right, expected):
     molecule_right.add_edges_from(right)
     assert molecule_left.same_edges(molecule_right) == expected
     assert molecule_right.same_edges(molecule_left) == expected
+
+
+@pytest.mark.parametrize('left, right, expected', (
+    (  # Identical non-edges
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        True,
+    ),
+    (  # Identical non-edges, but disordered
+        [
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        True,
+    ),
+
+    (  # Different number of non-edges
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (  # Same number of non-edges, but mismatched anchors
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('AA', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('BB', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (  # Mismatch in an attribute
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('XX', {'foo': 'mismatch', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (  # Mismatch in number of attributes, there is a shortcut in same_non_edges
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar'}),
+            ('YY', {}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar'}),
+            ('XX', {'foo': 'no bar again'}),
+            ('YY', {}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar'}),
+            ('YY', {}),
+            ('YY', {'something': 'tadaam'}),
+        ],
+        False,
+    ),
+))
+def test_same_non_edges(left, right, expected):
+    """
+    Compare non-edges between two links.
+    """
+    link_left = vermouth.molecule.Link()
+    link_left.non_edges = left
+    link_right = vermouth.molecule.Link()
+    link_right.non_edges = right
+    assert link_left.same_non_edges(link_right) == expected
+    assert link_right.same_non_edges(link_left) == expected
