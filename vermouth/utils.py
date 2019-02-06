@@ -151,6 +151,10 @@ def are_different(left, right):
     of numerical value, the comparison is done with :func:`numpy.isclose` to
     account for rounding. In the context of this test, `nan` compares equal to
     itself, which is not the default behavior.
+
+    The order of mappings (dicts) is assumed to be irrelevant, so two
+    dictionaries are not different if the only difference is the order of the
+    keys.
     """
     if left.__class__ != right.__class__:
         return True
@@ -176,14 +180,11 @@ def are_different(left, right):
     filler = _Filler()
 
     if isinstance(left, collections.abc.Mapping):
-        zipped = itertools.zip_longest(left.items(), right.items(), fillvalue=filler)
-        return any(
-            item_left is filler
-            or item_right is filler
-            or are_different(item_left[0], item_right[0])  # keys
-            or are_different(item_left[1], item_right[1])  # values
-            for item_left, item_right in zipped
-        )
+        left_key_set = set(left.keys())
+        right_key_set = set(right.keys())
+        if left_key_set != right_key_set:
+            return True
+        return any(are_different(left[key], right[key]) for key in left_key_set)
 
     if isinstance(left, collections.abc.Iterable):
         zipped = itertools.zip_longest(left, right, fillvalue=filler)

@@ -206,3 +206,17 @@ def test_not_are_different(left):
     Test that :func:`are_different` returns False for equal values.
     """
     assert not utils.are_different(left, left)
+
+
+@pytest.mark.parametrize('left, right, expected', (
+    (  # dict with different order
+        {-1: None, '0+': None},
+        {'0+': None, -1: None},
+        False,
+    ),
+))
+def test_are_different_custom(left, right, expected):
+    """
+    Test :func:`are_different` on handcrafted cases.
+    """
+    assert utils.are_different(left, right) == expected
