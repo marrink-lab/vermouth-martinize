@@ -330,7 +330,7 @@ class Molecule(nx.Graph):
     When comparing molecules, the order of the nodes is considered as it
     determines in what order atoms will be written in the output. Same goes for
     the interactions within an interaction type. The order of edges is not
-    garanteed anywhere in the code, and they are not writen in the output.
+    guaranteed anywhere in the code, and they are not writen in the output.
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
