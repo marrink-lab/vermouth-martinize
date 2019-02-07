@@ -673,7 +673,7 @@ class Molecule(nx.Graph):
         """
         Returns `True` if the interactions are the same.
 
-        To be equal, two interations must share the same node key reference,
+        To be equal, two interactions must share the same node key reference,
         the same interaction parameters, and the same meta attributes. Empty
         interaction categories are ignored.
 
