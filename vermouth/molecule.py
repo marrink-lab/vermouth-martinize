@@ -673,7 +673,7 @@ class Molecule(nx.Graph):
         """
         Returns `True` if the interactions are the same.
 
-        To be equal, two interations must share the same node key references,
+        To be equal, two interations must share the same node key reference,
         the same interaction parameters, and the same meta attributes. Empty
         interaction categories are ignored.
 
@@ -1192,7 +1192,7 @@ class Link(Block):
         those of this link. Returns `False` otherwise.
         """
         # A non-edge is a list of two elements: the key to a node in the graph
-        # that is used as anchor, and a attribute dict that must match none of
+        # that is used as anchor, and an attribute dict that must match none of
         # the atoms connected to the anchor.
         # For the link to match, none of the non-edges must match. Therefore,
         # their order do not matter. Though, because the attribute dicts are

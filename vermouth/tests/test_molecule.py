@@ -917,7 +917,8 @@ def test_link_parameter_effector_equal(effector_class, format_spec):
 ))
 def test_link_parameter_effector_diff_format(effector_class, format_left, format_right):
     """
-    Test that LinkParameterEffector compare different if they have different format.
+    Test that two instances of LinkParameterEffector compare different if they
+    have different formats.
     """
     n_keys = effector_class.n_keys_asked
     left_keys = ['A{}'.format(idx) for idx in range(n_keys)]
@@ -1074,7 +1075,7 @@ def random_interaction(draw, graph, natoms=None,
 def interaction_collection(draw, graph,
                            interaction_class=Interaction, attrs=False):
     """
-    Strategy that builds a collection of interaction-like intances.
+    Strategy that builds a collection of interaction-like instances.
 
     The collection is a dictionary with any string as key, and a list of
     :class:`~vermouth.molecule.Interaction` or
@@ -1127,7 +1128,7 @@ def random_molecule(draw, molecule_class=Molecule):
     nrexcl = draw(st.one_of(st.none(), st.integers()))
     molecule = molecule_class(graph, meta=meta, nrexcl=nrexcl)
 
-    molecule.interations = draw(interaction_collection(molecule))
+    molecule.interactions = draw(interaction_collection(molecule))
     
     return molecule
 
