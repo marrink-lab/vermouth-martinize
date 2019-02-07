@@ -18,6 +18,10 @@ Provides several generic utility functions
 
 import string
 import numpy as np
+import collections.abc
+import numbers
+import itertools
+import warnings
 
 
 # Do not define in the except so the function can be tested.
@@ -32,6 +36,16 @@ try:
     from scipy.spatial.distance import euclidean as distance  # pylint: disable=unused-import
 except ImportError:
     distance = _distance
+
+
+class _Filler:
+    """
+    Utility class for :func:`are_different`.
+
+    An instance of this class is used as filler when comparing iterables that
+    may not have the same length.
+    """
+    pass
 
 
 def format_atom_string(node, **kwargs):
@@ -127,3 +141,58 @@ def are_all_equal(iterable):
     iterator = iter(iterable)
     first = next(iterator, None)
     return all(item == first for item in iterator)
+
+
+def are_different(left, right):
+    """
+    Return True if two values are different from one another.
+
+    Values are considered different if they do not share the same type. In case
+    of numerical value, the comparison is done with :func:`numpy.isclose` to
+    account for rounding. In the context of this test, `nan` compares equal to
+    itself, which is not the default behavior.
+
+    The order of mappings (dicts) is assumed to be irrelevant, so two
+    dictionaries are not different if the only difference is the order of the
+    keys.
+    """
+    if left.__class__ != right.__class__:
+        return True
+    
+    # Because we know that `left` and `right` share the same type, we also know
+    # that if `left` is `None`, then `right` is also `None`, so `left` and
+    # `right` are NOT different. It is an easy and common case, so we treat it
+    # early to avoid extra work.
+    if left is None:
+        return False
+
+    if isinstance(left, numbers.Number):
+        try:
+            return not np.isclose(left, right, equal_nan=True)
+        except TypeError:
+            # Some things pretend to be numbers but cannot go through isclose.
+            # It is the case of integers that overflow an int64 for instance.
+            return left != right
+    
+    if isinstance(left,(str, bytes)):
+        return left != right
+
+    filler = _Filler()
+
+    if isinstance(left, collections.abc.Mapping):
+        left_key_set = set(left.keys())
+        right_key_set = set(right.keys())
+        if left_key_set != right_key_set:
+            return True
+        return any(are_different(left[key], right[key]) for key in left_key_set)
+
+    if isinstance(left, collections.abc.Iterable):
+        zipped = itertools.zip_longest(left, right, fillvalue=filler)
+        return any(
+            item_left is filler
+            or item_right is filler
+            or are_different(item_left, item_right)
+            for  item_left, item_right in zipped
+        )
+
+    return left != right
