@@ -48,10 +48,11 @@ class _Filler:
     pass
 
 
-def format_atom_string(node, **kwargs):
-    node = node.copy()
-    node.update(kwargs)
-    return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**node)
+def format_atom_string(node, atomid='', chain='', resname='', resid='', atomname=''):
+    defaults = dict(atomid=atomid, chain=chain, resname=resname, resid=resid,
+                    atomname=atomname)
+    defaults.update(node)
+    return '{atomid}{chain}-{resname}{resid}:{atomname}'.format(**defaults)
 
 
 def maxes(iterable, key=lambda x: x):

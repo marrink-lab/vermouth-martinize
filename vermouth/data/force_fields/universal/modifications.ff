@@ -13,7 +13,7 @@ C OXT
 [ modification ]
 N-ter
 [ atoms ]
-CA {"element": "CA"}
+CA {"element": "C"}
 N {"element": "N"}
 HN {"element": "H", "replace": {"atomname": "HN1"}}
 HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}

@@ -299,6 +299,10 @@ def fix_ptm(molecule):
                 # non PTM atoms attributes need to change.
                 if ptm_node['PTM_atom']:
                     mol_node['graph'] = molecule.subgraph([mol_idx]).copy()
+                    for attr in ptm_node:
+                        # FIXME: This probably transfers too many attributes.
+                        if attr not in ('PTM_atom', 'replace'):
+                            mol_node[attr] = ptm_node[attr]
                 if 'replace' in ptm_node:
                     to_replace = ptm_node['replace']
                     for attr_name, val in to_replace.items():
