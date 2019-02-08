@@ -149,33 +149,24 @@ def write_gmx_topology(system, top_path, deduplicate=True, header=()):
     if deduplicate:
         # Deduplicate the moleculetypes in order to write each molecule ITP only
         # once.
-        molecule_types = [[system.molecules[0], [system.molecules[0]]], ]
+        molecule_types = [[system.molecules[0]], ]
         for molecule in system.molecules[1:]:
             for molecule_type, share_moltype in molecule_types:
-                if molecule.share_moltype_with(molecule_type):
+                if molecule.share_moltype_with(share_moltype[0]):
                     share_moltype.append(molecule)
                     break
             else:  # no break
-                molecule_types.append([molecule, [molecule, ]])
+                molecule_types.append([molecule, ])
     else:
-        molecule_types = [[molecule, [molecule, ]] for molecule in system.molecules]
+        molecule_types = [[molecule, ] for molecule in system.molecules]
     # Write the ITP files for the moleculetypes.
-    for molidx, (molecule_type, _) in enumerate(molecule_types):
-        molecule_type.moltype = 'molecule_{}'.format(molidx)
+    for molidx, sharing_type in enumerate(molecule_types):
+        for molecule in sharing_type:
+            molecule.moltype = 'molecule_{}'.format(molidx)
         with open('molecule_{}.itp'.format(molidx), 'w') as outfile:
-            vermouth.gmx.itp.write_molecule_itp(molecule_type, outfile, header=header)
-    # Reorganize the molecule type assignment to write the top file.
-    # The top file "molecules" section lists the molecules in the same order
-    # as in the structure and group them. To do the grouping, we associate each
-    # molecule to the molecule type (its name actually) instead of associating
-    # the molecule types with the molecules as we did above.
-    molecule_to_type = {}
-    for molecule_type, share_moltype in molecule_types:
-        for molecule in share_moltype:
-            molecule_to_type[molecule] = molecule_type.moltype
+            vermouth.gmx.itp.write_molecule_itp(sharing_type[0], outfile, header=header)
     # Write the top file
-    max_name_length = max(len(molecule_type.moltype)
-                          for molecule_type, _ in molecule_types)
+    max_name_length = max(len(molecules[0].moltype) for molecules in molecule_types)
     template = textwrap.dedent("""\
         #include "martini.itp"
         {includes}
@@ -187,11 +178,10 @@ def write_gmx_topology(system, top_path, deduplicate=True, header=()):
         {molecules}
     """)
     include_string = '\n'.join(
-        '#include "{}.itp"'.format(molecule_type.moltype)
-        for molecule_type, _ in molecule_types
+        '#include "{}.itp"'.format(molecule_type[0].moltype)
+        for molecule_type in molecule_types
     )
-    molecule_groups = itertools.groupby(system.molecules,
-                                        key=lambda x: molecule_to_type[x])
+    molecule_groups = itertools.groupby(system.molecules, key=lambda x: x.moltype)
     molecule_string = '\n'.join(
         '{mtype:<{length}}    {num}'
         .format(mtype=mtype, num=len(list(group)), length=max_name_length)
