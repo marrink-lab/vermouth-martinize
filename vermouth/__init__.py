@@ -52,3 +52,28 @@ del LOGGER
 from .molecule import Molecule
 from .processors import *
 from .system import System
+
+from .due import due, BibTeX
+due.cite(
+    BibTeX(
+        """
+        @article{Kroon2018,
+          doi = {10.1016/j.bpj.2017.11.3648},
+          url = {https://doi.org/10.1016/j.bpj.2017.11.3648},
+          year  = {2018},
+          month = {feb},
+          publisher = {Elsevier {BV}},
+          volume = {114},
+          number = {3},
+          pages = {676--677},
+          author = {Peter C. Kroon and Tsjerk A. Wassenaar and Jonathan Barnoud and Siewert-Jan Marrink},
+          title = {New Automated and High-throughput Tools for the Martini Forcefield},
+          journal = {Biophysical Journal}
+        }
+        """
+    ),
+    description='Vermouth and Martinize2',
+    cite_module=True,
+    path='vermouth',
+)
+del due, BibTeX

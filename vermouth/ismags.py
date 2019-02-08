@@ -103,8 +103,10 @@ from functools import reduce, wraps
 import itertools
 
 from .utils import are_all_equal
+from .due import due, Doi
 
 
+@due.dcite(Doi('10.1371/journal.pone.0097896'), description='ISMAGS graph isomorphism')
 class ISMAGS:
     """
     Implements the ISMAGS subgraph matching algorith. [1]_ ISMAGS stands for

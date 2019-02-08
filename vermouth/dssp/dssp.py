@@ -26,6 +26,7 @@ from ..system import System
 from ..processors.processor import Processor
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 from .. import utils
+from ..due import due, Doi
 
 
 class DSSPError(Exception):
@@ -141,6 +142,10 @@ def read_dssp2(lines):
     return secstructs
 
 
+@due.dcite(
+    Doi('10.1002/bip.360221211'),
+    description='Secondary structure assignation with DSSP',
+)
 def run_dssp(system, executable='dssp', savefile=None):
     """
     Run DSSP on a system and return the assigned secondary structures.

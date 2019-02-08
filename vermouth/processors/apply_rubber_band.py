@@ -21,6 +21,7 @@ import networkx as nx
 
 from .processor import Processor
 from .. import selectors
+from ..due import due, Doi
 
 DEFAULT_BOND_TYPE = 6
 
@@ -149,6 +150,7 @@ def build_connectivity_matrix(graph, separation, selection=None):
     return connectivity
 
 
+@due.dcite(Doi('10.1021/ct9002114'), description='Rubber band elastic network')
 def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
