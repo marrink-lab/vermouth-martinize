@@ -25,6 +25,7 @@ import itertools
 import textwrap
 from pathlib import Path
 import sys
+from collections import OrderedDict
 
 import vermouth
 import vermouth.forcefield
@@ -140,33 +141,27 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     return system
 
 
-def write_gmx_topology(system, top_path, deduplicate=True, header=()):
+def write_gmx_topology(system, top_path, header=()):
     """
     Writes a Gromacs .top file for the specified system.
     """
     if not system.molecules:
         raise ValueError('No molecule in the system. Nothing to write.')
-    if deduplicate:
-        # Deduplicate the moleculetypes in order to write each molecule ITP only
-        # once.
-        molecule_types = [[system.molecules[0]], ]
-        for molecule in system.molecules[1:]:
-            for molecule_type, share_moltype in molecule_types:
-                if molecule.share_moltype_with(share_moltype[0]):
-                    share_moltype.append(molecule)
-                    break
-            else:  # no break
-                molecule_types.append([molecule, ])
-    else:
-        molecule_types = [[molecule, ] for molecule in system.molecules]
+
     # Write the ITP files for the moleculetypes.
-    for molidx, sharing_type in enumerate(molecule_types):
-        for molecule in sharing_type:
-            molecule.moltype = 'molecule_{}'.format(molidx)
-        with open('molecule_{}.itp'.format(molidx), 'w') as outfile:
-            vermouth.gmx.itp.write_molecule_itp(sharing_type[0], outfile, header=header)
+    max_name_length = 0
+    moltype_count = OrderedDict()
+    molecule_groups = itertools.groupby(system.molecules, key=lambda x: x.meta['moltype'])
+    for moltype, molecules in molecule_groups:
+        molecule = next(molecules)
+        with open('{}.itp'.format(moltype), 'w') as outfile:
+            vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
+        this_moltype_len = len(molecule.meta['moltype'])
+        if this_moltype_len > max_name_length:
+            max_name_length = this_moltype_len
+        moltype_count[moltype] = 1 + len(list(molecules))
+
     # Write the top file
-    max_name_length = max(len(molecules[0].moltype) for molecules in molecule_types)
     template = textwrap.dedent("""\
         #include "martini.itp"
         {includes}
@@ -178,14 +173,13 @@ def write_gmx_topology(system, top_path, deduplicate=True, header=()):
         {molecules}
     """)
     include_string = '\n'.join(
-        '#include "{}.itp"'.format(molecule_type[0].moltype)
-        for molecule_type in molecule_types
+        '#include "{}.itp"'.format(molecule_type)
+        for molecule_type in moltype_count
     )
-    molecule_groups = itertools.groupby(system.molecules, key=lambda x: x.moltype)
     molecule_string = '\n'.join(
         '{mtype:<{length}}    {num}'
-        .format(mtype=mtype, num=len(list(group)), length=max_name_length)
-        for mtype, group in molecule_groups
+        .format(mtype=mtype, num=num, length=max_name_length)
+        for mtype, num in moltype_count.items()
     )
     with open(str(top_path), 'w') as outfile:
         outfile.write(
@@ -479,6 +473,7 @@ def entry():
             vermouth.MergeChains(chain_set).run_system(system)
 
     LOGGER.info('Writing output.', type='step')
+    vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
     # Write the topology if requested
     header = [
         'This file was generated using the following command:',
@@ -493,9 +488,7 @@ def entry():
         ]
 
     if args.top_path is not None:
-        write_gmx_topology(system, args.top_path,
-                           deduplicate=not args.keep_duplicate_itp,
-                           header=header)
+        write_gmx_topology(system, args.top_path, header=header)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)

@@ -83,7 +83,8 @@ def write_molecule_itp(molecule, outfile, header=()):
     """
     # Make sure the molecule contains the information required to write the
     # header.
-    _attr_has_not_none_attr(molecule, 'moltype')
+    if molecule.meta.get('moltype') is None:
+        raise ValueError('A molecule must have a moltype meta to write an ITP')
     _attr_has_not_none_attr(molecule, 'nrexcl')
 
     # Make sure the molecule contains the information required to write the
@@ -116,7 +117,7 @@ def write_molecule_itp(molecule, outfile, header=()):
         outfile.write('\n')
 
     outfile.write('[ moleculetype ]\n')
-    outfile.write('{} {}\n\n'.format(molecule.moltype, molecule.nrexcl))
+    outfile.write('{} {}\n\n'.format(molecule.meta['moltype'], molecule.nrexcl))
 
     # The atoms in the [atoms] section must be consecutively numbered, yet
     # there is no guarantee that the molecule fulfill that constrain.
