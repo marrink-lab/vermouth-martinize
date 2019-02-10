@@ -16,6 +16,7 @@
 Test for the NameMolType processor.
 """
 
+from collections import defaultdict
 import itertools
 from glob import glob
 import os.path
@@ -29,7 +30,8 @@ from .molecule_strategies import random_molecule
 from .datafiles import PDB_HB
 
 @st.composite
-def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None):
+def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
+                           molecule_kwargs={}):
     """
     Generates a list of molecules and the list of the expected moltypes.
 
@@ -44,6 +46,8 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None):
     max_size: int, optional
         Maximum number of molecules. If `None`, behaves the same way as
         :func:`hypothesis.strategies.lists`.
+    molecule_kwargs: dict
+        Arguments to pass to :func:`random_molecule`.
 
     Returns
     -------
@@ -79,9 +83,8 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None):
             pre_to_moltype[pre_moltype] = 'molecule_{}'.format(moltype_index)
         moltypes.append(pre_to_moltype[pre_moltype])
 
-    molecule_share_template = tuple(st.shared(random_molecule(), key=moltype)
-                                    for moltype in moltypes)
-    molecules = draw(st.tuples(*molecule_share_template))
+    sharing = defaultdict(lambda : draw(random_molecule(**molecule_kwargs)))
+    molecules = [sharing[moltype] for moltype in moltypes]
 
     # So far we made sure that molecules with a different moltype are drawn
     # separately. Though, two different draws may result in equal molecules,
@@ -99,8 +102,11 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None):
 
     return [molecules, moltypes]
 
+
 @pytest.mark.parametrize('deduplicate', (True, False))
-@given(mols_and_moltypes=molecules_and_moltypes())
+@given(mols_and_moltypes=molecules_and_moltypes(
+    max_size=4, max_moltypes=3,  molecule_kwargs={'max_nodes': 3, 'max_meta': 3},
+))
 def test_name_moltype(mols_and_moltypes, deduplicate):
     molecules, moltypes = mols_and_moltypes
 

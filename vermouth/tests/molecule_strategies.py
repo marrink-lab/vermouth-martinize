@@ -156,7 +156,7 @@ def interaction_collection(draw, graph,
 
 
 @st.composite
-def random_molecule(draw, molecule_class=Molecule):
+def random_molecule(draw, molecule_class=Molecule, max_nodes=5, max_meta=None):
     """
     Strategy that builds a molecule.
 
@@ -173,11 +173,11 @@ def random_molecule(draw, molecule_class=Molecule):
     hypothesis.searchstrategy.lazy.LazyStrategy
     """
     graph = draw(hnst.graph_builder(
-        max_nodes=5,
+        max_nodes=max_nodes,
         node_data=attribute_dict(max_size=3),
         edge_data=attribute_dict(max_size=2),
     ))
-    meta = draw(attribute_dict())
+    meta = draw(attribute_dict(max_size=max_meta))
     nrexcl = draw(st.one_of(st.none(), st.integers()))
     molecule = molecule_class(graph, meta=meta, nrexcl=nrexcl)
 
