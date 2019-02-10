@@ -25,21 +25,33 @@ from vermouth.processors.name_moltype import NameMolType
 from .molecule_strategies import random_molecule
 
 @st.composite
-def molecules_and_moltypes(draw,
-                           min_moltypes=1, max_moltypes=4,
-                           min_size=None, max_size=None):
+def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None):
     """
     Generates a list of molecules and the list of the expected moltypes.
+
+    Parameters
+    ----------
+    draw:
+        Internal for hypothesis.
+    max_moltypes: int
+        Maximum number of different moltypes.
+    min_size: int
+        Minimum number of molecules.
+    max_size: int, optional
+        Maximum number of molecules. If `None`, behaves the same way as
+        :func:`hypothesis.strategies.lists`.
+
+    Returns
+    -------
+    hypothesis.searchstrategy.lazy.LazyStrategy
+        A list of molecules and a list of moltype names corresponding to these
+        molecules as they are expected to be assigned by
+        :class:`vermouth.processors.name_moltype.NameMolType`.
     """
-    if min_size is None:
-        min_size = min_moltypes
     if max_size is not None and max_size < min_size:
         raise ValueError('max_size ({}) must be greater than min_size ({}), or None.'
                          .fornat(max_size, min_size))
-    if max_moltypes < min_moltypes:
-        raise ValueError('max_moltypes ({}) must be greater than min_moltypes ({}).' 
-                         .fornat(max_moltypes, min_moltypes))
-                         
+
     # We first generate the list of expected moltypes, we can then use it as
     # keys to draw the molecules with shared strategies. The moltypes must
     # match what NameMolType would generate, so they must have the form
@@ -47,7 +59,7 @@ def molecules_and_moltypes(draw,
     # on the first occurence of the molecule type.
     # pre_moltypes will be the moltype names before we rename them based on
     # their order.
-    n_moltypes = draw(st.integers(min_value=min_moltypes, max_value=max_moltypes))
+    n_moltypes = draw(st.integers(min_value=1, max_value=max_moltypes))
     unique_pre_moltypes = range(n_moltypes)
     pre_moltypes_sampled = draw(st.lists(st.sampled_from(unique_pre_moltypes),
                                          min_size=min_size, max_size=max_size))
@@ -82,7 +94,6 @@ def molecules_and_moltypes(draw,
     molecules = [molecule.copy() for molecule in molecules]
 
     return [molecules, moltypes]
-
 
 @pytest.mark.parametrize('deduplicate', (True, False))
 @given(mols_and_moltypes=molecules_and_moltypes())
