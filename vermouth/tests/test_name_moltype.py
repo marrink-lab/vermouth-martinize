@@ -17,12 +17,16 @@ Test for the NameMolType processor.
 """
 
 import itertools
+from glob import glob
+import os.path
+import subprocess
 import pytest
 from hypothesis import given, assume
 from hypothesis import strategies as st
 from vermouth import System
 from vermouth.processors.name_moltype import NameMolType
 from .molecule_strategies import random_molecule
+from .datafiles import PDB_HB
 
 @st.composite
 def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None):
@@ -111,3 +115,31 @@ def test_name_moltype(mols_and_moltypes, deduplicate):
 
     found_moltypes = [molecule.meta['moltype'] for molecule in system.molecules]
     assert found_moltypes == moltypes
+
+
+@pytest.mark.parametrize('deduplicate', (True, False))
+def test_martinize2_moltypes(tmpdir, deduplicate):
+    """
+    Run martinize2 and make sure the ITP file produced have the expected names.
+    """
+    command = [
+        'martinize2',
+        '-f', str(PDB_HB),
+        '-o', 'topol.top',
+        '-x', 'out.pdb',
+        '-ignore', 'HOH', '-ignore', 'HEME',
+    ]
+    if deduplicate:
+        expected = ['molecule_{}.itp'.format(i) for i in range(2)]
+        n_outputs = 2
+    else:
+        command.append('-sep')
+        n_outputs = 4
+    expected = ['molecule_{}.itp'.format(i) for i in range(n_outputs)]
+
+    proc = subprocess.Popen(command, cwd=str(tmpdir))
+    exit_code = proc.wait()
+    assert exit_code == 0
+
+    itp_files = sorted(os.path.basename(fname) for fname in glob(str(tmpdir / '*.itp')))
+    assert itp_files == expected
