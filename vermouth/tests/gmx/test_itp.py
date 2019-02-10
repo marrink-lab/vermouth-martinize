@@ -37,7 +37,7 @@ def dummy_molecule():
             'charge_group': 1, 'charge': 0, 'mass': 72
         }),
     ))
-    molecule.moltype = 'TEST'
+    molecule.meta['moltype'] = 'TEST'
     molecule.nrexcl = 1
     return molecule
 
