@@ -43,7 +43,7 @@ class NameMolType(Processor):
 
     See Also
     --------
-    vermouth.processors.SetMoleculeMeta
+    vermouth.processors.set_molecule_meta.SetMoleculeMeta
         This processor can set key/value pairs in the meta attributes of one
         molecule, or all molecules in a system. It can be used to set the
         moltype manually.
