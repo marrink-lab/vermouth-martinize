@@ -44,7 +44,7 @@ def attribute_dict(draw, min_size=0, max_size=None, max_depth=1):
     -------
     hypothesis.searchstrategy.lazy.LazyStrategy
     """
-    keys = st.one_of(st.text(), st.integers(), st.none())
+    keys = st.one_of(st.integers(), st.none(), st.text())
     bases = [st.none(), st.text(), st.integers(), st.floats()]
     if max_depth > 0:
         bases.append(attribute_dict(max_size=1, max_depth=max_depth - 1))

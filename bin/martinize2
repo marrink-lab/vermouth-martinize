@@ -148,18 +148,40 @@ def write_gmx_topology(system, top_path, header=()):
     if not system.molecules:
         raise ValueError('No molecule in the system. Nothing to write.')
 
-    # Write the ITP files for the moleculetypes.
+    # Write the ITP files for the molecule types, and prepare writing the
+    # [ molecules ] section of the top file.
+    # * We write one ITP file for each different moltype in the system, the
+    #   moltype being defined by the name provided under the "moltype" meta of
+    #   the molecules. If more than one molecule share the same moltype, we use
+    #   the first one to write the ITP file.
+    moltype_written = set()
+    # * We keep track of the length of the longer moltype name, to align the
+    #   [ molecules ] section.
     max_name_length = 0
-    moltype_count = OrderedDict()
+    # * We keep track of groups of successive molecules with the same moltypes.
+    moltype_count = []  # items will be [moltype, number of molecules]
+
+    # Iterate over groups of successive molecules with the same moltypes. We
+    # shall *NOT* sort the molecules before hand, as groups of successive
+    # molecules wit the same moltype can be interupted by other moltypes, and
+    # we want to reflect these interuptions in the [ molecules ] section of the
+    # top file.
     molecule_groups = itertools.groupby(system.molecules, key=lambda x: x.meta['moltype'])
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
-        with open('{}.itp'.format(moltype), 'w') as outfile:
-            vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
-        this_moltype_len = len(molecule.meta['moltype'])
-        if this_moltype_len > max_name_length:
-            max_name_length = this_moltype_len
-        moltype_count[moltype] = 1 + len(list(molecules))
+        if moltype not in moltype_written:
+            # A given moltype can appear more than once in the sequence of
+            # molecules, without being uninterpted by other moltypes. Even in
+            # that case, we want to write the ITP only once.
+            with open('{}.itp'.format(moltype), 'w') as outfile:
+                vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
+            this_moltype_len = len(molecule.meta['moltype'])
+            if this_moltype_len > max_name_length:
+                max_name_length = this_moltype_len
+            moltype_written.add(moltype)
+        # We already removed one element from the "molecules" generator, do not
+        # forget to count it in the number of molecules in that stride.
+        moltype_count.append([moltype, 1 + len(list(molecules))])
 
     # Write the top file
     template = textwrap.dedent("""\
@@ -174,12 +196,12 @@ def write_gmx_topology(system, top_path, header=()):
     """)
     include_string = '\n'.join(
         '#include "{}.itp"'.format(molecule_type)
-        for molecule_type in moltype_count
+        for molecule_type, _ in moltype_count
     )
     molecule_string = '\n'.join(
         '{mtype:<{length}}    {num}'
         .format(mtype=mtype, num=num, length=max_name_length)
-        for mtype, num in moltype_count.items()
+        for mtype, num in moltype_count
     )
     with open(str(top_path), 'w') as outfile:
         outfile.write(

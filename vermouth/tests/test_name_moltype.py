@@ -74,8 +74,8 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
     if not pre_moltypes_sampled:
         return [], []
 
-    moltype_index = 0
-    pre_to_moltype = {pre_moltypes_sampled[0]: 'molecule_{}'.format(moltype_index)}
+    moltype_index = -1  # Will be 0 for the first moltype
+    pre_to_moltype = {}
     moltypes = []
     for pre_moltype in pre_moltypes_sampled:
         if pre_moltype not in pre_to_moltype:
@@ -88,7 +88,7 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
 
     # So far we made sure that molecules with a different moltype are drawn
     # separately. Though, two different draws may result in equal molecules,
-    # especially as molecules are reduced whn shrinking the draws.
+    # especially as molecules are reduced when shrinking the draws.
     representatives = [
         next(group)[0]
         for _, group in itertools.groupby(
@@ -144,7 +144,7 @@ def test_martinize2_moltypes(tmpdir, deduplicate):
     expected = ['molecule_{}.itp'.format(i) for i in range(n_outputs)]
 
     proc = subprocess.Popen(command, cwd=str(tmpdir))
-    exit_code = proc.wait()
+    exit_code = proc.wait(timeout=60)
     assert exit_code == 0
 
     itp_files = sorted(os.path.basename(fname) for fname in glob(str(tmpdir / '*.itp')))

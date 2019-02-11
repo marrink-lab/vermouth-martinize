@@ -21,7 +21,7 @@ from .processor import Processor
 
 class NameMolType(Processor):
     """
-    Assign moltype names to molecules.
+    Assigns molecule type (moltype) names to molecules.
 
     Moltype names are the names given to molecules in an ITP file. This
     processor assign consecutive names to the molecule. If the `deduplicate`
@@ -51,6 +51,7 @@ class NameMolType(Processor):
         Writes the ITP file for a molecule, and use the 'moltype' meta to name
         the molecule.
     """
+    # TODO: See issue #35
     def __init__(self, deduplicate=True, meta_key='moltype'):
         self.deduplicate = deduplicate
         self.meta_key = meta_key
@@ -81,5 +82,5 @@ class NameMolType(Processor):
             molecule.meta[self.meta_key] = 'molecule_{}'.format(match_id)
 
     def _name_without_deduplication(self, system):
-        for match_id, molecule in enumerate(system.molecules):
-            molecule.meta[self.meta_key] = 'molecule_{}'.format(match_id)
+        for molecule_id, molecule in enumerate(system.molecules):
+            molecule.meta[self.meta_key] = 'molecule_{}'.format(molecule_id)
