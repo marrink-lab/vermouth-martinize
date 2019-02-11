@@ -16,6 +16,12 @@
 Test for the NameMolType processor.
 """
 
+# Pylint complains about hypothesis strategies not receiving a value for the
+# `draw` parameter. This is because the `draw` parameter is implicitly filled
+# by hypothesis. The pylint warning is disabled for the file instead of being
+# disabled at every call of a strategy.
+# pylint: disable=no-value-for-parameter
+
 from collections import defaultdict
 import itertools
 from glob import glob
@@ -31,7 +37,7 @@ from .datafiles import PDB_HB
 
 @st.composite
 def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
-                           molecule_kwargs={}):
+                           molecule_kwargs=None):
     """
     Generates a list of molecules and the list of the expected moltypes.
 
@@ -46,7 +52,7 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
     max_size: int, optional
         Maximum number of molecules. If `None`, behaves the same way as
         :func:`hypothesis.strategies.lists`.
-    molecule_kwargs: dict
+    molecule_kwargs: dict, optional
         Arguments to pass to :func:`random_molecule`.
 
     Returns
@@ -58,7 +64,9 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
     """
     if max_size is not None and max_size < min_size:
         raise ValueError('max_size ({}) must be greater than min_size ({}), or None.'
-                         .fornat(max_size, min_size))
+                         .format(max_size, min_size))
+    if molecule_kwargs is None:
+        molecule_kwargs = {}
 
     # We first generate the list of expected moltypes, we can then use it as
     # keys to draw the molecules with shared strategies. The moltypes must
@@ -83,7 +91,7 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
             pre_to_moltype[pre_moltype] = 'molecule_{}'.format(moltype_index)
         moltypes.append(pre_to_moltype[pre_moltype])
 
-    sharing = defaultdict(lambda : draw(random_molecule(**molecule_kwargs)))
+    sharing = defaultdict(lambda: draw(random_molecule(**molecule_kwargs)))
     molecules = [sharing[moltype] for moltype in moltypes]
 
     # So far we made sure that molecules with a different moltype are drawn
@@ -92,7 +100,8 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
     representatives = [
         next(group)[0]
         for _, group in itertools.groupby(
-                zip(molecules, moltypes), key=lambda x: x[1])
+            zip(molecules, moltypes), key=lambda x: x[1]
+        )
     ]
     assume(all(not mol1.share_moltype_with(mol2)
                for mol1, mol2 in itertools.combinations(representatives, 2)))
@@ -105,14 +114,17 @@ def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
 
 @pytest.mark.parametrize('deduplicate', (True, False))
 @given(mols_and_moltypes=molecules_and_moltypes(
-    max_size=4, max_moltypes=3,  molecule_kwargs={'max_nodes': 3, 'max_meta': 3},
+    max_size=4, max_moltypes=3, molecule_kwargs={'max_nodes': 3, 'max_meta': 3},
 ))
 def test_name_moltype(mols_and_moltypes, deduplicate):
+    """
+    The NameMolType processor works as expected with and withour deduplication.
+    """
     molecules, moltypes = mols_and_moltypes
 
     system = System()
     system.molecules = molecules
-    
+
     if not deduplicate:
         moltypes = ['molecule_{}'.format(i) for i in range(len(molecules))]
 
