@@ -18,7 +18,6 @@ Contains the Mapping object and the associated parser.
 from collections import defaultdict
 from functools import partial
 
-from .forcefield import FORCE_FIELDS
 from .ffinput import _tokenize, _parse_atom_attributes
 from .graph_utils import MappingGraphMatcher
 from .molecule import Block

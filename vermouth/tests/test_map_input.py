@@ -207,6 +207,56 @@ A B C D
 )
 
 
+def case_to_dummy_ffs(ff_names, names, mapping, weights, extra):
+    from_atoms = []
+    for _, atname in mapping.keys():
+        from_atoms.append(atname)
+
+    to_atoms = []
+    for _, atname in weights.keys():
+        to_atoms.append(atname)
+
+    ffs = {}
+    for ff_name in ff_names:
+        ff = vermouth.forcefield.ForceField(name=ff_name)
+        ffs[ff_name] = ff
+        for name in names:
+            block = vermouth.molecule.Block(force_field=ff, name=name)
+            block.add_nodes_from(from_atoms + to_atoms)
+            for node in block.nodes:
+                block.nodes[node]['atomname'] = node
+            ff.blocks[name] = block
+    return ffs
+
+
+def mapping_to_old_style(mapping):
+    map_out = collections.defaultdict(list)
+    weights = collections.defaultdict(dict)
+    for node_from in mapping:
+        for node_to, weight in mapping[node_from].items():
+            map_out[(0, node_from)].append((0, node_to))
+            weights[(0, node_to)][(0, node_from)] = weight
+    return dict(map_out), dict(weights)
+
+
+def compare_old_new_mappings(mappings, reference):
+    assert mappings.keys() == reference.keys()
+    for from_ff in mappings:
+        assert mappings[from_ff].keys() == reference[from_ff].keys()
+        for to_ff in mappings[from_ff]:
+            assert mappings[from_ff][to_ff].keys() == reference[from_ff][to_ff].keys()
+            for case_name in mappings[from_ff][to_ff]:
+                mapping, weights = mapping_to_old_style(mappings[from_ff][to_ff][case_name].mapping)
+                assert mapping.keys() == reference[from_ff][to_ff][case_name][0].keys()
+                for from_, tos in mapping.items():
+                    # Old style mappigns could contain something like:
+                    #  {(0, 'd'): [(0, 'A'), (0, 'B'), (0, 'B')]}. New style
+                    # mappings can't. Instead, it's in the weights.
+                    assert all(to in reference[from_ff][to_ff][case_name][0][from_] for to in tos)
+                assert weights == reference[from_ff][to_ff][case_name][1]
+                assert mappings[from_ff][to_ff][case_name].block_to.extra == reference[from_ff][to_ff][case_name][2]
+
+
 @pytest.mark.parametrize(
     'case',
     [SYSTEM_BASIC, SYSTEM_SHARED, SYSTEM_EXTRA, SYSTEM_NULL, SYSTEM_FROM_TO, SYSTEM_IGNORE]
@@ -280,13 +330,17 @@ def test_read_mapping_file(case):
         reference[from_ff][to_ff][case.name] = (
             case.mapping, case.weights, case.extra
         )
+
+    ffs = case_to_dummy_ffs(case.from_ff + case.to_ff, [case.name], case.mapping,
+                            case.weights, case.extra)
+
     reference = vermouth.map_input._default_to_dict(reference)
 
-    mappings = vermouth.map_input.read_mapping_file(
-        ['[ molecule ]'] + case.string.split('\n')
+    mappings = vermouth.map_input.read_backmapping_file(
+        ['[ molecule ]'] + case.string.split('\n'),
+        ffs
     )
-
-    assert mappings == reference
+    compare_old_new_mappings(mappings, reference)
 
 
 @pytest.fixture
@@ -335,8 +389,20 @@ def test_read_mapping_file_multiple(reference_multi):
     Test that read_mapping_file can read more than one molecule.
     """
     content, reference = reference_multi
-    mappings = vermouth.map_input.read_mapping_file(content)
-    assert mappings == reference
+    from_names = list(reference.keys())
+    to_names = []
+    block_names = []
+
+    for k in reference:
+        to_names.extend(reference[k].keys())
+        for to in reference[k]:
+            block_names.extend(reference[k][to].keys())
+    force_fields = case_to_dummy_ffs(from_names + to_names, block_names,
+                                     {(0, 'X1'): [(0, 'A')], (0, 'X2'): [(0, 'B')], (0, 'X3'): [(0, 'D')]},
+                                     {(0, 'A'): {(0, 'X1'): 1.0}, (0, 'B'): {(0, 'X2'): 1.0}, (0, 'C'): {(0, 'X2'): 1.0}, (0, 'D'): {(0, 'X3'): 1.0}},
+                                     [])
+    mappings = vermouth.map_input.read_backmapping_file(content, force_fields)
+    compare_old_new_mappings(mappings, reference)
 
 
 @pytest.fixture(scope='session')
@@ -369,7 +435,7 @@ def ref_mapping_directory(tmpdir_factory):
     force_fields_from = force_fields_from + ['only_from']
     iterate_on = itertools.product(force_fields_from, force_fields_to, range(3))
     for idx, (from_ff, to_ff, _) in enumerate(iterate_on):
-        mapfile = mapdir / 'file{}.map'.format(idx)
+        mapfile = mapdir / 'file{}.backmap'.format(idx)
         with open(str(mapfile), 'w') as outfile:
             outfile.write(template.format(idx, from_ff, to_ff))
 
@@ -396,8 +462,28 @@ def test_read_mapping_directory(ref_mapping_directory):
     Test that mapping files from a directory are propely found and read.
     """
     dirpath, ref_mappings = ref_mapping_directory
-    mappings = vermouth.map_input.read_mapping_directory(dirpath)
-    assert mappings == ref_mappings
+    from_names = list(ref_mappings.keys())
+    to_names = []
+    block_names = []
+    mapping = {}
+    weights = {}
+
+
+    for k in ref_mappings:
+        to_names.extend(ref_mappings[k].keys())
+        for to in ref_mappings[k]:
+            block_names.extend(ref_mappings[k][to].keys())
+            for block_name in ref_mappings[k][to]:
+                m, w, _ = ref_mappings[k][to][block_name]
+                mapping.update(m)
+                weights.update(w)
+    force_fields = case_to_dummy_ffs(from_names + to_names, block_names,
+                                     mapping, weights, [])
+
+
+    mappings = vermouth.map_input.read_mapping_directory(dirpath, force_fields)
+    compare_old_new_mappings(mappings, ref_mappings)
+#    assert mappings == ref_mappings
 
 
 def test_read_mapping_directory_not_dir():
@@ -406,7 +492,7 @@ def test_read_mapping_directory_not_dir():
     the input is not a directory.
     """
     with pytest.raises(NotADirectoryError):
-        vermouth.map_input.read_mapping_directory('not a directory')
+        vermouth.map_input.read_mapping_directory('not a directory', {})
 
 
 def test_read_mapping_directory_error(tmpdir):
@@ -415,17 +501,17 @@ def test_read_mapping_directory_error(tmpdir):
     exception when a file could not be read.
     """
     mapdir = Path(str(tmpdir.mkdir('mappings')))
-    with open(str(mapdir / 'valid.map'), 'w') as outfile:
+    with open(str(mapdir / 'valid.backmap'), 'w') as outfile:
         outfile.write(textwrap.dedent("""
             [ molecule ]
             valid
             [ atoms ]
             0 A B
         """))
-    with open(str(mapdir / 'not_valid.map'), 'w') as outfile:
+    with open(str(mapdir / 'not_valid.backmap'), 'w') as outfile:
         outfile.write('invalid content')
     with pytest.raises(IOError):
-        vermouth.map_input.read_mapping_directory(mapdir)
+        vermouth.map_input.read_mapping_directory(mapdir, {})
 
 
 def test_generate_self_mapping():
@@ -446,17 +532,13 @@ def test_generate_self_mapping():
     ref_mappings = {
         'A0': (
             # mapping
-            {(0, 'AA'): [(0, 'AA')], (0, 'BBB'): [(0, 'BBB')], (0, 'CCCC'): [(0, 'CCCC')]},
-            # weights
-            {(0, 'AA'): {(0, 'AA'): 1}, (0, 'BBB'): {(0, 'BBB'): 1}, (0, 'CCCC'): {(0, 'CCCC'): 1}},
+            {"AA": {"AA": 1}, "BBB": {"BBB": 1}, "CCCC": {"CCCC": 1}},
             # extra
             [],
         ),
         'B1': (
             # mapping
-            {(0, 'BBB'): [(0, 'BBB')], (0, 'CCCC'): [(0, 'CCCC')], (0, 'E'): [(0, 'E')]},
-            # weights
-            {(0, 'BBB'): {(0, 'BBB'): 1}, (0, 'CCCC'): {(0, 'CCCC'): 1}, (0, 'E'): {(0, 'E'): 1}},
+            {"BBB": {"BBB": 1}, "CCCC": {"CCCC": 1}, "E": {"E": 1}},
             # extra
             [],
         ),
@@ -464,7 +546,8 @@ def test_generate_self_mapping():
     # Actually test
     mappings = vermouth.map_input.generate_self_mappings(blocks)
     assert mappings.keys() == ref_mappings.keys()
-    assert mappings == ref_mappings
+    for blockname in mappings:
+        assert mappings[blockname].mapping, mappings[blockname].extras == ref_mappings[blockname]
 
 
 def test_generate_all_self_mappings():

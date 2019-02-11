@@ -540,6 +540,10 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     while block_matches or mod_matches:
         # Take the match with the lowest atom id, and prefer blocks over
         # modifications
+        # This will break badly if there is a modification associated with an
+        # atom with a low ID, but it crosses residues and expects to find an
+        # existing atom that belongs to a block that is not mapped yet.
+        # FIXME
         if (not block_matches or
             (mod_matches and
              min(mod_matches[-1][0].keys()) < min(block_matches[-1][0].keys()))):

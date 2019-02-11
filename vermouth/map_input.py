@@ -18,12 +18,20 @@
 Read force field to force field mappings.
 """
 
+from .log_helpers import StyleAdapter, get_logger
 from .map_parser import MappingDirector, Mapping
 
 from pathlib import Path
 import collections
 import itertools
 
+
+LOGGER = StyleAdapter(get_logger(__name__))
+
+
+# TODO: This file contains a parser for backmapping files. This parser needs to
+#       be redone using a SectionLineParser like the MappingDirector in
+#       map_parser.py
 
 def read_backmapping_file(lines, force_fields):
     """
@@ -84,12 +92,14 @@ def read_backmapping_file(lines, force_fields):
             try:
                 from_block = force_fields[from_ff].blocks[name]
             except KeyError:
-                print("Can't find block {} for FF {}".format(name, from_ff))
+                LOGGER.log(5, "Can't find block {} for FF {}", name, from_ff,
+                           type='inconsistent-data')
                 continue
             try:
                 to_block = force_fields[to_ff].blocks[name]
             except KeyError:
-                print("Can't find block {} for FF {}".format(name, to_ff))
+                LOGGER.log(5, "Can't find block {} for FF {}", name, to_ff, 
+                           type='inconsistent-data')
                 continue
 
             if name not in name_to_index[from_ff]:
@@ -119,8 +129,10 @@ def make_mapping_object(from_block, to_block, mapping, weights, extra, name_to_i
             try:
                 idx_from = from_name_to_idx[atname_from]
             except KeyError:
-                print("Can't find atom {} in block {} in force field {}".format(
-                        atname_from, from_block.name, from_block.force_field.name))
+                LOGGER.log(5, "Can't find atom {} in block {} in force field {}",
+                           atname_from, from_block.name,
+                           from_block.force_field.name,
+                           type='inconsistent-data')
                 continue
             idx_to = to_name_to_idx[atname_to]
             map_dict[idx_from][idx_to] = weight

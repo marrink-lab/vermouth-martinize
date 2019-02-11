@@ -976,10 +976,9 @@ class TestModification:
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
         vermouth.ffinput.read_ff(lines, ff)
-        # This will change after #172 is merged. Indeed, in this PR,
-        # ff.modifications becomes a dict with modification name as key, and
-        # the modification as value.
-        assert len(ff.modifications) == 2
+        # 2 modifications were made, but they both had the same name. This 
+        # should probably raise an error somewhere.
+        assert list(ff.modifications.keys()) == ['']
 
     @staticmethod
     def test_example():
@@ -1000,10 +999,7 @@ class TestModification:
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
         vermouth.ffinput.read_ff(lines, ff)
-        # This will change after #172 is merged. Indeed, in this PR,
-        # ff.modifications becomes a dict with modification name as key, and
-        # the modification as value.
-        modification = ff.modifications[0]
+        modification = ff.modifications['C-ter']
 
         assert modification.name == 'C-ter'
         assert tuple(modification.nodes(data=True)) == (

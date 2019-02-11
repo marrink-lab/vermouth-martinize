@@ -57,7 +57,7 @@ def force_field_with_features(empty_force_field):
     ('name', 'empty'),
     ('blocks', {}),
     ('links', []),
-    ('modifications', []),
+    ('modifications', {}),
     ('renamed_residues', {}),
     ('variables', {}),
     ('reference_graphs', {}),
