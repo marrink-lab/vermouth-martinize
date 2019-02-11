@@ -988,7 +988,7 @@ def test_block_equal(block):
     assert block is not block_copy
 
 
-@hypothesis.given(random_link())
+@hypothesis.given(random_link(max_nodes=3, max_meta=3))
 def test_link_equal(link):
     """
     Two equal links are equal.

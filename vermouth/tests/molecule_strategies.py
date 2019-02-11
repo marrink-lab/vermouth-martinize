@@ -187,7 +187,7 @@ def random_molecule(draw, molecule_class=Molecule, max_nodes=5, max_meta=None):
 
 
 @st.composite
-def random_block(draw, block_class=Block):
+def random_block(draw, block_class=Block, max_nodes=5, max_meta=None):
     """
     Strategy that builds a block.
 
@@ -203,13 +203,14 @@ def random_block(draw, block_class=Block):
     -------
     hypothesis.searchstrategy.lazy.LazyStrategy
     """
-    block = draw(random_molecule(molecule_class=block_class))
+    block = draw(random_molecule(molecule_class=block_class,
+                                 max_nodes=max_nodes, max_meta=max_meta))
     block.name = draw(st.one_of(st.none(), st.text()))
     return block
 
 
 @st.composite
-def random_link(draw):
+def random_link(draw, max_nodes=5, max_meta=None):
     """
     Strategy that builds a link.
 
@@ -225,13 +226,14 @@ def random_link(draw):
     -------
     hypothesis.searchstrategy.lazy.LazyStrategy
     """
-    link = draw(random_block(block_class=Link))
+    link = draw(random_block(block_class=Link,
+                             max_nodes=max_nodes, max_meta=max_meta))
     link.removed_interactions = draw(interaction_collection(
         link, interaction_class=DeleteInteraction, attrs=True,
     ))
-    link.molecule_meta = draw(attribute_dict())
+    link.molecule_meta = draw(attribute_dict(max_size=4))
     link.non_edges = draw(st.lists(
-        st.tuples(st.text(min_size=1, max_size=4), attribute_dict()),
+        st.tuples(st.text(min_size=1, max_size=4), attribute_dict(max_size=4)),
         max_size=4,
     ))
     link.patterns = draw(st.lists(
