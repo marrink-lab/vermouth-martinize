@@ -163,7 +163,7 @@ def write_gmx_topology(system, top_path, header=()):
 
     # Iterate over groups of successive molecules with the same moltypes. We
     # shall *NOT* sort the molecules before hand, as groups of successive
-    # molecules wit the same moltype can be interupted by other moltypes, and
+    # molecules with the same moltype can be interupted by other moltypes, and
     # we want to reflect these interuptions in the [ molecules ] section of the
     # top file.
     molecule_groups = itertools.groupby(system.molecules, key=lambda x: x.meta['moltype'])
@@ -171,7 +171,7 @@ def write_gmx_topology(system, top_path, header=()):
         molecule = next(molecules)
         if moltype not in moltype_written:
             # A given moltype can appear more than once in the sequence of
-            # molecules, without being uninterpted by other moltypes. Even in
+            # molecules, without being uninterupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
             with open('{}.itp'.format(moltype), 'w') as outfile:
                 vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
@@ -180,7 +180,7 @@ def write_gmx_topology(system, top_path, header=()):
                 max_name_length = this_moltype_len
             moltype_written.add(moltype)
         # We already removed one element from the "molecules" generator, do not
-        # forget to count it in the number of molecules in that stride.
+        # forget to count it in the number of molecules in that group.
         moltype_count.append([moltype, 1 + len(list(molecules))])
 
     # Write the top file
