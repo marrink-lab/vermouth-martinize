@@ -18,7 +18,7 @@ install:
 script:
   - coverage run $(which pytest) -vv vermouth --hypothesis-show-statistics
 after_success:
-  - coverage run --omit='*/bin/pytest'
+  - coverage report --omit='*/bin/pytest'
   - if [[ ${WITH_CODECOV} == true ]]; then codecov; fi
 addons:
   apt:
