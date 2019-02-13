@@ -123,7 +123,7 @@ def test_broken_edgecase():
     invalid coupling, losing out on a permutation.
     """
     graph = nx.Graph()
-    graph.add_path(range(5))
+    nx.add_path(graph, range(5))
     graph.add_edges_from([(2, 5), (5, 6)])
 
     ismags = vermouth.ismags.ISMAGS(graph, graph)

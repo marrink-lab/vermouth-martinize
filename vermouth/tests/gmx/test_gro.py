@@ -396,7 +396,7 @@ def assert_molecule_equal(molecule, reference):
 
 
 @st.composite
-def generate_dict(draw, min_size=None):
+def generate_dict(draw, min_size=0):
     """
     Strategy to generate an arbitrary dictionary.
     """
