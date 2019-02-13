@@ -56,8 +56,9 @@ def read_dssp2(lines):
     The "C" code for loops and random coil is translated from the gap used in
     the DSSP file for an improved readability.
 
-    Only the version 2 of DSSP is supported. If the format is not recognized as
-    comming from that version of DSSP, then a :exc:`IOError` is raised.
+    Only the version 2 and 3 of DSSP is supported. If the format is not
+    recognized as comming from that version of DSSP, then a :exc:`IOError` is
+    raised.
 
     .. _`documentation of the DSSP format`: http://swift.cmbi.ru.nl/gv/dssp/DSSP_3.html
 
@@ -84,7 +85,7 @@ def read_dssp2(lines):
     # user to count lines in a file starting from 1 rather than 0.
     numbered_lines = enumerate(lines, start=1)
 
-    # The function can only read output from DSSP version 2. Hopefully, if the
+    # The function can only read output from DSSP version 2 and 3. Hopefully, if the
     # input file is not in this format, then the parser will break as it reads
     # the file; we can expect that the end of the header will not be found or
     # the secondary structure will be an unexpected character.
@@ -101,7 +102,7 @@ def read_dssp2(lines):
     if first_line and first_line.startswith('****'):
         msg = ('Based on its header, the input file could come from a '
                'pre-July 1995 version of DSSP (or the compatibility mode '
-               'of a more recent version). Only output from the version 2 '
+               'of a more recent version). Only output from the version 2 and 3'
                'of DSSP are supported.')
         raise IOError(msg)
 
@@ -155,7 +156,7 @@ def run_dssp(system, executable='dssp', savefile=None):
     'universal' force field for DSSP to recognize them.
     However, the molecules do not require the edges to be defined.
 
-    DSSP is assumed to be in version 2. The secondary structure codes are
+    DSSP is assumed to be in version 2 or 3. The secondary structure codes are
     described in :func:`read_dssp2`.
 
     If "savefile" is set to a path, then the output of DSSP is written in
