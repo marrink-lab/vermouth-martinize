@@ -223,8 +223,10 @@ def modification_matches(molecule, mappings):
     grouped = nx.connected_components(ptm_subgraph)
     found_ptm_groups = set()
     for group in grouped:
-        modifications = {tuple(molecule.nodes[mol_idx].get('modifications', []))
-                         for mol_idx in group}
+        modifications = {
+                         tuple(mod.name for mod in molecule.nodes[mol_idx].get('modifications', []))
+                         for mol_idx in group
+                        }
         # Every group of PTMs should have the same modifications
         assert len(modifications) == 1
         found_ptm_groups.update(modifications)
@@ -238,7 +240,7 @@ def modification_matches(molecule, mappings):
         # group with keys from known_mod_mappings. An improvement would be to
         # do the graph covering again.
         # TODO?
-        covered_by = cover([ptm.name for ptm in group],
+        covered_by = cover(list(group),
                            sorted(known_mod_mappings, key=len, reverse=True))
         if covered_by is None:
             LOGGER.warning("Can't find modification mappings for the "
