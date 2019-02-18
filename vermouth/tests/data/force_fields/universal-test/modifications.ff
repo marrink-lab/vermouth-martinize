@@ -1,0 +1,86 @@
+; Copyright 2018 University of Groningen
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;    http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+[ modification ]
+C-ter
+[ atoms ]
+CA {"element": "C"}
+C {"element": "C"}
+O {"element": "O", "replace": {"atomname": "O1"}}
+OXT {"element": "O", "PTM_atom": true, "replace": {"atomname": "O2"}}
+[ edges ]
+CA C
+C O
+C OXT
+
+[ modification ]
+N-ter
+[ atoms ]
+CA {"element": "C"}
+N {"element": "N"}
+HN {"element": "H", "replace": {"atomname": "HN1"}}
+HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}
+HN3 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN3"}}
+[ edges ]
+N CA
+N HN
+N HN2
+N HN3
+
+[ modification ]
+GLU-H
+[ atoms ]
+CD {"element": "C"}
+OE1 {"element": "O"}
+OE2 {"element": "O"}
+HE1 {"element": "H", "PTM_atom": true}
+[ edges ]
+CD OE1
+CD OE2
+OE1 HE1
+
+[ modification ]
+HSD
+[ atoms ]
+ND1 {"resname": "HIS", "element": "N"}
+HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+ND1 HD1
+
+[ modification ]
+HSE
+[ atoms ]
+NE1 {"resname": "HIS", "element": "N"}
+HE1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+NE1 HE1
+
+[ modification ]
+HSP
+[ atoms ]
+NE1 {"resname": "HIS", "element": "N"}
+HE1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+ND1 {"resname": "HIS", "element": "N"}
+HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+NE1 HE1
+ND1 HD1
+
+[ modification ]
+ASP0
+[ atoms ]
+HD2 {"resname": "ASP", "element": "H", "PTM_atom": true}
+OD2 {"resname": "ASP"}
+[ edges ]
+OD2 HD2

@@ -300,6 +300,9 @@ class MappingBuilder:
                 del node['replace']
         self.blocks_from = self._add_block(self.blocks_from, block)
 
+    def add_name(self, name):
+        self.names.append(name)
+
     def add_block_to(self, block):
         """
         Add a block to :attr:`blocks_to`.
@@ -713,6 +716,12 @@ class MappingDirector(SectionLineParser):
             if fetch and attrs.get('resname') is not None:
                 block = getattr(self.force_fields[self.ff[direction]], map_type+'s')[attrs['resname']]
                 builder_methods[direction](block)
+            if direction == 'from':
+                if attrs.get('resname'):
+                    name = attrs.get('resname')
+                else:
+                    name = identifier
+                self.builder.add_name(identifier)
             if map_type == 'modification' and 'resname' in attrs:
                 del attrs['resname']
             self.identifiers[(direction, identifier)] = attrs

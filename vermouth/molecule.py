@@ -668,7 +668,7 @@ class Molecule(nx.Graph):
             # We assume that the last id is always the largest.
             last_node_idx = max(self)
             offset = last_node_idx
-            residue_offset = self.nodes[last_node_idx]['resid']
+            residue_offset = self.nodes[last_node_idx].get('resid', 1)
             offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
         else:
             offset = 0

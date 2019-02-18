@@ -247,10 +247,7 @@ def modification_matches(molecule, mappings):
                          tuple(mod.name for mod in molecule.nodes[mol_idx].get('modifications', []))
                          for mol_idx in group
                         }
-        # Every group of PTMs should have the same modifications
-        assert len(modifications) == 1
         found_ptm_groups.update(modifications)
-
     needed_mod_mappings = set()
     known_mod_mappings = get_mod_mappings(mappings)
     for group in found_ptm_groups:
@@ -266,10 +263,9 @@ def modification_matches(molecule, mappings):
             LOGGER.warning("Can't find modification mappings for the "
                            "modifications {}. The following modification "
                            "mappings are known: {}",
-                           [ptm.name for ptm in group], known_mod_mappings)
+                           [ptm for ptm in group], known_mod_mappings)
             continue
         needed_mod_mappings.update(covered_by)
-
     matches = []
     # Sort on the tuple[str] type names of the mappings so that mappings that
     # define most modifications at the same time get processed first
@@ -453,6 +449,12 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
                 out_to_mol[out_idx] = {}
             out_to_mol[out_idx][mol_idx] = weight
 
+    for mod_idx, mod_jdx in modification.edges:
+        out_idx = mod_to_out[mod_idx]
+        out_jdx = mod_to_out[mod_jdx]
+        if not graph_out.has_edge(out_idx, out_jdx):
+            graph_out.add_edge(out_idx, out_jdx)
+
     new_references = {mod_to_out[mod_idx]: mol_idx for mod_idx, mol_idx in references.items()}
 
     # Apply interactions
@@ -529,8 +531,9 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     mappings = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
     block_matches = []
     for mapping in mappings:
-        block_matches.extend(mapping.map(molecule, node_match=_old_atomname_match,
-                                       edge_match=edge_matcher))
+        if mapping.type == 'block':
+            block_matches.extend(mapping.map(molecule, node_match=_old_atomname_match,
+                                             edge_match=edge_matcher))
     mod_matches = modification_matches(molecule, mappings)
 
     # Sort by lowest node key per residue. We need to do this, since
