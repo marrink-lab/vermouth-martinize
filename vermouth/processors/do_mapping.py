@@ -121,6 +121,26 @@ def _old_atomname_match(node1, node2):
     return node_matcher(node1, node2)
 
 
+def node_should_exist(modification, node_idx):
+    """
+    Returns True if the node with index `node_idx` in `modification` should
+    already exist in the parent molecule.
+
+    Parameters
+    ----------
+    modification: networkx.Graph
+    node_idx: collections.abc.Hashable
+        The key of a node in `modification`.
+
+    Returns
+    -------
+    bool
+        True iff the node `node_idx` in `modification` should already exist in
+        the parent molecule.
+    """
+    return not modification.nodes[node_idx].get('PTM_atom', False)
+
+
 def ptm_resname_match(node1, node2):
     """
     As :func:`node_matcher`, except that empty resname and false PTM_atom
@@ -391,9 +411,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     # Some nodes of modification will already exist. The question is
     # which, and which index they have in graph_out.
     for mod_idx in modification:
-        # FIXME: Bad way of detecting whether the node should already
-        #        exist!
-        if modification.nodes[mod_idx].get('PTM_atom', False):
+        if not node_should_exist(modification, mod_idx):
             # Node does not exist yet.
             if not graph_out.nodes:
                 out_idx = 0
@@ -517,8 +535,21 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
 
     # Sort by lowest node key per residue. We need to do this, since
     # merge_molecule creates new resid's in order.
-    block_matches = sorted(block_matches, key=lambda x: min(x[0].keys()), reverse=True)
-    mod_matches = sorted(mod_matches, key=lambda x: min(x[0].keys()), reverse=True)
+    block_sort_key = lambda x: min(x[0].keys())
+    # Sort modifications by the lowest mapped index when all touched atoms are
+    # newly created PTM atoms that do not exist yet. Otherwise, take the
+    # highest index. If we don't do this we run the risk that a PTM mapped to
+    # a node with a low index also changes a node of a higher residue, causing
+    # all sorts of havok.
+    mod_sort_key = lambda x: (max(x[0].keys())
+                              if any(node_should_exist(x[1], idx)
+                                     for idx in
+                                     {mod_idx for mol_idx in x[0]
+                                      for mod_idx in x[0][mol_idx]})
+                              else
+                              min(x[0].keys()))
+    block_matches = sorted(block_matches, key=block_sort_key, reverse=True)
+    mod_matches = sorted(mod_matches, key=mod_sort_key, reverse=True)
 
     # There are a few separate mapping cases to be considered:
     # One to one mapping - e.g. AA to AA, the simplest case
@@ -542,13 +573,9 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     while block_matches or mod_matches:
         # Take the match with the lowest atom id, and prefer blocks over
         # modifications
-        # This will break badly if there is a modification associated with an
-        # atom with a low ID, but it crosses residues and expects to find an
-        # existing atom that belongs to a block that is not mapped yet.
-        # FIXME
         if (not block_matches or
             (mod_matches and
-             min(mod_matches[-1][0].keys()) < min(block_matches[-1][0].keys()))):
+             mod_sort_key(mod_matches[-1]) < block_sort_key(block_matches[-1]))):
             match = mod_matches.pop(-1)
             applied_interactions, refs = apply_mod_mapping(match,
                                                            molecule, graph_out,
