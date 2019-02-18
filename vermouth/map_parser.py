@@ -856,6 +856,12 @@ class MappingDirector(SectionLineParser):
         attrs_from = self._resolve_atom_spec(from_, 'from')
         self.builder.add_reference(attrs_to, attrs_from)
 
+    @SectionLineParser.section_parser('molecule')
+    def _molecule(self, line, lineno=0):
+        raise IOError("It look like you're trying to parse an old style "
+                      "backmapping file. These some minor modifications to be "
+                      "used compared to the files used by `backwards.py`.")
+
 
 def parse_mapping_file(filepath, force_fields):
     """

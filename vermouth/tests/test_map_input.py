@@ -435,7 +435,7 @@ def ref_mapping_directory(tmpdir_factory):
     force_fields_from = force_fields_from + ['only_from']
     iterate_on = itertools.product(force_fields_from, force_fields_to, range(3))
     for idx, (from_ff, to_ff, _) in enumerate(iterate_on):
-        mapfile = mapdir / 'file{}.backmap'.format(idx)
+        mapfile = mapdir / 'file{}.map'.format(idx)
         with open(str(mapfile), 'w') as outfile:
             outfile.write(template.format(idx, from_ff, to_ff))
 
@@ -508,7 +508,7 @@ def test_read_mapping_directory_error(tmpdir):
             [ atoms ]
             0 A B
         """))
-    with open(str(mapdir / 'not_valid.backmap'), 'w') as outfile:
+    with open(str(mapdir / 'not_valid.map'), 'w') as outfile:
         outfile.write('invalid content')
     with pytest.raises(IOError):
         vermouth.map_input.read_mapping_directory(mapdir, {})

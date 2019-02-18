@@ -392,7 +392,7 @@ def read_mapping_directory(directory, force_fields):
         raise NotADirectoryError('"{}" is not a directory.'.format(directory))
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
     # Old style mappings
-    for path in directory.glob('**/*.backmap'):
+    for path in directory.glob('**/*.map'):
         with open(str(path)) as infile:
             try:
                 new_mappings = read_backmapping_file(infile, force_fields)
@@ -401,7 +401,7 @@ def read_mapping_directory(directory, force_fields):
             else:
                 combine_mappings(mappings, new_mappings)
     # New style mappings
-    for path in directory.glob('**/*.map'):
+    for path in directory.glob('**/*.mapping'):
         with open(str(path)) as infile:
             try:
                 new_mappings = read_mapping_file(infile, force_fields)
