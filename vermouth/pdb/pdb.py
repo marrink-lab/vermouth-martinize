@@ -209,8 +209,7 @@ def do_conect(mol, conectlist):
                     atom = atidx2nodeidx[atom]
                 except KeyError:
                     continue
-                dist = distance(mol.node[at0]['position'], mol.node[atom]['position'])
-                mol.add_edge(at0, atom, distance=dist)
+                mol.add_edge(at0, atom)
 
 
 def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
