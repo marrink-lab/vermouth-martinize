@@ -31,7 +31,7 @@ from vermouth.utils import are_different
     (  # Empty file
         """
         """,
-        0,
+        None,
         (),
         (),
     ),
@@ -43,7 +43,7 @@ from vermouth.utils import are_different
         TITLE    3 ADP*PI FORM #1                                                       
         REMARK   3    REFINEMENT TARGET : MAXIMUM LIKELIHOOD                            
         """,
-        0,
+        None,
         (),
         (),
     ),

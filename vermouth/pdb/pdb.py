@@ -212,7 +212,7 @@ def do_conect(mol, conectlist):
                 mol.add_edge(at0, atom)
 
 
-def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
+def read_pdb(file_name, exclude=('SOL',), ignh=False, model=None):
     """
     Parse a PDB file to create a molecule.
 
@@ -225,13 +225,23 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
     ignh: bool
         Whether hydrogen atoms should be ignored.
     model: int
-        If the PDB file contains multiple models, which one to select.
+        If the PDB file contains multiple models, which one to select. If
+        `model` is set to `None` (default), then the first model will be
+        returned; in case there is no molecule defined, then an empty molecule
+        is returned. If `model` is set to a number, the number will be used to
+        index a list on the models.
 
     Returns
     -------
     vermouth.molecule.Molecule
         The parsed molecules. Will only contain edges if the PDB file has
         CONECT records. Either way, might be disconnected.
+
+    Raises
+    ------
+    IndexError
+        The `model` argument is set to an index out of bound of the list of
+        available models.
     """
     models = [Molecule()]
     conect = []
@@ -286,7 +296,12 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
     for molecule in models:
         do_conect(molecule, conect)
 
-    molecule = models[model]
+    if model is None and models:
+        molecule = models[0]
+    elif model is None and not models:
+        molecule = Molecule()
+    else:
+        molecule = models[model]
 
 #    if molecule.number_of_edges() == 0:
 #        edges_from_distance(molecule)
