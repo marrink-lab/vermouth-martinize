@@ -255,6 +255,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
         for line in pdb:
             record = line[:6]
             if record == 'ENDMDL':
+                idx = 0
                 models.append(Molecule())
             elif record in ('ATOM  ', 'HETATM'):
                 properties = {}
