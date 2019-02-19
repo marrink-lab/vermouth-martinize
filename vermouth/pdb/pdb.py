@@ -258,7 +258,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
                 idx = 0
                 models.append(Molecule())
             elif record in ('ATOM  ', 'HETATM'):
-                properties = {}
+                properties = {'record_type': record.strip()}
                 for name, type_, slice_ in zip(field_names, field_types, slices):
                     properties[name] = type_(line[slice_].strip())
 
