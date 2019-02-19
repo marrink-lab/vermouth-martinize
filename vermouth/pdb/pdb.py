@@ -266,6 +266,11 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
                 # Coordinates are read in Angstrom, but we want them in nm
                 properties['position'] = np.array(pos, dtype=float) / 10
 
+                if not properties['charge']:
+                    properties['charge'] = None
+                else:
+                    properties['charge'] = int(properties['charge'])
+
                 if not properties['element']:
                     atomname = properties['atomname']
                     properties['element'] = first_alpha(atomname)
