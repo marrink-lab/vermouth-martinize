@@ -13,7 +13,13 @@
 # limitations under the License.
 
 """
-Assign moltype names to molecules.
+Provides a processor to assign molecule type names to molecules.
+
+A molecule type (moltype) is Gromacs's concept of a molecule. Providing a name
+for a molecule type is required to write an ITP file for that molecule. We also
+use the molecule type name to group molecules sharing the same molecule type.
+Molecule type identity is tested based on
+:meth:`vermouth.molecule.Molecule.share_moltype_with`.
 """
 
 from .processor import Processor
