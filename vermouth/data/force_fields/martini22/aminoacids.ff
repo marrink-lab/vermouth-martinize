@@ -839,24 +839,3 @@ SC1 >SC1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
 
-
-;; Protein terminii. These links should be applied last.
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qd", "charge": 1}}
-[ non-edges ]
-BB -BB
-
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qa", "charge": -1}}
-[ non-edges ]
-BB +BB
