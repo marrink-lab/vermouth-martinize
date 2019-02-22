@@ -310,7 +310,8 @@ def entry():
                                        'rather than elastic bonds'))
 
     rb_group = parser.add_argument_group('Protein elastic network')
-    rb_group.add_argument('-elastic', action='store_true', default=False,
+    rb_exclusion = rb_group.add_mutually_exclusive_group()
+    rb_exclusion.add_argument('-elastic', action='store_true', default=False,
                           help='Write elastic bonds')
     rb_group.add_argument('-ef', dest='rb_force_constant', type=float, default=500,
                           help='Elastic bond force constant Fc in kJ/mol/nm^2')
@@ -327,6 +328,9 @@ def entry():
     rb_group.add_argument('-eb', dest='rb_selection',
                           type=lambda x: x.split(','), default=None,
                           help='Comma separated list of bead names for elastic bonds')
+
+    rb_exclusion.add_argument('-govs-includes', action='store_true', default=False,
+                          help='Write include statements to use Vitrual Site Go Martini.')
 
     prot_group = parser.add_argument_group('Protein description')
     prot_group.add_argument('-nt', dest='neutral_termini',
@@ -496,6 +500,9 @@ def entry():
 
     LOGGER.info('Writing output.', type='step')
     vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
+    if args.govs_includes:
+        LOGGER.info('Adding includes for Virtual Site Go Martini.', type='step')
+        govs_processor = vermouth.GoVirtIncludes().run_system(system)
     # Write the topology if requested
     header = [
         'This file was generated using the following command:',

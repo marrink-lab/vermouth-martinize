@@ -81,13 +81,13 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     moltype: str, optional
         The molecule type. If set to `None` (default), the molecule type is
         read from the "moltype" key of `molecule.meta`.
-    post_section_lines: dict[str, Iterable[str]], optional
+    post_section_lines: dict[str, collections.abc.Iterable[str]], optional
         List of lines to write at the end of some sections of the file. The
         argument is passed as a dict with the keys being the name of the
         sections, and the values being the lists of lines. If the argument is
         set to `None`, the lines will be read from the "post_section_lines" key
         of `molecule.meta`.
-    pre_section_lines: dict[str, Iterable[str]], optional
+    pre_section_lines: dict[str, collections.abc.Iterable[str]], optional
         List of lines to write at the beginning of some sections, just after
         the section header. The argument is formatted in the same way as
         `post_section_lines`. If the argument is set to `None`, the lines will
