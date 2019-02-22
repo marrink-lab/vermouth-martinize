@@ -16,12 +16,14 @@
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
 from functools import partial
+import itertools
 
 import networkx as nx
 import numpy as np
 
 from . import graph_utils
 from . import geometry
+from . import utils
 
 
 Interaction = namedtuple('Interaction', 'atoms parameters meta')
@@ -315,6 +317,20 @@ class Molecule(nx.Graph):
     """
     Represents a molecule as per a specific force field. Consists of atoms
     (nodes), bonds (edges) and interactions such as angle potentials.
+
+    Two molecules are equal if:
+
+    * the exclusion distance (nrexcl) are equal
+    * the force fields are equal (but may be different instances)
+    * the nodes are equal and in the same order
+    * the edges are equal (but order is not accounted for)
+    * the interactions are the same and in the same order within an interaction
+      type
+
+    When comparing molecules, the order of the nodes is considered as it
+    determines in what order atoms will be written in the output. Same goes for
+    the interactions within an interaction type. The order of edges is not
+    guaranteed anywhere in the code, and they are not writen in the output.
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
@@ -326,6 +342,15 @@ class Molecule(nx.Graph):
         self.nrexcl = kwargs.pop('nrexcl', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
+
+    def __eq__(self, other):
+        return (
+            self.nrexcl == other.nrexcl
+            and self._force_field == other._force_field
+            and self.same_nodes(other)
+            and self.same_edges(other)
+            and self.same_interactions(other)
+        )
 
     @property
     def force_field(self):
@@ -375,6 +400,7 @@ class Molecule(nx.Graph):
         Molecule
         """
         subgraph = self.__class__()
+        subgraph.name = self.name
         subgraph.meta = copy.copy(self.meta)
         subgraph._force_field = self._force_field
         subgraph.nrexcl = self.nrexcl
@@ -642,6 +668,127 @@ class Molecule(nx.Graph):
         # the interactions.
         return nx.is_isomorphic(self, other)
 
+    # TODO: Allow comparison of interactions betweem isomorphic molecules.
+    def same_interactions(self, other):
+        """
+        Returns `True` if the interactions are the same.
+
+        To be equal, two interactions must share the same node key reference,
+        the same interaction parameters, and the same meta attributes. Empty
+        interaction categories are ignored.
+
+        Parameters
+        ----------
+        other: Molecule
+
+        Returns
+        -------
+        bool
+        """
+        keys_self = set(
+            interaction_type
+            for interaction_type, interactions
+            in self.interactions.items()
+            if interactions
+        )
+        keys_other = set(
+            interaction_type
+            for interaction_type, interactions
+            in other.interactions.items()
+            if interactions
+        )
+        # We first make sure that the two molecules share the same relevant
+        # interaction categories. A relevant category is one that actually has
+        # interactions. If the molecules share the relevant categories, then we
+        # can loop over the categories of one or the other, without issues with
+        # mismatches.
+        if keys_self != keys_other:
+            return False
+        return all(
+            self.interactions[interaction_type] == other.interactions[interaction_type]
+            for interaction_type in keys_self
+        )
+
+    # TODO: Allow default values for attributes.
+    # In most cases, we assume that an unspecified attribute is equivalent to
+    # the attribute being None; we should allow for this in the comparison. We
+    # should also allow an attribute to have an arbitrary default value. For
+    # instance, the assumed default for the `PTM_atom` attribute is False.
+    def same_nodes(self, other, ignore_attr=()):
+        """
+        Returns `True` if the nodes are the same and in the same order.
+
+        The equality criteria used for the attribute values are those of
+        :func:`vermouth.utils.are_different`.
+
+        Parameters
+        ----------
+        other: Molecule
+        ignore_attr: collections.abc.Container
+            Attribute keys that will not be considered in the comparison.
+
+        Returns
+        -------
+        bool
+        """
+        # We first check that the node keys match between the two molecules.
+        # The order matters here, and we count on the fact that Molecules are
+        # OrderedDicts.
+        if list(self.nodes.keys()) != list(other.nodes.keys()):
+            return False
+        zipped_nodes = zip(self.nodes.values(), other.nodes.values())
+        for self_node, other_node in zipped_nodes:
+            # For each pair of nodes, we compare the attribute dictionaries.
+            # The order does not matter here.
+            self_keys = set(key for key in self_node if key not in ignore_attr)
+            other_keys = set(key for key in other_node if key not in ignore_attr)
+            if self_node.keys() != other_node.keys():
+                return False
+            # We can loop over the keys because we tested above that they were
+            # matching between the two dicts.
+            for key in self_keys:
+                self_value = self_node[key]
+                other_value = other_node[key]
+                if utils.are_different(self_value, other_value):
+                    return False
+        return True
+
+    def same_edges(self, other):
+        """
+        Compare the edges between this molecule and an other.
+
+        Edges are unordered and undirected, but they can have attributes.
+
+        Parameters
+        ----------
+        other: networkx.Graph
+            The other molecule to compare the edges with.
+
+        Returns
+        -------
+        bool
+        """
+        # The items of `graph.edges(data=True)` are formatted as
+        # (from, to, {dict of attributes}).
+        edges_self = {
+            frozenset(edge[:2]): edge[2]
+            for edge in self.edges(data=True)
+        }
+        edges_other = {
+            frozenset(edge[:2]): edge[2]
+            for edge in other.edges(data=True)
+        }
+        # We first start with the cheapest test: if the edges do not match
+        # regardless of attributes, we can save the more costly tests.
+        if set(edges_self.keys()) != set(edges_other.keys()):
+            return False
+
+        # We know that the keys in `edges_self` and `edges_other` are the same.
+        return all(
+            not utils.are_different(edges_self[edge], edges_other[edge])
+            for edge in edges_self
+        )
+
     def iter_residues(self):
         """
         Returns a generator over the nodes of this molecules residues.
@@ -723,6 +870,9 @@ class Block(Molecule):
     """
     Residue topology template
 
+    Two blocks are equal if the underlying molecules are equal, and if the
+    block names are equal.
+
     Parameters
     ----------
     incoming_graph_data:
@@ -770,6 +920,9 @@ class Block(Molecule):
         for attribute, default_value in defaults.items():
             if not hasattr(self, attribute):
                 setattr(self, attribute, default_value)
+
+    def __eq__(self, other):
+        return self.name == other.name and super().__eq__(other)
 
     def __repr__(self):
         name = self.name
@@ -981,10 +1134,26 @@ class Link(Block):
     """
     Template link between two residues.
 
+    Two links are equal if:
+    
+    * the underlying molecules are equal
+    * the names are equal
+    * the negative edges ("non-edges") are equal regardless of order
+    * the interactions to remove are the same and in the same order
+    * the meta variables are equal
+    * the pattern definitions are equal and in the same order
+    * the features are equals regardless of order
+
+    A link does not match if any of the non-edges match the target; their
+    order therefore is not important. Same goes for features that just need to
+    be present or not. The order does matter however for interactions to remove
+    as removing the interactions in a different order may lead to a different
+    set of remaining interactions.
+
     Parameters
     ----------
     incoming_graph_data:
-        Data to initialize graph. If None (default) an empty graph is created.
+        Data to initialize graph. If `None` (default) an empty graph is created.
     attr:
         Attributes to add to graph as key=value pairs.
     """
@@ -1004,6 +1173,63 @@ class Link(Block):
         }
         self._set_defaults(defaults)
         self._apply_to_all_nodes = {}
+
+    def __eq__(self, other):
+        # TODO: There is no good reason to care about the order of patterns
+        # except for the fact that order free comparison of non hashable things
+        # is a pain.
+        return (super().__eq__(other)
+                and self.same_non_edges(other)
+                and self.removed_interactions == other.removed_interactions
+                and self.molecule_meta == other.molecule_meta
+                and self.patterns == other.patterns
+                and set(self.features) == set(other.features)
+                )
+
+    def same_non_edges(self, other):
+        """
+        Returns `True` if all the non-edges of an `other` link are equal to
+        those of this link. Returns `False` otherwise.
+        """
+        # A non-edge is a list of two elements: the key to a node in the graph
+        # that is used as anchor, and an attribute dict that must match none of
+        # the atoms connected to the anchor.
+        # For the link to match, none of the non-edges must match. Therefore,
+        # their order do not matter. Though, because the attribute dicts are
+        # not hashable, non-edges cannot be put in a set.
+
+        # If the number of non-edges is not the same, we can save the hasle.
+        if len(self.non_edges) != len(other.non_edges):
+            return False
+        # If there is no non-edges, which is likely the most common case, we
+        # can also save some effort.
+        if not self.non_edges:
+            return True
+
+        # We sort the non-edges to get rid of the order. However, we cannot
+        # sort them on the attribute dict, and there may be more than one
+        # non-edge involving a given anchor. So for each anchor, we need to
+        # compare the dicts of that link with all the non already assigned
+        # dicts of the other link that share the same anchor.
+        sorted_self = sorted(self.non_edges, key=lambda x: x[0])
+        sorted_other = sorted(other.non_edges, key=lambda x: x[0])
+        zipped = zip(itertools.groupby(sorted_self, key=lambda x: x[0]),
+                     itertools.groupby(sorted_other, key=lambda x: x[0]))
+        for (key_self, attrs_self), (key_other, attrs_other) in zipped:
+            if key_self != key_other:
+                return False
+            attrs_self = list(attrs_self)
+            attrs_other = list(attrs_other)
+            if len(attrs_self) != len(attrs_other):
+                return False
+            for attr_self in attrs_self:
+                for i, attr_other in enumerate(attrs_other):
+                    if not utils.are_different(attr_self, attr_other):
+                        del attrs_other[i]
+                        break
+                else:  # no break
+                    return False
+        return True
 
 
 def attributes_match(attributes, template_attributes, ignore_keys=()):

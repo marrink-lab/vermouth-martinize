@@ -55,14 +55,16 @@ def _interaction_sorting_key(interaction):
     return (conditional, group)
 
 
-def write_molecule_itp(molecule, outfile, header=()):
+def write_molecule_itp(molecule, outfile, header=(), moltype=None):
     """
     Write a molecule in ITP format.
 
-    The molecule must have a `moltype` and a `nrexcl` attribute. Each atom
-    in the molecule must have at least the following keys: `atype`, `resid`,
-    `resname`, `atomname`, and `charge_group`. Atoms can also have a
-    `charge` and a `mass` key.
+    The molecule must have a `nrexcl` attribute. Each atom in the molecule must
+    have at least the following keys: `atype`, `resid`, `resname`, `atomname`,
+    and `charge_group`. Atoms can also have a `charge` and a `mass` key.
+
+    If the `moltype` argument is not provided, then the molecule must have a
+    "moltype" meta attribute.
 
     Parameters
     ----------
@@ -75,6 +77,9 @@ def write_molecule_itp(molecule, outfile, header=()):
         List of lines to write as comment at the beginning of the file. The
         comment character and the new line should not be included as they will
         be added in the function.
+    moltype: str, optional
+        The molecule type. If set to `None` (default), the molecule type is
+        read from the "moltype" key of `molecule.meta`.
 
     Raises
     ------
@@ -83,7 +88,12 @@ def write_molecule_itp(molecule, outfile, header=()):
     """
     # Make sure the molecule contains the information required to write the
     # header.
-    _attr_has_not_none_attr(molecule, 'moltype')
+    if moltype is None:
+        moltype = molecule.meta.get('moltype')
+        if  moltype is None:
+            raise ValueError('A molecule must have a moltype to write an '
+                             'ITP, provide it with the moltype argument, or '
+                             'with the "moltype" meta attribute of the molecule.')
     _attr_has_not_none_attr(molecule, 'nrexcl')
 
     # Make sure the molecule contains the information required to write the
@@ -116,7 +126,7 @@ def write_molecule_itp(molecule, outfile, header=()):
         outfile.write('\n')
 
     outfile.write('[ moleculetype ]\n')
-    outfile.write('{} {}\n\n'.format(molecule.moltype, molecule.nrexcl))
+    outfile.write('{} {}\n\n'.format(moltype, molecule.nrexcl))
 
     # The atoms in the [atoms] section must be consecutively numbered, yet
     # there is no guarantee that the molecule fulfill that constrain.

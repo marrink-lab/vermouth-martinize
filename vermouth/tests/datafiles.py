@@ -31,6 +31,7 @@ PDB_NOT_PROTEIN = TEST_DATA / 'heme.pdb'
 
 # Full PDB files
 PDB_CYS = TEST_DATA / '2QWO.pdb'  # Contains cystein bridges
+PDB_HB = TEST_DATA / '2dn2.pdb'  # Hemoglobin with heme and 2*2 protein chains
 
 # DNA
 SHORT_DNA = TEST_DATA / 'dna-short.pdb'
