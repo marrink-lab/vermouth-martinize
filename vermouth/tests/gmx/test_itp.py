@@ -111,7 +111,7 @@ def test_pre_post_section_lines(pre_meta, post_meta):
     # pre_section_lines and post_section_lines are defined for the section.
     # When <joint> in "with", then the section contains 2 interactions in
     # addition to the pre- and post- lines. When <joint> is "only", then the
-    # section only has the lines defined, and no interactions.
+    # section only has the pre/post lines defined, and no interactions.
     parts = ('pre', 'post', 'pre_post')
     molecule.interactions = {}
     for part in parts:
@@ -185,11 +185,13 @@ def test_pre_post_section_lines(pre_meta, post_meta):
 
     if post_meta:
         arg_post = post_section_lines
+        molecule.meta['post_section_lines'] = 'invalid'
     else:
         arg_post = None
         molecule.meta['post_section_lines'] = post_section_lines
     if pre_meta:
         arg_pre = pre_section_lines
+        molecule.meta['pre_section_lines'] = 'invalid'
     else:
         arg_pre = None
         molecule.meta['pre_section_lines'] = pre_section_lines
