@@ -76,13 +76,6 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
     str
         The system as PDB formatted string.
     """
-    def keyfunc(graph, node_idx):
-        """
-        Used for sorting nodes
-        """
-        # TODO add something like idx_in_residue
-        return graph.node[node_idx]['chain'], graph.node[node_idx]['resid'], graph.node[node_idx]['resname']
-
     out = []
 
     formatter = TruncFormatter()
@@ -94,7 +87,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
     nodeidx2atomid = {}
     atomid = 1
     for mol_idx, molecule in enumerate(system.molecules):
-        node_order = sorted(molecule, key=partial(keyfunc, molecule))
+        node_order = molecule.nodes
 
         for node_idx in node_order:
             nodeidx2atomid[(mol_idx, node_idx)] = atomid
@@ -135,7 +128,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
         number_fmt = '{:>4dt}'
         format_string = 'CONECT '
         for mol_idx, molecule in enumerate(system.molecules):
-            node_order = sorted(molecule, key=partial(keyfunc, molecule))
+            node_order = molecule.nodes
 
             for node_idx in node_order:
                 todo = [nodeidx2atomid[(mol_idx, n_idx)]

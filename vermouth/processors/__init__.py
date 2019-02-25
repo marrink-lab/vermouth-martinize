@@ -42,3 +42,4 @@ from .add_molecule_edges import AddMoleculeEdgesAtDistance, MergeNucleicStrands
 from .name_moltype import NameMolType
 from .quote import Quoter
 from .go_vs_includes import GoVirtIncludes
+from .sort_molecule_atoms import SortMoleculeAtoms
