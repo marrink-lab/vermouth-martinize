@@ -16,8 +16,9 @@ install:
   - pip install --upgrade -r requirements-tests.txt
   - pip install --upgrade .
 script:
-  - pytest -vv --cov=vermouth vermouth --hypothesis-show-statistics
+  - coverage run --source=vermouth $(which pytest) -vv vermouth --hypothesis-show-statistics
 after_success:
+  - coverage report --omit='*/bin/pytest'
   - if [[ ${WITH_CODECOV} == true ]]; then codecov; fi
 addons:
   apt:

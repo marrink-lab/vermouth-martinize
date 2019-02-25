@@ -12,8 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+import itertools
+import numpy as np
 import pytest
+import hypothesis
+import hypothesis.strategies as st
+import hypothesis_networkx.strategy as hnst
 import vermouth
+import vermouth.molecule
+from vermouth.molecule import Interaction, Molecule, Block, Link, DeleteInteraction
+from .molecule_strategies import attribute_dict, random_molecule, random_block, random_link
+
+# In some cases, drawing from hypothesis.strategies.text is extremely slow and
+# triggers the heath check warnings. It appears to be due to some internal
+# combinations of timers and cache. This is a workwround that forces the
+# generation, and the caching, of the character table out of any test. This
+# way, the table is cached, and the time required to build it is not accounted
+# in the health checks.
+# See <https://github.com/HypothesisWorks/hypothesis/issues/1153>.
+hypothesis.internal.charmap.charmap()
 
 
 @pytest.fixture
@@ -345,3 +363,812 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
         for edge in sorted_expected
     ]
     assert found_attributes == expected_attributes
+
+
+@pytest.mark.parametrize('left, right, expected', (
+    (  # Same
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        True,
+    ),
+    (  # Difference in atoms
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'notC'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        False,
+    ),
+    (  # Difference in parameters
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['different'],
+                            meta={'a': 0}),
+            ],
+        },
+        False,
+    ),
+    (  # Difference in meta
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0, 'other': True}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        False,
+    ),
+    (  # Equal with LinkParameterEffector
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamDistance(['A', 'B']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamDistance(['A', 'B']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        True,
+    ),
+    (  # Different arguments for LinkParameterEffector
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamDistance(['A', 'B']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamDistance(['A', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        False,
+    ),
+    (  # Different format_spec in LinkParameterEffector
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamDistance(['A', 'B']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamDistance(
+                                    ['A', 'B'], format_spec='.2f',
+                                ),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        False,
+    ),
+    (  # Different LinkParameterEffector
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamDistance(['A', 'B']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        False,
+    ),
+    (  # Missing interaction category ("angles" is missing in one molecule)
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [
+                Interaction(atoms=('A', 'B', 'C'),
+                            parameters=['1', '0.2', '200'],
+                            meta={'a': 0}),
+            ],
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+        },
+        False,
+    ),
+    (  # Empty interaction category
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+            'angles': [],  # Empty!
+        },
+        {
+            'bonds': [
+                Interaction(atoms=('A', 'B'),
+                            parameters=[
+                                'a',
+                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                '200',
+                            ],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),
+            ],
+        },
+        True,
+    ),
+
+))
+def test_same_interactions(left, right, expected):
+    """
+    Test that Molecule.same_interactions works as expected.
+    """
+    left_mol = Molecule()
+    left_mol.interactions = left
+    right_mol = Molecule()
+    right_mol.interactions = right
+    assert left_mol.same_interactions(right_mol) == expected
+    assert right_mol.same_interactions(left_mol) == expected
+
+
+@pytest.mark.parametrize('left, right, expected', (
+    (  # Simple identical
+        (  # left
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        True,  # expected
+    ),
+    (  # Wrong order
+        (  # left
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (1, {'c': (0, 1, 2), 'd': None}),
+            (0, {'a': 'abc', 'b': 123}),
+        ),
+        False,  # expected
+    ),
+
+    (  # Different string
+        (  # left
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': 'different', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        False,
+    ),
+    (  # Different number
+        (  # left
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': 'abc', 'b': 900}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        False,  # expected
+    ),
+    (  # Different tuple
+        (  # left
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (3, 2, 1), 'd': None}),
+        ),
+        False,  # expected
+    ),
+    (  # Equal Numpy array
+        (  # left
+            (0, {'a': np.linspace(2, 5, num=7), 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': np.linspace(2, 5, num=7), 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        True,  # expected
+    ),
+    (  # Different Numpy array
+        (  # left
+            (0, {'a': np.linspace(2, 5, num=7), 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': np.linspace(2, 8, num=7), 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        False,  # expected
+    ),
+    (  # Different shaped Numpy array
+        (  # left
+            (0, {'a': np.linspace(2, 5, num=9), 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': np.linspace(2, 5, num=9).reshape((3, 3)), 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        False,  # expected
+    ),
+    (  # Mismatch types
+        (  # left
+            (0, {'a': np.linspace(2, 5, num=9), 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': 'not an array', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        False,  # expected
+    ),
+    (  # Mismatch attribute key
+        (  # left
+            (0, {'a': 'abc', 'b': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        (  # right
+            (0, {'a': 'abc', 'different': 123}),
+            (1, {'c': (0, 1, 2), 'd': None}),
+        ),
+        False,  # expected
+    ),
+    (  # same dicts as value
+        (  # left
+            (0, {'a': {'a': 0, 'b': 1}}),
+        ),
+        (  # right
+            (0, {'a': {'a': 0, 'b': 1}}),
+        ),
+        True,
+    ),
+    (  # different dicts as value
+        (  # left
+            (0, {'a': {'a': 0, 'b': 1}}),
+        ),
+        (  # right
+            (0, {'a': {'a': None, 'b': 1}}),
+        ),
+        False,
+    ),
+))
+def test_same_nodes(left, right, expected):
+    left_mol = Molecule()
+    left_mol.add_nodes_from(left)
+    right_mol = Molecule()
+    right_mol.add_nodes_from(right)
+    assert left_mol.same_nodes(right_mol) == expected
+    assert right_mol.same_nodes(left_mol) == expected
+
+
+@pytest.mark.parametrize('effector_class', (
+    vermouth.molecule.ParamDistance,
+    vermouth.molecule.ParamAngle,
+    vermouth.molecule.ParamDihedral,
+    vermouth.molecule.ParamDihedralPhase,
+))
+@pytest.mark.parametrize('format_spec', (
+    None, '.2f', '0.3f',
+))
+def test_link_parameter_effector_equal(effector_class, format_spec):
+    """
+    Test that equal LinkParameterEffector compare equal.
+    """
+    n_keys = effector_class.n_keys_asked
+    left_keys = ['A{}'.format(idx) for idx in range(n_keys)]
+    right_keys = copy.copy(left_keys)  # Let's be sure the id is different
+    left = effector_class(left_keys, format_spec=format_spec)
+    right = effector_class(right_keys, format_spec=format_spec)
+    assert left == right
+
+
+@pytest.mark.parametrize('effector_class', (
+    vermouth.molecule.ParamDistance,
+    vermouth.molecule.ParamAngle,
+    vermouth.molecule.ParamDihedral,
+    vermouth.molecule.ParamDihedralPhase,
+))
+@pytest.mark.parametrize('format_right, format_left', itertools.combinations(
+    (None, '.2f', '0.3f', ), 2
+))
+def test_link_parameter_effector_diff_format(effector_class, format_left, format_right):
+    """
+    Test that two instances of LinkParameterEffector compare different if they
+    have different formats.
+    """
+    n_keys = effector_class.n_keys_asked
+    left_keys = ['A{}'.format(idx) for idx in range(n_keys)]
+    right_keys = copy.copy(left_keys)  # Let's be sure the id is different
+    left = effector_class(left_keys, format_spec=format_left)
+    right = effector_class(right_keys, format_spec=format_right)
+    assert left != right
+
+
+@pytest.mark.parametrize('effector_class', (
+    vermouth.molecule.ParamDistance,
+    vermouth.molecule.ParamAngle,
+    vermouth.molecule.ParamDihedral,
+    vermouth.molecule.ParamDihedralPhase,
+))
+def test_link_parameter_effector_diff_keys(effector_class):
+    """
+    Test that LinkParameterEffector compare different if they have different keys.
+    """
+    n_keys = effector_class.n_keys_asked
+    left_keys = ['A{}'.format(idx) for idx in range(n_keys)]
+    right_keys = ['B{}'.format(idx) for idx in range(n_keys)]
+    left = effector_class(left_keys)
+    right = effector_class(right_keys)
+    assert left != right
+
+
+@pytest.mark.parametrize('left_class, right_class', itertools.combinations((
+    vermouth.molecule.ParamDistance,
+    vermouth.molecule.ParamAngle,
+    vermouth.molecule.ParamDihedral,
+    vermouth.molecule.ParamDihedralPhase,
+), 2))
+def test_link_parameter_effector_diff_class(left_class, right_class):
+    """
+    Test that LinkParameterEffector compare different if they have different classes.
+    """
+    left_n_keys = left_class.n_keys_asked
+    left_keys = ['A{}'.format(idx) for idx in range(left_n_keys)]
+    left = left_class(left_keys)
+
+    right_n_keys = right_class.n_keys_asked
+    right_keys = ['A{}'.format(idx) for idx in range(right_n_keys)]
+    right = right_class(right_keys)
+
+    assert left != right
+
+
+@hypothesis.given(random_molecule())
+def test_molecule_equal(mol):
+    """
+    Two equal molecules are equal.
+    """
+    mol_copy = mol.copy()
+    assert mol == mol_copy
+    assert mol is not mol_copy
+
+
+@hypothesis.given(random_block())
+def test_block_equal(block):
+    """
+    Two equal blocks are equal.
+    """
+    block_copy = block.copy()
+    assert block == block_copy
+    assert block is not block_copy
+
+
+@hypothesis.given(random_link(max_nodes=3, max_meta=3))
+def test_link_equal(link):
+    """
+    Two equal links are equal.
+    """
+    link_copy = link.copy()
+    assert link == link
+    assert link is not link_copy
+
+
+@pytest.mark.parametrize('left, right, expected', (
+    (  # Equal edges, same order, same direction, same attributes
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        True,
+    ),
+    (  # Equal edges, but different order
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (1, 3, {'foo': 'bar'}),
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+        ],
+        True,
+    ),
+    (  # Equal edges, but different order and different direction
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (3, 1, {'foo': 'bar'}),
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+        ],
+        True,
+    ),
+    (  # Edges only differ by an attribute
+        [
+            (0, 1, {'a': 0, 'b': [2, 3]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        [
+            (0, 1, {'a': 0, 'b': [2, 40]}),
+            (1, 3, {'foo': 'bar'}),
+        ],
+        False,
+    ),
+    (  # Edges are different
+        [
+            (0, 1, {'foo': 'bar'}),
+            (2, 3, {}),
+        ],
+        [
+            (5, 6, {'foo': 'bar'}),
+            (3, 4, {}),
+        ],
+        False,
+    ),
+))
+def test_same_edges(left, right, expected):
+    """
+    Compare edges between two molecules.
+    """
+    molecule_left = vermouth.molecule.Molecule()
+    molecule_left.add_edges_from(left)
+    molecule_right = vermouth.molecule.Molecule()
+    molecule_right.add_edges_from(right)
+    assert molecule_left.same_edges(molecule_right) == expected
+    assert molecule_right.same_edges(molecule_left) == expected
+
+
+@pytest.mark.parametrize('left, right, expected', (
+    (  # Identical non-edges
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        True,
+    ),
+    (  # Identical non-edges, but disordered
+        [
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        True,
+    ),
+
+    (  # Different number of non-edges
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (  # Same number of non-edges, but mismatched anchors
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('AA', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('BB', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (  # Mismatch in an attribute
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        [
+            ('XX', {'foo': 'mismatch', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (  # Mismatch in number of attributes, there is a shortcut in same_non_edges
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar'}),
+            ('YY', {}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar', 'plop': 'else'}),
+            ('YY', {'klonk': 0}),
+        ],
+        False,
+    ),
+    (
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar'}),
+            ('XX', {'foo': 'no bar again'}),
+            ('YY', {}),
+        ],
+        [
+            ('XX', {'foo': 'bar', 'toto': [0, 1, 2]}),
+            ('XX', {'foo': 'no bar'}),
+            ('YY', {}),
+            ('YY', {'something': 'tadaam'}),
+        ],
+        False,
+    ),
+))
+def test_same_non_edges(left, right, expected):
+    """
+    Compare non-edges between two links.
+    """
+    link_left = vermouth.molecule.Link()
+    link_left.non_edges = left
+    link_right = vermouth.molecule.Link()
+    link_right.non_edges = right
+    assert link_left.same_non_edges(link_right) == expected
+    assert link_right.same_non_edges(link_left) == expected

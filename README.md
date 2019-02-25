@@ -18,8 +18,8 @@ transformation on molecular structures and topologies using graph algorithms.
 
 ## Disclaimer
 
-**Both Martinize2 and vermouth are at a prototype stage. DO NOT USE IN
-PRODUCTION.**
+Martinize2 and Vermouth are under developpement. Bugs can occur. If you encounter an issue, please report it on <https://github.com/marrink-lab/vermouth-martinize/issues>. Carefully check your input and output files before
+using them; read the messages displayed by the program.
 
 ## Installation
 

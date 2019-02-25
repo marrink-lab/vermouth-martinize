@@ -343,8 +343,15 @@ def test_run_dssp(savefile, tmpdir):
     if savefile:
         assert path.exists()
         with open(str(path)) as genfile, open(str(DSSP_OUTPUT)) as reffile:
-            gen = '\n'.join(genfile.readlines()[6:])
-            ref = '\n'.join(reffile.readlines()[6:])
+            # DSSP 3 is outputs mostly the same thing as DSSP2, though there
+            # are some differences in non significant whitespaces, and an extra
+            # field header. We need to normalize these differences to be able
+            # to compare.
+            gen = '\n'.join([
+                line.strip().replace('            CHAIN', '')
+                for line in genfile.readlines()[6:]
+            ])
+            ref = '\n'.join([line.strip() for line in reffile.readlines()[6:]])
             assert gen == ref
     else:
         # Is the directory empty?
