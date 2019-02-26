@@ -39,6 +39,7 @@ underlying backbone bead. They are also added in the `[ virtual_sitesn ]`
 section.
 """
 
+import networkx as nx
 from ..molecule import Interaction
 from .processor import Processor
 
@@ -82,20 +83,34 @@ class GoVirtIncludes(Processor):
         return molecule
 
 
-def add_virtual_sites(molecule, prefix, atomname='BB'):
+def add_virtual_sites(molecule, prefix, backbone='BB', atomname='CA', charge=0):
     """
     Add the virtual sites for GoMartini in the molecule.
 
     One virtual site is added per backbone bead of the the Martini protein.
     Each virtual site copies the resid, resname, and chain of the backbone
-    bead. It also copies the *reference* to the poition array, so the virtual
+    bead. It also copies the *reference* to the position array, so the virtual
     site position follows if the backbone bead is translated. The virtual sites
     are added *after* all the other atoms of the molecule, each in its own
-    charge group, with "CA" as atomname, and a charge of 0.
+    charge group, with "CA" as atomname, and a charge of 0. The atomname and
+    charge can be set with the `atomname` and `charge` argument, respectively.
 
     The bead type of the virtual sites is names "<prefix>_<resid>". Where
     `prefix` is provided as an argument of the function, and is expected to be
     the molecule type name.
+
+    Parameters
+    ----------
+    molecule: vermouth.molecule.Molecule
+        The molecule to augment with virtual sites.
+    prefix: str
+        The prefix to use for bead type names. Usually the molecule type name.
+    backbone: str
+        The atomname of the backbone beads.
+    atomname: str
+        The atomname of the virtual sites.
+    charge: float or int
+        The charge of the virtual sites.
     """
     # If there are no atoms, then there is nothing to do. We can exit early,
     # avoiding to deal with empty iterators.
@@ -104,25 +119,26 @@ def add_virtual_sites(molecule, prefix, atomname='BB'):
     virtual_site_nodes = []
     virtual_sites = []
     new_node_id = max(molecule.nodes)
-    new_charge_group = max(node['charge_group'] for node in molecule.nodes.values())
+    charge_groups = nx.get_node_attributes(molecule, 'charge_group').values()
+    new_charge_group = max(charge_groups) if charge_groups else 0
     for node_id, atom in molecule.nodes(data=True):
-        if atom.get('atomname') == atomname:
+        if atom.get('atomname') == backbone:
             new_node_id += 1
             new_charge_group += 1
             virtual_site_nodes.append((new_node_id, {
                 'resid': atom['resid'],
                 'resname': atom['resname'],
-                'atomname': 'CA',
                 'atype': '{}_{}'.format(prefix, atom['resid']),
                 'charge_group': new_charge_group,
                 'chain': atom['chain'],
                 'position': atom['position'],
-                'charge': 0,
+                'atomname': atomname,
+                'charge': charge,
             }))
             virtual_sites.append(Interaction(
                 atoms=[new_node_id, node_id],
                 parameters=['1'],
-                meta={'go_vs': True, 'comment': 'virtual go site'},
+                meta={'go_vs': True, 'group': 'Virtual go site'},
             ))
     molecule.add_nodes_from(virtual_site_nodes)
     if 'virtual_sitesn' not in molecule.interactions:

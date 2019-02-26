@@ -16,6 +16,9 @@
 Test the :class:`vermouth.processors.go_vs_includes.GoVirtIncludes` processor.
 """
 
+# Pylint issues false warnings because of pytest's fixtures.
+# pylint: disable=redefined-outer-name
+
 import pytest
 from vermouth import Molecule
 from vermouth.processors import GoVirtIncludes
@@ -43,7 +46,7 @@ def molecule_for_go(request):
                 charge_group=base_atom_idx,
                 chain='A',
                 # Should be an array, but it is not relevant for the test
-                position=[0, 0, 0],  
+                position=[0, 0, 0],
             )
     molecule.meta['post_section_lines'] = {
         'exclusions': ['I exist'],

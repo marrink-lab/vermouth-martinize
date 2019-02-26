@@ -16,7 +16,11 @@
 Test the writing of ITP file.
 """
 
-import itertools
+# Pylint issues false warnings because of pytest's fixtures.
+# pylint: disable=redefined-outer-name
+# Some of the expected outputs do contain trailing whitespaces.
+# pylint: disable=trailing-whitespace
+
 import io
 import textwrap
 import pytest
@@ -132,7 +136,7 @@ def test_pre_post_section_lines(pre_meta, post_meta):
         'atoms': ['after_atoms_0'],
         'interaction_with_post': ['after_post_0', 'after_post_1'],
         'interaction_with_pre_post': ['after_pre_post_0'],
-        'interaction_only_post': ['after_post_only_0','after_post_only_1'],
+        'interaction_only_post': ['after_post_only_0', 'after_post_only_1'],
         'interaction_only_pre_post': ['after_prepost_only_0'],
     }
     expected_segments = [

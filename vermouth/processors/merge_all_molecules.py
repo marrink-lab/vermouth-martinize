@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Provides a processor that merges all the molecules from a system.
+"""
+
 from .processor import Processor
 
 
@@ -32,3 +36,7 @@ class MergeAllMolecules(Processor):
 
         system.molecules = [molecule]
         return system
+
+    @staticmethod
+    def run_molecule(molecule):
+        raise NotImplementedError('MergeAllMolecules only works on systems.')

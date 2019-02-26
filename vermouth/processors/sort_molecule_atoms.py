@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Provides a processor that sorts atoms within molecules.
+"""
+
+import copy
 from functools import partial
 from .processor import Processor
 
@@ -30,11 +35,12 @@ class SortMoleculeAtoms(Processor):
             (node_key, molecule.nodes[node_key])
             for node_key in node_order
         ]
-        # remove_nodes_from would be better, but it leads to an OrderedDict
-        # being modified during iteration, and python does not like that.
-        for node in node_order:
-            super(type(molecule), molecule).remove_node(node)
+        edges = tuple(molecule.edges(data=True))
+        interactions = copy.copy(molecule.interactions)
+        molecule.remove_nodes_from(node_order)
         molecule.add_nodes_from(sorted_nodes)
+        molecule.add_edges_from(edges)
+        molecule.interactions = interactions
         return molecule
 
 
