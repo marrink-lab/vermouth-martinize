@@ -66,7 +66,7 @@ def test_go_virt_includes(molecule_for_go):
     processor.run_molecule(molecule)
 
     expected_post = {
-        'exclusions': ['I exist', '#include "TEST_exclusions_VirtGoSite.itp"'],
+        'exclusions': ['I exist', '#include "TEST_exclusions_VirtGoSites.itp"'],
         'other': ['Hello'],
     }
 

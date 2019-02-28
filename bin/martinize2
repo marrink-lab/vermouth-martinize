@@ -142,7 +142,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     return system
 
 
-def write_gmx_topology(system, top_path, header=()):
+def write_gmx_topology(system, top_path, defines=(), header=()):
     """
     Writes a Gromacs .top file for the specified system.
     """
@@ -186,6 +186,7 @@ def write_gmx_topology(system, top_path, header=()):
 
     # Write the top file
     template = textwrap.dedent("""\
+        {defines}
         #include "martini.itp"
         {includes}
 
@@ -204,12 +205,16 @@ def write_gmx_topology(system, top_path, header=()):
         .format(mtype=mtype, num=num, length=max_name_length)
         for mtype, num in moltype_count
     )
+    define_string = '\n'.join(
+        '#define {}'.format(define) for define in defines
+    )
     with open(str(top_path), 'w') as outfile:
         outfile.write(
             textwrap.dedent(
                 template.format(
                     includes=include_string,
-                    molecules=molecule_string
+                    molecules=molecule_string,
+                    defines=define_string,
                 )
             )
         )
@@ -516,12 +521,14 @@ def entry():
         vermouth.MergeAllMolecules().run_system(system)
         vermouth.SetMoleculeMeta(moltype=args.govs_moltype).run_system(system)
         vermouth.GoVirtIncludes().run_system(system)
+        defines = ('GO_VIRT',)
     else:
         # Merge chains if required.
         if args.merge_chains:
             for chain_set in args.merge_chains:
                 vermouth.MergeChains(chain_set).run_system(system)
         vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
+        defines = ()
 
     LOGGER.info('Writing output.', type='step')
     # Write the topology if requested
@@ -538,7 +545,7 @@ def entry():
         ]
 
     if args.top_path is not None:
-        write_gmx_topology(system, args.top_path, header=header)
+        write_gmx_topology(system, args.top_path, defines=defines, header=header)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)

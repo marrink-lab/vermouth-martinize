@@ -76,7 +76,7 @@ class GoVirtIncludes(Processor):
         includes = molecule.meta.get('post_section_lines', {})
         for section in self.sections:
             section_includes = includes.get(section, [])
-            section_includes.append('#include "{moltype}_{section}_VirtGoSite.itp"'
+            section_includes.append('#include "{moltype}_{section}_VirtGoSites.itp"'
                                     .format(moltype=moltype, section=section))
             includes[section] = section_includes
         molecule.meta['post_section_lines'] = includes
