@@ -55,7 +55,8 @@ def _interaction_sorting_key(interaction):
     return (conditional, group)
 
 
-def write_molecule_itp(molecule, outfile, header=(), moltype=None):
+def write_molecule_itp(molecule, outfile, header=(), moltype=None,
+                       post_section_lines=None, pre_section_lines=None):
     """
     Write a molecule in ITP format.
 
@@ -80,6 +81,17 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None):
     moltype: str, optional
         The molecule type. If set to `None` (default), the molecule type is
         read from the "moltype" key of `molecule.meta`.
+    post_section_lines: dict[str, collections.abc.Iterable[str]], optional
+        List of lines to write at the end of some sections of the file. The
+        argument is passed as a dict with the keys being the name of the
+        sections, and the values being the lists of lines. If the argument is
+        set to `None`, the lines will be read from the "post_section_lines" key
+        of `molecule.meta`.
+    pre_section_lines: dict[str, collections.abc.Iterable[str]], optional
+        List of lines to write at the beginning of some sections, just after
+        the section header. The argument is formatted in the same way as
+        `post_section_lines`. If the argument is set to `None`, the lines will
+        be read from the "post_section_lines" key of `molecule.meta`.
 
     Raises
     ------
@@ -128,6 +140,14 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None):
     outfile.write('[ moleculetype ]\n')
     outfile.write('{} {}\n\n'.format(moltype, molecule.nrexcl))
 
+    # Get the post- and pre- section lines. These lines are will be written at
+    # the end or at the beginning of the relevant sections.
+    if post_section_lines is None:
+        post_section_lines = molecule.meta.get('post_section_lines', {})
+    if pre_section_lines is None:
+        pre_section_lines = molecule.meta.get('pre_section_lines', {})
+    seen_sections = set()
+
     # The atoms in the [atoms] section must be consecutively numbered, yet
     # there is no guarantee that the molecule fulfill that constrain.
     # Therefore we renumber the atoms. The `correspondence` dict allows to
@@ -138,6 +158,9 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None):
     # correctly numbered.
     correspondence = {}
     outfile.write('[ atoms ]\n')
+    seen_sections.add('atoms')
+    for line in pre_section_lines.get('atoms', []):
+        outfile.write(line + '\n')
     for idx, (original_idx, atom) in enumerate(molecule.atoms, start=1):
         correspondence[original_idx] = idx
         new_atom = copy.copy(atom)
@@ -155,6 +178,8 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None):
                       '{charge:>{max_length[charge]}} '
                       '{mass:>{max_length[mass]}}\n'
                       .format(idx=idx, max_length=max_length, **new_atom))
+    for line in post_section_lines.get('atoms', []):
+        outfile.write(line + '\n')
     outfile.write('\n')
 
     # Write the interactions
@@ -169,6 +194,9 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None):
         if name == 'impropers':
             name = 'dihedrals'
         outfile.write('[ {} ]\n'.format(name))
+        seen_sections.add(name)
+        for line in pre_section_lines.get(name, []):
+            outfile.write(line + '\n')
         interactions_group_sorted = sorted(
             interactions,
             key=_interaction_sorting_key
@@ -199,4 +227,18 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None):
                 outfile.write(' '.join(to_join) + comment + '\n')
             if conditional:
                 outfile.write('#endif\n')
+            for line in post_section_lines.get(name, []):
+                outfile.write(line + '\n')
             outfile.write('\n')
+
+    # Some sections may have pre or post lines, but no other content. I that
+    # case, we need to write the sections separately.
+    remaining_sections = set(pre_section_lines) | set(post_section_lines)
+    remaining_sections -= seen_sections
+    for name in remaining_sections:
+        outfile.write('[ {} ]\n'.format(name))
+        for line in pre_section_lines.get(name, []):
+            outfile.write(line + '\n')
+        for line in post_section_lines.get(name, []):
+            outfile.write(line + '\n')
+        outfile.write('\n')

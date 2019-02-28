@@ -127,13 +127,6 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
     box: tuple[float]
         Box length and optionally angles.
     """
-    def keyfunc(graph, node_idx):
-        """Key function for sorting nodes."""
-        # TODO add something like idx_in_residue
-        return (graph.node[node_idx]['chain'],
-                graph.node[node_idx]['resid'],
-                graph.node[node_idx]['resname'])
-
     formatter = TruncFormatter()
     pos_format_string = '{{:{ntx}.3ft}}'.format(ntx=precision+1)
     format_string = '{:5dt}{:<5st}{:>5st}{:5dt}' + pos_format_string*3
@@ -150,7 +143,7 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
         out.write(formatter.format('{}\n', system.num_particles))  # number of atoms
         atomid = 1
         for molecule in system.molecules:
-            node_order = sorted(molecule, key=partial(keyfunc, molecule))
+            node_order = molecule.nodes
             for node_idx in node_order:
                 node = molecule.node[node_idx]
                 atomname = node['atomname']
