@@ -515,6 +515,8 @@ def entry():
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
 
+    vermouth.Quoter().run_system(system)
+
 
 if __name__ == '__main__':
     entry()
