@@ -437,8 +437,8 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
                 raise ValueError("No node found in molecule with "
                                  "atomname {}".format(modification.nodes[mod_idx]['atomname']))
             mod_to_out[mod_idx] = out_idx
-            # FIXME: modify out_node as required. We will lose access to
-            #        "modification" after this.
+            graph_out.nodes[out_idx].update(modification.nodes[mod_idx].get('replace', {}))
+
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():
             out_idx = mod_to_out[mod_idx]
