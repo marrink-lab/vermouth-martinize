@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import networkx as nx
+"""
+Contains an integrative test for the Mapping parser and the DoMapping processor.
+"""
+
 import pytest
 
 from vermouth.processors import DoMapping, RepairGraph, CanonicalizeModifications, PDBInput, MakeBonds
-from vermouth.pdb.pdb import read_pdb
 from vermouth import System
 from vermouth.map_input import read_mapping_directory
 from vermouth.forcefield import ForceField
@@ -29,6 +31,10 @@ from vermouth.tests.datafiles import (
     MAP_UNIVERSAL_TEST_PEPPLANE
 )
 from vermouth.tests.helper_functions import equal_graphs
+
+
+# Pylint doesn't like pytest fixtures
+# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture(scope='session')

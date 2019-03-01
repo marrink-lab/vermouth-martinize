@@ -4,11 +4,25 @@ C-ter
 CA {"element": "C"}
 C {"element": "C"}
 O {"element": "O", "replace": {"atomname": "O1"}}
-OXT {"element": "O", "PTM_atom": true, "replace": {"atomname": "O2"}}
+O2 {"element": "O", "PTM_atom": true}
 [ edges ]
 CA C
 C O
-C OXT
+C O2
+
+[ modification ]
+COOH-ter
+[ atoms ]
+CA {"element": "C"}
+C {"element": "C"}
+O {"element": "O", "replace": {"atomname": "O1"}}
+O2 {"element": "O", "PTM_atom": true}
+HO2 {"element": "H", "PTM_atom": true}
+[ edges ]
+CA C
+C O
+C O2
+O2 HO2
 
 [ modification ]
 N-ter

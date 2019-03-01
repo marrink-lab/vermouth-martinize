@@ -15,9 +15,9 @@
 """
 Helper functions for parsers
 """
-from .ffinput import _tokenize, _parse_macro, _substitute_macros
 from collections import deque
 
+from .ffinput import _tokenize, _parse_macro, _substitute_macros
 
 # This file contains helper methods and infrastructure for parsers. The class
 # SectionLineParser in particular is a powerful tool that is intended to make
@@ -34,8 +34,8 @@ class SectionParser(type):
     of all its attributes. You can conveniently set `_section_names` attributes
     using the :meth:`section_parser` decorator.
     """
-    def __new__(cls, name, bases, attrs, **kwargs):
-        obj = super().__new__(cls, name, bases, attrs, **kwargs)
+    def __new__(mcs, name, bases, attrs, **kwargs):
+        obj = super().__new__(mcs, name, bases, attrs, **kwargs)
         if not hasattr(obj, 'METH_DICT'):
             obj.METH_DICT = {}
         mapping = obj.METH_DICT
@@ -103,8 +103,8 @@ class LineParser:
             The results of dispatching to parsing methods, and of
             :meth:`finalize`.
         """
+        lineno = 0
         for lineno, line in enumerate(file_handle, 1):
-            # TODO split off comments
             line, _ = split_comments(line, self.COMMENT_CHAR)
             if not line:
                 continue
@@ -202,7 +202,7 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
     def finalize_section(self, previous_section, ended_section):
         """
         Called once a section is finished. Currently does nothing.
-        
+
         Arguments
         ---------
         previous_section: list[str]

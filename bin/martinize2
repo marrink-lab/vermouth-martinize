@@ -481,6 +481,10 @@ def entry():
         delete_unknown=True,
     )
 
+    if args.neutral_termini:
+        LOGGER.info('Making termini neutral.', type='step')
+        vermouth.NeutralTermini(force_field=known_force_fields[args.to_ff]).run_system(system)
+
     # Apply a rubber band elastic network is required.
     if args.elastic:
         LOGGER.info('Setting the rubber bands.', type='step')

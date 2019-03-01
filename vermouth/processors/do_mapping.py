@@ -17,14 +17,12 @@
 Provides a processor that can perform a resolution transformation on a
 molecule.
 """
-from collections import defaultdict, Counter
-from functools import partial
-from itertools import product, combinations, groupby
+from collections import defaultdict
+from itertools import product, combinations
 
 import networkx as nx
 
-from ..map_parser import parse_mapping_file
-from ..molecule import Molecule, Block, attributes_match
+from ..molecule import Molecule, attributes_match
 from .processor import Processor
 from ..utils import are_all_equal, format_atom_string
 from ..log_helpers import StyleAdapter, get_logger
@@ -244,9 +242,9 @@ def modification_matches(molecule, mappings):
     found_ptm_groups = set()
     for group in grouped:
         modifications = {
-                         tuple(mod.name for mod in molecule.nodes[mol_idx].get('modifications', []))
-                         for mol_idx in group
-                        }
+            tuple(mod.name for mod in molecule.nodes[mol_idx].get('modifications', []))
+            for mol_idx in group
+        }
         found_ptm_groups.update(modifications)
     needed_mod_mappings = set()
     known_mod_mappings = get_mod_mappings(mappings)
@@ -438,6 +436,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
                                  "atomname {}".format(modification.nodes[mod_idx]['atomname']))
             mod_to_out[mod_idx] = out_idx
             graph_out.nodes[out_idx].update(modification.nodes[mod_idx].get('replace', {}))
+        graph_out.nodes[out_idx]['modification'] = modification
 
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():
@@ -577,8 +576,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
         # Take the match with the lowest atom id, and prefer blocks over
         # modifications
         if (not block_matches or
-            (mod_matches and
-             mod_sort_key(mod_matches[-1]) < block_sort_key(block_matches[-1]))):
+                (mod_matches and
+                 mod_sort_key(mod_matches[-1]) < block_sort_key(block_matches[-1]))):
             match = mod_matches.pop(-1)
             applied_interactions, refs = apply_mod_mapping(match,
                                                            molecule, graph_out,

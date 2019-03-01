@@ -13,4 +13,12 @@ zwitter
 [ atoms ]
 BB {"replace": {"atype": "Qda"}}
 
+[ modification ]
+COOH-ter
+[ atoms ]
+BB {"replace": {"atype": "P5", "charge": 0}}
 
+[ modification ]
+NH2-ter
+[ atoms ]
+BB {"replace": {"atype": "P5", "charge": 0}}
