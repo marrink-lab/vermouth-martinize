@@ -43,9 +43,10 @@ DSSP_OUTPUT = TEST_DATA / 'dssp_1bta.ssd'
 # Test force fields
 FF_UNIVERSAL_TEST = TEST_DATA / 'force_fields' / 'universal-test'
 FF_PEPPLANE = TEST_DATA / 'force_fields' / 'pepplane'
+FF_MARTINI_TEST = TEST_DATA / 'force_fields' / 'martini-test'
 
 # Mappings
-MAP_UNIVERSAL_TEST_PEPPLANE = TEST_DATA / 'mappings' / 'universal-test' / 'pepplane' 
+MAP_UNIVERSAL_TEST_PEPPLANE = TEST_DATA / 'mappings' / 'universal-test'
 
 
 # Clean the namespace so only the data file variables can be imported.

@@ -18,12 +18,12 @@
 Read force field to force field mappings.
 """
 
-from .log_helpers import StyleAdapter, get_logger
-from .map_parser import MappingDirector, Mapping
-
-from pathlib import Path
 import collections
 import itertools
+from pathlib import Path
+
+from .log_helpers import StyleAdapter, get_logger
+from .map_parser import MappingDirector, Mapping
 
 
 LOGGER = StyleAdapter(get_logger(__name__))
@@ -98,14 +98,14 @@ def read_backmapping_file(lines, force_fields):
             try:
                 to_block = force_fields[to_ff].blocks[name]
             except KeyError:
-                LOGGER.log(5, "Can't find block {} for FF {}", name, to_ff, 
+                LOGGER.log(5, "Can't find block {} for FF {}", name, to_ff,
                            type='inconsistent-data')
                 continue
 
             if name not in name_to_index[from_ff]:
-                name_to_index[from_ff][name] = block_names_to_idxs(from_block)
+                name_to_index[from_ff][name] = _block_names_to_idxs(from_block)
             if name not in name_to_index[to_ff]:
-                name_to_index[to_ff][name] = block_names_to_idxs(to_block)
+                name_to_index[to_ff][name] = _block_names_to_idxs(to_block)
             map_obj = make_mapping_object(from_block, to_block, mapping, weights, extra, name_to_index)
             if map_obj is not None:
                 mappings[from_ff][to_ff][name] = map_obj
@@ -115,11 +115,38 @@ def read_backmapping_file(lines, force_fields):
     return mappings
 
 
-def block_names_to_idxs(block):
+def _block_names_to_idxs(block):
+    """
+    Helper function that returns a dict mapping atomnames to node indices for
+    every node in block.
+    """
     return {block.nodes[idx]['atomname']: idx for idx in block.nodes}
 
 
 def make_mapping_object(from_block, to_block, mapping, weights, extra, name_to_index):
+    """
+    Convenience method for creating modern :class:`vermouth.map_parser.Mapping`
+    objects from old style mapping information.
+
+    Parameters
+    ----------
+    from_blocks: collections.abc.Iterable[vermouth.molecule.Block]
+    to_blocks: collections.abc.Iterable[vermouth.molecule.Block]
+    mapping: dict[tuple[int, str], list[tuple[int, str]]]
+        Old style mapping describing what (resid, atomname) maps to what
+        (resid, atomname)
+    weights: dict[tuple[int, str], dict[tuple[int, str], float]]
+        Old style weights, mapping (resid, atomname), (resid, atomname) to a
+        weight.
+    extra: tuple
+    name_to_index: dict[str, dict[str, dict[str, collections.abc.Hashable]]]
+        Dict force field names, block names, atomnames to node indices.
+
+    Returns
+    -------
+    vermouth.map_parser.Mapping
+        The created mapping.
+    """
     map_dict = collections.defaultdict(lambda: collections.defaultdict(dict))
     from_name_to_idx = name_to_index[from_block.force_field.name][from_block.name]
     to_name_to_idx = name_to_index[to_block.force_field.name][to_block.name]
@@ -409,7 +436,7 @@ def read_mapping_directory(directory, force_fields):
                 raise IOError('An error occured while reading "{}".'.format(path))
             else:
                 combine_mappings(mappings, new_mappings)
-    
+
     return dict(mappings)
 
 

@@ -303,6 +303,14 @@ class MappingBuilder:
         self.blocks_from = self._add_block(self.blocks_from, block)
 
     def add_name(self, name):
+        """
+        Add a name to the mapping.
+
+        Parameters
+        ----------
+        name: str
+            The name to add
+        """
         self.names.append(name)
 
     def add_block_to(self, block):
@@ -535,14 +543,15 @@ class MappingDirector(SectionLineParser):
 
         Returns
         -------
-        Mapping
-            The accumulated mapping.
+        Mapping or None
+            The accumulated mapping if the mapping is complete, None otherwise.
         """
         if any(ended in self.SECTION_ENDS for ended in ended_section):
             map_type = previous_section[0]
             mapping = self.builder.get_mapping(map_type)
             self._reset_mapping()
             return mapping
+        return None
 
     def _parse_blocks(self, line):
         """

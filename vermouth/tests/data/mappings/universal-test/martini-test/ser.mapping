@@ -1,0 +1,19 @@
+[ block ]
+[ from ]
+universal-test
+[ to ]
+martini-test
+
+[ from blocks ]
+SER
+
+[ to blocks ]
+SER
+
+[ mapping ]
+C   BB
+CA  BB
+N   BB
+HN  BB
+HA  BB
+; Sidechain unmapped on purpose

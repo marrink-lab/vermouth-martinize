@@ -26,7 +26,7 @@ import pytest
 
 from vermouth.processors.do_mapping import do_mapping, cover, modification_matches, apply_mod_mapping
 import vermouth.forcefield
-from vermouth.molecule import Molecule, Block, Link
+from vermouth.molecule import Molecule, Block, Link, Interaction
 from vermouth.map_parser import Mapping
 from vermouth.tests.helper_functions import equal_graphs
 
@@ -172,6 +172,9 @@ def test_residue_crossing():
 
 
 def _map_weights(mapping):
+    """
+    Get the weights associated with a mapping
+    """
     inv_map = defaultdict(list)
     for from_, tos in mapping.items():
         for to in tos:
@@ -309,12 +312,18 @@ def test_peptide():
     ([1, 2, 3], [[1, 2], [4]], None),
 ))
 def test_cover(to_cover, options, expected):
+    """
+    Test the cover function
+    """
     output = cover(to_cover, options)
     assert output == expected
 
 
 @pytest.fixture
 def modifications():
+    """
+    Provides modifications
+    """
     mods = {}
     mod_a = Link(force_field=FF_UNIVERSAL, name='mA')
     mod_a.add_node('mA', atomname='mA', PTM_atom=True)
@@ -332,6 +341,7 @@ def modifications():
     mod_fg.add_node('mF', atomname='mF', PTM_atom=True)
     mod_fg.add_node('mG', atomname='mG', PTM_atom=True)
     mod_fg.add_edge('mF', 'mG')
+    mod_fg.add_interaction('bond', ['mF', 'mG'], (3, 4))
     mods['mFG'] = mod_fg
 
     mod_i = Link(force_field=FF_UNIVERSAL, name='mI')
@@ -358,6 +368,9 @@ def modifications():
 
 @pytest.fixture
 def modified_molecule(modifications):
+    """
+    Provides a molecule with modifications
+    """
     mol = Molecule(force_field=FF_UNIVERSAL)
     mol.add_nodes_from(enumerate((
         # Lone PTM
@@ -402,6 +415,9 @@ def modified_molecule(modifications):
 
 
 def test_mod_matches(modified_molecule, modifications):
+    """
+    Test modification matches
+    """
     mappings = []
     for name in 'ABCDEFGHIJ':
         block = Block(force_field=FF_UNIVERSAL, name=name)
@@ -444,6 +460,9 @@ def test_mod_matches(modified_molecule, modifications):
 
 
 def test_apply_mod_mapping(modified_molecule, modifications):
+    """
+    Test apply_mod_mapping
+    """
     graph_out = Molecule(force_field=FF_UNIVERSAL)
     graph_out.add_nodes_from([
         (0, {'atomname': 'A', 'resid': 1})
@@ -479,6 +498,9 @@ def test_apply_mod_mapping(modified_molecule, modifications):
 
 
 def test_do_mapping_mods(modified_molecule, modifications):
+    """
+    Test do_mapping on a molecule with modifications
+    """
     mappings = {}
     for name in 'ABCDEFGHIJ':
         block = Block(force_field=FF_UNIVERSAL, name=name)
@@ -508,3 +530,4 @@ def test_do_mapping_mods(modified_molecule, modifications):
     pprint.pprint(list(expected.edges))
 
     assert equal_graphs(expected, out, node_attrs=['atomname', 'resid', 'mapping_weights'])
+    assert out.interactions['bond'] == [Interaction(atoms=(9, 11), parameters=(3, 4), meta={})]
