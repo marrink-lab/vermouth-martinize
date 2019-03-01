@@ -123,11 +123,6 @@ class ForceField(object):
         bool
         """
         return feature in self.features
-    
-    def __eq__(self, other):
-        # FIXME. Should compare id.
-        return ((isinstance(self, other.__class__) or isinstance(other, self.__class__)) and
-                getattr(self, 'name', '') == getattr(other, 'name', ''))
 
 
 def find_force_fields(directory, force_fields=None):

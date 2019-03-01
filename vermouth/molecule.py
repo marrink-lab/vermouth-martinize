@@ -59,8 +59,12 @@ class LinkPredicate:
 
     def match(self, node, key):
         """
-        Do the comparison with the reference value. Returns ``True`` iff
-        `node[key]` is the same type as `self`, and the values are equal.
+        Do the comparison with the reference value.
+
+        Notes
+        -----
+        This function **must** be defined by the subclasses. This docstring
+        describe the *expected* format of the method.
 
         Parameters
         ----------
