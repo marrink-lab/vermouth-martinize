@@ -1172,3 +1172,15 @@ def test_same_non_edges(left, right, expected):
     link_right.non_edges = right
     assert link_left.same_non_edges(link_right) == expected
     assert link_right.same_non_edges(link_left) == expected
+
+
+@hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())
+def test_str_method(mol, moltype):
+    fmt = '{moltype} with {nodes} atoms and {edges} bonds'
+    if moltype is not None:
+        mol.meta['moltype'] = moltype
+    else: 
+        moltype = 'molecule'
+    nnodes = len(mol.nodes)
+    nedges = len(mol.edges)
+    assert str(mol) == fmt.format(moltype=moltype, nodes=nnodes, edges=nedges)

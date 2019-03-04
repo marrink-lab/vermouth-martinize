@@ -352,6 +352,11 @@ class Molecule(nx.Graph):
             and self.same_interactions(other)
         )
 
+    def __str__(self):
+        moltype = self.meta.get('moltype', 'molecule')
+        fmt = "{} with {} atoms and {} bonds"
+        return fmt.format(moltype, len(self.nodes), len(self.edges))
+
     @property
     def force_field(self):
         """
