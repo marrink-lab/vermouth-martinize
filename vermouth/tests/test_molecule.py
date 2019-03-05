@@ -1176,11 +1176,29 @@ def test_same_non_edges(left, right, expected):
 
 @hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())
 def test_str_method(mol, moltype):
-    fmt = '{moltype} with {nodes} atoms and {edges} bonds'
     if moltype is not None:
         mol.meta['moltype'] = moltype
     else: 
         moltype = 'molecule'
-    nnodes = len(mol.nodes)
-    nedges = len(mol.edges)
-    assert str(mol) == fmt.format(moltype=moltype, nodes=nnodes, edges=nedges)
+
+    sort_keys = {'atoms': 0, 'edges': 0.1}
+    counts = {'atoms': len(mol.nodes)}
+    for itype in mol.interactions:
+        interactions = mol.interactions.get(itype, [])
+        if interactions:
+            counts[itype] = len(interactions)
+            sort_keys[itype] = len(interactions[0].atoms)
+
+    fmt = '{} with '.format(moltype)
+    if counts.get('bonds', 0) != len(mol.edges):
+        counts['edges'] = len(mol.edges)
+
+    sorted_counts = sorted(counts.items(), key=lambda c: sort_keys[c[0]])
+
+    fmt += ', '.join('{} {}'.format(count, itype) for itype, count in sorted_counts[:-1])
+    if len(sorted_counts) != 1:
+        fmt += ', and '
+    fmt += '{} {}'.format(sorted_counts[-1][1], sorted_counts[-1][0])
+    
+    found = str(mol)
+    assert found == fmt

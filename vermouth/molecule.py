@@ -354,8 +354,31 @@ class Molecule(nx.Graph):
 
     def __str__(self):
         moltype = self.meta.get('moltype', 'molecule')
-        fmt = "{} with {} atoms and {} bonds"
-        return fmt.format(moltype, len(self.nodes), len(self.edges))
+        # Make sure atoms and edges get sorted first.
+        sort_keys = {'atoms': 0, 'edges': 0.1}
+        number_interactions = {'atoms': len(self.nodes)}
+
+        for interaction_type, interactions in self.interactions.items():
+            if not interactions:
+                continue
+            sort_keys[interaction_type] = len(interactions[0].atoms)
+            number_interactions[interaction_type] = len(interactions)
+
+        if number_interactions.get('bonds', 0) != len(self.edges):
+            number_interactions['edges'] = len(self.edges)
+        
+        # Sort the interactions by the number of atoms per interaction
+        sorted_interactions = sorted(number_interactions.items(),
+                                     key=lambda i: sort_keys[i[0]])
+
+        out = "{} with ".format(moltype)
+        out += ', '.join('{} {}'.format(number, itype)
+                         for itype, number in sorted_interactions[:-1])
+        if len(sorted_interactions) != 1:
+            out += ', and '
+        out += '{} {}'.format(sorted_interactions[-1][1],
+                              sorted_interactions[-1][0])
+        return out
 
     @property
     def force_field(self):
