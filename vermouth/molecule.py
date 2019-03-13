@@ -352,32 +352,44 @@ class Molecule(nx.Graph):
             and self.same_interactions(other)
         )
 
+    @staticmethod
+    def _sort_interactions(all_interactions):
+        """
+        Returns keys in interactions sorted by (number_of_atoms, name). Keys
+        with no interactions are skipped.
+        """
+        sort_keys = {}
+        for interaction_type, interactions in all_interactions.items():
+            if not interactions:
+                continue
+            sort_keys[interaction_type] = len(interactions[0].atoms), interaction_type
+        return sorted(sort_keys, key=lambda k: sort_keys[k])
+
     def __str__(self):
         moltype = self.meta.get('moltype', 'molecule')
         # Make sure atoms and edges get sorted first.
         sort_keys = {'atoms': 0, 'edges': 0.1}
         number_interactions = {'atoms': len(self.nodes)}
 
-        for interaction_type, interactions in self.interactions.items():
-            if not interactions:
-                continue
-            sort_keys[interaction_type] = len(interactions[0].atoms)
-            number_interactions[interaction_type] = len(interactions)
+        interaction_count = OrderedDict()
+        interaction_count['atoms'] = len(self.nodes)
+        if len(self.interactions.get('bonds', [])) != len(self.edges):
+            interaction_count['edges'] = len(self.edges)
 
-        if number_interactions.get('bonds', 0) != len(self.edges):
-            number_interactions['edges'] = len(self.edges)
-        
-        # Sort the interactions by the number of atoms per interaction
-        sorted_interactions = sorted(number_interactions.items(),
-                                     key=lambda i: sort_keys[i[0]])
+        for itype in self._sort_interactions(self.interactions):
+            interaction_count[itype] = len(self.interactions[itype])
 
+        if not interaction_count:
+            return moltype
+
+        last_item = interaction_count.popitem(last=True)
         out = "{} with ".format(moltype)
         out += ', '.join('{} {}'.format(number, itype)
-                         for itype, number in sorted_interactions[:-1])
-        if len(sorted_interactions) != 1:
+                         for itype, number in interaction_count.items())
+        if interaction_count:
             out += ', and '
-        out += '{} {}'.format(sorted_interactions[-1][1],
-                              sorted_interactions[-1][0])
+        out += '{} {}'.format(last_item[1],
+                              last_item[0])
         return out
 
     @property

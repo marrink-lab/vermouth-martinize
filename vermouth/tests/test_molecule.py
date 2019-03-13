@@ -1174,31 +1174,63 @@ def test_same_non_edges(left, right, expected):
     assert link_right.same_non_edges(link_left) == expected
 
 
+
+@pytest.mark.parametrize('interactions, expected', (
+    (
+        {},
+        []
+    ),
+    (
+        {'bonds': []},
+        []
+    ),
+    (
+        {'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])]},
+        ['bonds']
+    ),
+    (
+        {'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],
+         'angles': []},
+        ['bonds']
+    ),
+    (
+        {'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],
+         'angles': [Interaction(atoms=(1, 2, 3), parameters=[], meta=[])]},
+        ['bonds', 'angles']
+    ),
+    (
+        {'angles': [Interaction(atoms=(1, 2, 3), parameters=[], meta=[])],
+         'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],},
+        ['bonds', 'angles']
+    ),
+    (
+        {'angles': [Interaction(atoms=(1, 2, 3), parameters=[], meta=[])],
+         'a_bonds': [Interaction(atoms=(10, 2), parameters=[], meta=[])],
+         'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],},
+        ['a_bonds', 'bonds', 'angles']
+    ),
+))
+def test_interaction_sort(interactions, expected):
+    """
+    Test the order produced by Molecule._sort_interactions.
+    """
+    assert vermouth.molecule.Molecule._sort_interactions(interactions) == expected
+
+
 @hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())
 def test_str_method(mol, moltype):
+    """
+    Test Molecule.__str__
+    """
     if moltype is not None:
         mol.meta['moltype'] = moltype
     else: 
         moltype = 'molecule'
-
-    sort_keys = {'atoms': 0, 'edges': 0.1}
-    counts = {'atoms': len(mol.nodes)}
-    for itype in mol.interactions:
-        interactions = mol.interactions.get(itype, [])
-        if interactions:
-            counts[itype] = len(interactions)
-            sort_keys[itype] = len(interactions[0].atoms)
-
-    fmt = '{} with '.format(moltype)
-    if counts.get('bonds', 0) != len(mol.edges):
-        counts['edges'] = len(mol.edges)
-
-    sorted_counts = sorted(counts.items(), key=lambda c: sort_keys[c[0]])
-
-    fmt += ', '.join('{} {}'.format(count, itype) for itype, count in sorted_counts[:-1])
-    if len(sorted_counts) != 1:
-        fmt += ', and '
-    fmt += '{} {}'.format(sorted_counts[-1][1], sorted_counts[-1][0])
-    
     found = str(mol)
-    assert found == fmt
+    assert '{} {}'.format(len(mol), 'atoms') in found
+    hypothesis.assume('' not in mol.interactions)
+    for itype, interactions in mol.interactions.items():
+        if interactions:
+            assert '{} {}'.format(len(interactions), itype) in found
+        else:
+            assert itype not in found

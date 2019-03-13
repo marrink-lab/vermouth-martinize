@@ -426,8 +426,9 @@ def entry():
         write_canon=args.write_canon,
     )
 
+    LOGGER.info('Read input.', type='step')
     for molecule in system.molecules:
-        LOGGER.info("Read molecule {}.", molecule, type='step')
+        LOGGER.debug("Read molecule {}.", molecule, type='step')
 
     target_ff = known_force_fields[args.to_ff]
     if args.dssp is not None:
@@ -533,8 +534,9 @@ def entry():
         vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
         defines = ()
 
+    LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:
-        LOGGER.info("Writing molecule {}.", molecule, type='step')
+        LOGGER.debug("Writing molecule {}.", molecule, type='step')
 
     # Write the topology if requested
     header = [
