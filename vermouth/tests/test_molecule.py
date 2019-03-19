@@ -1229,9 +1229,8 @@ def test_str_method(mol, moltype):
     found = str(mol)
     assert '{} {}'.format(len(mol), 'atoms') in found
     hypothesis.assume('' not in mol.interactions)
-    hypothesis.assume(all(itype not in '0123456789' for itype in mol.interactions))
     for itype, interactions in mol.interactions.items():
         if interactions:
             assert '{} {}'.format(len(interactions), itype) in found
         else:
-            assert itype not in found
+            assert '{} {}'.format(0, itype) not in found
