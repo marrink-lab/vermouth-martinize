@@ -70,9 +70,9 @@ jobs:
     - stage: deploy
       python: "3.7"
       addons: skip
-      env:
+      env: WITH_CODECOV=false
+      before_script: skip
       script: skip
-      after_success: skip
       deploy:
           provider: pypi
           # Remove the server stanza once we know it works.
