@@ -2,6 +2,10 @@ language: python
 dist: xenial
 cache: pip
 
+branches:
+  only:
+  - master
+  - /^v(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/ # SemVer tags (https://github.com/semver/semver/issues/232#issuecomment-405596809)
 
 env:
   global:
@@ -46,7 +50,6 @@ jobs:
     - python: "3.8-dev"
       env: WITH_SCIPY=false WITH_CODECOV=false
 
-
     - stage: docs
       python: "3.7"
       addons: skip
@@ -67,6 +70,7 @@ jobs:
         - python run_pylint.py --disable=fixme --fail-under=8.5 vermouth 
         - python run_pylint.py --disable=fixme --fail-under=9.5 bin/martinize2
       after_success: skip
+
     - stage: deploy
       python: "3.7"
       addons: skip
@@ -82,5 +86,5 @@ jobs:
               # travis encrypt --add deploy.password
               secure: "Wc4fsA5ADWlAp7oiRk+QhR3H3UtqjHHg16pn3GoCRE2JQZM97uzt0Db6pCUxGiQAG9bq70LJG2D10OVl3GFjmy2aQnGE1XgleJuYWU4rpxQ4YPAQZzHqcdTY/KnDQSfSoMoeZFpqgNq5sq1Kt2nGmEco6F6sy1o8p6FoD5wI5HVSzUyd7xBPYVgIwd8//OAgbPypTqC+MwqSNbaVw/jABlknfQqmZpFBC0MpRCa5/MMixNDEL8cNNjT+0g/yHHzi5KKFY/KNOMuG5PJ4ztwEVIg/ExwaulM4RrWGUaYScI8Uj9H6ncfYdu+ldgJuMzQHV2EQ3X1+4k2tgPOCleLg+S936MN4b6D9s97PiUxAsr182s04t+Rypdrlag+UU4YTSsCA3GF2aX4tk1RT5rAiWvyMQquy+s2QN6El+IsCWrq1stgxihvLXiELe/MZJexsmQ3sTb/BcVr5govnGSxOlCyE+4DUkIIBw2W9KpaJrue2jrwE71dyG4nHyLAjRjKl01glJysv9zlqH37W0RstutaT9JtaVg58N4Ot/Emh7whWpWcdaiBAmR5VfdMgMbuWTNF7qSaluE0fbnXH2HbbbFwOPehJnv8kMyibEKK0kt60fb8/nDjcp7v4n5EqO4ENm/0MhPnBFt4wFObkzb5Bq8snznqYd70sFqumut4HV1Y="
           on:
-              tags: master
+              tags: true
  
