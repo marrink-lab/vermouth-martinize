@@ -80,7 +80,7 @@ jobs:
       deploy:
           provider: pypi
           # Remove the server stanza once we know it works.
-          server: test.pypi.org/legacy
+          server: http://test.pypi.org/legacy
           user: peterkroon
           password:
               # travis encrypt --add deploy.password
