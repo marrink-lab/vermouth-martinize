@@ -1227,6 +1227,7 @@ def test_str_method(mol, moltype):
     else: 
         moltype = 'molecule'
     found = str(mol)
+    assert '{} with '.format(moltype) in found
     assert '{} {}'.format(len(mol), 'atoms') in found
     hypothesis.assume('' not in mol.interactions)
     for itype, interactions in mol.interactions.items():
