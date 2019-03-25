@@ -367,11 +367,11 @@ class Molecule(nx.Graph):
 
     def __str__(self):
         moltype = self.meta.get('moltype', 'molecule')
-        # Make sure atoms and edges get sorted first.
-        sort_keys = {'atoms': 0, 'edges': 0.1}
+
         number_interactions = {'atoms': len(self.nodes)}
 
         interaction_count = OrderedDict()
+        # Make sure atoms and edges get sorted first.
         interaction_count['atoms'] = len(self.nodes)
         if len(self.interactions.get('bonds', [])) != len(self.edges):
             interaction_count['edges'] = len(self.edges)
@@ -379,9 +379,7 @@ class Molecule(nx.Graph):
         for itype in self._sort_interactions(self.interactions):
             interaction_count[itype] = len(self.interactions[itype])
 
-        if not interaction_count:
-            return moltype
-
+        # interaction_count will always contain at least 'atoms'.
         last_item = interaction_count.popitem(last=True)
         out = "{} with ".format(moltype)
         out += ', '.join('{} {}'.format(number, itype)
