@@ -368,8 +368,6 @@ class Molecule(nx.Graph):
     def __str__(self):
         moltype = self.meta.get('moltype', 'molecule')
 
-        number_interactions = {'atoms': len(self.nodes)}
-
         interaction_count = OrderedDict()
         # Make sure atoms and edges get sorted first.
         interaction_count['atoms'] = len(self.nodes)
