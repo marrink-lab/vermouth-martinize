@@ -836,7 +836,10 @@ class Molecule(nx.Graph):
         empty after all the necessary interactions have been deleted.
         """
         for name, interactions in self.interactions.items():
-            for interaction in interactions:
+            # We *must* copy interactions (list call), otherwise you change
+            # interactions while iterating over it, causing it to miss 
+            # consecutive interactions that should be removed.
+            for interaction in list(interactions):
                 if node in interaction.atoms:
                     self.interactions[name].remove(interaction)
 
