@@ -611,7 +611,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
     # * interactions create nodes
     if context_type == 'block':
         treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
-    elif context_type == 'link':
+    elif context_type == 'link' or context_type == 'modifications':
         treated_atoms = _treat_link_interaction_atoms(atoms, context, section)
 
 
