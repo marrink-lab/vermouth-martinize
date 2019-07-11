@@ -90,6 +90,7 @@ def make_reference(mol):
     reference_graph = nx.Graph()
     residues = make_residue_graph(mol)
     symmetry_cache = {}
+    LOGGER.debug('Making reference graph', type='step')
     for residx in residues:
         # TODO: make separate function for just one residue.
         # TODO: Merge degree 1 nodes (hydrogens!) with the parent node. And
@@ -142,6 +143,8 @@ def make_reference(mol):
         res_copy = nx.relabel_nodes(residue, new_residue_names, copy=True)
         ref_copy = nx.relabel_nodes(reference, new_reference_names, copy=True)
 
+        LOGGER.debug('Matching residue {}{} to its reference', resname, resid, type='step')
+
         # If we assume residue > reference the tests run *way* faster, but the
         # actual program becomes *much* *much* slower.
         ismags = ISMAGS(ref_copy, res_copy,
@@ -191,7 +194,7 @@ def repair_residue(molecule, ref_residue, include_graph):
 
     resid = ref_residue['resid']
     resname = ref_residue['resname']
-
+    LOGGER.debug('Repairing residue {}{}', resname, resid, type='step')
     for ref_idx in reference:
         if ref_idx in match:
             res_idx = match[ref_idx]
@@ -248,7 +251,7 @@ def repair_residue(molecule, ref_residue, include_graph):
             message = "Adding {}"
             args = format_atom_string(node)
             if node['element'] != 'H':
-                LOGGER.debug(message, *args, type='missing-atom')
+                LOGGER.debug(message, args, type='missing-atom')
             else:
                 # These are logged *below* debug level. Otherwise your screen
                 # fills up pretty fast.
@@ -264,13 +267,14 @@ def repair_residue(molecule, ref_residue, include_graph):
                     molecule.add_edge(neighbour_res_idx, res_idx)
                     neighbours += 1
             assert neighbours != 0
-    if missing:
-        for ref_idx in missing:
-            LOGGER.error('Could not reconstruct atom {}{}:{}',
-                         reference.nodes[ref_idx]['resname'],
-                         reference.nodes[ref_idx]['resid'],
-                         reference.nodes[ref_idx]['atomname'],
-                         type='missing-atom')
+
+    for ref_idx in missing:
+        # TODO: use utils.format_atom_string
+        LOGGER.error('Could not reconstruct atom {}{}:{}',
+                     reference.nodes[ref_idx]['resname'],
+                     resid,
+                     reference.nodes[ref_idx]['atomname'],
+                     type='missing-atom')
 
 
 def repair_graph(molecule, reference_graph, include_graph=True):
