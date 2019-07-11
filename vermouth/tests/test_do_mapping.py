@@ -530,4 +530,4 @@ def test_do_mapping_mods(modified_molecule, modifications):
     pprint.pprint(list(expected.edges))
 
     assert equal_graphs(expected, out, node_attrs=['atomname', 'resid', 'mapping_weights'])
-    assert out.interactions['bond'] == [Interaction(atoms=(9, 11), parameters=(3, 4), meta={})]
+    assert out.interactions['bond'] == [Interaction(atoms=(10, 11), parameters=(3, 4), meta={})]

@@ -461,7 +461,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     applied_interactions = defaultdict(lambda: defaultdict(list))
     for interaction_type, interactions in modification.interactions.items():
         for interaction in interactions:
-            atoms = [k for mod_idx in interaction.atoms for k in mod_to_mol[mod_idx].keys()]
+            atoms = [mod_to_out[mod_idx] for mod_idx in interaction.atoms]
             assert len(atoms) == len(interaction.atoms)
             interaction = interaction._replace(atoms=atoms)
             applied_interactions[interaction_type][tuple(atoms)].append(modification)
