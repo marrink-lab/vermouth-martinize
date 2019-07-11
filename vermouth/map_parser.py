@@ -569,6 +569,7 @@ class MappingDirector(SectionLineParser):
             A tuple of an identifier, and it's associated attributes.
         """
         tokens = list(_tokenize(line))
+        resid = 0
         if len(tokens) == 2 and tokens[1].startswith('{') and tokens[1].endswith('}'):
             # It's definitely full spec.
             identifier = tokens[0]
@@ -576,7 +577,11 @@ class MappingDirector(SectionLineParser):
             yield identifier, attrs
         else:  # It must be shorthand
             for identifier in tokens:
-                resname, resid = self._parse_block_shorthand(identifier)
+                resname, found_resid = self._parse_block_shorthand(identifier)
+                if found_resid is None:
+                    resid += 1
+                else:
+                    resid = found_resid
                 if resname.startswith(self.NO_FETCH_BLOCK):
                     resname = resname[len(self.NO_FETCH_BLOCK):]
                 attrs = {'resname': resname, 'resid': resid}
@@ -602,7 +607,7 @@ class MappingDirector(SectionLineParser):
         else:
             # ALA
             resname = token
-            resid = 1
+            resid = None
         return resname, resid
 
     def _resolve_atom_spec(self, atom_str, prefix=None):
