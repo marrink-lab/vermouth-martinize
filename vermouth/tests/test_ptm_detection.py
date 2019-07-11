@@ -112,6 +112,19 @@ def make_molecule(atoms, edges):
         [(0, 1), (1, 2), (2, 3)],
         [({1, 2}, {0, 3})]
     ),
+    (
+        {
+            0: {'atomname': 'A', 'PTM_atom': True, 'element': 'A', 'resid': 1},
+            1: {'atomname': 'A', 'PTM_atom': True, 'element': 'A', 'resid': 1},
+            2: {'atomname': 'A', 'PTM_atom': False, 'element': 'A', 'resid': 1},
+            3: {'atomname': 'A', 'PTM_atom': False, 'element': 'A', 'resid': 1},
+            4: {'atomname': 'A', 'PTM_atom': False, 'element': 'A', 'resid': 2},
+            5: {'atomname': 'A', 'PTM_atom': False, 'element': 'A', 'resid': 1},
+            6: {'atomname': 'A', 'PTM_atom': False, 'element': 'A', 'resid': 3},
+        },
+        [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6)],
+        [({0, 1}, {2})]
+    )
 ])
 def test_ptm_groups(atoms, edges, expected):
     """
