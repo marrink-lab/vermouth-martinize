@@ -86,13 +86,12 @@ def find_ptm_atoms(molecule):
         to_see = set()
         # Traverse in molecule.
         while True:
-            succ = molecule[orig].keys()
             if orig in extra_atoms and orig not in atoms:
                 # If this is a PTM atom, we want to see it's neighbours as
                 # well.
-                to_see.update(succ)
+                to_see.update(molecule[orig].keys())
                 atoms.add(orig)
-            elif orig not in extra_atoms and orig not in anchors:
+            elif orig not in extra_atoms:
                 # Else, it's an attachment point for the this PTM
                 anchors.add(orig)
             if not to_see:
