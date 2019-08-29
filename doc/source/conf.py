@@ -178,6 +178,7 @@ apidoc_output_dir = 'api'
 apidoc_separate_modules = True
 apidoc_excluded_paths = ['tests', 'redistributed']
 
+autodoc_inherit_docstrings = False
 autoclass_content = 'both'
 autodoc_default_options = {'members': None,
                            'undoc-members': None,
