@@ -59,6 +59,30 @@ def mol_with_subgraph():
         "target False": np.array([2.6, 3.6, 4.6]),
     })
 
+    subgraph = nx.Graph()
+    mol.add_node(2, **{
+        "graph": subgraph,
+        "mapping_weights": {},
+        "target mass": np.array([np.nan, np.nan, np.nan]),
+        "target not mass": np.array([np.nan, np.nan, np.nan]),
+        "target None": np.array([np.nan, np.nan, np.nan]),
+        "target False": np.array([np.nan, np.nan, np.nan]),
+    })
+
+    subgraph = nx.Graph()
+    subgraph.add_nodes_from((
+        (0, {'mass': 1.2, 'not mass': 2.2, 'position': np.array([2, 3, 4], dtype=float),}),
+        (1, {'mass': 1.3, 'not mass': 2.3, 'position': np.array([3, 4, 5], dtype=float),}),
+    ))
+    mol.add_node(3, **{
+        "graph": subgraph,
+        "mapping_weights": {0: 0, 1: 0},
+        "target mass": np.array([np.nan, np.nan, np.nan]),
+        "target not mass": np.array([np.nan, np.nan, np.nan]),
+        "target None": np.array([np.nan, np.nan, np.nan]),
+        "target False": np.array([np.nan, np.nan, np.nan]),
+    })
+
     return mol
 
 @pytest.fixture(params=(None, 'mass', 'not mass'))
@@ -89,7 +113,7 @@ def test_do_average_bead(mol_with_subgraph, weight):
     target_key = 'target {}'.format(weight)
     target_positions = np.stack([node[target_key] for node in mol_with_subgraph.nodes.values()])
     positions = np.stack([node['position'] for node in mol_with_subgraph.nodes.values()])
-    assert np.allclose(positions, target_positions)
+    assert np.allclose(positions, target_positions, equal_nan=True)
 
 
 @pytest.mark.parametrize('weight', ('mass', 'not mass'))
@@ -120,7 +144,7 @@ def test_processor_variable(mol_with_variable):
     target_key = 'target {}'.format(weight)
     target_positions = np.stack([node[target_key] for node in mol_with_variable.nodes.values()])
     positions = np.stack([node['position'] for node in mol_with_variable.nodes.values()])
-    assert np.allclose(positions, target_positions)
+    assert np.allclose(positions, target_positions, equal_nan=True)
 
 
 @pytest.mark.parametrize('weight', (False, 'mass', 'not mass'))
@@ -130,4 +154,4 @@ def test_processor_weight(mol_with_variable, weight):
     target_key = 'target {}'.format(weight)
     target_positions = np.stack([node[target_key] for node in mol_with_variable.nodes.values()])
     positions = np.stack([node['position'] for node in mol_with_variable.nodes.values()])
-    assert np.allclose(positions, target_positions)
+    assert np.allclose(positions, target_positions, equal_nan=True)
