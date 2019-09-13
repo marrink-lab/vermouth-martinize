@@ -166,6 +166,13 @@ def test_remove_nodes_from(atoms, bonds, interactions, removed, expected):
          'bond': [vermouth.molecule.Interaction(atoms=(1, 6), meta={}, parameters={}),
                   vermouth.molecule.Interaction(atoms=(5, 4), meta={}, parameters={})]}
     ),
+    (
+        [1, 2, 3, 4],
+        [(1, 2), (2, 3), (3, 4)],
+        [('bond', (1, 2), {}), ('bond', (2, 3), {}), ('bond', (3, 4), {})],
+        2,
+        {'bond': [vermouth.molecule.Interaction(atoms=(3, 4), meta={}, parameters={})]},
+    ),
 ])
 def test_remove_node(atoms, bonds, interactions, removed, expected):
     """
