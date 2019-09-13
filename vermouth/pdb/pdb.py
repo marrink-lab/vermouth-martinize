@@ -92,9 +92,9 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
         for node_idx in node_order:
             nodeidx2atomid[(mol_idx, node_idx)] = atomid
             node = molecule.node[node_idx]
-            atomname = node['atomname']
+            atomname = get_not_none(node, 'atomname', '')
             altloc = get_not_none(node, 'altloc', '')
-            resname = node['resname']
+            resname = get_not_none(node, 'resname', '')
             chain = node['chain']
             resid = node['resid']
             insertion_code = get_not_none(node, 'insertioncode', '')

@@ -223,3 +223,43 @@ def make_residue_graph(mol):
     res_graph = blockmodel(mol, grps, chain=chain, resid=resids,
                            resname=resnames, atomname=resnames)
     return res_graph
+
+
+# We can't inherit from nx.isomorphism.GraphMatcher to override
+# `semantic_feasibility`. That implementation will clobber this one's method.
+class MappingGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
+    def __init__(self, *args, edge_match=None, node_match=None, **kwargs):
+        self.edge_match = edge_match
+        self.node_match = node_match
+        super().__init__(*args, **kwargs)
+        self.G1_adj = self.G1.adj
+
+    def semantic_feasibility(self, G1_node, G2_node):
+        """
+        Returns True if mapping G1_node to G2_node is semantically feasible.
+        Adapted from networkx.algorithms.isomorphism.vf2userfunc._semantic_feasibility.
+        """
+        # Make sure the nodes match
+        if self.node_match is not None:
+            nm = self.node_match(self.G1.nodes[G1_node], self.G2.nodes[G2_node])
+            if not nm:
+                return False
+
+        # Make sure the edges match
+        if self.edge_match is not None:
+
+            # Cached lookups
+            core_1 = self.core_1
+            edge_match = self.edge_match
+
+            for neighbor in self.G1_adj[G1_node]:
+                # G1_node is not in core_1, so we must handle R_self separately
+                if neighbor == G1_node:
+                    if not edge_match(G1_node, G1_node, G2_node, G2_node):
+                        return False
+                elif neighbor in core_1:
+                    if not edge_match(G1_node, neighbor, G2_node, core_1[neighbor]):
+                        return False
+            # syntactic check has already verified that neighbors are symmetric
+        return True
+

@@ -203,7 +203,7 @@ def allowed_ptms(residue, res_ptms, known_ptms):
         As returned by ``find_PTM_atoms``.
         Currently not used.
 
-    known_ptms : collections.abc.Iterable[networkx.Graph]
+    known_ptms : collections.abc.Mapping[str, networkx.Graph]
 
     Yields
     ------
@@ -211,7 +211,7 @@ def allowed_ptms(residue, res_ptms, known_ptms):
         All graphs in known_ptms which are subgraphs of residue.
     """
     # TODO: filter by element count first
-    for ptm in known_ptms:
+    for ptm in known_ptms.values():
         ptm_graph_matcher = nx.isomorphism.GraphMatcher(residue, ptm, node_match=ptm_node_matcher)
         if ptm_graph_matcher.subgraph_is_isomorphic():
             yield ptm, ptm_graph_matcher
@@ -291,30 +291,31 @@ def fix_ptm(molecule):
                     ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
                      for resid in resids])
         for ptm, match in identified:
+            ptm.match = match
             for mol_idx, ptm_idx in match.items():
                 ptm_node = ptm.nodes[ptm_idx]
                 mol_node = molecule.nodes[mol_idx]
                 # Names of PTM atoms still need to be corrected, and for some
                 # non PTM atoms attributes need to change.
-                # Nodes with 'replace': {'atomname': None} will be removed.
-                if ptm_node['PTM_atom'] or 'replace' in ptm_node:
+                if ptm_node['PTM_atom']:
                     mol_node['graph'] = molecule.subgraph([mol_idx]).copy()
-                    to_replace = ptm_node.copy()
-                    if 'replace' in to_replace:
-                        del to_replace['replace']
-                    to_replace.update(ptm_node.get('replace', dict()))
+                    for attr in ptm_node:
+                        # FIXME: This probably transfers too many attributes.
+                        if attr not in ('PTM_atom', 'replace'):
+                            mol_node[attr] = ptm_node[attr]
+                if 'replace' in ptm_node:
+                    to_replace = ptm_node['replace']
                     for attr_name, val in to_replace.items():
-                        if attr_name == 'atomname' and val is None:
-                            LOGGER.debug('Removing atom {}',
-                                         format_atom_string(mol_node),
-                                         type='remove-atom')
-                            molecule.remove_node(mol_idx)
-                            n_idxs.remove(mol_idx)
-                            resid_to_idxs[mol_node['resid']].remove(mol_idx)
-                            break
+                        if attr_name == 'atomname':
+                            mol_node['_old_atomname'] = mol_node['atomname']
+                        # We can't remove nodes which get their atomname set to
+                        # None here, since mapping would then break due to
+                        # missing atoms. Instead, the mapping processor should
+                        # make sure superfluous atoms do not get constructed in
+                        # the output resolution.
                         if mol_node.get(attr_name) != val:
                             fmt = 'Changing attribute {} from {} to {} for atom {}'
-                            LOGGER.debug(fmt, attr_name, mol_node[attr_name],
+                            LOGGER.debug(fmt, attr_name, mol_node.get(attr_name),
                                          val, format_atom_string(mol_node),
                                          type='change-atom')
                             mol_node[attr_name] = val

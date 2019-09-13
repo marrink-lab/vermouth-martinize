@@ -27,9 +27,10 @@ class System:
     molecules: list[:class:`~vermouth.molecule.Molecule`]
         The molecules in the system.
     """
-    def __init__(self):
+    def __init__(self, force_field=None):
         self.molecules = []
         self._force_field = None
+        self.force_field = force_field
 
     @property
     def force_field(self):

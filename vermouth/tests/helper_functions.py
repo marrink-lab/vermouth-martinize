@@ -15,6 +15,8 @@
 """
 Contains helper functions for tests.
 """
+import operator
+import networkx.algorithms.isomorphism as iso
 
 
 def make_into_set(iter_of_dict):
@@ -23,3 +25,35 @@ def make_into_set(iter_of_dict):
     frozenset of the dict items.
     """
     return set(frozenset(dict_.items()) for dict_ in iter_of_dict)
+
+
+def equal_graphs(g1, g2, 
+                 node_attrs=('resid', 'resname', 'atomname', 'chain', 'charge_group', 'atype'),
+                 edge_attrs=()):
+    """
+    Parameters
+    ----------
+    g1: networkx.Graph
+    g2: networkx.Graph
+    node_attrs: collections.abc.Iterable or None
+        Node attributes to consider. If `None`, the node attribute dicts must
+        be equal.
+    edge_attrs: collections.abc.Iterable or None
+        Edge attributes to consider. If `None`, the edge attribute dicts must
+        be equal.
+    
+    Returns
+    -------
+    bool
+        True if `g1` and `g2` are isomorphic, False otherwise.
+    """
+    if node_attrs is None:
+        node_equal = operator.eq
+    else:
+        node_equal = iso.categorical_node_match(node_attrs, ['']*len(node_attrs))
+    if edge_attrs is None:
+        edge_equal = operator.eq
+    else:
+        edge_equal = iso.categorical_node_match(edge_attrs, ['']*len(edge_attrs))
+    matcher = iso.GraphMatcher(g1, g2, node_match=node_equal, edge_match=edge_equal)
+    return matcher.is_isomorphic()

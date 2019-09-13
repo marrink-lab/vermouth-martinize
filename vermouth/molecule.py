@@ -78,8 +78,13 @@ class LinkPredicate:
         -------
         bool
         """
-
         raise NotImplementedError
+
+    def __eq__(self, other):
+        # Should maybe be:
+        # return (isinstance(other, self.__class__) or isinstance(self, other.__class__))\
+        #        and self.value == other.value
+        return other.__class__ == self.__class__ and self.value == other.value
 
     def __repr__(self):
         return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
@@ -424,7 +429,9 @@ class Molecule(nx.Graph):
         -------
         Molecule
         """
-        return self.subgraph(self.nodes)
+        new = self.subgraph(self.nodes)
+        new.name = self.name
+        return new
 
     def subgraph(self, nodes):
         """
@@ -440,6 +447,7 @@ class Molecule(nx.Graph):
         subgraph.meta = copy.copy(self.meta)
         subgraph._force_field = self._force_field
         subgraph.nrexcl = self.nrexcl
+        subgraph.name = self.name
 
         node_copies = [(node, copy.copy(self.nodes[node])) for node in nodes]
         subgraph.add_nodes_from(node_copies)
@@ -612,7 +620,7 @@ class Molecule(nx.Graph):
         """
         for node_idx in self:
             node = self.nodes[node_idx]
-            if all(node.get(attr, None) == val for attr, val in attrs.items()):
+            if attributes_match(node, attrs):
                 yield node_idx
 
     def __getattr__(self, name):
@@ -664,7 +672,7 @@ class Molecule(nx.Graph):
             # We assume that the last id is always the largest.
             last_node_idx = max(self)
             offset = last_node_idx
-            residue_offset = self.nodes[last_node_idx]['resid']
+            residue_offset = self.nodes[last_node_idx].get('resid', 1)
             offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
         else:
             offset = 0
@@ -1117,7 +1125,7 @@ class Block(Molecule):
         return tuple(center) in all_centers
 
     def to_molecule(self, atom_offset=0, offset_resid=0, offset_charge_group=0,
-                    force_field=None):
+                    force_field=None, default_attributes=None):
         """
         Converts this block to a :class:`Molecule`.
 
@@ -1130,6 +1138,8 @@ class Block(Molecule):
         offset_charge_group: int
             The offset for the `charge_group` attributes.
         force_field: None or vermouth.forcefield.ForceField
+        default_attributes: collections.abc.Mapping[str]
+            Attributes to set to for nodes that are missing them.
 
         Returns
         -------
@@ -1138,14 +1148,16 @@ class Block(Molecule):
         """
         if force_field is None:
             force_field = self.force_field
+        if default_attributes is None:
+            default_attributes = {'resname': self.name}
         name_to_idx = {}
         mol = Molecule(force_field=force_field)
         for idx, node in enumerate(self.nodes, start=atom_offset):
             name_to_idx[node] = idx
             atom = self.nodes[node]
-            new_atom = copy.copy(atom)
+            new_atom = default_attributes.copy()
+            new_atom.update(atom)
             new_atom['resid'] = (new_atom.get('resid', 1) + offset_resid)
-            new_atom['resname'] = atom.get('resname', self.name)
             new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
             mol.add_node(idx, **new_atom)
@@ -1299,10 +1311,9 @@ def attributes_match(attributes, template_attributes, ignore_keys=()):
     for attr, value in template_attributes.items():
         if attr in ignore_keys:
             continue
-        if isinstance(value, LinkPredicate):
-            if not value.match(attributes, attr):
-                return False
-        elif attributes.get(attr) != value:
+        if attributes.get(attr) != value:
+            if isinstance(value, LinkPredicate) and value.match(attributes, attr):
+                continue
             return False
     return True
 

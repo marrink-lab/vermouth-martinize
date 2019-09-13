@@ -1,0 +1,16 @@
+[ modification ]
+C-ter
+[ atoms ]
+BB {"PTM_atom": true, "atype": "Qa", "charge": -1}
+
+[ modification ]
+N-ter
+[ atoms ]
+CA {"PTM_atom": true, "atype": "Qd", "charge": 1}
+
+[ modification ]
+zwitter
+[ atoms ]
+BB {"replace": {"atype": "Qda", "charge": 0}}
+
+

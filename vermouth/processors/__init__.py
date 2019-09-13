@@ -24,7 +24,6 @@ from .pdb_reader import PDBInput
 from .repair_graph import RepairGraph
 from .do_mapping import DoMapping
 from .do_links import DoLinks
-from .apply_blocks import ApplyBlocks
 from .average_beads import DoAverageBead
 from .apply_posres import ApplyPosres
 from .set_molecule_meta import SetMoleculeMeta
@@ -44,3 +43,4 @@ from .quote import Quoter
 from .go_vs_includes import GoVirtIncludes
 from .sort_molecule_atoms import SortMoleculeAtoms
 from .merge_all_molecules import MergeAllMolecules
+from .neutral_termini import NeutralTermini

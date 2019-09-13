@@ -28,6 +28,8 @@ else:
 PDB_PROTEIN = TEST_DATA / '1bta.pdb'
 PDB_PARTIALLY_PROTEIN = TEST_DATA / '1bta_mutated.pdb'  # LYS replaced by UNK
 PDB_NOT_PROTEIN = TEST_DATA / 'heme.pdb'
+PDB_ALA5 = TEST_DATA / 'ala5.pdb'
+PDB_ALA5_CG = TEST_DATA / 'ala5_cg.pdb'
 
 # Full PDB files
 PDB_CYS = TEST_DATA / '2QWO.pdb'  # Contains cystein bridges
@@ -37,6 +39,15 @@ PDB_HB = TEST_DATA / '2dn2.pdb'  # Hemoglobin with heme and 2*2 protein chains
 SHORT_DNA = TEST_DATA / 'dna-short.pdb'
 
 DSSP_OUTPUT = TEST_DATA / 'dssp_1bta.ssd'
+
+# Test force fields
+FF_UNIVERSAL_TEST = TEST_DATA / 'force_fields' / 'universal-test'
+FF_PEPPLANE = TEST_DATA / 'force_fields' / 'pepplane'
+FF_MARTINI_TEST = TEST_DATA / 'force_fields' / 'martini-test'
+
+# Mappings
+MAP_UNIVERSAL_TEST_PEPPLANE = TEST_DATA / 'mappings' / 'universal-test'
+
 
 # Clean the namespace so only the data file variables can be imported.
 # An other option would be to define __all__, but it is easy to forget to add

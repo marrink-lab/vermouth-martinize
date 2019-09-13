@@ -20,7 +20,7 @@ protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|
 
 [ moleculetype ]
 ; molname       nrexcl
-GLY                1			
+GLY                1            
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
@@ -454,7 +454,7 @@ PHE                1
 [bonds]
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
-   1     2    1       0.31     7500 	
+   1     2    1       0.31     7500     
 
 [constraints]
 ;  i     j   funct   length  
@@ -489,7 +489,7 @@ TYR                1
 [bonds]
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
-   1     2    1       0.32     5000 	
+   1     2    1       0.32     5000     
 
 [constraints]
 ;  i     j   funct   length  
@@ -525,7 +525,7 @@ TRP                1
 [bonds]
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
-   1     2    1       0.30     5000 	
+   1     2    1       0.30     5000     
 
 [constraints]
 ;  i     j   funct   length  
