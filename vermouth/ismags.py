@@ -105,6 +105,11 @@ import itertools
 from .utils import are_all_equal
 
 
+# There are a number of "pragma: no cover" statements in this code, because
+# their coverage would otherwise not be measure accurately.
+# See https://github.com/nedbat/coveragepy/issues/198
+
+
 class ISMAGS:
     """
     Implements the ISMAGS subgraph matching algorith. [1]_ ISMAGS stands for
@@ -301,54 +306,6 @@ class ISMAGS:
             return cmp(graph1.edges[edge1], graph2.edges[edge2])
         return comparer
 
-    def find_isomorphisms(self, symmetry=True):
-        """
-        Find all subgraph isomorphisms between :attr:`subgraph` <=
-        :attr:`graph`.
-
-        Parameters
-        ----------
-        symmetry: bool
-            Whether symmetry should be taken into account. If False, found
-            isomorphisms may be symmetrically equivalent.
-
-        Yields
-        ------
-        dict
-            The found isomorphism mappings of {graph_node: subgraph_node}.
-        """
-        # The networkx VF2 algorithm is slightly funny in when it yields an
-        # empty dict and when not.
-        if not self.subgraph:
-            yield {}
-            return
-        elif not self.graph:
-            return
-        elif len(self.graph) < len(self.subgraph):
-            return
-
-        if symmetry:
-            _, cosets = self.analyze_symmetry(self.subgraph,
-                                              self._sgn_partitions,
-                                              self._sge_colors)
-            constraints = self._make_constraints(cosets)
-        else:
-            constraints = []
-
-        candidates = self._find_nodecolor_candidates()
-        la_candidates = self._get_lookahead_candidates()
-        for sgn in self.subgraph:
-            extra_candidates = la_candidates[sgn]
-            if extra_candidates:
-                candidates[sgn] = candidates[sgn] | {frozenset(extra_candidates)}
-
-        if any(candidates.values()):
-            start_sgn = min(candidates, key=lambda n: min(candidates[n], key=len))
-            candidates[start_sgn] = (intersect(candidates[start_sgn]),)
-            yield from self._map_nodes(start_sgn, candidates, constraints)
-        else:
-            return
-
     @staticmethod
     def _find_neighbor_color_count(graph, node, node_color, edge_color):
         """
@@ -398,6 +355,304 @@ class ISMAGS:
                     candidates[sgn].add(gn)
         return candidates
 
+    def _edges_of_same_color(self, sgn1, sgn2):
+        """
+        Returns all edges in :attr:`graph` that have the same colour as the
+        edge between sgn1 and sgn2 in :attr:`subgraph`.
+        """
+        if (sgn1, sgn2) in self._sge_colors:
+            # FIXME directed graphs
+            sge_color = self._sge_colors[sgn1, sgn2]
+        else:
+            sge_color = self._sge_colors[sgn2, sgn1]
+        if sge_color in self._edge_compatibility:
+            ge_color = self._edge_compatibility[sge_color]
+            g_edges = self._ge_partitions[ge_color]
+        else:
+            g_edges = []
+        return g_edges
+
+    def _find_nodecolor_candidates(self):
+        """
+        Per node in subgraph find all nodes in graph that have the same color.
+        """
+        candidates = defaultdict(set)
+        for sgn in self.subgraph.nodes:
+            sgn_color = self._sgn_colors[sgn]
+            if sgn_color in self._node_compatibility:
+                gn_color = self._node_compatibility[sgn_color]
+                candidates[sgn].add(frozenset(self._gn_partitions[gn_color]))
+            else:
+                candidates[sgn].add(frozenset())
+        candidates = dict(candidates)
+        for sgn, options in candidates.items():
+            candidates[sgn] = frozenset(options)
+        return candidates
+
+    @staticmethod
+    def _make_constraints(cosets):
+        """
+        Turn cosets into constraints.
+        """
+        constraints = set()
+        for node_i, node_ts in cosets.items():
+            for node_t in node_ts:
+                if node_i != node_t:
+                    # Node i must be smaller than node t.
+                    constraints.add((node_i, node_t))
+        return constraints
+
+    def _map_nodes(self, sgn, candidates, constraints, mapping=None, to_be_mapped=None):
+        """
+        Find all subgraph isomorphisms honoring constraints.
+        """
+        if mapping is None:
+            mapping = {}
+        else:
+            mapping = mapping.copy()
+        if to_be_mapped is None:
+            to_be_mapped = set(self.subgraph.nodes)
+
+        # Note, we modify candidates here. Doesn't seem to affect results, but
+        # remember this.
+        #candidates = candidates.copy()
+        sgn_candidates = intersect(candidates[sgn])
+        candidates[sgn] = frozenset([sgn_candidates])
+        for gn in sgn_candidates:
+            # We're going to try to map sgn to gn.
+            if gn in mapping.values() or sgn not in to_be_mapped:
+                # gn is already mapped to something
+                continue  # pragma: no cover
+
+            # REDUCTION and COMBINATION
+            mapping[sgn] = gn
+            # BASECASE
+            if to_be_mapped == set(mapping.keys()):
+                yield {v: k for k, v in mapping.items()}
+                continue
+            left_to_map = to_be_mapped - set(mapping.keys())
+
+            new_candidates = candidates.copy()
+            sgn_neighbours = set(self.subgraph[sgn])
+            not_gn_neighbours = set(self.graph.nodes) - set(self.graph[gn])
+            for sgn2 in left_to_map:
+                if sgn2 not in sgn_neighbours:
+                    gn2_options = not_gn_neighbours
+                else:
+                    # Get all edges to gn of the right color:
+                    g_edges = self._edges_of_same_color(sgn, sgn2)
+                    # FIXME directed graphs
+                    # And all nodes involved in those which are connected to gn
+                    gn2_options = {n for e in g_edges for n in e if gn in e}
+                # Node color compatibility should be taken care of by the
+                # initial candidate lists made by find_subgraphs
+
+                # Add gn2_options to the right collection. Since new_candidates
+                # is a dict of frozensets of frozensets of node indices it's
+                # a bit clunky. We can't do .add, and + also doesn't work. We
+                # could do |, but I deem union to be clearer.
+                new_candidates[sgn2] = new_candidates[sgn2].union([frozenset(gn2_options)])
+                # Propagate the constraints. This should reduce the search space
+                # by first dealing with highly symmetric nodes, since those will
+                # have less candidates.
+                if (sgn, sgn2) in constraints:
+                    gn2_options = {gn2 for gn2 in self.graph if gn2 > gn}
+                elif (sgn2, sgn) in constraints:
+                    gn2_options = {gn2 for gn2 in self.graph if gn2 < gn}
+                else:
+                    continue  # pragma: no cover
+                new_candidates[sgn2] = new_candidates[sgn2].union([frozenset(gn2_options)])
+
+            # The next node is the one that is unmapped and has fewest
+            # candidates
+            # Pylint disables because it's a one-shot function.
+            next_sgn = min(left_to_map,
+                           key=lambda n: min(new_candidates[n], key=len))  # pylint: disable=cell-var-from-loop
+            yield from self._map_nodes(next_sgn,
+                                       new_candidates,
+                                       constraints,
+                                       mapping=mapping,
+                                       to_be_mapped=to_be_mapped)
+            # Unmap sgn-gn. Strictly not necessary since it'd get overwritten
+            # when making a new mapping for sgn.
+            #del mapping[sgn]
+
+    def find_isomorphisms(self, symmetry=True):
+        """
+        Find all subgraph isomorphisms between :attr:`subgraph` <=
+        :attr:`graph`.
+
+        Parameters
+        ----------
+        symmetry: bool
+            Whether symmetry should be taken into account. If False, found
+            isomorphisms may be symmetrically equivalent.
+
+        Yields
+        ------
+        dict
+            The found isomorphism mappings of {graph_node: subgraph_node}.
+        """
+        # The networkx VF2 algorithm is slightly funny in when it yields an
+        # empty dict and when not.
+        if not self.subgraph:
+            yield {}
+            return
+        elif not self.graph:
+            return
+        elif len(self.graph) < len(self.subgraph):
+            return
+
+        if symmetry:
+            _, cosets = self.analyze_symmetry(self.subgraph,
+                                              self._sgn_partitions,
+                                              self._sge_colors)
+            constraints = self._make_constraints(cosets)
+        else:
+            constraints = []
+
+        candidates = self._find_nodecolor_candidates()
+        la_candidates = self._get_lookahead_candidates()
+        for sgn in self.subgraph:
+            extra_candidates = la_candidates[sgn]
+            if extra_candidates:
+                candidates[sgn] = candidates[sgn] | {frozenset(extra_candidates)}
+
+        if any(candidates.values()):
+            start_sgn = min(candidates, key=lambda n: min(candidates[n], key=len))
+            candidates[start_sgn] = (intersect(candidates[start_sgn]),)
+            yield from self._map_nodes(start_sgn, candidates, constraints)
+        else:
+            return
+
+    def is_isomorphic(self, symmetry=False):
+        """
+        Returns True if :attr:`graph` is isomorphic to :attr:`subgraph` and
+        False otherwise.
+
+        Returns
+        -------
+        bool
+        """
+        return len(self.subgraph) == len(self.graph) and self.subgraph_is_isomorphic(symmetry)
+
+    def subgraph_is_isomorphic(self, symmetry=False):
+        """
+        Returns True if a subgraph of :attr:`graph` is isomorphic to
+        :attr:`subgraph` and False otherwise.
+
+        Returns
+        -------
+        bool
+        """
+        # symmetry=False, since we only need to know whether there is any
+        # example; figuring out all symmetry elements probably costs more time
+        # than it gains.
+        isom = next(self.subgraph_isomorphisms_iter(symmetry=symmetry), None)
+        return isom is not None
+
+    def isomorphisms_iter(self, symmetry=True):
+        """
+        Does the same as :meth:`find_isomorphisms` if :attr:`graph` and
+        :attr:`subgraph` have the same number of nodes.
+
+        .. automethod:: find_isomorphisms
+        """
+        if len(self.graph) == len(self.subgraph):
+            yield from self.subgraph_isomorphisms_iter(symmetry=symmetry)
+
+    def subgraph_isomorphisms_iter(self, symmetry=True):
+        """
+        Alternative name for :meth:`find_isomorphisms`.
+
+        .. automethod:: find_isomorphisms
+        """
+        return self.find_isomorphisms(symmetry)
+
+    def _largest_common_subgraph(self, candidates, constraints,
+                                 to_be_mapped=None):
+        """
+        Find all largest common subgraphs honoring constraints.
+        """
+        if to_be_mapped is None:
+            to_be_mapped = {frozenset(self.subgraph.nodes)}
+
+        # The LCS problem is basically a repeated subgraph isomorphism problem
+        # with smaller and smaller subgraphs. We store the nodes that are
+        # "part of" the subgraph in to_be_mapped, and we make it a little
+        # smaller every iteration.
+
+        # pylint disable becuase it's guarded against by default value
+        current_size = len(next(iter(to_be_mapped), []))  # pylint: disable=stop-iteration-return
+
+        found_iso = False
+        if current_size <= len(self.graph):
+            # There's no point in trying to find isomorphisms of
+            # graph >= subgraph if subgraph has more nodes than graph.
+
+            # Try the isomorphism first with the nodes with lowest ID. So sort
+            # them. Those are more likely to be part of the final
+            # correspondence. This makes finding the first answer(s) faster. In
+            # theory.
+            for nodes in sorted(to_be_mapped, key=sorted):
+                # Find the isomorphism between subgraph[to_be_mapped] <= graph
+                next_sgn = min(nodes, key=lambda n: min(candidates[n], key=len))
+                isomorphs = self._map_nodes(next_sgn, candidates, constraints,
+                                            to_be_mapped=nodes)
+
+                # This is effectively `yield from isomorphs`, except that we look
+                # whether an item was yielded.
+                try:
+                    item = next(isomorphs)
+                except StopIteration:
+                    pass
+                else:
+                    yield item
+                    yield from isomorphs
+                    found_iso = True
+
+        # BASECASE
+        if found_iso or current_size == 1:
+            # Shrinking has no point because either 1) we end up with a smaller
+            # common subgraph (and we want the largest), or 2) there'll be no
+            # more subgraph.
+            return
+
+        left_to_be_mapped = set()
+        for nodes in to_be_mapped:
+            for sgn in nodes:
+                # We're going to remove sgn from to_be_mapped, but subject to
+                # symmetry constraints. We know that for every constraint we
+                # have those subgraph nodes are equal. So whenever we would
+                # remove the lower part of a constraint, remove the higher
+                # instead. This is all dealth with by _remove_node. And because
+                # left_to_be_mapped is a set, we don't do double work.
+
+                # And finally, make the subgraph one node smaller.
+                # REDUCTION
+                new_nodes = self._remove_node(sgn, nodes, constraints)
+                left_to_be_mapped.add(new_nodes)
+        # COMBINATION
+        yield from self._largest_common_subgraph(candidates, constraints,
+                                                 to_be_mapped=left_to_be_mapped)
+
+    @staticmethod
+    def _remove_node(node, nodes, constraints):
+        """
+        Returns a new set where node has been removed from nodes, subject to
+        symmetry constraints. We know, that for every constraint we have
+        those subgraph nodes are equal. So whenever we would remove the
+        lower part of a constraint, remove the higher instead.
+        """
+        while True:
+            for low, high in constraints:
+                if low == node and high in nodes:
+                    node = high
+                    break
+            else:  # no break, couldn't find node in constraints
+                break
+        return frozenset(nodes - {node})
+
     def largest_common_subgraph(self, symmetry=True):
         """
         Find the largest common induced subgraphs between :attr:`subgraph` and
@@ -436,113 +691,6 @@ class ISMAGS:
             yield from self._largest_common_subgraph(candidates, constraints)
         else:
             return
-
-    def analyze_symmetry(self, graph, node_partitions, edge_colors):
-        """
-        Find a minimal set of permutations and corresponding co-sets that
-        describe the symmetry of :attr:`subgraph`.
-
-        Returns
-        -------
-        set[frozenset]
-            The found permutations. This is a set of frozenset of pairs of node
-            keys which can be exchanged without changing :attr:`subgraph`.
-        dict[collections.abc.Hashable, set[collections.abc.Hashable]]
-            The found co-sets. The co-sets is a dictionary of {node key:
-            set of node keys}. Every key-value pair describes which `values`
-            can be interchanged without changing nodes less than `key`.
-        """
-        if self._symmetry_cache is not None:
-            key = hash((tuple(graph.nodes), tuple(graph.edges),
-                        tuple(map(tuple, node_partitions)), tuple(edge_colors.items())))
-            if key in self._symmetry_cache:
-                return self._symmetry_cache[key]
-        node_partitions = list(self._refine_node_partitions(graph,
-                                                            node_partitions,
-                                                            edge_colors))
-        assert len(node_partitions) == 1
-        node_partitions = node_partitions[0]
-        permutations, cosets = self._process_ordered_pair_partitions(graph,
-                                                                     node_partitions,
-                                                                     node_partitions,
-                                                                     edge_colors)
-        if self._symmetry_cache is not None:
-            self._symmetry_cache[key] = permutations, cosets
-        return permutations, cosets
-
-    def is_isomorphic(self, symmetry=False):
-        """
-        Returns True if :attr:`graph` is isomorphic to :attr:`subgraph` and
-        False otherwise.
-
-        Returns
-        -------
-        bool
-        """
-        return len(self.subgraph) == len(self.graph) and self.subgraph_is_isomorphic(symmetry)
-
-    def subgraph_is_isomorphic(self, symmetry=False):
-        """
-        Returns True if a subgraph of :attr:`graph` is isomorphic to
-        :attr:`subgraph` and False otherwise.
-
-        Returns
-        -------
-        bool
-        """
-        # symmetry=False, since we only need to know whether there is any
-        # example; figuring out all symmetry elements probably costs more time
-        # than it gains.
-        isom = next(self.subgraph_isomorphisms_iter(symmetry=symmetry), None)
-        return isom is not None
-
-    def isomorphisms_iter(self, symmetry=True):
-        """
-        Does the same as :meth:`find_isomorphisms` if :attr:`graph` and
-        :attr:`subgraph` have the same number of nodes.
-
-        .. automethod:: find_isomorphisms
-        """
-        if len(self.graph) == len(self.subgraph):
-            yield from self.subgraph_isomorphisms_iter()
-
-    def subgraph_isomorphisms_iter(self, symmetry=True):
-        """
-        Alternative name for :meth:`find_isomorphisms`.
-
-        .. automethod:: find_isomorphisms
-        """
-        return self.find_isomorphisms(symmetry)
-
-    def _find_nodecolor_candidates(self):
-        """
-        Per node in subgraph find all nodes in graph that have the same color.
-        """
-        candidates = defaultdict(set)
-        for sgn in self.subgraph.nodes:
-            sgn_color = self._sgn_colors[sgn]
-            if sgn_color in self._node_compatibility:
-                gn_color = self._node_compatibility[sgn_color]
-                candidates[sgn].add(frozenset(self._gn_partitions[gn_color]))
-            else:
-                candidates[sgn].add(frozenset())
-        candidates = dict(candidates)
-        for sgn, options in candidates.items():
-            candidates[sgn] = frozenset(options)
-        return candidates
-
-    @staticmethod
-    def _make_constraints(cosets):
-        """
-        Turn cosets into constraints.
-        """
-        constraints = []
-        for node_i, node_ts in cosets.items():
-            for node_t in node_ts:
-                if node_i != node_t:
-                    # Node i must be smaller than node t.
-                    constraints.append((node_i, node_t))
-        return constraints
 
     @staticmethod
     def _find_node_edge_color(graph, node_colors, edge_colors):
@@ -629,189 +777,6 @@ class ISMAGS:
                     n_p.append(partition)
         for n_p in output:
             yield from cls._refine_node_partitions(graph, n_p, edge_colors, branch)
-
-    def _edges_of_same_color(self, sgn1, sgn2):
-        """
-        Returns all edges in :attr:`graph` that have the same colour as the
-        edge between sgn1 and sgn2 in :attr:`subgraph`.
-        """
-        if (sgn1, sgn2) in self._sge_colors:
-            # FIXME directed graphs
-            sge_color = self._sge_colors[sgn1, sgn2]
-        else:
-            sge_color = self._sge_colors[sgn2, sgn1]
-        if sge_color in self._edge_compatibility:
-            ge_color = self._edge_compatibility[sge_color]
-            g_edges = self._ge_partitions[ge_color]
-        else:
-            g_edges = []
-        return g_edges
-
-    def _map_nodes(self, sgn, candidates, constraints, mapping=None, to_be_mapped=None):
-        """
-        Find all subgraph isomorphisms honoring constraints.
-        """
-        if mapping is None:
-            mapping = {}
-        else:
-            mapping = mapping.copy()
-        if to_be_mapped is None:
-            to_be_mapped = set(self.subgraph.nodes)
-
-        # Note, we modify candidates here. Doesn't seem to affect results, but
-        # remember this.
-        #candidates = candidates.copy()
-        sgn_candidates = intersect(candidates[sgn])
-        candidates[sgn] = frozenset([sgn_candidates])
-        for gn in sgn_candidates:
-            # We're going to try to map sgn to gn.
-
-            # First, let's see if that would violate a constraint.
-            # It's probably better to integrate the constraints infinding the
-            # candidates below, *and* somehow propagating them. That *should*
-            # reduce the search space. Of course it won't matter for asymmetric
-            # subgraphs.
-            violation = False
-            for constraint in constraints:
-                low, high = constraint
-                # gn violates upper bound
-                too_high = low == sgn and high in mapping and gn > mapping[high]
-                # gn violates lower bound
-                too_low = high == sgn and low in mapping and gn < mapping[low]
-                if too_high or too_low:
-                    violation = True
-                    break
-            if violation or (gn in mapping.values()) or (sgn not in to_be_mapped):
-                # This either violates a constraint, or gn is already mapped to
-                # something
-                # Don't measure coverage for this line.
-                # See https://github.com/nedbat/coveragepy/issues/198
-                continue  # pragma: no cover
-
-            # REDUCTION and COMBINATION
-            mapping[sgn] = gn
-            # BASECASE
-            if to_be_mapped == set(mapping.keys()):
-                yield {v: k for k, v in mapping.items()}
-                continue
-
-            new_candidates = candidates.copy()
-            sgn_neighbours = set(self.subgraph[sgn])
-            not_gn_neighbours = set(self.graph.nodes) - set(self.graph[gn])
-            for sgn2 in self.subgraph:
-                if sgn2 not in sgn_neighbours:
-                    gn2_options = not_gn_neighbours
-                else:
-                    # Get all edges to gn of the right color:
-                    g_edges = self._edges_of_same_color(sgn, sgn2)
-                    # FIXME directed graphs
-                    # And all nodes involved in those which are connected to gn
-                    gn2_options = {n for e in g_edges for n in e if gn in e}
-                # Node color compatibility should be taken care of by the
-                # initial candidate lists made by find_subgraphs
-
-                # Add gn2_options to the right collection. Since new_candidates
-                # is a dict of frozensets of frozensets of node indices it's
-                # a bit clunky. We can't do .add, and + also doesn't work. We
-                # could do |, but I deem union to be clearer.
-                new_candidates[sgn2] = new_candidates[sgn2].union([frozenset(gn2_options)])
-            # The next node is the one that is unmapped and has fewest
-            # candidates
-            # Pylint disables because it's a one-shot function.
-            next_sgn = min(to_be_mapped - set(mapping.keys()),
-                           key=lambda n: min(new_candidates[n], key=len))  # pylint: disable=cell-var-from-loop
-            yield from self._map_nodes(next_sgn,
-                                       new_candidates,
-                                       constraints,
-                                       mapping=mapping,
-                                       to_be_mapped=to_be_mapped)
-            # Unmap sgn-gn. Strictly not necessary since it'd get overwritten
-            # when making a new mapping for sgn.
-            #del mapping[sgn]
-
-    def _largest_common_subgraph(self, candidates, constraints,
-                                 to_be_mapped=None):
-        """
-        Find all largest common subgraphs honoring constraints.
-        """
-        if to_be_mapped is None:
-            to_be_mapped = {frozenset(self.subgraph.nodes)}
-
-        # The LCS problem is basically a repeated subgraph isomorphism problem
-        # with smaller and smaller subgraphs. We store the nodes that are
-        # "part of" the subgraph in to_be_mapped, and we make it a little
-        # smaller every iteration.
-
-        # pylint disable becuase it's guarded against by default value
-        current_size = len(next(iter(to_be_mapped), []))  # pylint: disable=stop-iteration-return
-
-        found_iso = False
-        if current_size <= len(self.graph):
-            # There's no point in trying to find isomorphisms of
-            # graph >= subgraph if subgraph has more nodes than graph.
-
-            # Try the isomorphism first with the nodes with lowest ID. So sort
-            # them. Those are more likely to be part of the final
-            # correspondence. This makes finding the first answer(s) faster. In
-            # theory.
-            for nodes in sorted(to_be_mapped, key=sorted):
-                # Find the isomorphism between subgraph[to_be_mapped] <= graph
-                next_sgn = min(nodes, key=lambda n: min(candidates[n], key=len))
-                isomorphs = self._map_nodes(next_sgn, candidates, constraints,
-                                            to_be_mapped=nodes)
-
-                # This is effectively `yield from isomorphs`, except that we look
-                # whether an item was yielded.
-                try:
-                    item = next(isomorphs)
-                except StopIteration:
-                    pass
-                else:
-                    yield item
-                    yield from isomorphs
-                    found_iso = True
-
-        # BASECASE
-        if found_iso or current_size == 1:
-            # Shrinking has no point because either 1) we end up with a smaller
-            # common subgraph (and we want the largest), or 2) there'll be no
-            # more subgraph.
-            return
-
-        left_to_be_mapped = set()
-        for nodes in to_be_mapped:
-            for sgn in nodes:
-                # We're going to remove sgn from to_be_mapped, but subject to
-                # symmetry constraints. We know that for every constraint we
-                # have those subgraph nodes are equal. So whenever we would
-                # remove the lower part of a constraint, remove the higher
-                # instead. This is all dealth with by _remove_node. And because
-                # left_to_be_mapped is a set, we don't do double work.
-
-                # And finally, make the subgraph one node smaller.
-                # REDUCTION
-                new_nodes = self._remove_node(sgn, nodes, constraints)
-                left_to_be_mapped.add(new_nodes)
-        # COMBINATION
-        yield from self._largest_common_subgraph(candidates, constraints,
-                                                 to_be_mapped=left_to_be_mapped)
-
-    @staticmethod
-    def _remove_node(node, nodes, constraints):
-        """
-        Returns a new set where node has been removed from nodes, subject to
-        symmetry constraints. We know, that for every constraint we have
-        those subgraph nodes are equal. So whenever we would remove the
-        lower part of a constraint, remove the higher instead.
-        """
-        while True:
-            for low, high in constraints:
-                if low == node and high in nodes:
-                    node = high
-                    break
-            else:  # no break, couldn't find node in constraints
-                break
-        return frozenset(nodes - {node})
 
     @staticmethod
     def _find_permutations(top_partitions, bottom_partitions):
@@ -929,10 +894,10 @@ class ISMAGS:
         for node2 in sorted(b_partition):
             if len(b_partition) == 1:
                 # Can never result in symmetry
-                continue
+                continue  # pragma: no cover
             if node != node2 and any(node in orbit and node2 in orbit for orbit in orbits):
                 # Orbit prune branch
-                continue
+                continue  # pragma: no cover
             # REDUCTION
             # Couple node to node2
             partitions = self._couple_nodes(top_partitions, bottom_partitions,
@@ -961,6 +926,39 @@ class ISMAGS:
             for orbit in orbits:
                 if node in orbit:
                     cosets[node] = orbit.copy()
+        return permutations, cosets
+
+    def analyze_symmetry(self, graph, node_partitions, edge_colors):
+        """
+        Find a minimal set of permutations and corresponding co-sets that
+        describe the symmetry of :attr:`subgraph`.
+
+        Returns
+        -------
+        set[frozenset]
+            The found permutations. This is a set of frozenset of pairs of node
+            keys which can be exchanged without changing :attr:`subgraph`.
+        dict[collections.abc.Hashable, set[collections.abc.Hashable]]
+            The found co-sets. The co-sets is a dictionary of {node key:
+            set of node keys}. Every key-value pair describes which `values`
+            can be interchanged without changing nodes less than `key`.
+        """
+        if self._symmetry_cache is not None:
+            key = hash((tuple(graph.nodes), tuple(graph.edges),
+                        tuple(map(tuple, node_partitions)), tuple(edge_colors.items())))
+            if key in self._symmetry_cache:
+                return self._symmetry_cache[key]
+        node_partitions = list(self._refine_node_partitions(graph,
+                                                            node_partitions,
+                                                            edge_colors))
+        assert len(node_partitions) == 1
+        node_partitions = node_partitions[0]
+        permutations, cosets = self._process_ordered_pair_partitions(graph,
+                                                                     node_partitions,
+                                                                     node_partitions,
+                                                                     edge_colors)
+        if self._symmetry_cache is not None:
+            self._symmetry_cache[key] = permutations, cosets
         return permutations, cosets
 
 
