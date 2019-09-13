@@ -352,6 +352,42 @@ class Molecule(nx.Graph):
             and self.same_interactions(other)
         )
 
+    @staticmethod
+    def _sort_interactions(all_interactions):
+        """
+        Returns keys in interactions sorted by (number_of_atoms, name). Keys
+        with no interactions are skipped.
+        """
+        sort_keys = {}
+        for interaction_type, interactions in all_interactions.items():
+            if not interactions:
+                continue
+            sort_keys[interaction_type] = len(interactions[0].atoms), interaction_type
+        return sorted(sort_keys, key=lambda k: sort_keys[k])
+
+    def __str__(self):
+        moltype = self.meta.get('moltype', 'molecule')
+
+        interaction_count = OrderedDict()
+        # Make sure atoms and edges get sorted first.
+        interaction_count['atoms'] = len(self.nodes)
+        if len(self.interactions.get('bonds', [])) != len(self.edges):
+            interaction_count['edges'] = len(self.edges)
+
+        for itype in self._sort_interactions(self.interactions):
+            interaction_count[itype] = len(self.interactions[itype])
+
+        # interaction_count will always contain at least 'atoms'.
+        last_item = interaction_count.popitem(last=True)
+        out = "{} with ".format(moltype)
+        out += ', '.join('{} {}'.format(number, itype)
+                         for itype, number in interaction_count.items())
+        if interaction_count:
+            out += ', and '
+        out += '{} {}'.format(last_item[1],
+                              last_item[0])
+        return out
+
     @property
     def force_field(self):
         """

@@ -1179,3 +1179,66 @@ def test_same_non_edges(left, right, expected):
     link_right.non_edges = right
     assert link_left.same_non_edges(link_right) == expected
     assert link_right.same_non_edges(link_left) == expected
+
+
+
+@pytest.mark.parametrize('interactions, expected', (
+    (
+        {},
+        []
+    ),
+    (
+        {'bonds': []},
+        []
+    ),
+    (
+        {'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])]},
+        ['bonds']
+    ),
+    (
+        {'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],
+         'angles': []},
+        ['bonds']
+    ),
+    (
+        {'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],
+         'angles': [Interaction(atoms=(1, 2, 3), parameters=[], meta=[])]},
+        ['bonds', 'angles']
+    ),
+    (
+        {'angles': [Interaction(atoms=(1, 2, 3), parameters=[], meta=[])],
+         'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],},
+        ['bonds', 'angles']
+    ),
+    (
+        {'angles': [Interaction(atoms=(1, 2, 3), parameters=[], meta=[])],
+         'a_bonds': [Interaction(atoms=(10, 2), parameters=[], meta=[])],
+         'bonds': [Interaction(atoms=(1, 2), parameters=[], meta=[])],},
+        ['a_bonds', 'bonds', 'angles']
+    ),
+))
+def test_interaction_sort(interactions, expected):
+    """
+    Test the order produced by Molecule._sort_interactions.
+    """
+    assert vermouth.molecule.Molecule._sort_interactions(interactions) == expected
+
+
+@hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())
+def test_str_method(mol, moltype):
+    """
+    Test Molecule.__str__
+    """
+    if moltype is not None:
+        mol.meta['moltype'] = moltype
+    else: 
+        moltype = 'molecule'
+    found = str(mol)
+    assert '{} with '.format(moltype) in found
+    assert '{} {}'.format(len(mol), 'atoms') in found
+    hypothesis.assume('' not in mol.interactions)
+    for itype, interactions in mol.interactions.items():
+        if interactions:
+            assert '{} {}'.format(len(interactions), itype) in found
+        else:
+            assert '{} {}'.format(0, itype) not in found
