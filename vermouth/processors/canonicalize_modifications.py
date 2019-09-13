@@ -78,35 +78,33 @@ def find_ptm_atoms(molecule):
     ptms = []
     while extra_atoms:
         # First PTM atom we'll look at
-        first = next(iter(extra_atoms))
+        orig = next(iter(extra_atoms))
         anchors = set()
         # PTM atoms we've found
         atoms = set()
         # Atoms we still need to see this traversal
-        to_see = set([first])
+        to_see = set()
         # Traverse in molecule.
-        for orig, succ in nx.bfs_successors(molecule, first):
-            # We've seen orig, so remove it
-            if orig in to_see:
-                to_see.remove(orig)
-            if orig in extra_atoms:
+        while True:
+            if orig in extra_atoms and orig not in atoms:
                 # If this is a PTM atom, we want to see it's neighbours as
                 # well.
-                to_see.update(succ)
+                to_see.update(molecule[orig].keys())
                 atoms.add(orig)
-            else:
+            elif orig not in extra_atoms:
                 # Else, it's an attachment point for the this PTM
                 anchors.add(orig)
             if not to_see:
                 # We've traversed the interesting bit of the tree
                 break
+            orig = to_see.pop()
         # Although we know how far our tree spans we may still have work to do
         # for terminal nodes. There has to be a more elegant solution though.
-        for node in to_see:
-            if node in extra_atoms:
-                atoms.add(node)
-            else:
-                anchors.add(node)
+        # for node in to_see:
+        #     if node in extra_atoms:
+        #         atoms.add(node)
+        #     else:
+        #         anchors.add(node)
         extra_atoms -= atoms
         ptms.append((atoms, anchors))
     return ptms
