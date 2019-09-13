@@ -426,6 +426,10 @@ def entry():
         write_canon=args.write_canon,
     )
 
+    LOGGER.info('Read input.', type='step')
+    for molecule in system.molecules:
+        LOGGER.debug("Read molecule {}.", molecule, type='step')
+
     target_ff = known_force_fields[args.to_ff]
     if args.dssp is not None:
         AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
@@ -531,6 +535,9 @@ def entry():
         defines = ()
 
     LOGGER.info('Writing output.', type='step')
+    for molecule in system.molecules:
+        LOGGER.debug("Writing molecule {}.", molecule, type='step')
+
     # Write the topology if requested
     header = [
         'This file was generated using the following command:',
