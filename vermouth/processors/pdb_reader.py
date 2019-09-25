@@ -33,5 +33,6 @@ class PDBInput(Processor):
         self.exclude = exclude
 
     def run_system(self, system):
-        molecule = read_pdb(self.filename, exclude=self.exclude)
-        system.add_molecule(molecule)
+        molecules = read_pdb(self.filename, exclude=self.exclude)
+        for molecule in molecules:
+            system.add_molecule(molecule)

@@ -16,13 +16,318 @@
 Provides functions for reading and writing PDB files.
 """
 
-from functools import partial
-
 import numpy as np
+import networkx as nx
 
 from ..molecule import Molecule
-from ..utils import first_alpha, distance
+from ..utils import first_alpha, distance, format_atom_string
+from ..parser_utils import LineParser
 from ..truncating_formatter import TruncFormatter
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
+
+
+class PDBParser(LineParser):
+    """
+    Parser for PDB files
+
+    Attributes
+    ----------
+    active_molecule: vermouth.molecule.Molecule
+        The molecule/model currently being read.
+    molecules: list[vermouth.molecule.Molecule]
+        All complete molecules read so far.
+
+    Parameters
+    ----------
+    exclude: collections.abc.Container[str]
+        Container of residue names. Any atom that has a residue name that is in
+        `exclude` will be skipped.
+    ignh: bool
+        Whether all hydrogen atoms should be skipped
+    model: int
+        Which model to take.
+    """
+
+    def __init__(self, exclude=('SOL',), ignh=False, model=0):
+        self.active_molecule = Molecule()
+        self.molecules = []
+        self._conects = []
+        self.exclude = exclude
+        self.ignh = ignh
+        self.model_ = model
+        self._skipahead = False
+
+    def parse(self, file_handle):
+        return list(super().parse(file_handle))[0]
+
+    def dispatch(self, line):
+        record = line[:6].strip().lower()
+        return getattr(self, record, self._unknown_line)
+
+    def _unknown_line(self, line, lineno):
+        """
+        Called when a line is unknown. Raises a KeyError with a helpful message.
+        """
+        raise KeyError("Line {} can not be parsed, since we don't recognize the"
+                       " first 6 characters. The line is: {}"
+                       "".format(lineno, line))
+
+    def _skip(self, line, lineno=0):
+        """
+        Does nothing
+        """
+
+
+    # TODO: Parse some of these, and either do something useful with it, or
+    #       propagate it to e.g. the ITP
+    # pylint: disable=bad-whitespace
+    # TITLE SECTION
+    header = _skip
+    obslte = _skip
+    title  = _skip
+    splt   = _skip
+    caveat = _skip
+    compnd = _skip
+    source = _skip
+    keywds = _skip
+    expdta = _skip
+    nummdl = _skip
+    mdltyp = _skip
+    author = _skip
+    revdat = _skip
+    sprsde = _skip
+    jrnl   = _skip
+    remark = _skip
+
+    # PRIMARY STRUCTURE SECTION
+    dbref  = _skip
+    dbref1 = _skip
+    dbref2 = _skip
+    seqadv = _skip
+    seqres = _skip
+    modres = _skip
+
+    # HETEROGEN SECTION
+    het    = _skip
+    formul = _skip
+    hetnam = _skip
+    hetsyn = _skip
+
+    # SECONDARY STRUCTURE SECTION
+    helix  = _skip
+    sheet  = _skip
+
+    # CONNECTIVITY ANNOTATION SECTION
+    ssbond = _skip
+    link   = _skip
+    cispep = _skip
+
+    # MISCELLANEOUS FEATURES SECTION
+    site   = _skip
+
+    # CRYSTALLOGRAPHIC AND COORDINATE TRANSFORMATION SECTION
+    cryst1 = _skip
+    origx1 = _skip
+    origx2 = _skip
+    origx3 = _skip
+    scale1 = _skip
+    scale2 = _skip
+    scale3 = _skip
+    mtrix1 = _skip
+    mtrix2 = _skip
+    mtrix3 = _skip
+
+    # COORDINATE SECTION
+    # model  = _skip  # Used
+    # atom   = _skip  # Used
+    anisou = _skip
+    # ter    = _skip  # Used
+    # hetatm = _skip  # Used
+    # endmdl = _skip  # Used
+
+    # CONNECTIVITY SECTION
+    # conect = _skip  # Used
+
+    # BOOKKEEPING SECTION
+    master = _skip
+    # end   = _skip  # Used
+    # pylint: enable=bad-whitespace
+
+    def _atom(self, line, lineno=0):
+        """
+        Parse an ATOM or HETATM record.
+
+        Parameters
+        ----------
+        line: str
+            The line to parse. We do not check whether it starts with either
+            "ATOM  " or "HETATM".
+        lineno: int
+            The line number (not used)
+
+        Returns
+        -------
+        None
+
+        """
+        if self._skipahead:
+            return
+
+        fields = [
+            ('', str, 6),
+            ('atomid', int, 5),
+            ('', str, 1),
+            ('atomname', str, 4),
+            ('altloc', str, 1),
+            ('resname', str, 4),
+            ('chain', str, 1),
+            ('resid', int, 4),
+            ('insertion_code', str, 1),
+            ('', str, 3),
+            ('x', float, 8),
+            ('y', float, 8),
+            ('z', float, 8),
+            ('occupancy', float, 6),
+            ('temp_factor', float, 6),
+            ('', str, 10),
+            ('element', str, 2),
+            ('charge', str, 2),
+        ]
+
+        start = 0
+        field_slices = []
+        for name, type_, width in fields:
+            if name:
+                field_slices.append((name, type_, slice(start, start + width)))
+            start += width
+
+        properties = {}
+        for name, type_, slice_ in field_slices:
+            properties[name] = type_(line[slice_].strip())
+
+        pos = (properties.pop('x'), properties.pop('y'), properties.pop('z'))
+        # Coordinates are read in Angstrom, but we want them in nm
+        properties['position'] = np.array(pos, dtype=float) / 10
+
+        if not properties['element']:
+            atomname = properties['atomname']
+            properties['element'] = first_alpha(atomname)
+        if (properties['resname'] in self.exclude or
+                (self.ignh and properties['element'] == 'H')):
+            return
+        idx = max(self.active_molecule) + 1 if self.active_molecule else 0
+        self.active_molecule.add_node(idx, **properties)
+
+    atom = _atom
+    hetatm = _atom
+
+    def model(self, line, lineno=0):
+        try:
+            modelnr = int(line[10:13])
+        except ValueError:
+            return
+        else:
+            self._skipahead = modelnr != self.model_
+
+    def conect(self, line, lineno=0):
+        self._conects.append(line)
+
+    def finish_molecule(self, line="", lineno=0):
+        if self.active_molecule:
+            self.molecules.append(self.active_molecule)
+        self.active_molecule = Molecule()
+
+    endmdl = finish_molecule
+    ter = finish_molecule
+    end = finish_molecule
+
+    def finalize(self, lineno=0):
+        # TODO: cross reference number of molecules with CMPND records
+        self.do_conect()
+        self.finish_molecule()
+        return self.molecules
+
+    def do_conect(self):
+        """
+        Apply connections to molecule based on CONECT records read from PDB file
+        """
+        for line in self._conects:
+            start = 6
+            width = 5
+            atidxs = []
+            for num in range(start, len(line.rstrip()), width):
+                atom = int(line[num:num + width])
+                atidxs.append(atom)
+            self._do_single_conect(atidxs)
+
+    def _do_single_conect(self, conect_record):
+        atidx0 = conect_record[0]
+        # Find the appropriate molecule:
+        for mol in self.molecules:
+            found = list(mol.find_atoms(atomid=atidx0))
+            if found:
+                atidx0 = found[0]
+                break
+        else:  # no break
+            # No molecule found with an atom containing atomid atidx0.
+            # This could be a hydrogen if ignh, or an excluded residue.
+            return
+        for atom in conect_record[1:]:
+            # Find the second molecule...
+            for mol2 in self.molecules:
+                found = list(mol2.find_atoms(atomid=atom))
+                if found:
+                    atom = found[0]
+                    break
+            else:
+                # Two options: a skipped atom
+                continue
+            if mol is not mol2:
+                LOGGER.info('Merging two molecules/chains because there is a '
+                            'CONECT record between atoms {} and {}',
+                            format_atom_string(mol.nodes[atidx0]),
+                            format_atom_string(mol2.nodes[atom]))
+                # Conect record between two molecules! It's probably a *good*
+                # idea to cross reference this with e.g. SSBOND and LINK records
+                self.molecules.remove(mol)
+                self.molecules.remove(mol2)
+                mol = nx.disjoint_union(mol, mol2)
+                mol2 = mol
+                self.molecules.append(mol)
+
+            dist = distance(mol.nodes[atidx0]['position'],
+                            mol2.nodes[atom]['position'])
+            mol.add_edge(atidx0, atom, distance=dist)
+
+
+def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
+    """
+    Parse a PDB file to create a molecule.
+
+    Parameters
+    ----------
+    filename: str
+        The file to read.
+    exclude: collections.abc.Container[str]
+        Atoms that have one of these residue names will not be included.
+    ignh: bool
+        Whether hydrogen atoms should be ignored.
+    model: int
+        If the PDB file contains multiple models, which one to select.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        The parsed molecules. Will only contain edges if the PDB file has
+        CONECT records. Either way, might be disconnected.
+    """
+    parser = PDBParser(exclude, ignh, model)
+    with open(file_name) as file_handle:
+        mols = parser.parse(file_handle)
+    LOGGER.info('Read {} molecules from PDB file {}', len(mols), file_name)
+    return mols
 
 
 def get_not_none(node, attr, default):
@@ -171,118 +476,3 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
     """
     with open(path, 'w') as out:
         out.write(write_pdb_string(system, conect, omit_charges, nan_missing_pos))
-
-
-def do_conect(mol, conectlist):
-    """Apply connections to molecule based on CONECT records read from PDB file
-
-    Parameters
-    ----------
-    mol: networkx.Graph
-        The graph to add edges to.
-    conectlist: collections.abc.Iterable[str]
-        An iterable of CONECT records as found in a PDB file.
-    """
-    atidx2nodeidx = {node_data['atomid']: node_idx
-                     for node_idx, node_data in mol.node.items()}
-
-    for line in conectlist:
-        start = 6
-        width = 5
-        ats = []
-        for num in range(start, len(line.rstrip()), width):
-            atom = int(line[num:num + width])
-            ats.append(atom)
-            try:
-                at0 = atidx2nodeidx[ats[0]]
-            except KeyError:
-                continue
-            for atom in ats[1:]:
-                try:
-                    atom = atidx2nodeidx[atom]
-                except KeyError:
-                    continue
-                dist = distance(mol.node[at0]['position'], mol.node[atom]['position'])
-                mol.add_edge(at0, atom, distance=dist)
-
-
-def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
-    """
-    Parse a PDB file to create a molecule.
-
-    Parameters
-    ----------
-    filename: str
-        The file to read.
-    exclude: collections.abc.Container[str]
-        Atoms that have one of these residue names will not be included.
-    ignh: bool
-        Whether hydrogen atoms should be ignored.
-    model: int
-        If the PDB file contains multiple models, which one to select.
-
-    Returns
-    -------
-    vermouth.molecule.Molecule
-        The parsed molecules. Will only contain edges if the PDB file has
-        CONECT records. Either way, might be disconnected.
-    """
-    models = [Molecule()]
-    conect = []
-    idx = 0
-
-    field_widths = (-6, 5, -1, 4, 1, 4, 1, 4, 1, -3, 8, 8, 8, 6, 6, -10, 2, 2)
-    field_types = (int, str, str, str, str, int, str, float, float, float, float, float, str, str)
-    field_names = ('atomid', 'atomname', 'altloc', 'resname', 'chain', 'resid',
-                   'insertion_code', 'x', 'y', 'z', 'occupancy', 'temp_factor',
-                   'element', 'charge')
-
-    start = 0
-    slices = []
-    for width in field_widths:
-        if width > 0:
-            slices.append(slice(start, start + width))
-        start = start + abs(width)
-
-    with open(str(file_name)) as pdb:
-        for line in pdb:
-            record = line[:6]
-            if record == 'ENDMDL':
-                models.append(Molecule())
-            elif record in ('ATOM  ', 'HETATM'):
-                properties = {}
-                for name, type_, slice_ in zip(field_names, field_types, slices):
-                    properties[name] = type_(line[slice_].strip())
-
-                pos = (properties.pop('x'), properties.pop('y'), properties.pop('z'))
-                # Coordinates are read in Angstrom, but we want them in nm
-                properties['position'] = np.array(pos, dtype=float) / 10
-
-                if not properties['element']:
-                    atomname = properties['atomname']
-                    properties['element'] = first_alpha(atomname)
-                if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):
-                    continue
-                models[-1].add_node(idx, **properties)
-                idx += 1
-            elif record == 'CONECT':
-                conect.append(line)
-
-    if not models[-1]:
-        models.pop()
-
-    for molecule in models:
-        do_conect(molecule, conect)
-
-    molecule = models[model]
-
-#    if molecule.number_of_edges() == 0:
-#        edges_from_distance(molecule)
-#        # Make all edges based on threshold distance
-#        positions = np.array([molecule.node[n]['position'] for n in molecule])
-#        distances = ssd.squareform(ssd.pdist([molecule.node[n]['position'] for n in molecule]))
-#        idxs = np.where((distances < threshold) & (distances != 0))
-#        weights = 1/distances[idxs]
-#        molecule.add_weighted_edges_from(zip(idxs[0], idxs[1], weights))
-
-    return molecule

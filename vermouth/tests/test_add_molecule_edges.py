@@ -33,16 +33,15 @@ from vermouth.processors.add_molecule_edges import (
 from .datafiles import SHORT_DNA
 
 
-
 @pytest.fixture
 def short_dna():
     """
     Build a system that contains a short DNA double strand without edges.
     """
-    molecule = read_pdb(SHORT_DNA)
+    molecules = read_pdb(SHORT_DNA)
 
     system = vermouth.system.System()
-    system.molecules = [molecule]
+    system.molecules = molecules
     return system
 
 
