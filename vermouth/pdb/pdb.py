@@ -38,6 +38,8 @@ class PDBParser(LineParser):
         The molecule/model currently being read.
     molecules: list[vermouth.molecule.Molecule]
         All complete molecules read so far.
+    modelidx: int
+        Which model to take.
 
     Parameters
     ----------
@@ -59,10 +61,20 @@ class PDBParser(LineParser):
         self.modelidx = modelidx
         self._skipahead = False
 
-    def parse(self, file_handle):
-        return list(super().parse(file_handle))[0]
-
     def dispatch(self, line):
+        """
+        Returns the appropriate method for parsing `line`. This is determined
+        based on the first 6 characters of `line`.
+
+        Parameters
+        ----------
+        line: str
+
+        Returns
+        -------
+        collections.abc.Callable[str, int]
+            The method to call with the line, and the line number.
+        """
         record = line[:6].strip().lower()
         return getattr(self, record, self._unknown_line)
 
@@ -78,7 +90,7 @@ class PDBParser(LineParser):
     @staticmethod
     def _skip(line, lineno=0):
         """
-        Does nothing
+        Does nothing.
         """
 
 
@@ -167,12 +179,7 @@ class PDBParser(LineParser):
             The line to parse. We do not check whether it starts with either
             "ATOM  " or "HETATM".
         lineno: int
-            The line number (not used)
-
-        Returns
-        -------
-        None
-
+            The line number (not used).
         """
         if self._skipahead:
             return
@@ -236,11 +243,7 @@ class PDBParser(LineParser):
             The line to parse. Should start with "MODEL ", but this is not
             checked.
         lineno: int
-            The line number of the line to parse.
-
-        Returns
-        -------
-        None
+            The line number (not used).
         """
         try:
             modelnr = int(line[10:13])
@@ -258,7 +261,7 @@ class PDBParser(LineParser):
         line: str
             The line to parse. Should start with CONECT, but this is not checked
         lineno: int
-            The line number of the line to parse.
+            The line number (not used).
         """
         # We can't add edges immediately, since the molecule might not be parsed
         # yet (does the PDB file format mandate anything on the order of
@@ -282,9 +285,23 @@ class PDBParser(LineParser):
     end = _finish_molecule
 
     def finalize(self, lineno=0):
+        """
+        Finish parsing the file. Process all CONECT records found, and returns
+        a list of molecules.
+
+        Parameters
+        ----------
+        lineno: int
+            The line number (not used).
+
+        Returns
+        -------
+        list[vermouth.molecule.Molecule]
+            All molecules parsed from this file.
+        """
         # TODO: cross reference number of molecules with CMPND records
-        self.do_conect()
         self._finish_molecule()
+        self.do_conect()
         return self.molecules
 
     def do_conect(self):
@@ -343,11 +360,16 @@ class PDBParser(LineParser):
                             format_atom_string(mol2.nodes[atomidx]))
                 # Conect record between two molecules! It's probably a *good*
                 # idea to cross reference this with e.g. SSBOND and LINK records
+                molidx = self.molecules.index(mol)
+                molidx2 = self.molecules.index(mol2)
+                del id2idxs[max(molidx, molidx2)]
+                del id2idxs[min(molidx, molidx2)]
                 self.molecules.remove(mol)
                 self.molecules.remove(mol2)
                 mol = nx.disjoint_union(mol, mol2)
                 mol2 = mol
                 self.molecules.append(mol)
+                id2idxs.append({mol.nodes[idx]['atomid']: idx for idx in mol})
 
             dist = distance(mol.nodes[atomidx0]['position'],
                             mol2.nodes[atomidx]['position'])
@@ -377,7 +399,12 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
     """
     parser = PDBParser(exclude, ignh, model)
     with open(file_name) as file_handle:
-        mols = parser.parse(file_handle)
+        mols = list(parser.parse(file_handle))
+        # Only PDBParser.finalize should produce a result, namely a list of
+        # molecules. This means that mols is a list containing a single list of
+        # molecules, which is a little silly.
+        assert len(mols) == 1
+        mols = mols[0]
     LOGGER.info('Read {} molecules from PDB file {}', len(mols), file_name)
     return mols
 
