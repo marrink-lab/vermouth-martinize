@@ -46,17 +46,17 @@ class PDBParser(LineParser):
         `exclude` will be skipped.
     ignh: bool
         Whether all hydrogen atoms should be skipped
-    model: int
+    modelidx: int
         Which model to take.
     """
 
-    def __init__(self, exclude=('SOL',), ignh=False, model=0):
+    def __init__(self, exclude=('SOL',), ignh=False, modelidx=1):
         self.active_molecule = Molecule()
         self.molecules = []
         self._conects = []
         self.exclude = exclude
         self.ignh = ignh
-        self.model_ = model
+        self.modelidx = modelidx
         self._skipahead = False
 
     def parse(self, file_handle):
@@ -66,7 +66,8 @@ class PDBParser(LineParser):
         record = line[:6].strip().lower()
         return getattr(self, record, self._unknown_line)
 
-    def _unknown_line(self, line, lineno):
+    @staticmethod
+    def _unknown_line(line, lineno):
         """
         Called when a line is unknown. Raises a KeyError with a helpful message.
         """
@@ -74,7 +75,8 @@ class PDBParser(LineParser):
                        " first 6 characters. The line is: {}"
                        "".format(lineno, line))
 
-    def _skip(self, line, lineno=0):
+    @staticmethod
+    def _skip(line, lineno=0):
         """
         Does nothing
         """
@@ -224,71 +226,121 @@ class PDBParser(LineParser):
     hetatm = _atom
 
     def model(self, line, lineno=0):
+        """
+        Parse a MODEL record. If the model is not the same as :attr:`modelidx`,
+        this model will not be parsed.
+
+        Parameters
+        ----------
+        line: str
+            The line to parse. Should start with "MODEL ", but this is not
+            checked.
+        lineno: int
+            The line number of the line to parse.
+
+        Returns
+        -------
+        None
+        """
         try:
             modelnr = int(line[10:13])
         except ValueError:
             return
         else:
-            self._skipahead = modelnr != self.model_
+            self._skipahead = modelnr != self.modelidx
 
     def conect(self, line, lineno=0):
+        """
+        Parse a CONECT record. The line is stored for later processing.
+
+        Parameters
+        ----------
+        line: str
+            The line to parse. Should start with CONECT, but this is not checked
+        lineno: int
+            The line number of the line to parse.
+        """
+        # We can't add edges immediately, since the molecule might not be parsed
+        # yet (does the PDB file format mandate anything on the order of
+        # records?). Instead, just store the lines for later use.
         self._conects.append(line)
 
-    def finish_molecule(self, line="", lineno=0):
+    def _finish_molecule(self, line="", lineno=0):
+        """
+        Finish parsing the molecule. :attr:`active_molecule` will be appended to
+        :attr:`molecules`, and a new :attr:`active_molecule` will be made.
+        """
+        # We kind of *want* to yield self.active_molecule here, but we can't
+        # since there's a very good chance it's CONECT records have not been
+        # parsed yet, and the molecule won't have any edges.
         if self.active_molecule:
             self.molecules.append(self.active_molecule)
         self.active_molecule = Molecule()
 
-    endmdl = finish_molecule
-    ter = finish_molecule
-    end = finish_molecule
+    endmdl = _finish_molecule
+    ter = _finish_molecule
+    end = _finish_molecule
 
     def finalize(self, lineno=0):
         # TODO: cross reference number of molecules with CMPND records
         self.do_conect()
-        self.finish_molecule()
+        self._finish_molecule()
         return self.molecules
 
     def do_conect(self):
         """
         Apply connections to molecule based on CONECT records read from PDB file
         """
+        id2idxs = [{mol.nodes[idx]['atomid']: idx for idx in mol}
+                   for mol in self.molecules]
         for line in self._conects:
             start = 6
             width = 5
-            atidxs = []
+            atids = []
             for num in range(start, len(line.rstrip()), width):
                 atom = int(line[num:num + width])
-                atidxs.append(atom)
-            self._do_single_conect(atidxs)
+                atids.append(atom)
+            self._do_single_conect(atids, id2idxs)
 
-    def _do_single_conect(self, conect_record):
-        atidx0 = conect_record[0]
+    def _do_single_conect(self, conect_record, id2idxs):
+        """
+        Process a single CONECT line. Adds edges to the molecules in
+        :attr:`molecules`.
+
+        Parameters
+        ----------
+        conect_record: list[int]
+        id2idxs: list[dict[int, int]]
+            A list of dicts mapping atomids to node keys for every molecule in
+            :attr:`molecules`
+        """
+        atomid0 = conect_record[0]
         # Find the appropriate molecule:
-        for mol in self.molecules:
-            found = list(mol.find_atoms(atomid=atidx0))
-            if found:
-                atidx0 = found[0]
+        mol = None
+        for mol, id2idx in zip(self.molecules, id2idxs):
+            if atomid0 in id2idx:
+                atomidx0 = id2idx[atomid0]
                 break
         else:  # no break
-            # No molecule found with an atom containing atomid atidx0.
+            # No molecule found with an atom containing atomid atid0.
             # This could be a hydrogen if ignh, or an excluded residue.
             return
-        for atom in conect_record[1:]:
+        for atomid in conect_record[1:]:
             # Find the second molecule...
-            for mol2 in self.molecules:
-                found = list(mol2.find_atoms(atomid=atom))
-                if found:
-                    atom = found[0]
+            mol2 = None
+            for mol2, id2idx in zip(self.molecules, id2idxs):
+                if atomid in id2idx:
+                    atomidx = id2idx[atomid]
                     break
             else:
                 # Two options: a skipped atom
                 continue
             if mol is not mol2:
+                assert mol is not None and mol2 is not None
                 LOGGER.info('Merging two molecules/chains because there is a '
                             'CONECT record between atoms {} and {}',
-                            format_atom_string(mol.nodes[atidx0]),
-                            format_atom_string(mol2.nodes[atom]))
+                            format_atom_string(mol.nodes[atomidx0]),
+                            format_atom_string(mol2.nodes[atomidx]))
                 # Conect record between two molecules! It's probably a *good*
                 # idea to cross reference this with e.g. SSBOND and LINK records
                 self.molecules.remove(mol)
@@ -297,9 +349,9 @@ class PDBParser(LineParser):
                 mol2 = mol
                 self.molecules.append(mol)
 
-            dist = distance(mol.nodes[atidx0]['position'],
-                            mol2.nodes[atom]['position'])
-            mol.add_edge(atidx0, atom, distance=dist)
+            dist = distance(mol.nodes[atomidx0]['position'],
+                            mol2.nodes[atomidx]['position'])
+            mol.add_edge(atomidx0, atomidx, distance=dist)
 
 
 def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
@@ -374,7 +426,6 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
         When set to `True`, atoms without coordinates will be written
         with 'nan' as coordinates; this will cause the output file to be
         *invalid* for most uses.
-        for most use.
 
     Returns
     -------
@@ -387,16 +438,14 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
 #    format_string = 'ATOM  {: >5.5d} {:4.4s}{:1.1s}{:3.3s} {:1.1s}{:4.4d}{:1.1s}   {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:2.2s}{:2.2s}'
     format_string = 'ATOM  {: >5dt} {:4st}{:1st}{:3st} {:1st}{:>4dt}{:1st}   {:8.3ft}{:8.3ft}{:8.3ft}{:6.2ft}{:6.2ft}          {:2st}{:2st}'
 
-    # FIXME Here we make the assumption that node indices are unique across
-    # molecules in a system. Probably not a good idea
     nodeidx2atomid = {}
     atomid = 1
     for mol_idx, molecule in enumerate(system.molecules):
-        node_order = molecule.nodes
-
-        for node_idx in node_order:
+        for node_idx in molecule:
+            # Node indices do not have to be unique across molecules. So store
+            # them as (mol_idx, node_idx)
             nodeidx2atomid[(mol_idx, node_idx)] = atomid
-            node = molecule.node[node_idx]
+            node = molecule.nodes[node_idx]
             atomname = get_not_none(node, 'atomname', '')
             altloc = get_not_none(node, 'altloc', '')
             resname = get_not_none(node, 'resname', '')
@@ -433,9 +482,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
         number_fmt = '{:>4dt}'
         format_string = 'CONECT '
         for mol_idx, molecule in enumerate(system.molecules):
-            node_order = molecule.nodes
-
-            for node_idx in node_order:
+            for node_idx in molecule:
                 todo = [nodeidx2atomid[(mol_idx, n_idx)]
                         for n_idx in molecule[node_idx] if n_idx > node_idx]
                 while todo:
