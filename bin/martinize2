@@ -74,7 +74,7 @@ LOGGER = StyleAdapter(LOGGER)
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
 
 
-def read_system(path, ignore_resnames=()):
+def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
     """
     Read a system from a PDB or GRO file.
 
@@ -85,9 +85,10 @@ def read_system(path, ignore_resnames=()):
     system = vermouth.System()
     file_extension = path.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ['PDB', 'ENT']:
-        vermouth.PDBInput(str(path), exclude=ignore_resnames).run_system(system)
+        vermouth.PDBInput(str(path), exclude=ignore_resnames, ignh=ignh,
+                          modelidx=modelidx).run_system(system)
     elif file_extension in ['GRO']:
-        vermouth.GROInput(str(path), exclude=ignore_resnames).run_system(system)
+        vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(system)
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
@@ -281,6 +282,12 @@ def entry():
     file_group.add_argument('-ignore', dest='ignore_res', action='append',
                             default=[],
                             help='Ignore residues with that name.')
+    file_group.add_argument('-ignh', dest='ignore_h', default=False,
+                            action='store_true',
+                            help='Ignore all Hydrogen atoms in the input file')
+    file_group.add_argument('-model', dest='modelidx', default=None, type=int,
+                            help='Which MODEL to select. Only meaningful for'
+                            ' PDB files.')
 
     ff_group = parser.add_argument_group('Force field selection')
     ff_group.add_argument('-ff', dest='to_ff', default='martini22',
@@ -375,6 +382,14 @@ def entry():
                      'compatible. The -elastic and -govs-include flags cannot '
                      'be used together.')
 
+    file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
+    if file_extension in ['GRO'] and args.modelidx is not None:
+        parser.error("GRO files don't know the concept of models.")
+    if args.modelidx is None:
+        # Set a sane default value. Can't do this using argparse machinery,
+        # since we need to be able to check whether the flag was given.
+        args.modelidx = 1
+
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
     LOGGER.setLevel(loglevels[args.verbosity])
 
@@ -417,7 +432,8 @@ def entry():
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
     # For now at least, we silently delete molecules with unknown blocks.
-    system = read_system(args.inpath, ignore_resnames=args.ignore_res)
+    system = read_system(args.inpath, ignore_resnames=args.ignore_res,
+                         ignh=args.ignore_h, modelidx=args.modelidx)
     system = pdb_to_universal(
         system,
         delete_unknown=True,

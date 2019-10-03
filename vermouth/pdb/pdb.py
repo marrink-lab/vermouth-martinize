@@ -78,6 +78,14 @@ class PDBParser(LineParser):
         record = line[:6].strip().lower()
         return getattr(self, record, self._unknown_line)
 
+    def parse(self, file_handle):
+        # Only PDBParser.finalize should produce a result, namely a list of
+        # molecules. This means that mols is a list containing a single list of
+        # molecules, which is a little silly.
+        outcome = list(super().parse(file_handle))
+        assert len(outcome) == 1
+        yield from outcome[0]
+
     @staticmethod
     def _unknown_line(line, lineno):
         """
@@ -246,7 +254,7 @@ class PDBParser(LineParser):
             The line number (not used).
         """
         try:
-            modelnr = int(line[10:13])
+            modelnr = int(line[10:14])
         except ValueError:
             return
         else:
@@ -376,7 +384,7 @@ class PDBParser(LineParser):
             mol.add_edge(atomidx0, atomidx, distance=dist)
 
 
-def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
+def read_pdb(file_name, exclude=('SOL',), ignh=False, modelidx=1):
     """
     Parse a PDB file to create a molecule.
 
@@ -397,14 +405,9 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, model=0):
         The parsed molecules. Will only contain edges if the PDB file has
         CONECT records. Either way, might be disconnected.
     """
-    parser = PDBParser(exclude, ignh, model)
+    parser = PDBParser(exclude, ignh, modelidx)
     with open(file_name) as file_handle:
         mols = list(parser.parse(file_handle))
-        # Only PDBParser.finalize should produce a result, namely a list of
-        # molecules. This means that mols is a list containing a single list of
-        # molecules, which is a little silly.
-        assert len(mols) == 1
-        mols = mols[0]
     LOGGER.info('Read {} molecules from PDB file {}', len(mols), file_name)
     return mols
 

@@ -34,6 +34,7 @@ PDB_ALA5_CG = TEST_DATA / 'ala5_cg.pdb'
 # Full PDB files
 PDB_CYS = TEST_DATA / '2QWO.pdb'  # Contains cystein bridges
 PDB_HB = TEST_DATA / '2dn2.pdb'  # Hemoglobin with heme and 2*2 protein chains
+PDB_MULTIMODEL = TEST_DATA / '6E8W.pdb'  # HIV-1, 15 models
 
 # DNA
 SHORT_DNA = TEST_DATA / 'dna-short.pdb'
