@@ -153,7 +153,7 @@ CONECT    5    4    6    2
 ))
 def test_single_model(pdbstr, ignh, nnodesnedges):
     parser = PDBParser(ignh=ignh)
-    mols = list(parser.parse(pdbstr.split('\n')))
+    mols = list(parser.parse(pdbstr.splitlines()))
     assert len(mols) == len(nnodesnedges)
     for mol, nnodes_edges in zip(mols, nnodesnedges):
         nnodes, nedges = nnodes_edges
@@ -175,3 +175,16 @@ def test_integrative(ignh, modelidx):
         else:
             assert len(mol.nodes) == 904
             assert len(mol.edges) == 0
+
+
+def test_altloc(caplog):
+    pdbstr = """
+ATOM   1300  CA AHIS A 194     -13.902 -22.133  70.272  0.56 53.66
+ATOM   1301  CA BHIS A 194     -13.910 -22.208  70.255  0.44 53.81
+"""
+    parser = PDBParser()
+    mols = list(parser.parse(pdbstr.splitlines()))
+    assert len(mols) == 1
+    mol = mols[0]
+    assert len(mol.nodes) == 1
+    assert any(rec.levelname == 'WARNING' for rec in caplog.records)

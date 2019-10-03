@@ -231,6 +231,14 @@ class PDBParser(LineParser):
         if not properties['element']:
             atomname = properties['atomname']
             properties['element'] = first_alpha(atomname)
+        if properties['altloc'] not in ['', 'A']:
+            # TODO: allow selecting alternative conformation for specific
+            #       residues.
+            LOGGER.warning("There is an alternative conformation for atom {}. "
+                           "We use conformation A exclusively",
+                           format_atom_string(properties),
+                           type='inconsistent-data')
+            return
         if (properties['resname'] in self.exclude or
                 (self.ignh and properties['element'] == 'H')):
             return
