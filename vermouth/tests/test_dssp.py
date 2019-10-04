@@ -19,9 +19,11 @@ Test the functions required to use DSSP.
 import os
 import itertools
 
+import numpy as np
 import pytest
 
 import vermouth
+from vermouth.forcefield import get_native_force_field
 from vermouth.dssp import dssp
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
@@ -356,3 +358,52 @@ def test_run_dssp(savefile, tmpdir):
     else:
         # Is the directory empty?
         assert not os.listdir(str(tmpdir))
+
+
+def test_cterm_atomnames():
+    nodes = [
+        dict(resname="ALA", atomname="N", element='N', resid=1, chain="", position=np.array([9.534, 5.359, 0.000])),
+        dict(resname="ALA", atomname="CA", element='C', resid=1, chain="", position=np.array([10.190, 6.661, -0.000])),
+        dict(resname="ALA", atomname="C", element='C', resid=1, chain="", position=np.array([11.706, 6.515, 0.000])),
+        dict(resname="ALA", atomname="O", element='O', resid=1, chain="", position=np.array([12.232, 5.403, 0.000])),
+        dict(resname="ALA", atomname="CB", element='C', resid=1, chain="", position=np.array([9.733, 7.484, 1.196])),
+        dict(resname="ALA", atomname="H", element='H', resid=1, chain="", position=np.array([10.101, 4.523, 0.000])),
+        dict(resname="ALA", atomname="HA", element='H', resid=1, chain="", position=np.array([9.914, 7.191, -0.912])),
+        dict(resname="ALA", atomname="1HB", element='H', resid=1, chain="", position=np.array([10.231, 8.454, 1.181])),
+        dict(resname="ALA", atomname="2HB", element='H', resid=1, chain="", position=np.array([8.654, 7.630, 1.147])),
+        dict(resname="ALA", atomname="3HB", element='H', resid=1, chain="", position=np.array([9.987, 6.960, 2.116])),
+
+        dict(resname="ALA", atomname="N", element='N', resid=2, chain="", position=np.array([12.404, 7.646, 0.000])),
+        dict(resname="ALA", atomname="CA", element='C', resid=2, chain="", position=np.array([13.862, 7.646, 0.000])),
+        dict(resname="ALA", atomname="C", element='C', resid=2, chain="", position=np.array([14.413, 9.066, 0.000])),
+        dict(resname="ALA", atomname="O1", element='O', resid=2, chain="", position=np.array([14.462, 9.691, 1.023])),
+        dict(resname="ALA", atomname="O2", element='O', resid=2, chain="", position=np.array([14.798, 9.560, -1.023])),
+        dict(resname="ALA", atomname="CB", element='C', resid=2, chain="", position=np.array([14.392, 6.868, -1.196])),
+        dict(resname="ALA", atomname="H", element='H', resid=2, chain="", position=np.array([11.912, 8.528, -0.000])),
+        dict(resname="ALA", atomname="HA", element='H', resid=2, chain="", position=np.array([14.212, 7.162, 0.912])),
+        dict(resname="ALA", atomname="1HB", element='H', resid=2, chain="", position=np.array([15.482, 6.878, -1.181])),
+        dict(resname="ALA", atomname="2HB", element='H', resid=2, chain="", position=np.array([14.038, 5.839, -1.147])),
+        dict(resname="ALA", atomname="3HB", element='H', resid=2, chain="", position=np.array([14.038, 7.331, -2.116])),
+
+    ]
+    edges = [
+        (0, 1), (0, 5),
+        (1, 2), (1, 4), (1, 6),
+        (2, 3),
+        (4, 7), (4, 8), (4, 9),
+        (2, 10),
+        (10, 11), (10, 16),
+        (11, 12), (11, 15), (11, 17),
+        (12, 13), (12, 14),
+        (15, 18), (15, 19), (15, 20),
+    ]
+    ff = get_native_force_field('universal')
+    mol = vermouth.molecule.Molecule(force_field=ff)
+    mol.add_nodes_from(enumerate(nodes))
+    mol.add_edges_from(edges)
+    system = vermouth.system.System(force_field=ff)
+    system.add_molecule(mol)
+    vermouth.processors.RepairGraph().run_system(system)
+    vermouth.processors.CanonicalizeModifications().run_system(system)
+    dssp_out = dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
+    assert dssp_out == list('CC')
