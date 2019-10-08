@@ -25,9 +25,6 @@ from hypothesis import given, settings
 from vermouth.pdb.pdb import PDBParser
 from vermouth.tests.datafiles import PDB_MULTIMODEL
 
-import networkx as networkx
-import numpy as np
-
 
 def single_model(with_conect):
     """
@@ -161,7 +158,7 @@ def test_single_model(pdbstr, ignh, nnodesnedges):
         assert len(mol.edges) == nedges
 
 
-@settings(max_examples=30)
+@settings(max_examples=30, deadline=None)
 @given(st.booleans(), st.integers(1, 15))
 def test_integrative(ignh, modelidx):
     parser = PDBParser(ignh=ignh, modelidx=modelidx)
