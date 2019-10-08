@@ -413,7 +413,7 @@ class Molecule(nx.Graph):
 
         See Also
         --------
-        :attr:`networkx.Graph.nodes`
+        :meth:`networkx.Graph.nodes`
         """
         # TODO: should just be an alias for nodes. If you need the attributes,
         #       do g.nodes(data=<attr>) or g.nodes(data=True)
