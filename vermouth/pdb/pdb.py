@@ -414,7 +414,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, modelidx=1):
         CONECT records. Either way, might be disconnected.
     """
     parser = PDBParser(exclude, ignh, modelidx)
-    with open(file_name) as file_handle:
+    with open(str(file_name)) as file_handle:
         mols = list(parser.parse(file_handle))
     LOGGER.info('Read {} molecules from PDB file {}', len(mols), file_name)
     return mols

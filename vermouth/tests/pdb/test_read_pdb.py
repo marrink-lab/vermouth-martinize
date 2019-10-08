@@ -162,7 +162,7 @@ def test_single_model(pdbstr, ignh, nnodesnedges):
 @pytest.mark.parametrize('modelidx', range(1, 16))
 def test_integrative(ignh, modelidx):
     parser = PDBParser(ignh=ignh, modelidx=modelidx)
-    with open(PDB_MULTIMODEL) as pdb_file:
+    with open(str(PDB_MULTIMODEL)) as pdb_file:
         mols = list(parser.parse(pdb_file))
     assert len(mols) == 3  # 3 chains
     for mol in mols:
