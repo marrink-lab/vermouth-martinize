@@ -24,7 +24,6 @@ import numpy as np
 from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
-from ..utils import distance
 
 # Van der Waals radii from A. Bondi, J. Phys. Chem., 68, 441-452, 1964.
 # https://doi.org/10.1021/j100785a001
@@ -78,7 +77,7 @@ def bonds_from_distance(system, fudge=1.2):
         A new graph where edges are added between nodes that are within a
         certain distance from each other. It is probably disconnected.
     """
-    system = nx.compose_all(system.molecules)
+    system = nx.disjoint_union_all(system.molecules)
     # We filter out the nodes for which we do not know the radius. Indeed, we
     # consider these nodes cannot make bonds. The filtering is done before we
     # enter the KDTree; we only provide to the KDTree the position of the nodes
@@ -88,11 +87,17 @@ def bonds_from_distance(system, fudge=1.2):
     idx_to_nodenum = {
         idx: n
         for idx, n in enumerate(
-                subn
-                for subn in system
-                if system.nodes[subn].get('element') in VDW_RADII
+            subn
+            for subn in system
+            if system.nodes[subn].get('element') in VDW_RADII
         )
     }
+
+    # We also make a set of all nodes that have gotten bonds from CONECT records
+    # (in case of PDB input). Later on we only make new bonds between pairs of
+    # atoms if at least one of those does *not* have a CONECT record. If both
+    # have CONECT records the bond between them should also have been specified.
+    has_conect = {idx for idx in system if system[idx]}
     max_dist = max(
         VDW_RADII[node.get('element')]
         for node in system.nodes.values()
@@ -107,7 +112,7 @@ def bonds_from_distance(system, fudge=1.2):
     pairs = tree.sparse_distance_matrix(tree, max_dist * fudge)
 
     for (idx1, idx2), dist in pairs.items():
-        if idx1 >= idx2:
+        if idx1 >= idx2 or (idx1 in has_conect and idx2 in has_conect):
             continue
         node_idx1 = idx_to_nodenum[idx1]
         node_idx2 = idx_to_nodenum[idx2]
@@ -124,6 +129,9 @@ def bonds_from_distance(system, fudge=1.2):
 
 class MakeBonds(Processor):
     def run_system(self, system):
+        if not system.molecules:
+            # No molecules means nothing to do.
+            return
         mols = bonds_from_distance(system)
         system.molecules = list(map(Molecule, (mols.subgraph(mol)
                                                for mol in nx.connected_components(mols))))
