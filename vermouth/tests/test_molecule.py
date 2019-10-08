@@ -975,6 +975,7 @@ def test_link_parameter_effector_diff_class(left_class, right_class):
     assert left != right
 
 
+@hypothesis.settings(suppress_health_check=[hypothesis.HealthCheck.too_slow])
 @hypothesis.given(random_molecule())
 def test_molecule_equal(mol):
     """
