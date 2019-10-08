@@ -158,8 +158,8 @@ def test_single_model(pdbstr, ignh, nnodesnedges):
         assert len(mol.edges) == nedges
 
 
-@settings(max_examples=30, deadline=None)
-@given(st.booleans(), st.integers(1, 15))
+@pytest.mark.parametrize('ignh', [True, False])
+@pytest.mark.parametrize('modelidx', range(1, 16))
 def test_integrative(ignh, modelidx):
     parser = PDBParser(ignh=ignh, modelidx=modelidx)
     with open(PDB_MULTIMODEL) as pdb_file:
