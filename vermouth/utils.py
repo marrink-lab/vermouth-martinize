@@ -16,12 +16,12 @@
 Provides several generic utility functions
 """
 
-import string
-import numpy as np
 import collections.abc
-import numbers
 import itertools
-import warnings
+import numbers
+import string
+
+import numpy as np
 
 
 # Do not define in the except so the function can be tested.
@@ -159,7 +159,7 @@ def are_different(left, right):
     """
     if left.__class__ != right.__class__:
         return True
-    
+
     # Because we know that `left` and `right` share the same type, we also know
     # that if `left` is `None`, then `right` is also `None`, so `left` and
     # `right` are NOT different. It is an easy and common case, so we treat it
@@ -174,8 +174,8 @@ def are_different(left, right):
             # Some things pretend to be numbers but cannot go through isclose.
             # It is the case of integers that overflow an int64 for instance.
             return left != right
-    
-    if isinstance(left,(str, bytes)):
+
+    if isinstance(left, (str, bytes)):
         return left != right
 
     filler = _Filler()
@@ -190,10 +190,10 @@ def are_different(left, right):
     if isinstance(left, collections.abc.Iterable):
         zipped = itertools.zip_longest(left, right, fillvalue=filler)
         return any(
-            item_left is filler
-            or item_right is filler
-            or are_different(item_left, item_right)
-            for  item_left, item_right in zipped
+            item_left is filler or
+            item_right is filler or
+            are_different(item_left, item_right)
+            for item_left, item_right in zipped
         )
 
     return left != right

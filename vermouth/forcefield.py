@@ -31,7 +31,7 @@ FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
 _FORCE_FIELDS = {}
 
 
-class ForceField(object):
+class ForceField:
     """
     Description of a force field.
 
@@ -58,6 +58,7 @@ class ForceField(object):
     variables: dict
     reference_graphs: dict
     """
+
     def __init__(self, directory=None, name=None):
         self.blocks = {}
         self.links = []

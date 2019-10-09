@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hypothesis
 import hypothesis.strategies as st
-import hypothesis_networkx.strategy as hnst
+from hypothesis_networkx import strategy as hnst
 import vermouth
 import vermouth.molecule
 from vermouth.molecule import Interaction, Molecule, Block, Link, DeleteInteraction
@@ -73,7 +72,7 @@ def parameter_effectors(draw):
     possible_formats = [None, '.2f', '3.0f']
     format_spec = draw(st.sampled_from(possible_formats))
 
-    return effector_class(keys, format_spec=format_spec)
+    return effector(keys, format_spec=format_spec)
 
 
 @st.composite
@@ -182,7 +181,7 @@ def random_molecule(draw, molecule_class=Molecule, max_nodes=5, max_meta=None):
     molecule = molecule_class(graph, meta=meta, nrexcl=nrexcl)
 
     molecule.interactions = draw(interaction_collection(molecule))
-    
+
     return molecule
 
 

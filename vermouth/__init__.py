@@ -19,7 +19,13 @@ Provides functionality for creating MD topologies from coordinate files. Powers
 the CLI tool martinize2.
 """
 import logging
+
+import pbr.version
+
 from .log_helpers import StyleAdapter, get_logger
+
+__version__ = pbr.version.VersionInfo('vermouth').release_string()
+
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 LOGGER = StyleAdapter(get_logger(__name__))
@@ -36,8 +42,6 @@ else:
     DATA_PATH = pkg_resources.resource_filename('vermouth', 'data')
     del pkg_resources
 
-import pbr.version
-__version__ = pbr.version.VersionInfo('vermouth').release_string()
 del pbr
 
 try:

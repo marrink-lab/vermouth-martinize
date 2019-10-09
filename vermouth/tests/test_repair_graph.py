@@ -16,12 +16,12 @@
 """
 Test graph reparation and related operations.
 """
+import copy
 
+import networkx as nx
 import pytest
 import vermouth
 import vermouth.forcefield
-import networkx as nx
-import copy
 
 
 def build_forcefield_with_mods():
@@ -74,7 +74,7 @@ def build_system_mod(force_field):
     force_field: vermouth.ForceField
         A force field based on "universal" that desribed the "GLU-H", "C-ter"
         and "N-ter" modifications.
-    
+
     Returns
     -------
     vermouth.System
@@ -161,6 +161,7 @@ def forcefield_with_mods():
 def system_mod(forcefield_with_mods):
     return build_system_mod(forcefield_with_mods)
 
+
 @pytest.fixture(params=(True, False))
 def repaired_graph(request, system_mod):
     vermouth.RepairGraph(include_graph=request.param).run_system(system_mod)
@@ -179,14 +180,14 @@ def renamed_graph(canonicalized_graph):
     return canonicalized_graph
 
 
-@pytest.mark.parametrize('node_key', (13,  14, 36))
+@pytest.mark.parametrize('node_key', (13, 14, 36))
 def test_PTM_atom_true(repaired_graph, node_key):
     molecule = repaired_graph.molecules[0]
     assert molecule.nodes[node_key].get('PTM_atom', False)
 
 
 @pytest.mark.parametrize('node_key', (
-    node_key for node_key in range(16) if node_key not in (13,  14)
+    node_key for node_key in range(16) if node_key not in (13, 14)
 ))
 def test_PTM_atom_false(repaired_graph, node_key):
     molecule = repaired_graph.molecules[0]

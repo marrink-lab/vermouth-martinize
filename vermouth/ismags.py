@@ -157,7 +157,7 @@ class ISMAGS:
             `n1` and `n2` node property dicts. See also
             :func:`~networkx.algorithms.isomorphism.categorical_node_match` and
             friends.
-            If `None`, all nodes are considered equal. 
+            If `None`, all nodes are considered equal.
         edge_match: collections.abc.Callable or None
             Function used to determine whether two edges are equivalent. Its
             signature should look like ``f(e1: dict, e2: dict) -> bool``, with
@@ -348,7 +348,7 @@ class ISMAGS:
                     pass
                 else:
                     new_sg_count[ge_color, gn_color] = count
-            
+
             for gn, g_count in g_counts.items():
                 if all(new_sg_count[x] <= g_count[x] for x in new_sg_count):
                     # Valid candidate
@@ -906,12 +906,14 @@ class ISMAGS:
             for opp in partitions:
                 new_top_partitions, new_bottom_partitions = opp
 
-                new_perms, new_cosets = self._process_ordered_pair_partitions(graph,
-                                                          new_top_partitions,
-                                                          new_bottom_partitions,
-                                                          edge_colors,
-                                                          orbits,
-                                                          cosets)
+                new_perms, new_cosets = self._process_ordered_pair_partitions(
+                    graph,
+                    new_top_partitions,
+                    new_bottom_partitions,
+                    edge_colors,
+                    orbits,
+                    cosets
+                )
                 # COMBINATION
                 permutations += new_perms
                 cosets.update(new_cosets)

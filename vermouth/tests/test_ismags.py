@@ -23,8 +23,8 @@ Contains unittests for vermouth.ismags.
 from pprint import pprint
 from time import perf_counter
 
-import hypothesis.strategies as st
 from hypothesis import given, note, settings, event
+import hypothesis.strategies as st
 from hypothesis_networkx import graph_builder
 
 import networkx as nx

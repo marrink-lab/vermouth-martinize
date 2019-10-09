@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import numpy as np
+import pytest
+
 from vermouth.processors import do_links, DoLinks
 from vermouth.molecule import Molecule, Link
 import vermouth.forcefield
+
 
 @pytest.mark.parametrize(
     "orders, resids, answer", (
@@ -176,7 +178,7 @@ def test_match_order(orders, resids, answer):
 
 @pytest.mark.parametrize("order", (
     1.2, -3.9, None, True, False, {'a': 3},
-    '><', '#>>', '#$H', '', [], np.nan, 
+    '><', '#>>', '#$H', '', [], np.nan,
 ))
 def test_order_errors(order):
     with pytest.raises(ValueError):
@@ -202,13 +204,15 @@ def test_interpret_order(order, ref_order_type, ref_order_value):
     assert order_type == ref_order_type
     assert order_value == ref_order_value
 
-def make_mol(mol_nodes, mol_edges=[], **kwargs):
+
+def make_mol(mol_nodes, mol_edges=tuple(), **kwargs):
     mol = Molecule(**kwargs)
     mol.add_nodes_from(mol_nodes)
     mol.add_edges_from(mol_edges)
     return mol
 
-def make_link(mol_nodes, mol_edges=[]):
+
+def make_link(mol_nodes, mol_edges=tuple()):
     mol = Link()
     mol.add_nodes_from(mol_nodes)
     mol.add_edges_from(mol_edges)

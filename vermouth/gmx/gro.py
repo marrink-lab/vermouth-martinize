@@ -16,7 +16,6 @@
 Provides functionality to read and write GRO96 files.
 """
 
-from functools import partial
 from itertools import chain
 
 import numpy as np
@@ -59,13 +58,13 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
         first_line = next(gro)
         has_vel = first_line.count('.') == 6
         first_dot = first_line.find('.', 25)
-        second_dot = first_line.find('.', first_dot+1)
+        second_dot = first_line.find('.', first_dot + 1)
         precision = second_dot - first_dot
 
-        field_widths.extend([precision]*3)
+        field_widths.extend([precision] * 3)
         if has_vel:
-            field_widths.extend([precision]*3)
-            field_types.extend([float]*3)
+            field_widths.extend([precision] * 3)
+            field_types.extend([float] * 3)
             field_names.extend(['vx', 'vy', 'vz'])
 
         start = 0
@@ -128,7 +127,7 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
         Box length and optionally angles.
     """
     formatter = TruncFormatter()
-    pos_format_string = '{{:{ntx}.3ft}}'.format(ntx=precision+1)
+    pos_format_string = '{{:{ntx}.3ft}}'.format(ntx=precision + 1)
     format_string = '{:5dt}{:<5st}{:>5st}{:5dt}' + pos_format_string*3
     # Pick an arbitrary node from the first molecule to see if all molecules
     # have velocities. Somehow I don't think we can write velocities for some
@@ -152,7 +151,7 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
                 x, y, z = node['position']  # pylint: disable=invalid-name
 
                 line = formatter.format(format_string, resid, resname, atomname,
-                                        atomid, x, y, z)  
+                                        atomid, x, y, z)
                 if has_vel:
                     vx, vy, vz = node['velocity']  # pylint: disable=invalid-name
                     line += formatter.format(vel_format_string, vx, vy, vz)

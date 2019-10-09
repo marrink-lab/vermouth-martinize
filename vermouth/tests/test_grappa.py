@@ -36,7 +36,7 @@ REFERENCE = {
         ['N', 'HA1', 'C', 'H', 'HA2', 'O1', 'CA'],
         [('N', 'CA'), ('N', 'H'), ('HA1', 'CA'), ('C', 'CA'),
          ('C', 'O1'), ('HA2', 'CA')],
-        {'CA': {'chiral': '(N,C,HA)'}, 'C':{'stub': 1}, 'N': {'stub': 1}},
+        {'CA': {'chiral': '(N,C,HA)'}, 'C': {'stub': 1}, 'N': {'stub': 1}},
     ),
     'ALA': RefEntry(
         '<BB> @CA CB(HB[1-3])',
@@ -166,7 +166,7 @@ REFERENCE = {
         ['N', 'H', 'CA', 'HA', 'C', 'O1', 'CB', 'HB1', 'HB2', 'CG', 'CE1',
          'HE1', 'ND1', 'NE2', 'HE2', 'CD2', 'HD2'],
         [('N', 'H'), ('N', 'CA'), ('CA', 'HA'), ('CA', 'C'), ('CA', 'CB'),
-         ('C', 'O1'), ('CB', 'HB1'), ('CB', 'HB2'), ('CB', 'CG'), 
+         ('C', 'O1'), ('CB', 'HB1'), ('CB', 'HB2'), ('CB', 'CG'),
          ('CG', 'CE1'), ('CG', 'CD2'), ('CE1', 'HE1'), ('CE1', 'ND1'),
          ('CE1', 'NE2'), ('NE2', 'HE2'), ('HE2', 'CD2'), ('CD2', 'HD2')],
         {'CA': {'chiral': '(N,C,HA)'}, 'C': {'stub': 1},

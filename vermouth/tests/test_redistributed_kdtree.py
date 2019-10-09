@@ -17,7 +17,12 @@ Test the modifications made to the redistributed KDTree.
 """
 
 
+import hypothesis
+from hypothesis import strategies as st
+import hypothesis.extra.numpy as hnp
 import numpy as np
+import pytest
+from vermouth.redistributed.kdtree import KDTree as redisKDTree
 
 try:
     from scipy.spatial import cKDTree as scipyKDTree
@@ -26,12 +31,6 @@ except ImportError:
     HAS_SCIPY = False
 else:
     HAS_SCIPY = True
-from vermouth.redistributed.kdtree import KDTree as redisKDTree
-
-import pytest
-import hypothesis
-from hypothesis import strategies as st
-import hypothesis.extra.numpy as hnp
 
 
 def dict_close(left, right):
@@ -73,4 +72,3 @@ def test_sparse_distance_matrix(coordinates, max_dist, p):
     redis_output = redis_tree.sparse_distance_matrix(redis_tree, max_dist, p)
 
     assert dict_close(redis_output, original_output)
-

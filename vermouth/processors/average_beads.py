@@ -65,7 +65,7 @@ def do_average_bead(molecule, ignore_missing_graphs=False, weight=None):
         if 'graph' not in node:
             missing.append(node)
         elif weight is not None:
-            have_all_weights =  all(
+            have_all_weights = all(
                 weight in subnode for subnode in node['graph'].nodes.values()
             )
             if not have_all_weights:

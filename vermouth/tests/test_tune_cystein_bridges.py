@@ -34,6 +34,7 @@ from vermouth.molecule import Choice
 from .test_edge_tuning import simple_protein  # pylint: disable=unused-import
 from .datafiles import PDB_CYS
 
+
 @pytest.fixture
 def cys_protein():
     """
@@ -99,7 +100,7 @@ def test_add_cystein_bridges_threshold(cys_protein):
     for edge in system.molecules[0].edges:
         node_a = system.molecules[0].nodes[edge[0]]
         node_b = system.molecules[0].nodes[edge[1]]
-        print('*', node_a, '--', node_b) 
+        print('*', node_a, '--', node_b)
         print(distance(node_a['position'], node_b['position']))
     assert len(system.molecules[0].edges) == 1
     # According to SSBOND record, cysbond should be between resid 171 and 876.

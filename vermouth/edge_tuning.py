@@ -25,7 +25,6 @@ import networkx as nx
 from . import KDTree
 from . import selectors
 from . import geometry
-from .utils import distance
 
 
 def _edge_is_between_selections(edge, selection_a, selection_b):
@@ -317,8 +316,6 @@ def pairs_under_threshold(molecules, threshold,
     for (idx, jdx), distance_between in sparse_distance_matrix.items():
         key_a = selection_a[idx]
         key_b = selection_b[jdx]
-        node_a = molecules[key_a[0]].nodes[key_a[1]]
-        node_b = molecules[key_b[0]].nodes[key_b[1]]
         if key_a != key_b and distance_between < threshold:
             if not _are_close(min_edges, molecules, key_a, key_b):
                 yield (key_a, key_b, distance_between)
@@ -327,15 +324,16 @@ def pairs_under_threshold(molecules, threshold,
 def _are_close(threshold, molecules, key_a, key_b):
     if not threshold:
         return False
-    if key_a[0] == key_b[0]:
-        try:
-            length = nx.shortest_path_length(
-                molecules[key_a[0]], key_a[1], key_b[1]
-            )
-        except nx.exception.NetworkXNoPath:
-            return False
-        else:
-            return length < threshold
+    if key_a[0] != key_b[0]:
+        return False
+    try:
+        length = nx.shortest_path_length(
+            molecules[key_a[0]], key_a[1], key_b[1]
+        )
+    except nx.exception.NetworkXNoPath:
+        return False
+    else:
+        return length < threshold
 
 
 def select_nodes_multi(molecules, selector):

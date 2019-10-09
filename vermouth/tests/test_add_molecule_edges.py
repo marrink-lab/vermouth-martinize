@@ -25,7 +25,6 @@ Tests for the AddMoleculeEdgesAtDistance processor.
 import pytest
 
 import vermouth
-from vermouth.molecule import Choice
 from vermouth.pdb.pdb import read_pdb
 from vermouth.processors.add_molecule_edges import (
     DNA_ACCEPTORS, DNA_DONORS, DNA_HB_DIST,
@@ -102,5 +101,4 @@ def test_add_molecule_edges_distance(short_dna_edges):
         (114, 115),
         (11, 13),
     ])
-    found = set(short_dna_edges.molecules[0].edges)
     assert set(short_dna_edges.molecules[0].edges) == expected

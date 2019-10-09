@@ -14,11 +14,14 @@
 
 import collections
 import copy
+
+import numpy as np
 import pytest
+
 from vermouth import ffinput
 from vermouth.molecule import Choice, Link, Block
 from vermouth import forcefield
-import numpy as np
+
 
 
 CHOICE = Choice(['A', 'B'])
@@ -433,7 +436,7 @@ def test_get_atoms_errors(tokens, natoms):
         {'+A': {'atomname': 'A', 'order': 1}},
     ),
     (
-        (('A', {}),  ('B', {}), ),
+        (('A', {}), ('B', {}), ),
         {'attr': 0},
         {},
         {
