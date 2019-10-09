@@ -324,17 +324,16 @@ def pairs_under_threshold(molecules, threshold,
 def _are_close(threshold, molecules, key_a, key_b):
     if not threshold:
         return False
-    if key_a[0] == key_b[0]:
-        try:
-            length = nx.shortest_path_length(
-                molecules[key_a[0]], key_a[1], key_b[1]
-            )
-        except nx.exception.NetworkXNoPath:
-            return False
-        else:
-            return length < threshold
-    else:
+    if key_a[0] != key_b[0]:
         return False
+    try:
+        length = nx.shortest_path_length(
+            molecules[key_a[0]], key_a[1], key_b[1]
+        )
+    except nx.exception.NetworkXNoPath:
+        return False
+    else:
+        return length < threshold
 
 
 def select_nodes_multi(molecules, selector):

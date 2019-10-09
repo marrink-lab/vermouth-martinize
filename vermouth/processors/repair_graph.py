@@ -136,7 +136,7 @@ def make_reference(mol):
         ))}
         new_reference_names = {old: new for new, old in enumerate(sorted(
             reference,
-           key=lambda jdx: (ref_names[jdx] not in res_names.values(), ref_names[jdx])
+            key=lambda jdx: (ref_names[jdx] not in res_names.values(), ref_names[jdx])
         ))}
 
         old_res_names = {v: k for k, v in new_residue_names.items()}

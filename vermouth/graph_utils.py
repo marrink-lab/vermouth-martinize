@@ -27,7 +27,7 @@ def add_element_attr(molecule):
 
     Parameters
     ----------
-    molecule: networkx.graph.Graph
+    molecule: networkx.Graph
         The graph of which nodes should get an element attribute.
 
     Raises
