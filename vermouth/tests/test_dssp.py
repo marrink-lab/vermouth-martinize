@@ -329,7 +329,8 @@ def test_run_dssp(savefile, tmpdir):
     else:
         path = None
     system = vermouth.System()
-    system.add_molecule(read_pdb(str(PDB_PROTEIN)))
+    for molecule in read_pdb(str(PDB_PROTEIN)):
+        system.add_molecule(molecule)
     secondary_structure = dssp.run_dssp(system,
                                         executable=DSSP_EXECUTABLE,
                                         savefile=path)

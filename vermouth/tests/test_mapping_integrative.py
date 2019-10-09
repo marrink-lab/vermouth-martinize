@@ -127,6 +127,8 @@ def test_pepplane_mapping(force_fields, mappings, ala5_aa, ala5_cg):
     for attrname in attrnames:
         print(aa_mol.nodes(data=attrname))
         print(cg_mol.nodes(data=attrname))
+    print(aa_mol.edges)
+    print(cg_mol.edges)
     assert equal_graphs(aa_mol, cg_mol, node_attrs=attrnames)
 
 

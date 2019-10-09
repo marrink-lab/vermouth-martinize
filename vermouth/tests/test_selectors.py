@@ -30,17 +30,19 @@ from vermouth.tests.datafiles import (
 
 
 @pytest.mark.parametrize(
-    'molecule, reference_answer',
+    'molecules, reference_answer',
     [(read_pdb(str(path)), answer) for path, answer in [
         (PDB_PROTEIN, True),
         (PDB_NOT_PROTEIN, False),
         (PDB_PARTIALLY_PROTEIN, False),
     ]]
 )
-def test_is_protein(molecule, reference_answer):
+def test_is_protein(molecules, reference_answer):
     """
     Make sure that proteins are correctly identified as such.
     """
+    assert len(molecules) == 1
+    molecule = molecules[0]
     assert vermouth.selectors.is_protein(molecule) == reference_answer
 
 
@@ -133,7 +135,10 @@ def test_filter_minimal():
     Test that :func:`vermouth.selectors.filter_minimal` works as expected.
     """
     # Build a molecule that has all even atoms with no positions.
-    molecule = read_pdb(str(PDB_PROTEIN))
+    molecules = read_pdb(str(PDB_PROTEIN))
+    assert len(molecules) == 1
+    molecule = molecules[0]
+
     for atom in list(molecule.nodes.values())[::2]:
         atom['position'] = None
     # This means that we want to keep the odd atoms

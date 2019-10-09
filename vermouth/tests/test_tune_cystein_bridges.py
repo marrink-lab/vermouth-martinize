@@ -30,6 +30,7 @@ import vermouth
 from vermouth.pdb.pdb import read_pdb
 from vermouth.processors import tune_cystein_bridges
 from vermouth.utils import distance
+from vermouth.molecule import Choice
 from .test_edge_tuning import simple_protein  # pylint: disable=unused-import
 from .datafiles import PDB_CYS
 
@@ -45,7 +46,9 @@ def cys_protein():
     The edges from the CONECT records are removed from the system, so there is
     no edge left.
     """
-    molecule = read_pdb(PDB_CYS)
+    molecules = read_pdb(PDB_CYS)
+    assert len(molecules) == 1
+    molecule = molecules[0]
     molecule.remove_edges_from(list(molecule.edges))
     system = vermouth.system.System()
     system.molecules = [molecule]
@@ -99,14 +102,24 @@ def test_add_cystein_bridges_threshold(cys_protein):
         print('*', node_a, '--', node_b) 
         print(distance(node_a['position'], node_b['position']))
     assert len(system.molecules[0].edges) == 1
-    assert (1285, 3508) in system.molecules[0].edges
+    # According to SSBOND record, cysbond should be between resid 171 and 876.
+    # Let's find the associated atoms.
+    atoms = tuple(system.molecules[0].find_atoms(resname='CYS', atomname='SG',
+                                                 resid=Choice([171, 876])))
+    assert atoms in system.molecules[0].edges
 
 
 def test_remove_cystein_bridge_edges_processor(cys_protein):
     """
     Test that :class:`vermouth.RemoveCysteinBridgeEdges` removes edges.
     """
+    print(cys_protein.molecules[0].nodes[1285], cys_protein.molecules[0].nodes[3508])
     cys_protein.molecules[0].add_edge(1285, 3508)
     processor = vermouth.RemoveCysteinBridgeEdges()
     processor.run_system(cys_protein)
-    assert (1285, 3508) not in cys_protein.molecules[0].edges
+    # According to SSBOND record, cysbond should be between resid 171 and 876.
+    # Let's find the associated atoms.
+    atoms = tuple(cys_protein.molecules[0].find_atoms(resname='CYS',
+                                                      atomname='SG',
+                                                      resid=Choice([171, 876])))
+    assert atoms not in cys_protein.molecules[0].edges
