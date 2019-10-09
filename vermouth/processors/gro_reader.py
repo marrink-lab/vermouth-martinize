@@ -26,11 +26,14 @@ from ..gmx import gro
 from .processor import Processor
 
 class GROInput(Processor):
-    def __init__(self, filename, exclude=()):
+    def __init__(self, filename, exclude=(), ignh=False):
         super().__init__()
         self.filename = filename
         self.exclude = exclude
+        self.ignh = ignh
 
     def run_system(self, system):
-        molecule = gro.read_gro(self.filename, exclude=self.exclude)
+        molecule = gro.read_gro(self.filename,
+                                exclude=self.exclude,
+                                ignh=self.ignh)
         system.add_molecule(molecule)
