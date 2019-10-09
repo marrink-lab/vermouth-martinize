@@ -481,6 +481,7 @@ class TestPairsUnderThreshold:
         """
         assert len(list(assymetric_pair_selected)) == 4
 
+    @staticmethod
     def test_empty_selection(multi_molecules):
         """
         Make sure :func:`edge_tuning.pairs_under_threshold` is not failing on

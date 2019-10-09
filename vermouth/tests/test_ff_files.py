@@ -21,7 +21,6 @@ import numpy as np
 import vermouth.ffinput
 import vermouth.forcefield
 import vermouth.molecule
-from .helper_functions import make_into_set
 
 
 class TestBlock:
@@ -237,7 +236,8 @@ class TestBlock:
                 """,
                 (('SC2', 'SC3'), ),
             ),
-    ))
+        )
+    )
     def test_interaction_edges(interaction_lines, edges):
         """
         Edges are created where expected.
@@ -776,7 +776,7 @@ class TestLink:
             ]},
             (('BB', 'SC1'),),
         ),
-    ))       
+    ))
     def test_link_interactions(lines, atoms, interactions, edges):
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
@@ -958,7 +958,7 @@ class TestLink:
         link = ff.links[0]
         assert link.non_edges == [
             ['XXX', {'atomname': 'notYYY', 'order': 0}],
-            ['ABC',{'atomname': 'DEF', 'order': 1}],
+            ['ABC', {'atomname': 'DEF', 'order': 1}],
         ]
 
 
@@ -976,7 +976,7 @@ class TestModification:
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
         vermouth.ffinput.read_ff(lines, ff)
-        # 2 modifications were made, but they both had the same name. This 
+        # 2 modifications were made, but they both had the same name. This
         # should probably raise an error somewhere.
         assert list(ff.modifications.keys()) == ['']
 
@@ -1003,7 +1003,7 @@ class TestModification:
 
         assert modification.name == 'C-ter'
         assert tuple(modification.nodes(data=True)) == (
-            ('CA',{'element': 'C', 'PTM_atom': False, 'atomname': 'CA'}),
+            ('CA', {'element': 'C', 'PTM_atom': False, 'atomname': 'CA'}),
             ('C', {'element': 'C', 'PTM_atom': False, 'atomname': 'C'}),
             ('O', {'element': 'O', 'PTM_atom': False, 'atomname': 'O'}),
             ('OXT', {
@@ -1013,7 +1013,7 @@ class TestModification:
                 'replace': {'atomname': None}
             }),
         )
-        assert set(frozenset(edge) for edge in  modification.edges) == {
+        assert set(frozenset(edge) for edge in modification.edges) == {
             frozenset(('CA', 'C')),
             frozenset(('C', 'O')),
             frozenset(('C', 'OXT')),

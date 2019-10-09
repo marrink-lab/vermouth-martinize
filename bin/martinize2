@@ -25,7 +25,6 @@ import itertools
 import textwrap
 from pathlib import Path
 import sys
-from collections import OrderedDict
 
 import vermouth
 import vermouth.forcefield

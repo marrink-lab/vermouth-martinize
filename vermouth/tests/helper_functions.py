@@ -27,7 +27,7 @@ def make_into_set(iter_of_dict):
     return set(frozenset(dict_.items()) for dict_ in iter_of_dict)
 
 
-def equal_graphs(g1, g2, 
+def equal_graphs(g1, g2,
                  node_attrs=('resid', 'resname', 'atomname', 'chain', 'charge_group', 'atype'),
                  edge_attrs=()):
     """
@@ -41,7 +41,7 @@ def equal_graphs(g1, g2,
     edge_attrs: collections.abc.Iterable or None
         Edge attributes to consider. If `None`, the edge attribute dicts must
         be equal.
-    
+
     Returns
     -------
     bool
@@ -50,10 +50,10 @@ def equal_graphs(g1, g2,
     if node_attrs is None:
         node_equal = operator.eq
     else:
-        node_equal = iso.categorical_node_match(node_attrs, ['']*len(node_attrs))
+        node_equal = iso.categorical_node_match(node_attrs, [''] * len(node_attrs))
     if edge_attrs is None:
         edge_equal = operator.eq
     else:
-        edge_equal = iso.categorical_node_match(edge_attrs, ['']*len(edge_attrs))
+        edge_equal = iso.categorical_node_match(edge_attrs, [''] * len(edge_attrs))
     matcher = iso.GraphMatcher(g1, g2, node_match=node_equal, edge_match=edge_equal)
     return matcher.is_isomorphic()

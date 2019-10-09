@@ -22,19 +22,19 @@ from .processor import Processor
 from .. import edge_tuning
 from ..molecule import Choice
 
-# TODO: this should be defined in te force fields
-DNA_DONORS = [
+# TODO: this should be defined in the force fields
+DNA_DONORS = (
     {'resname': Choice(['DA', 'DA3', 'DA5']), 'atomname': Choice(['C2', 'N6'])},
     {'resname': Choice(['DG', 'DG3', 'DG5']), 'atomname': Choice(['N1', 'N2'])},
     {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': 'N4'},
     {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': 'N3'},
-]
-DNA_ACCEPTORS = [
+)
+DNA_ACCEPTORS = (
     {'resname': Choice(['DA', 'DA3', 'DA5']), 'atomname': 'N1'},
     {'resname': Choice(['DG', 'DG3', 'DG5']), 'atomname': 'O6'},
     {'resname': Choice(['DC', 'DC3', 'DC5']), 'atomname': Choice(['N3', 'O2'])},
     {'resname': Choice(['DT', 'DT3', 'DT5']), 'atomname': Choice(['O2', 'O4'])},
-]
+)
 DNA_HB_DIST = 0.30
 
 

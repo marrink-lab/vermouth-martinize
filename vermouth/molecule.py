@@ -89,9 +89,6 @@ class LinkPredicate:
     def __repr__(self):
         return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and other.value == self.value
-
 
 class Choice(LinkPredicate):
     """
@@ -350,11 +347,11 @@ class Molecule(nx.Graph):
 
     def __eq__(self, other):
         return (
-            self.nrexcl == other.nrexcl
-            and self._force_field == other._force_field
-            and self.same_nodes(other)
-            and self.same_edges(other)
-            and self.same_interactions(other)
+            self.nrexcl == other.nrexcl and
+            self._force_field == other._force_field and
+            self.same_nodes(other) and
+            self.same_edges(other) and
+            self.same_interactions(other)
         )
 
     @staticmethod
@@ -881,7 +878,7 @@ class Molecule(nx.Graph):
         """
         for name, interactions in self.interactions.items():
             # We *must* copy interactions (list call), otherwise you change
-            # interactions while iterating over it, causing it to miss 
+            # interactions while iterating over it, causing it to miss
             # consecutive interactions that should be removed.
             for interaction in list(interactions):
                 if node in interaction.atoms:
@@ -1144,7 +1141,7 @@ class Block(Molecule):
         Returns
         -------
         Molecule
-            This block as a molecule.        
+            This block as a molecule.
         """
         if force_field is None:
             force_field = self.force_field
@@ -1158,8 +1155,8 @@ class Block(Molecule):
             new_atom = default_attributes.copy()
             new_atom.update(atom)
             new_atom['resid'] = (new_atom.get('resid', 1) + offset_resid)
-            new_atom['charge_group'] = (new_atom.get('charge_group', 1)
-                                        + offset_charge_group)
+            new_atom['charge_group'] = (new_atom.get('charge_group', 1) +
+                                        offset_charge_group)
             mol.add_node(idx, **new_atom)
         for name, interactions in self.interactions.items():
             for interaction in interactions:
@@ -1186,7 +1183,7 @@ class Link(Block):
     Template link between two residues.
 
     Two links are equal if:
-    
+
     * the underlying molecules are equal
     * the names are equal
     * the negative edges ("non-edges") are equal regardless of order
@@ -1274,9 +1271,9 @@ class Link(Block):
             if len(attrs_self) != len(attrs_other):
                 return False
             for attr_self in attrs_self:
-                for i, attr_other in enumerate(attrs_other):
+                for idx, attr_other in enumerate(attrs_other):
                     if not utils.are_different(attr_self, attr_other):
-                        del attrs_other[i]
+                        del attrs_other[idx]
                         break
                 else:  # no break
                     return False

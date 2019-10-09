@@ -20,12 +20,6 @@ from functools import partial
 
 from .ffinput import _tokenize, _parse_atom_attributes
 from .graph_utils import MappingGraphMatcher
-from .molecule import Block
-
-
-from collections import defaultdict, deque
-from functools import partial
-
 from .log_helpers import StyleAdapter, get_logger
 from .molecule import Block
 from .parser_utils import SectionLineParser

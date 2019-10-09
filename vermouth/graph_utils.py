@@ -17,11 +17,25 @@
 import itertools
 import networkx as nx
 
-from .ismags import ISMAGS
 from .utils import maxes, first_alpha
 
 
 def add_element_attr(molecule):
+    """
+    Adds an element attribute to every node in `molecule`, based on that node's
+    atomname attribute.
+
+    Parameters
+    ----------
+    molecule: networkx.graph.Graph
+        The graph of which nodes should get an element attribute.
+
+    Raises
+    ------
+    ValueError
+        If no element could be guessed for a node.
+
+    """
     for node_idx in molecule:
         node = molecule.nodes[node_idx]
         if 'element' not in node:
@@ -262,4 +276,3 @@ class MappingGraphMatcher(nx.isomorphism.isomorphvf2.GraphMatcher):
                         return False
             # syntactic check has already verified that neighbors are symmetric
         return True
-

@@ -85,10 +85,10 @@ def read_dssp2(lines):
     # user to count lines in a file starting from 1 rather than 0.
     numbered_lines = enumerate(lines, start=1)
 
-    # The function can only read output from DSSP version 2 and 3. Hopefully, if the
-    # input file is not in this format, then the parser will break as it reads
-    # the file; we can expect that the end of the header will not be found or
-    # the secondary structure will be an unexpected character.
+    # The function can only read output from DSSP version 2 and 3. Hopefully, if
+    # the input file is not in this format, then the parser will break as it
+    # reads the file; we can expect that the end of the header will not be found
+    # or the secondary structure will be an unexpected character.
     # We could predict from the first line that the format is not the one we
     # expect if it does not start with "===="; however, the first lines of the
     # file are non-essential and could have been trimmed. (For instance, the
@@ -399,7 +399,7 @@ def convert_dssp_annotation_to_martini(
     For every node in `molecule`, translate the `from_attribute` with
     :func:`convert_dssp_to_martini`, and assign it to the attribute
     `to_attribute`.
-    
+
     Parameters
     ----------
     molecule: networkx.Graph
@@ -408,7 +408,7 @@ def convert_dssp_annotation_to_martini(
         The attribute to read.
     to_attribute: collections.abc.Hashable
         The attribute to set.
-    
+
     Raises
     ------
     ValueError

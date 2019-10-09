@@ -36,6 +36,7 @@ KWARG_ST = st.text(alphabet=string.ascii_letters, min_size=1)
 
 class FormatCounter(str):
     def __init__(self, *args, **kwargs):
+        super().__init__()
         self._format_count = 0
 
     def format(self, *args, **kwargs):
@@ -46,7 +47,7 @@ class FormatCounter(str):
     def __mod__(self, args):
         self._format_count += 1
         return self.__class__(super().__mod__(args))
-    
+
     def get_count(self):
         """Returns the current value of the counter"""
         return self._format_count
@@ -54,6 +55,7 @@ class FormatCounter(str):
 
 class LogHandler(logging.NullHandler):
     """Helper class which will run a test for every log record"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.test = lambda: None
@@ -97,8 +99,10 @@ def test_get_logger(name):
     args=st.lists(st.text(), min_size=0, max_size=5),
     type_=st.one_of(st.none(), st.text()),
     default_type=st.text(min_size=1),
-    extra=st.one_of(st.none(),
-                    st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
+    extra=st.one_of(
+        st.none(),
+        st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5)
+    )
 )
 def test_type_adapter(logger, handler, args, type_, default_type, extra):
     """Make sure the TypeAdapter sets the correct type attr"""
@@ -119,7 +123,7 @@ def test_type_adapter(logger, handler, args, type_, default_type, extra):
     logger.addHandler(handler)
     logger = TypeAdapter(logger, default_type=default_type, extra=extra)
     handler.set_test(test)
-    fmt = ['%s']*len(args)
+    fmt = ['%s'] * len(args)
     fmt = ' '.join(fmt)
 
     note('fmt={}'.format(fmt))
@@ -138,8 +142,10 @@ def test_type_adapter(logger, handler, args, type_, default_type, extra):
                            st.text(), min_size=0, max_size=5),
     type_=st.one_of(st.none(), st.text()),
     default_type=st.text(min_size=1),
-    extra=st.one_of(st.none(),
-                    st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
+    extra=st.one_of(
+        st.none(),
+        st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5)
+    )
 )
 def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, extra):
     """Make sure that if you have both a TypeAdapter and a StyleAdapter the
@@ -162,9 +168,9 @@ def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, 
     logger = TypeAdapter(logger, default_type=default_type)
     logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
-    fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
+    fmt = ['{}']*len(args) + ['{' + name + '}' for name in kwargs]
     fmt = ' '.join(fmt)
-    print('-'*60)
+    print('-' * 60)
 
     note('fmt={}'.format(fmt))
     if type_ is None:
@@ -194,7 +200,7 @@ def test_style_adapter(logger, handler, args, kwargs, extra):
     logger.addHandler(handler)
     logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
-    fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
+    fmt = ['{}']*len(args) + ['{' + name + '}' for name in kwargs]
     fmt = ' '.join(fmt)
 
     note('fmt={}'.format(fmt))
@@ -214,7 +220,7 @@ def test_passing_adapter(logger, handler, args, kwargs):
     handler.set_test(test)
     logger.addHandler(handler)
     logger = PassingLoggerAdapter(logger)
-    fmt = ['%s']*len(args) + ['%('+name+')s' for name in kwargs]
+    fmt = ['%s']*len(args) + ['%(' + name + ')s' for name in kwargs]
     fmt = ' '.join(fmt)
     note(fmt)
     logger.setLevel(logging.INFO)
@@ -227,7 +233,7 @@ def test_passing_adapter(logger, handler, args, kwargs):
 )
 def test_message(args, kwargs):
     """Make sure Message doesn't formats it's contents needlessly"""
-    fmt = ['{}']*len(args) + ['{'+name+'}' for name in kwargs]
+    fmt = ['{}']*len(args) + ['{' + name + '}' for name in kwargs]
     fmt = ' '.join(fmt)
     note('fmt={}'.format(fmt))
     counter = FormatCounter(fmt)

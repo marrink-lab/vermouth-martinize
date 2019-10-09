@@ -39,7 +39,7 @@ def test_get_native_force_field_identity():
     first_call = set(id(vermouth.forcefield.get_native_force_field(name))
                      for name in requests)
     second_call = set(id(vermouth.forcefield.get_native_force_field(name))
-                     for name in requests)
+                      for name in requests)
 
     # Are all the force fields different?
     assert len(first_call) == len(second_call) == len(requests)

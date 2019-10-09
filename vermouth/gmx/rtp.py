@@ -38,10 +38,11 @@ _BondedTypes = collections.namedtuple(
 )
 
 
-class _IterRTPSubsectionLines(object):
+class _IterRTPSubsectionLines:
     """
     Iterate over the lines of an RTP file within a subsection.
     """
+
     def __init__(self, parent):
         self.parent = parent
         self.lines = parent.lines
@@ -68,12 +69,13 @@ class _IterRTPSubsectionLines(object):
             pass
 
 
-class _IterRTPSubsections(object):
+class _IterRTPSubsections:
     """
     Iterate over the subsection of a RTP file within a section.
 
     For each subsections, yields its name and  an iterator over its lines.
     """
+
     def __init__(self, parent):
         self.parent = parent
         self.lines = parent.lines
@@ -119,13 +121,14 @@ class _IterRTPSubsections(object):
             pass
 
 
-class _IterRTPSections(object):
+class _IterRTPSections:
     """
     Iterate over the sections of a RTP file.
 
     For each section, yields the name of the sections and an iterator over its
     subsections.
     """
+
     def __init__(self, lines):
         self.lines = lines
         self.buffer = collections.deque()

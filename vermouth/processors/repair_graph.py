@@ -19,7 +19,7 @@ Provides a processor that repairs a graph based on a reference.
 import networkx as nx
 
 from .processor import Processor
-from ..graph_utils import *
+from ..graph_utils import *  # FIXME
 from ..ismags import ISMAGS
 from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string
@@ -130,10 +130,14 @@ def make_reference(mol):
         #       can do a similar trick here by rot+trans aligning the given
         #       residue with a reference conformation. And then sort by
         #       distance
-        new_residue_names = {old: new for new, old in enumerate(sorted(residue,
-                             key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])))}
-        new_reference_names = {old: new for new, old in enumerate(sorted(reference,
-                               key=lambda jdx: (ref_names[jdx] not in res_names.values(), ref_names[jdx])))}
+        new_residue_names = {old: new for new, old in enumerate(sorted(
+            residue,
+            key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])
+        ))}
+        new_reference_names = {old: new for new, old in enumerate(sorted(
+            reference,
+           key=lambda jdx: (ref_names[jdx] not in res_names.values(), ref_names[jdx])
+        ))}
 
         old_res_names = {v: k for k, v in new_residue_names.items()}
         old_ref_names = {v: k for k, v in new_reference_names.items()}
@@ -342,7 +346,7 @@ class RepairGraph(Processor):
     def __init__(self, delete_unknown=False, include_graph=True):
         super().__init__()
         self.delete_unknown = delete_unknown
-        self.include_graph=include_graph
+        self.include_graph = include_graph
 
     def run_molecule(self, molecule):
         molecule = molecule.copy()

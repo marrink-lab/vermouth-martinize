@@ -14,15 +14,16 @@
 
 import copy
 import itertools
-import numpy as np
-import pytest
+
 import hypothesis
 import hypothesis.strategies as st
-import hypothesis_networkx.strategy as hnst
+import numpy as np
+import pytest
 import vermouth
 import vermouth.molecule
-from vermouth.molecule import Interaction, Molecule, Block, Link, DeleteInteraction
-from .molecule_strategies import attribute_dict, random_molecule, random_block, random_link
+from vermouth.molecule import Interaction, Molecule
+
+from .molecule_strategies import random_molecule, random_block, random_link
 
 # In some cases, drawing from hypothesis.strategies.text is extremely slow and
 # triggers the heath check warnings. It appears to be due to some internal
@@ -655,7 +656,7 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
                 Interaction(atoms=('A', 'B'),
                             parameters=[
                                 'a',
-                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                vermouth.molecule.ParamAngle(['A', 'B', 'C']),
                                 '200',
                             ],
                             meta={'a': 0}),
@@ -677,7 +678,7 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
                 Interaction(atoms=('A', 'B'),
                             parameters=[
                                 'a',
-                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                vermouth.molecule.ParamAngle(['A', 'B', 'C']),
                                 '200',
                             ],
                             meta={'a': 0}),
@@ -696,7 +697,7 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
                 Interaction(atoms=('A', 'B'),
                             parameters=[
                                 'a',
-                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                vermouth.molecule.ParamAngle(['A', 'B', 'C']),
                                 '200',
                             ],
                             meta={'a': 0}),
@@ -713,7 +714,7 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
                 Interaction(atoms=('A', 'B'),
                             parameters=[
                                 'a',
-                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                vermouth.molecule.ParamAngle(['A', 'B', 'C']),
                                 '200',
                             ],
                             meta={'a': 0}),
@@ -728,7 +729,7 @@ def test_subgraph_edges(edges_between_molecule, edges_between_selections,
                 Interaction(atoms=('A', 'B'),
                             parameters=[
                                 'a',
-                                vermouth.molecule.ParamAngle( ['A', 'B', 'C']),
+                                vermouth.molecule.ParamAngle(['A', 'B', 'C']),
                                 '200',
                             ],
                             meta={'a': 0}),
@@ -1182,7 +1183,6 @@ def test_same_non_edges(left, right, expected):
     assert link_right.same_non_edges(link_left) == expected
 
 
-
 @pytest.mark.parametrize('interactions, expected', (
     (
         {},
@@ -1232,7 +1232,7 @@ def test_str_method(mol, moltype):
     """
     if moltype is not None:
         mol.meta['moltype'] = moltype
-    else: 
+    else:
         moltype = 'molecule'
     found = str(mol)
     assert '{} with '.format(moltype) in found
