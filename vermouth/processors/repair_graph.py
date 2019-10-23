@@ -96,10 +96,10 @@ def make_reference(mol):
         # TODO: Merge degree 1 nodes (hydrogens!) with the parent node. And
         # check whether the node degrees match?
 
-        resname = residues.node[residx]['resname']
-        resid = residues.node[residx]['resid']
-        chain = residues.node[residx]['chain']
-        residue = residues.node[residx]['graph']
+        resname = residues.nodes[residx]['resname']
+        resid = residues.nodes[residx]['resid']
+        chain = residues.nodes[residx]['chain']
+        residue = residues.nodes[residx]['graph']
         reference = mol.force_field.reference_graphs[resname]
         add_element_attr(reference)
         add_element_attr(residue)

@@ -423,12 +423,12 @@ def _split_block_and_link(pre_block):
     for idx, node in enumerate(link.nodes()):
         atomname = node
         if node[0] in '+-':
-            link.node[node]['order'] = order[node[0]]
+            link.nodes[node]['order'] = order[node[0]]
             atomname = atomname[1:]
         else:
-            link.node[node]['order'] = 0
-            link.node[node]['resname'] = block.name
-        link.node[node]['atomname'] = atomname
+            link.nodes[node]['order'] = 0
+            link.nodes[node]['resname'] = block.name
+        link.nodes[node]['atomname'] = atomname
         relabel_mapping[node] = idx
     nx.relabel_nodes(link, relabel_mapping, copy=False)
 

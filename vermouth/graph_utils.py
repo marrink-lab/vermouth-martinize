@@ -131,19 +131,19 @@ def blockmodel(G, partitions, **attrs):
     for bead_idx, idxs in enumerate(partitions):
         bd = G.subgraph(idxs)
         CG_mol.add_node(bead_idx)
-        CG_mol.node[bead_idx]['graph'] = bd
+        CG_mol.nodes[bead_idx]['graph'] = bd
         # TODO: CoM instead of CoG
-#        CG_mol.node[bead_idx]['position'] = np.mean([bd.node[idx]['position'] for idx in bd], axis=0)
+#        CG_mol.nodes[bead_idx]['position'] = np.mean([bd.nodes[idx]['position'] for idx in bd], axis=0)
         for k, vals in attrs.items():
-            CG_mol.node[bead_idx][k] = vals[bead_idx]
+            CG_mol.nodes[bead_idx][k] = vals[bead_idx]
 
-        CG_mol.node[bead_idx]['nnodes'] = bd.number_of_nodes()
-        CG_mol.node[bead_idx]['nedges'] = bd.number_of_edges()
-        CG_mol.node[bead_idx]['density'] = nx.density(bd)
+        CG_mol.nodes[bead_idx]['nnodes'] = bd.number_of_nodes()
+        CG_mol.nodes[bead_idx]['nedges'] = bd.number_of_edges()
+        CG_mol.nodes[bead_idx]['density'] = nx.density(bd)
 
     block_mapping = {}
     for n in CG_mol:
-        nodes_in_block = CG_mol.node[n]['graph'].nodes()
+        nodes_in_block = CG_mol.nodes[n]['graph'].nodes()
         block_mapping.update(dict.fromkeys(nodes_in_block, n))
 
     for u, v, d in G.edges(data=True):
@@ -190,7 +190,7 @@ def rate_match(residue, bead, match):
         The number of entries in match where the atomname in ``residue`` matches
         the atomname in ``bead``.
     """
-    return sum(residue.node[rdx].get('atomname') == bead.node[bdx].get('atomname')
+    return sum(residue.nodes[rdx].get('atomname') == bead.nodes[bdx].get('atomname')
                for rdx, bdx in match.items())
 
 
@@ -223,8 +223,8 @@ def make_residue_graph(mol):
             :atomname: The residue name.
     """
     def keyfunc(node_idx):
-        return mol.node[node_idx]['chain'], mol.node[node_idx]['resid'], mol.node[node_idx]['resname']
-    nodes = sorted(mol.node, key=keyfunc)
+        return mol.nodes[node_idx]['chain'], mol.nodes[node_idx]['resid'], mol.nodes[node_idx]['resname']
+    nodes = sorted(mol.nodes, key=keyfunc)
     keys = []
     grps = []
     for key, grp in itertools.groupby(nodes, keyfunc):

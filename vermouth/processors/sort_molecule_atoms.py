@@ -50,7 +50,7 @@ def _keyfunc(graph, node_idx):
     """
     # TODO add something like idx_in_residue
     return (
-        graph.node[node_idx]['chain'],
-        graph.node[node_idx]['resid'],
-        graph.node[node_idx]['resname'],
+        graph.nodes[node_idx]['chain'],
+        graph.nodes[node_idx]['resid'],
+        graph.nodes[node_idx]['resname'],
     )
