@@ -415,7 +415,7 @@ class Molecule(nx.Graph):
         # TODO: should just be an alias for nodes. If you need the attributes,
         #       do g.nodes(data=<attr>) or g.nodes(data=True)
         for node in self.nodes():
-            node_attr = self.node[node]
+            node_attr = self.nodes[node]
             yield node, node_attr
 
     def copy(self):
@@ -999,7 +999,7 @@ class Block(Molecule):
     @property
     def atoms(self):
         for node in self.nodes():
-            node_attr = self.node[node]
+            node_attr = self.nodes[node]
             # In pre-blocks, some nodes correspond to particles in neighboring
             # residues. These node do not carry particle information and should
             # not appear as particles.

@@ -116,8 +116,8 @@ def bonds_from_distance(system, fudge=1.2):
             continue
         node_idx1 = idx_to_nodenum[idx1]
         node_idx2 = idx_to_nodenum[idx2]
-        atom1 = system.node[node_idx1]
-        atom2 = system.node[node_idx2]
+        atom1 = system.nodes[node_idx1]
+        atom2 = system.nodes[node_idx2]
         element1 = atom1['element']
         element2 = atom2['element']
 

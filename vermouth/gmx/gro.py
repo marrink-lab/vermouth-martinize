@@ -144,7 +144,7 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
         for molecule in system.molecules:
             node_order = molecule.nodes
             for node_idx in node_order:
-                node = molecule.node[node_idx]
+                node = molecule.nodes[node_idx]
                 atomname = node['atomname']
                 resname = node['resname']
                 resid = node['resid']
