@@ -22,7 +22,7 @@ HO {"element": "H", "PTM_atom": true}
 CA C
 C O
 C OXT
-OXT HO2
+OXT HO
 
 [ modification ]
 N-ter

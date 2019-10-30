@@ -785,6 +785,15 @@ def _parse_edges(tokens, context, context_type, negate):
     if negate:
         context.non_edges.append([prefixed_atoms[0][0], prefixed_atoms[1][1]])
     else:
+        error_message = 'Atom with name {} not found for {} {}'
+        if prefixed_atoms[0][0] not in context and context_type == 'modification':
+            raise KeyError(error_message.format(prefixed_atoms[0][0],
+                                                context_type,
+                                                context.name))
+        if prefixed_atoms[1][0] not in context and context_type == 'modification':
+            raise KeyError(error_message.format(prefixed_atoms[1][0],
+                                                context_type,
+                                                context.name))
         context.add_edge(prefixed_atoms[0][0], prefixed_atoms[1][0])
 
 
