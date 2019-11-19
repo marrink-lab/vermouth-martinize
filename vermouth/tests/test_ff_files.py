@@ -1252,8 +1252,19 @@ def test_variable_first():
     """,
     # Specify edge between unknown atoms
     """
+    [ modification ]
+    X1
     [ atoms ]
-    A
+    A {}
+    [ edges ]
+    A B
+    """,
+    # Specify edge between unknown atoms
+    """
+    [ modification ]
+    X2
+    [ atoms ]
+    B {}
     [ edges ]
     A B
     """,
