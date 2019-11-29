@@ -1250,6 +1250,24 @@ def test_variable_first():
     [ atoms ]
     ABD {"custom": 0}
     """,
+    # Specify edge between unknown atoms
+    """
+    [ modification ]
+    X1
+    [ atoms ]
+    A {}
+    [ edges ]
+    A B
+    """,
+    # Specify edge between unknown atoms
+    """
+    [ modification ]
+    X2
+    [ atoms ]
+    B {}
+    [ edges ]
+    A B
+    """,
 ))
 def test_misformed_lines(lines):
     """
