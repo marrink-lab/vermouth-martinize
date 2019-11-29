@@ -835,7 +835,7 @@ BB +++BB 1 0.970 2500
 [ link ]
 resname "CYS"
 [ constraints ]
-SC1 >SC1 0.24 {"comment": "Disulfide bridge"}
+SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
 
