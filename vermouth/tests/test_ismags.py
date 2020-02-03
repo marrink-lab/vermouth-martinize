@@ -256,8 +256,12 @@ def test_isomorphism_match(data):
         node_match = nx.isomorphism.categorical_node_match(attrs, [None]*len(attrs))
 
     graph = data.draw(ISO_BUILDER)
-    nodes = data.draw(st.sets(st.sampled_from(list(graph.nodes)),
-                              max_size=len(graph)))
+
+    if graph:
+        nodes = data.draw(st.sets(st.sampled_from(list(graph.nodes)),
+                                  max_size=len(graph)))
+    else:
+        nodes = []
     subgraph = graph.subgraph(nodes)
 
     note(("Graph nodes", graph.nodes(data=True)))
@@ -369,8 +373,12 @@ def test_mcs_match(data):
         node_match = nx.isomorphism.categorical_node_match(attrs, [None]*len(attrs))
 
     graph = data.draw(MCS_BUILDER)
-    nodes = data.draw(st.sets(st.sampled_from(list(graph.nodes)),
-                              max_size=len(graph)))
+
+    if graph:
+        nodes = data.draw(st.sets(st.sampled_from(list(graph.nodes)),
+                                  max_size=len(graph)))
+    else:
+        nodes = []
     subgraph = graph.subgraph(nodes)
 
     note(("Graph nodes", graph.nodes(data=True)))
