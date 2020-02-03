@@ -119,7 +119,9 @@ def build_connectivity_matrix(graph, separation, selection=None):
         interest for these two nodes to be considered connected. Must be >= 0.
     selection: collections.abc.Iterable
         A list of node keys to work on. If this argument is set, then the
-        matrix corresponds to the subgraph containing these keys.
+        matrix is built only for the nodes in the selection; the whole graph is
+        used to determine the paths. If set to `None` (default), then the matrix
+        is built for all the nodes.
 
     Returns
     -------
@@ -133,11 +135,17 @@ def build_connectivity_matrix(graph, separation, selection=None):
         # matrix. Thankfully, networkx can directly give it to us a a numpy
         # array.
         return np.asarray(nx.to_numpy_matrix(graph, nodelist=selection).astype(bool))
-    subgraph = graph.subgraph(selection)
-    connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
-    for (idx, key_idx), (jdx, key_jdx) in itertools.combinations(enumerate(subgraph.nodes), 2):
+    if selection is None:
+        size = len(graph)
+        selected_nodes = graph.nodes
+    else:
+        size = len(selection)
+        selected_nodes = (node for node in graph.nodes if node in selection)
+    connectivity = np.zeros((size, size), dtype=bool)
+    node_combinations = itertools.combinations(enumerate(selected_nodes), 2)
+    for (idx, key_idx), (jdx, key_jdx) in node_combinations:
         try:
-            shortest_path = len(nx.shortest_path(subgraph, key_idx, key_jdx))
+            shortest_path = len(nx.shortest_path(graph, key_idx, key_jdx))
         except nx.NetworkXNoPath:
             # There is no path between key_i and key_j so they are not
             # connected; which is the default.
