@@ -225,6 +225,7 @@ def make_bonds(system, fudge=1.0):
     -----
     Edges for residues for which no block can be found will be added based on
         the distance criterion. A warning will be issued if this is the case.
+
     Elements that are not in `VDW_RADII` do not make bonds based on distances.
 
     Parameters
