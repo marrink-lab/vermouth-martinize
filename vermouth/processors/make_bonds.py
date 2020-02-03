@@ -70,7 +70,7 @@ def _residue_key_func(node):
 
 def _collect_residues(graph):
     """
-    Creates groups of indices per residue. 
+    Creates groups of indices per residue.
     Returns a dict of {<key>: set(indices)}. <key> comes from _residue_key_func.
     """
     residues = defaultdict(set)
@@ -121,7 +121,8 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
         for node in idx_to_nodenum
     ], dtype=float)
 
-    if len(positions):
+    # Pylint ignore because positions is a numpy array.
+    if len(positions):  # pylint: disable=len-as-condition
         positions = np.atleast_2d(positions)
         tree = KDTree(positions)
         pairs = tree.sparse_distance_matrix(tree, max_dist * fudge)
