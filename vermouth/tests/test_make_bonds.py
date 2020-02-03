@@ -17,6 +17,7 @@ Test the MakeBonds processor.
 """
 
 import pytest
+from vermouth.forcefield import get_native_force_field
 from vermouth.molecule import Molecule
 from vermouth.system import System
 from vermouth.processors import MakeBonds
@@ -54,7 +55,7 @@ from vermouth.processors import MakeBonds
         [[{'element': 'H', 'position': [0, 0, 0]},
           {'element': 'H', 'position': [0, 0, 0.2]}], ],
         [[], ],
-        [{}, {}],
+        [{}],
     ],
     [
         # Two molecule with one node each that should not be connected
@@ -115,14 +116,14 @@ from vermouth.processors import MakeBonds
         # Single molecule with four nodes that should not be connected despite
         # being close enough
         [[
-            {'element': 'H', 'position': [0, 0, 0]},
-            {'element': 'C', 'position': [0, 0, 0.145]},
-            {'element': 'C', 'position': [0, 0, 0.315]},
-            {'element': 'H', 'position': [0, 0, 0.460]},
+            {'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0]},
+            {'element': 'C', 'resname': 'GLY', 'position': [0, 0, 0.145]},
+            {'element': 'N', 'resname': 'GLY', 'position': [0, 0, 0.315]},
+            {'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0.460]},
         ], ],
         [[(0, 1, {}), (2, 3, {})], ],
-        [{(0, 1): {}},
-         {(2, 3): {}}],
+        [{(0, 1): {},
+          (2, 3): {}}],
     ],
 ))
 def test_make_bonds(nodes, edges, expected_edges):
@@ -135,7 +136,7 @@ def test_make_bonds(nodes, edges, expected_edges):
     expected_edges is a List[Dict[Tuple[Int, Int], Dict]], allowing for
         multiple molecules
     """
-    system = System()
+    system = System(force_field=get_native_force_field('universal'))
     for node_set, edge_set in zip(nodes, edges):
         mol = Molecule()
         mol.add_nodes_from(enumerate(node_set))
