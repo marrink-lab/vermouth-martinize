@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import hypothesis.strategies as st
-from hypothesis import assume
 from hypothesis_networkx import strategy as hnst
 import vermouth
 import vermouth.molecule
@@ -110,8 +109,10 @@ def random_interaction(draw, graph, natoms=None,
     """
     if natoms is None:
         natoms = draw(st.integers(min_value=1, max_value=4))
-    assume(graph)
-    atoms = tuple(draw(st.sampled_from(list(graph.nodes))) for _ in range(natoms))
+    if graph:
+        atoms = tuple(draw(st.sampled_from(list(graph.nodes))) for _ in range(natoms))
+    else:
+        atoms = []
     parameters = st.lists(elements=st.one_of(st.text(), parameter_effectors()))
     meta = draw(st.one_of(st.none(), attribute_dict()))
     if attrs:
