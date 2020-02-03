@@ -94,7 +94,7 @@ def build_connectivity_matrix(graph, separation, selection=None):
     """
     Build a connectivity matrix based on the separation between nodes in a graph.
 
-    The connectivity matrix is a symetric boolean matrix where cells contain
+    The connectivity matrix is a symmetric boolean matrix where cells contain
     ``True`` if the corresponding atoms are connected in the graph and
     separated by less or as much nodes as the given 'separation' argument.
 
@@ -130,9 +130,9 @@ def build_connectivity_matrix(graph, separation, selection=None):
         raise ValueError('Separation has to be null or positive.')
     if separation == 0:
         # The connectivity matrix with a separation of 1 is the adjacency
-        # matrix. Thanksfully, networkx can directly give it to us a a numpy
+        # matrix. Thankfully, networkx can directly give it to us a a numpy
         # array.
-        return nx.to_numpy_matrix(graph, nodelist=selection).astype(bool)
+        return np.asarray(nx.to_numpy_matrix(graph, nodelist=selection).astype(bool))
     subgraph = graph.subgraph(selection)
     connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
     for (idx, key_idx), (jdx, key_jdx) in itertools.combinations(enumerate(subgraph.nodes), 2):
@@ -157,7 +157,7 @@ def apply_rubber_band(molecule, selector,
     r"""
     Adds a rubber band elastic network to a molecule.
 
-    The eleastic network is applied as bounds between the atoms selected by the
+    The elastic network is applied as bounds between the atoms selected by the
     function declared with the 'selector' argument. The equilibrium length for
     the bonds is measured from the coordinates in the molecule, the force
     constant is computed from the base force constant and an optional decay
@@ -200,7 +200,7 @@ def apply_rubber_band(molecule, selector,
         If 'decay_factor' or 'decay_power' is set to 0, then it will be the
         used force constant.
     minimum_force: float
-        Minimum force constat in :math:`kJ.mol^{-1}.nm^{-2}` under which bonds
+        Minimum force constant in :math:`kJ.mol^{-1}.nm^{-2}` under which bonds
         are not kept.
     bond_type: int
         Gromacs bond function type to apply to the elastic network bonds.
@@ -232,7 +232,7 @@ def apply_rubber_band(molecule, selector,
     # Set the force constant to 0 for pairs that are connected. `connectivity`
     # is a matrix of booleans that is True when a pair is connected. Because
     # booleans acts as 0 or 1 in operation, we multiply the force constant
-    # matrix by the oposite (OR) of the connectivity matrix.
+    # matrix by the opposite (OR) of the connectivity matrix.
     constants *= ~connectivity
     distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
     for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
