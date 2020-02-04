@@ -15,6 +15,7 @@
 Provides a processor that adds a rubber band elastic network.
 """
 import itertools
+import functools
 
 import numpy as np
 import networkx as nx
@@ -70,7 +71,7 @@ def compute_decay(distance, shift, rate, power):
     array, then the returned value is an array of decay factors with the same
     shape as the input.
     """
-    return np.exp(-rate * ((distance - shift) **  power))
+    return np.exp(-rate * ((distance - shift) ** power))
 
 
 def compute_force_constants(distance_matrix, lower_bound, upper_bound,
@@ -88,6 +89,39 @@ def compute_force_constants(distance_matrix, lower_bound, upper_bound,
     constants[constants < minimum_force] = 0
     constants[distance_matrix > upper_bound] = 0
     return constants
+
+
+def are_connected(graph, left, right, separation):
+    """
+    ``True`` if the nodes are at most 'separation' nodes away.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph/molecule to work on.
+    left:
+        One node key from the graph.
+    right:
+        One node key from the graph.
+    separation: int
+        The maximum number of nodes in the shortest path between two nodes of
+        interest for these two nodes to be considered connected. Must be >= 0.
+
+    Returns
+    -------
+    bool
+    """
+    nodes_are_connected = False
+    try:
+        shortest_path = len(nx.shortest_path(graph, left, right))
+    except nx.NetworkXNoPath:
+        # There is no path between left and right so they are not
+        # connected; which is the default.
+        pass
+    else:
+        # The source and the target are counted in the shortest path
+        nodes_are_connected = shortest_path <= separation + 2
+    return nodes_are_connected
 
 
 def build_connectivity_matrix(graph, separation, selection=None):
@@ -131,29 +165,12 @@ def build_connectivity_matrix(graph, separation, selection=None):
     if separation < 0:
         raise ValueError('Separation has to be null or positive.')
     if separation == 0:
-        # The connectivity matrix with a separation of 1 is the adjacency
+        # The connectivity matrix with a separation of 0 is the adjacency
         # matrix. Thankfully, networkx can directly give it to us a a numpy
-        # array.
+        # matrix.
         return np.asarray(nx.to_numpy_matrix(graph, nodelist=selection).astype(bool))
-    if selection is None:
-        size = len(graph)
-        selected_nodes = graph.nodes
-    else:
-        size = len(selection)
-        selected_nodes = (node for node in graph.nodes if node in selection)
-    connectivity = np.zeros((size, size), dtype=bool)
-    node_combinations = itertools.combinations(enumerate(selected_nodes), 2)
-    for (idx, key_idx), (jdx, key_jdx) in node_combinations:
-        try:
-            shortest_path = len(nx.shortest_path(graph, key_idx, key_jdx))
-        except nx.NetworkXNoPath:
-            # There is no path between key_i and key_j so they are not
-            # connected; which is the default.
-            pass
-        else:
-            # The source and the target are counted in the shortest path
-            connectivity[idx, jdx] = shortest_path <= separation + 2
-            connectivity[jdx, idx] = connectivity[idx, jdx]
+    criterion = functools.partial(are_connected, separation=separation)
+    connectivity = build_pair_matrix(graph, criterion, selection)
     return connectivity
 
 
