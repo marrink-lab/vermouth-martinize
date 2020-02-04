@@ -170,7 +170,7 @@ def build_domain_matrix(graph, are_same_domain, selection):
         The graph/molecule to work on.
     are_same_domain: Callable
         A function that determines if two nodes are part of the same domain.
-        It takes the two nde dictionary as arguments and returns a boolean.
+        It takes a graph and two node keys as arguments and returns a boolean.
     selection: collections.abc.Collection
         A list of node keys to work on. If this argument is set, then the
         matrix is built only for the nodes in the selection. If set to
@@ -190,9 +190,7 @@ def build_domain_matrix(graph, are_same_domain, selection):
     share_domain = np.zeros((size, size), dtype=bool)
     node_combinations = itertools.combinations(enumerate(selected_nodes), 2)
     for (idx, key_idx), (jdx, key_jdx) in node_combinations:
-        share_domain[idx, jdx] = are_same_domain(
-            graph.nodes[key_idx], graph.nodes[key_jdx]
-        )
+        share_domain[idx, jdx] = are_same_domain(graph, key_idx, key_jdx)
         share_domain[jdx, idx] = share_domain[idx, jdx]
     return share_domain
 
