@@ -281,9 +281,10 @@ def entry():
     file_group.add_argument('-merge', dest='merge_chains',
                             type=lambda x: x.split(','), action='append',
                             help='Merge chains: e.g. -merge A,B,C (+)')
-    file_group.add_argument('-ignore', dest='ignore_res', action='append',
-                            default=[],
-                            help='Ignore residues with that name.')
+    file_group.add_argument('-ignore', dest='ignore_res', nargs='+',
+                            default=[], action='append', type=lambda x: x.split(','),
+                            help='Ignore residues with that name: e.g. '
+                            '-ignore HOH,LIG (+)')
     file_group.add_argument('-ignh', dest='ignore_h', default=False,
                             action='store_true',
                             help='Ignore all Hydrogen atoms in the input file')
@@ -443,11 +444,17 @@ def entry():
     #    raise ValueError('No mapping known to go from "{}" to "{}".'
     #                     .format(from_ff, args.to_ff))
 
+    # args.ignore_res is a pretty deep list: given "-ignore HOH CU,LIG -ignore LIG2"
+    # it'll contain [[['HOH'], ['CU', 'LIG']], [['LIG2']]]
+    ignore_res = set()
+    for grp in args.ignore_res:
+        ignore_res.update(*grp)
+
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
     # For now at least, we silently delete molecules with unknown blocks.
-    system = read_system(args.inpath, ignore_resnames=args.ignore_res,
+    system = read_system(args.inpath, ignore_resnames=ignore_res,
                          ignh=args.ignore_h, modelidx=args.modelidx)
     system = pdb_to_universal(
         system,
