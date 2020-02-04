@@ -117,7 +117,7 @@ def build_connectivity_matrix(graph, separation, selection=None):
     separation: int
         The maximum number of nodes in the shortest path between two nodes of
         interest for these two nodes to be considered connected. Must be >= 0.
-    selection: collections.abc.Iterable
+    selection: collections.abc.Collection
         A list of node keys to work on. If this argument is set, then the
         matrix is built only for the nodes in the selection; the whole graph is
         used to determine the paths. If set to `None` (default), then the matrix
@@ -155,6 +155,46 @@ def build_connectivity_matrix(graph, separation, selection=None):
             connectivity[idx, jdx] = shortest_path <= separation + 2
             connectivity[jdx, idx] = connectivity[idx, jdx]
     return connectivity
+
+
+def build_domain_matrix(graph, are_same_domain, selection):
+    """
+    Build a boolean matrix telling if two nodes belong to the same domain.
+
+    A domain is an ensemble of nodes that can be connected by an elastic
+    network.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph/molecule to work on.
+    are_same_domain: Callable
+        A function that determines if two nodes are part of the same domain.
+        It takes the two nde dictionary as arguments and returns a boolean.
+    selection: collections.abc.Collection
+        A list of node keys to work on. If this argument is set, then the
+        matrix is built only for the nodes in the selection. If set to
+        `None` (default), then the matrix is built for all the nodes.
+
+    Returns
+    -------
+    numpy.ndarray
+        A boolean matrix.
+    """
+    if selection is None:
+        size = len(graph)
+        selected_nodes = graph.nodes
+    else:
+        size = len(selection)
+        selected_nodes = (node for node in graph.nodes if node in selection)
+    share_domain = np.zeros((size, size), dtype=bool)
+    node_combinations = itertools.combinations(enumerate(selected_nodes), 2)
+    for (idx, key_idx), (jdx, key_jdx) in node_combinations:
+        share_domain[idx, jdx] = are_same_domain(
+            graph.nodes[key_idx], graph.nodes[key_jdx]
+        )
+        share_domain[jdx, idx] = share_domain[idx, jdx]
+    return share_domain
 
 
 def apply_rubber_band(molecule, selector,

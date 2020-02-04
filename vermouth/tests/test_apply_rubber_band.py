@@ -90,3 +90,34 @@ def test_build_connectivity_matrix(disconnected_graph, separation, selection):
     if selection is not None:
         expected_connectivity = expected_connectivity[:, selection][selection]
     assert np.all(connectivity == expected_connectivity)
+
+
+@pytest.mark.parametrize('selection', (
+        None,  # Use all the nodes, implicitly
+        list(range(16)),  # Use all the nodes, explicitly
+        list(range(8)),  # Only the first component
+        list(range(8, 16)),  # Only the second component
+        list(range(0, 16, 2)),  # Every other nodes
+))
+@pytest.mark.parametrize('extra_edges', ([], [(7, 10)]))
+def test_build_domain_matrix(disconnected_graph, selection, extra_edges):
+    """
+    The detection of domains works as expected.
+
+    The graph is defined as having two domains: one per chain. The extra edges
+    allow to make sure the connectivity does not impact the domain detection.
+    """
+    def have_same_chain(left, right):
+        return left['chain'] == right['chain']
+
+    expected = np.zeros((16, 16), dtype=bool)
+    expected[:8, :8] = True
+    expected[8:, 8:] = True
+    np.fill_diagonal(expected, False)
+    if selection is not None:
+        expected = expected[:, selection][selection]
+
+    disconnected_graph.add_edges_from(extra_edges)
+    domains = apply_rubber_band.build_domain_matrix(
+        disconnected_graph, have_same_chain, selection)
+    assert np.all(domains == expected)
