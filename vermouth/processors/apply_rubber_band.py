@@ -213,7 +213,7 @@ def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
                       base_constant, minimum_force,
-                      bond_type, res_min_dist=3):
+                      bond_type, domain_criterion, res_min_dist=3):
     r"""
     Adds a rubber band elastic network to a molecule.
 
@@ -237,6 +237,12 @@ def apply_rubber_band(molecule, selector,
 
     The 'selector' argument takes a callback that accepts a atom dictionary and
     returns ``True`` if the atom match the conditions to be kept.
+
+    Only nodes that are in the same domain can be connected by the elastic
+    network. The 'domain_criterion' argument accepts a callback that determines
+    if two nodes are in the same domain. That callbacks accepts a graph and two
+    node keys as argument and returns whether or not the nodes are in the same
+    domain as a boolean.
 
     Parameters
     ----------
@@ -287,13 +293,13 @@ def apply_rubber_band(molecule, selector,
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,
                                         base_constant, minimum_force)
-    connectivity = build_connectivity_matrix(molecule, res_min_dist - 1,
-                                             selection=selection)
-    # Set the force constant to 0 for pairs that are connected. `connectivity`
-    # is a matrix of booleans that is True when a pair is connected. Because
-    # booleans acts as 0 or 1 in operation, we multiply the force constant
-    # matrix by the opposite (OR) of the connectivity matrix.
-    constants *= ~connectivity
+    connected = build_connectivity_matrix(molecule, res_min_dist - 1,
+                                          selection=selection)
+    same_domain = build_pair_matrix(molecule, domain_criterion,
+                                    selection=selection)
+    can_be_linked = (~connected) & same_domain
+    # Multiply the force constant by 0 if the nodes cannot be linked.
+    constants *= can_be_linked
     distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
     for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
         from_key = selection[from_idx]
@@ -309,12 +315,20 @@ def apply_rubber_band(molecule, selector,
             )
 
 
+def always_true(*args, **kwargs):
+    """
+    Returns ``True`` whatever the arguments are.
+    """
+    return True
+
+
 class ApplyRubberBand(Processor):
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
                  base_constant, minimum_force,
                  bond_type=None,
                  selector=selectors.select_backbone,
-                 bond_type_variable='elastic_network_bond_type'):
+                 bond_type_variable='elastic_network_bond_type',
+                 domain_criterion=always_true):
         super().__init__()
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
@@ -325,6 +339,7 @@ class ApplyRubberBand(Processor):
         self.bond_type = bond_type
         self.selector = selector
         self.bond_type_variable = bond_type_variable
+        self.domain_criterion = domain_criterion
 
     def run_molecule(self, molecule):
         # Choose the bond type. From high to low, the priority order is:
@@ -344,5 +359,6 @@ class ApplyRubberBand(Processor):
                           decay_power=self.decay_power,
                           base_constant=self.base_constant,
                           minimum_force=self.minimum_force,
-                          bond_type=bond_type)
+                          bond_type=bond_type,
+                          domain_criterion=self.domain_criterion)
         return molecule
