@@ -157,19 +157,16 @@ def build_connectivity_matrix(graph, separation, selection=None):
     return connectivity
 
 
-def build_domain_matrix(graph, are_same_domain, selection):
+def build_pair_matrix(graph, criterion, selection):
     """
-    Build a boolean matrix telling if two nodes belong to the same domain.
-
-    A domain is an ensemble of nodes that can be connected by an elastic
-    network.
+    Build a boolean matrix telling if a pair of nodes fulfil a criterion.
 
     Parameters
     ----------
     graph: networkx.Graph
         The graph/molecule to work on.
-    are_same_domain: Callable
-        A function that determines if two nodes are part of the same domain.
+    criterion: Callable
+        A function that determines if a pair of nodes fulfill the criterion.
         It takes a graph and two node keys as arguments and returns a boolean.
     selection: collections.abc.Collection
         A list of node keys to work on. If this argument is set, then the
@@ -190,7 +187,7 @@ def build_domain_matrix(graph, are_same_domain, selection):
     share_domain = np.zeros((size, size), dtype=bool)
     node_combinations = itertools.combinations(enumerate(selected_nodes), 2)
     for (idx, key_idx), (jdx, key_jdx) in node_combinations:
-        share_domain[idx, jdx] = are_same_domain(graph, key_idx, key_jdx)
+        share_domain[idx, jdx] = criterion(graph, key_idx, key_jdx)
         share_domain[jdx, idx] = share_domain[idx, jdx]
     return share_domain
 

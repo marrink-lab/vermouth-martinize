@@ -100,10 +100,11 @@ def test_build_connectivity_matrix(disconnected_graph, separation, selection):
         list(range(0, 16, 2)),  # Every other nodes
 ))
 @pytest.mark.parametrize('extra_edges', ([], [(7, 10)]))
-def test_build_domain_matrix(disconnected_graph, selection, extra_edges):
+def test_build_pair_matrix(disconnected_graph, selection, extra_edges):
     """
-    The detection of domains works as expected.
+    The creation of a pair matrix works as expected.
 
+    Here, the criterion is ``True`` when nodes belong to the same domain.
     The graph is defined as having two domains: one per chain. The extra edges
     allow to make sure the connectivity does not impact the domain detection.
     """
@@ -118,6 +119,6 @@ def test_build_domain_matrix(disconnected_graph, selection, extra_edges):
         expected = expected[:, selection][selection]
 
     disconnected_graph.add_edges_from(extra_edges)
-    domains = apply_rubber_band.build_domain_matrix(
+    domains = apply_rubber_band.build_pair_matrix(
         disconnected_graph, have_same_chain, selection)
     assert np.all(domains == expected)
