@@ -25,6 +25,7 @@ from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import format_atom_string
+from ..graph_utils import collect_residues
 
 from ..log_helpers import StyleAdapter, get_logger
 
@@ -57,27 +58,6 @@ VDW_RADII = {  # in nm
     'Xe': 0.216,
 }
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
-
-
-def _residue_key_func(node):
-    """
-    Creates a residue "key" for a node. Keys should be identical only for nodes
-    that are part of the same residue.
-    """
-    attrs = 'mol_idx', 'chain', 'resid', 'resname'
-    return tuple(node.get(attr) for attr in attrs)
-
-
-def _collect_residues(graph):
-    """
-    Creates groups of indices per residue.
-    Returns a dict of {<key>: set(indices)}. <key> comes from _residue_key_func.
-    """
-    residues = defaultdict(set)
-    for node_idx in graph:
-        key = _residue_key_func(graph.nodes[node_idx])
-        residues[key].add(node_idx)
-    return dict(residues)
 
 
 def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
@@ -260,7 +240,7 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     system = nx.disjoint_union_all(system.molecules)
     non_edges = set()
 
-    residue_groups = _collect_residues(system)
+    residue_groups = collect_residues(system, ('mol_idx', 'chain', 'resid', 'resname'))
 
     for ((mol_idx, chain, resid, resname), idxs) in residue_groups.items():
         if not allow_name:

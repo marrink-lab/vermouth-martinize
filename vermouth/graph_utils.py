@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 import itertools
 import networkx as nx
 
@@ -237,6 +238,51 @@ def make_residue_graph(mol):
     res_graph = blockmodel(mol, grps, chain=chain, resid=resids,
                            resname=resnames, atomname=resnames)
     return res_graph
+
+
+def get_attrs(node, attrs):
+    """
+    Returns multiple values from a dictionary in order.
+
+    Parameters
+    ----------
+    node: dict
+        The dict from which items should be taken.
+    attrs: Sequence
+        The keys which values should be taken.
+
+    Returns
+    -------
+    tuple
+        A tuple of (node[attr] for every attr in attrs). 
+    """
+    return tuple(node.get(attr) for attr in attrs)
+
+
+def collect_residues(graph, attrs=('chain', 'resid', 'resname')):
+    """
+    Creates groups of indices based on the node attributes with keys `attrs`.
+    All nodes in graph will be part of exactly one group.
+
+    Parameters
+    ----------
+    graph: :class:`networkx.Graph`
+        The graph whose node indices should be grouped.
+    attrs: :class:`~collections.abc.Sequence`
+        The attribute keys that should be used to group node indices. The
+        associated values should be hashable.
+
+    Returns
+    -------
+    dict[tuple, set]
+        The keys are the found node attributes, the values the associated node
+        indices.
+    """
+    residues = defaultdict(set)
+    for node_idx in graph:
+        key = get_attrs(graph.nodes[node_idx], attrs=attrs)
+        residues[key].add(node_idx)
+    return dict(residues)
 
 
 # We can't inherit from nx.isomorphism.GraphMatcher to override
