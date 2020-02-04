@@ -107,8 +107,8 @@ def test_build_domain_matrix(disconnected_graph, selection, extra_edges):
     The graph is defined as having two domains: one per chain. The extra edges
     allow to make sure the connectivity does not impact the domain detection.
     """
-    def have_same_chain(left, right):
-        return left['chain'] == right['chain']
+    def have_same_chain(graph, left, right):
+        return graph.nodes[left]['chain'] == graph.nodes[right]['chain']
 
     expected = np.zeros((16, 16), dtype=bool)
     expected[:8, :8] = True
