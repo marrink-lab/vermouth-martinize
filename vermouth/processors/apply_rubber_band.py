@@ -270,6 +270,13 @@ def apply_rubber_band(molecule, selector,
         are not kept.
     bond_type: int
         Gromacs bond function type to apply to the elastic network bonds.
+    domain_criterion: Callback
+        Function to establish if two atoms are part of the same domain. Elastic
+        bonds are only added within a domain. By default, all the atoms in
+        the molecule are considered part of the same domain. The function
+        expects a graph (e.g. a :class:`Molecule`) and two atom node keys as
+        argument and returns ``True`` if the two atoms are part of the same
+        domain; returns ``False`` otherwise.
     res_min_dist: int
         Minimum separation between two atoms for a bond to be kept.
         Bonds are kept is the separation is greater or equal to the value
