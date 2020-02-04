@@ -114,12 +114,51 @@ from vermouth.processors import MakeBonds
     ],
     [
         # Single molecule with four nodes that should not be connected despite
-        # being close enough
+        # being close enough because they're not connected in the block
+        [[
+            {'atomname': 'H1', 'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0]},
+            {'atomname': 'C', 'element': 'C', 'resname': 'GLY', 'position': [0, 0, 0.145]},
+            {'atomname': 'N', 'element': 'N', 'resname': 'GLY', 'position': [0, 0, 0.315]},
+            {'atomname': 'H2', 'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0.460]},
+        ], ],
+        [[(0, 1, {}), (2, 3, {})], ],
+        [{(0, 1): {},
+          (2, 3): {}}],
+    ],
+    [
+        # Single molecule with four nodes that should be connected despite
+        # being far away because they're connected in the block
+        [[
+            {'atomname': 'H1', 'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0]},
+            {'atomname': 'C', 'element': 'C', 'resname': 'GLY', 'position': [0, 0, 0.145]},
+            {'atomname': 'CA', 'element': 'C', 'resname': 'GLY', 'position': [0, 0, 1.315]},
+            {'atomname': 'H2', 'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0.460]},
+        ], ],
+        [[(0, 1, {}), (2, 3, {})], ],
+        [{(0, 1): {},
+          (1, 2): {'distance': pytest.approx(1.17)},
+          (2, 3): {}}],
+    ],
+    [
+        # Single molecule with four nodes that have a resname, but not atomnames
         [[
             {'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0]},
             {'element': 'C', 'resname': 'GLY', 'position': [0, 0, 0.145]},
             {'element': 'N', 'resname': 'GLY', 'position': [0, 0, 0.315]},
             {'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0.460]},
+        ], ],
+        [[(0, 1, {}), (2, 3, {})], ],
+        [{(0, 1): {},
+          (2, 3): {}}],
+    ],
+    [
+        # Single molecule with four nodes that have a resname and duplicate
+        # atomnames
+        [[
+            {'atomname': 'H', 'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0]},
+            {'atomname': 'C', 'element': 'C', 'resname': 'GLY', 'position': [0, 0, 0.145]},
+            {'atomname': 'N', 'element': 'N', 'resname': 'GLY', 'position': [0, 0, 0.315]},
+            {'atomname': 'H', 'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0.460]},
         ], ],
         [[(0, 1, {}), (2, 3, {})], ],
         [{(0, 1): {},

@@ -184,29 +184,35 @@ def _bonds_from_names(graph, resname, nodes, force_field):
         raise KeyError("Residue {} is not known to force field {}"
                        "".format(resname, force_field.name))
 
-    name_to_idx = defaultdict(set)
-    for idx in nodes:
-        if 'atomname' in graph.nodes[idx]:
-            name_to_idx[graph.nodes[idx]['atomname']].add(idx)
-    name_to_idx = dict(name_to_idx)
-    for name, idxs in name_to_idx.items():
-        if len(idxs) > 1:
+    mol_name_to_idx = defaultdict(set)
+    for graph_idx in nodes:
+        if 'atomname' in graph.nodes[graph_idx]:
+            mol_name_to_idx[graph.nodes[graph_idx]['atomname']].add(graph_idx)
+    mol_name_to_idx = dict(mol_name_to_idx)
+    for name, graph_idxs in mol_name_to_idx.items():
+        if len(graph_idxs) > 1:
             raise KeyError("Residue has multiple atoms with atom name {}"
                            "".format(name))
-        name_to_idx[name] = name_to_idx[name].pop()
+        mol_name_to_idx[name] = mol_name_to_idx[name].pop()
 
-    for idx, jdx in block.edges:
-        idx_name = block.nodes[idx]['atomname']
-        jdx_name = block.nodes[jdx]['atomname']
-        if idx_name in name_to_idx and jdx_name in name_to_idx:
-            graph.add_edge(name_to_idx[idx_name], name_to_idx[jdx_name])
+    for block_idx, block_jdx in block.edges:
+        block_idx_name = block.nodes[block_idx]['atomname']
+        block_jdx_name = block.nodes[block_jdx]['atomname']
+        if block_idx_name in mol_name_to_idx and block_jdx_name in mol_name_to_idx:
+            graph_idx = mol_name_to_idx[block_idx_name]
+            graph_jdx = mol_name_to_idx[block_jdx_name]
+            pos1 = np.array(graph.nodes[graph_idx].get('position', np.full(3, np.nan)))
+            pos2 = np.array(graph.nodes[graph_jdx].get('position', np.full(3, np.nan)))
+            dist = np.sqrt(np.sum((pos1 - pos2)**2))
+            graph.add_edge(graph_idx, graph_jdx, distance=dist)
 
     non_edges = set()
-    for idx, jdx in nx.non_edges(block):
-        idx_name = block.nodes[idx]['atomname']
-        jdx_name = block.nodes[jdx]['atomname']
-        if idx_name in name_to_idx and jdx_name in name_to_idx:
-            non_edges.add(frozenset((name_to_idx[idx_name], name_to_idx[jdx_name])))
+    for block_idx, block_jdx in nx.non_edges(block):
+        block_idx_name = block.nodes[block_idx]['atomname']
+        block_jdx_name = block.nodes[block_jdx]['atomname']
+        if block_idx_name in mol_name_to_idx and block_jdx_name in mol_name_to_idx:
+            non_edges.add(frozenset((mol_name_to_idx[block_idx_name],
+                                     mol_name_to_idx[block_jdx_name])))
     return non_edges
 
 
@@ -278,9 +284,9 @@ def make_bonds(system, fudge=1.0):
     # to find the connected components.
     residue_graph = nx.quotient_graph(system, residue_groups.values())
     molecules = []
-    for mol_idxs in nx.connected_components(residue_graph):
-        mol_idxs = set().union(*mol_idxs)
-        mol = Molecule(system.subgraph(mol_idxs))
+    for node_idxs in nx.connected_components(residue_graph):
+        node_idxs = set().union(*node_idxs)
+        mol = Molecule(system.subgraph(node_idxs))
         molecules.append(mol)
 
     return molecules
