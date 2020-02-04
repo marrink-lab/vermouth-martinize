@@ -94,7 +94,7 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
 
 
 def pdb_to_universal(system, delete_unknown=False, force_field=None,
-                     bonds_from_name=True, bonds_from_dist=True,
+                     bonds_from_name=True, bonds_from_dist=True, bonds_fudge=1,
                      write_graph=None, write_repair=None, write_canon=None):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
@@ -105,7 +105,8 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     canonicalized.force_field = force_field
     LOGGER.info('Guessing the bonds.', type='step')
     vermouth.MakeBonds(allow_name=bonds_from_name,
-                       allow_dist=bonds_from_dist).run_system(canonicalized)
+                       allow_dist=bonds_from_dist,
+                       fudge=bonds_fudge).run_system(canonicalized)
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
@@ -295,6 +296,10 @@ def entry():
                             help="How to determine connectivity in the input. "
                             "If 'none', only bonds from the input file (CONECT)"
                             " will be used.")
+    file_group.add_argument('-bonds-fudge', dest='bonds_fudge', type=float,
+                            default=1.0, help='Factor with which Van der Waals'
+                            ' radii should be scaled when determining bonds '
+                            'based on distances.')
 
     ff_group = parser.add_argument_group('Force field selection')
     ff_group.add_argument('-ff', dest='to_ff', default='martini22',
@@ -450,6 +455,7 @@ def entry():
         force_field=known_force_fields[from_ff],
         bonds_from_name=bonds_from_name,
         bonds_from_dist=bonds_from_dist,
+        bonds_fudge=args.bonds_fudge,
         write_graph=args.write_graph,
         write_repair=args.write_repair,
         write_canon=args.write_canon,

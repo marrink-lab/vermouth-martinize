@@ -297,9 +297,10 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
 
 
 class MakeBonds(Processor):
-    def __init__(self, allow_name=True, allow_dist=True):
+    def __init__(self, allow_name=True, allow_dist=True, fudge=1):
         self.allow_name = allow_name
         self.allow_dist = allow_dist
+        self.fudge = fudge
 
     def run_system(self, system):
         if not system.molecules:
@@ -307,7 +308,8 @@ class MakeBonds(Processor):
             return
         mols = make_bonds(system,
                           allow_name=self.allow_name,
-                          allow_dist=self.allow_dist)
+                          allow_dist=self.allow_dist,
+                          fudge=self.fudge)
         system.molecules = mols
         # Restore the force field in each molecule. Setting the force field
         # at the system level propagates it to all the molecules.
