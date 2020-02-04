@@ -216,7 +216,7 @@ def _bonds_from_names(graph, resname, nodes, force_field):
     return non_edges
 
 
-def make_bonds(system, fudge=1.0):
+def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     """Creates bonds within molecules in the system.
 
     First, edges will be created based on residue and atom names. Second, edges
@@ -263,21 +263,25 @@ def make_bonds(system, fudge=1.0):
     residue_groups = _collect_residues(system)
 
     for ((mol_idx, chain, resid, resname), idxs) in residue_groups.items():
+        if not allow_name:
+            break
         try:
             # Try adding bonds within the residue based on atom names
             non_edges.update(_bonds_from_names(system, resname, idxs, force_field))
         except KeyError as error:
             # ... if that doesn't work, fall back to distance
-            LOGGER.warning("Can't add bonds based on atom names for residue "
-                           "{}-{}{} because {}. Falling back to distance "
-                           "criteria.",
+            message = "Can't add bonds based on atom names for residue {}-{}{} because {}."
+            if allow_dist:
+                _bonds_from_distance(system, idxs, fudge=fudge)
+                message += " Falling back to distance criteria."
+            LOGGER.warning(message,
                            chain, resname, resid, error, force_field.name)
-            _bonds_from_distance(system, idxs, fudge=fudge)
     # And finally, add edges based on distance, but ignore any edges that would
     # otherwise have been added by name. So only edges between residues will be
     # added, and edges involving atoms which are not known to the blocks (PTMs,
     # termini, ...)
-    _bonds_from_distance(system, non_edges=non_edges, fudge=fudge)
+    if allow_dist:
+        _bonds_from_distance(system, non_edges=non_edges, fudge=fudge)
 
     # Split the system into connected components. We do want to keep residues
     # together, so make a residue graph (1 node per residue) first, and use that
@@ -293,11 +297,17 @@ def make_bonds(system, fudge=1.0):
 
 
 class MakeBonds(Processor):
+    def __init__(self, allow_name=True, allow_dist=True):
+        self.allow_name = allow_name
+        self.allow_dist = allow_dist
+
     def run_system(self, system):
         if not system.molecules:
             # No molecules means nothing to do.
             return
-        mols = make_bonds(system)
+        mols = make_bonds(system,
+                          allow_name=self.allow_name,
+                          allow_dist=self.allow_dist)
         system.molecules = mols
         # Restore the force field in each molecule. Setting the force field
         # at the system level propagates it to all the molecules.
