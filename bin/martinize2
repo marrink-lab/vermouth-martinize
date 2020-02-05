@@ -94,6 +94,7 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
 
 
 def pdb_to_universal(system, delete_unknown=False, force_field=None,
+                     modifications=[],
                      bonds_from_name=True, bonds_from_dist=True, bonds_fudge=1,
                      write_graph=None, write_repair=None, write_canon=None):
     """
@@ -103,6 +104,9 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
         force_field = vermouth.forcefield.get_native_force_field('universal')
     canonicalized = system.copy()
     canonicalized.force_field = force_field
+    LOGGER.debug('Annotating required mutations and modifications.', type='step')
+    vermouth.AnnotateMutMod(modifications).run_system(canonicalized)
+
     LOGGER.info('Guessing the bonds.', type='step')
     vermouth.MakeBonds(allow_name=bonds_from_name,
                        allow_dist=bonds_from_dist,
@@ -375,6 +379,19 @@ def entry():
     prot_group.add_argument('-cys', dest='cystein_bridge',
                             type=_cys_argument,
                             default='none', help='Cystein bonds')
+    prot_group.add_argument('-mutate', dest='modifications', action='append',
+                            type=lambda s: s.split(':'), default=[],
+                            help='Mutate a residue. Desired mutation is '
+                            'specified as, e.g. A-PHE45:ALA. The format is '
+                            '<chain>-<resname><resid>:<new resname>. Elements '
+                            'of the specification can be omitted as required.')
+    prot_group.add_argument('-modify', dest='modifications', action='append',
+                            type=lambda s: s.split(':'), default=[],
+                            help='Add a modification to a residue. Desired '
+                            'modification is specified as, e.g. A-ASP45:ASP0. '
+                            'The format is <chain>-<resname><resid>:<modification>.'
+                            ' Elements of the specification can be omitted as '
+                            'required.')
 
     debug_group = parser.add_argument_group('Debugging options')
     debug_group.add_argument('-write-graph', type=Path, default=None,
@@ -487,6 +504,7 @@ def entry():
         bonds_from_name=bonds_from_name,
         bonds_from_dist=bonds_from_dist,
         bonds_fudge=args.bonds_fudge,
+        modifications=args.modifications,
         write_graph=args.write_graph,
         write_repair=args.write_repair,
         write_canon=args.write_canon,
