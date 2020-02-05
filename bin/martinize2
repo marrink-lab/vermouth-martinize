@@ -315,7 +315,7 @@ def entry():
                           help='Additional repository for mapping files.')
     ff_group.add_argument('-list-ff', action='store_true', dest='list_ff',
                           help='List all known force fields, and exit.')
-    ff_group.add_argument('-list-block', action='store_true', dest='list_blocks',
+    ff_group.add_argument('-list-blocks', action='store_true', dest='list_blocks',
                           help='List all Blocks and Modifications known to the'
                           ' force field, and exit.')
 
