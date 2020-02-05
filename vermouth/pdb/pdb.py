@@ -549,7 +549,7 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
         Whether charges should be omitted. This is usually a good idea since
         the PDB format can only deal with integer charges.
     nan_missing_pos: bool
-        Wether the writing should fail if an atom does not have a position.
+        Whether the writing should fail if an atom does not have a position.
         When set to `True`, atoms without coordinates will be written
         with 'nan' as coordinates; this will cause the output file to be
         *invalid* for most uses.
