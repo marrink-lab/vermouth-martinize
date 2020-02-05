@@ -37,7 +37,9 @@ def disconnected_graph():
      |         |    |
     12 - 13 - 14 - 15
     """
-    graph = nx.Graph([
+    graph = nx.Graph()
+    graph.add_nodes_from(range(16))
+    graph.add_edges_from([
         # First connected component
         [0, 1], [1, 2], [2, 3], [3, 7], [4, 5], [5, 6], [6, 7],
         # Second connected component
