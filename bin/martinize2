@@ -313,6 +313,11 @@ def entry():
     ff_group.add_argument('-map-dir', dest='extra_map_dir', action='append',
                           type=Path, default=[],
                           help='Additional repository for mapping files.')
+    ff_group.add_argument('-list-ff', action='store_true', dest='list_ff',
+                          help='List all known force fields, and exit.')
+    ff_group.add_argument('-list-blocks', action='store_true', dest='list_blocks',
+                          help='List all Blocks and Modifications known to the'
+                          ' force field, and exit.')
 
     posres_group = parser.add_argument_group('Position restraints')
     posres_group.add_argument('-p', dest='posres', type=str.lower,
@@ -431,6 +436,12 @@ def entry():
             raise ValueError(msg.format(directory))
         combine_mappings(known_mappings, partial_mapping)
 
+    if args.list_ff:
+        print('The following force fields are known:')
+        for idx, ff_name in enumerate(reversed(list(known_force_fields)), 1):
+            print('{:3d}. {}'.format(idx, ff_name))
+        parser.exit()
+
     # Build self mappings
     partial_mapping = generate_all_self_mappings(known_force_fields.values())
     combine_mappings(known_mappings, partial_mapping)
@@ -443,6 +454,19 @@ def entry():
     #if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
     #    raise ValueError('No mapping known to go from "{}" to "{}".'
     #                     .format(from_ff, args.to_ff))
+
+    if args.list_blocks:
+        print('The following Blocks are known to force field {}:'.format(args.from_ff))
+        print(', '.join(known_force_fields[args.from_ff].blocks))
+        print('The following Modifications are known to force field {}:'.format(args.from_ff))
+        print(', '.join(known_force_fields[args.from_ff].modifications))
+        print()
+        print('The following Blocks are known to force field {}:'.format(args.to_ff))
+        print(', '.join(known_force_fields[args.to_ff].blocks))
+        print('The following Modifications are known to force field {}:'.format(args.to_ff))
+        print(', '.join(known_force_fields[args.to_ff].modifications))
+        parser.exit()
+
 
     # args.ignore_res is a pretty deep list: given "-ignore HOH CU,LIG -ignore LIG2"
     # it'll contain [[['HOH'], ['CU', 'LIG']], [['LIG2']]]
