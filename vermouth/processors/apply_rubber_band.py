@@ -169,8 +169,11 @@ def build_connectivity_matrix(graph, separation, selection=None):
         # matrix. Thankfully, networkx can directly give it to us a a numpy
         # matrix.
         return np.asarray(nx.to_numpy_matrix(graph, nodelist=selection).astype(bool))
-    criterion = functools.partial(are_connected, separation=separation)
-    connectivity = build_pair_matrix(graph, criterion, selection)
+    if selection is None:
+        selection = slice(None, None, None)
+    distances = np.asarray(nx.floyd_warshall_numpy(graph))[:, selection][selection] - 1
+    connectivity = distances <= separation
+    np.fill_diagonal(connectivity, False)
     return connectivity
 
 
