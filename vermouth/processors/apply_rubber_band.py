@@ -21,7 +21,6 @@ import networkx as nx
 
 from .processor import Processor
 from .. import selectors
-from .. import Molecule  # for references in the documentation
 
 DEFAULT_BOND_TYPE = 6
 
@@ -256,7 +255,7 @@ def apply_rubber_band(molecule, selector,
 
     Parameters
     ----------
-    molecule: Molecule
+    molecule: vermouth.molecule.Molecule
         The molecule to which apply the elastic network. The molecule is
         modified in-place.
     selector: collections.abc.Callable
@@ -284,7 +283,7 @@ def apply_rubber_band(molecule, selector,
         Function to establish if two atoms are part of the same domain. Elastic
         bonds are only added within a domain. By default, all the atoms in
         the molecule are considered part of the same domain. The function
-        expects a graph (e.g. a :class:`Molecule`) and two atom node keys as
+        expects a graph (e.g. a :class:`~vermouth.molecule.Molecule`) and two atom node keys as
         argument and returns ``True`` if the two atoms are part of the same
         domain; returns ``False`` otherwise.
     res_min_dist: int
