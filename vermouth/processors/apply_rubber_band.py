@@ -15,13 +15,13 @@
 Provides a processor that adds a rubber band elastic network.
 """
 import itertools
-import functools
 
 import numpy as np
 import networkx as nx
 
 from .processor import Processor
 from .. import selectors
+from .. import Molecule  # for references in the documentation
 
 DEFAULT_BOND_TYPE = 6
 
