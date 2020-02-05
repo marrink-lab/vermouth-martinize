@@ -329,6 +329,32 @@ def always_true(*args, **kwargs):
     return True
 
 
+def same_chain(graph, left, right):
+    """
+    Returns ``True`` is the nodes are part of the same chain.
+
+    Nodes are considered part of the same chain if they both have the same value
+    under the "chain" attribute, or if none of the 2 nodes have that attribute.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        A graph the nodes are part of.
+    left:
+        A node key in 'graph'.
+    right:
+        A node key in 'graph'.
+
+    Returns
+    -------
+    bool
+        ``True`` if the nodes are part of the same chain.
+    """
+    node_left = graph.nodes[left]
+    node_right = graph.nodes[right]
+    return node_left.get('chain') == node_right.get('chain')
+
+
 class ApplyRubberBand(Processor):
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
                  base_constant, minimum_force,

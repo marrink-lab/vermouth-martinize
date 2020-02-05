@@ -43,6 +43,7 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings
 )
+from vermouth.processors.apply_rubber_band import always_true, same_chain
 
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
 # not work as intended. Investigation required.
@@ -366,6 +367,11 @@ def entry():
     rb_group.add_argument('-eb', dest='rb_selection',
                           type=lambda x: x.split(','), default=None,
                           help='Comma separated list of bead names for elastic bonds')
+    rb_group.add_argument('-eunit', dest='rb_unit', default='molecule',
+                          choices=['chain', 'molecule', 'all'],
+                          help=('Establish what is the structural unit for the '
+                                'elastic network. Bonds are only created within'
+                                'a unit.'))
 
     go_group = parser.add_argument_group('Virtual site based GoMartini')
     go_group.add_argument('-govs-includes', action='store_true', default=False,
@@ -427,7 +433,7 @@ def entry():
                                    'CanonicalizeModifications step. The '
                                    'resulting file may contain "nan" '
                                    'coordinates making it unreadable by most '
-                                   'softwares.'))
+                                   'software.'))
     debug_group.add_argument('-v', dest='verbosity', action='count',
                              help='Enable debug logging output. Can be given '
                                   'multiple times.', default=0)
@@ -585,27 +591,9 @@ def entry():
         delete_unknown=True,
     )
 
-    # Apply a rubber band elastic network is required.
-    if args.elastic:
-        LOGGER.info('Setting the rubber bands.', type='step')
-        if args.rb_selection is not None:
-            selector = functools.partial(
-                selectors.proto_select_attribute_in,
-                attribute='atomname',
-                values=args.rb_selection,
-            )
-        else:
-            selector = selectors.select_backbone
-        rubber_band_processor = vermouth.ApplyRubberBand(
-            lower_bound=args.rb_lower_bound,
-            upper_bound=args.rb_upper_bound,
-            decay_factor=args.rb_decay_factor,
-            decay_power=args.rb_decay_power,
-            base_constant=args.rb_force_constant,
-            minimum_force=args.rb_minimum_force,
-            selector=selector,
-        )
-        rubber_band_processor.run_system(system)
+    if args.neutral_termini:
+        LOGGER.info('Making termini neutral.', type='step')
+        vermouth.NeutralTermini(force_field=known_force_fields[args.to_ff]).run_system(system)
 
     # Apply position restraints if required.
     if args.posres != 'none':
@@ -638,6 +626,40 @@ def entry():
                 vermouth.MergeChains(chain_set).run_system(system)
         vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
         defines = ()
+
+    # Apply a rubber band elastic network is required.
+    if args.elastic:
+        LOGGER.info('Setting the rubber bands.', type='step')
+        if args.rb_unit == 'molecule':
+            domain_criterion = always_true
+        elif args.rb_unit == 'all':
+            vermouth.MergeAllMolecules().run_system(system)
+            domain_criterion = always_true
+        elif args.rb_unit == 'chain':
+            domain_criterion = same_chain
+        else:
+            message = 'Unknown value for -eunit: "{}".'.format(args.rb_unit)
+            LOGGER.critical(message)
+            raise ValueError(message)
+        if args.rb_selection is not None:
+            selector = functools.partial(
+                selectors.proto_select_attribute_in,
+                attribute='atomname',
+                values=args.rb_selection,
+            )
+        else:
+            selector = selectors.select_backbone
+        rubber_band_processor = vermouth.ApplyRubberBand(
+            lower_bound=args.rb_lower_bound,
+            upper_bound=args.rb_upper_bound,
+            decay_factor=args.rb_decay_factor,
+            decay_power=args.rb_decay_power,
+            base_constant=args.rb_force_constant,
+            minimum_force=args.rb_minimum_force,
+            selector=selector,
+            domain_criterion=domain_criterion,
+        )
+        rubber_band_processor.run_system(system)
 
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:
