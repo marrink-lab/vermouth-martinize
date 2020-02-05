@@ -171,10 +171,17 @@ def build_connectivity_matrix(graph, separation, selection=None):
         return np.asarray(nx.to_numpy_matrix(graph, nodelist=selection).astype(bool))
     if selection is None:
         selection = slice(None, None, None)
-    distances = np.asarray(nx.floyd_warshall_numpy(graph))[:, selection][selection] - 1
-    connectivity = distances <= separation
+    size = graph.number_of_nodes()
+    correspondence = {node: index for index, node in enumerate(graph.nodes)}
+    connectivity = np.zeros((size, size), dtype=bool)
+    # separation is provided in term of nodes while the path is provided in
+    # terms of edges, hence `separation + 1`.
+    distance_pairs = nx.all_pairs_shortest_path_length(graph, cutoff=separation + 1)
+    for origin, target_and_distances in distance_pairs:
+        for target in target_and_distances:
+            connectivity[correspondence[origin], correspondence[target]] = True
     np.fill_diagonal(connectivity, False)
-    return connectivity
+    return connectivity[:, selection][selection]
 
 
 def build_pair_matrix(graph, criterion, selection):
