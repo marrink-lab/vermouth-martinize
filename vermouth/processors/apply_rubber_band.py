@@ -192,7 +192,7 @@ def build_pair_matrix(graph, criterion, selection):
     ----------
     graph: networkx.Graph
         The graph/molecule to work on.
-    criterion: Callable
+    criterion: collections.abc.Callable
         A function that determines if a pair of nodes fulfill the criterion.
         It takes a graph and two node keys as arguments and returns a boolean.
     selection: collections.abc.Collection
@@ -280,7 +280,7 @@ def apply_rubber_band(molecule, selector,
         are not kept.
     bond_type: int
         Gromacs bond function type to apply to the elastic network bonds.
-    domain_criterion: Callable
+    domain_criterion: collections.abc.Callable
         Function to establish if two atoms are part of the same domain. Elastic
         bonds are only added within a domain. By default, all the atoms in
         the molecule are considered part of the same domain. The function
