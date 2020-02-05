@@ -479,7 +479,7 @@ def test_rate_match(nodes1, nodes2, match, expected):
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5}], {},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1}], {}
+        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1, 'attr': 5}], {}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
@@ -492,16 +492,16 @@ def test_rate_match(nodes1, nodes2, match, expected):
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
-         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}],
+        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1, 'attr': 5},
+         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2, 'attr': 7}],
         {}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {(0, 1): {}},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
-         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}],
+        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1, 'attr': 5},
+         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2, 'attr': 7}],
         {(0, 1): {'weight': 1}}
     ),
     (
@@ -510,7 +510,7 @@ def test_rate_match(nodes1, nodes2, match, expected):
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {(2, 1): {}},
         [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
-         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}],
+         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2, 'attr': 7}],
         {(0, 1): {'weight': 1}}
     ),
 ])

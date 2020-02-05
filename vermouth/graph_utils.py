@@ -18,7 +18,7 @@ from collections import defaultdict
 import itertools
 import networkx as nx
 
-from .utils import maxes, first_alpha
+from .utils import maxes, first_alpha, are_all_equal
 
 
 def add_element_attr(molecule):
@@ -133,8 +133,14 @@ def blockmodel(G, partitions, **attrs):
         bd = G.subgraph(idxs)
         CG_mol.add_node(bead_idx)
         CG_mol.nodes[bead_idx]['graph'] = bd
-        # TODO: CoM instead of CoG
-#        CG_mol.nodes[bead_idx]['position'] = np.mean([bd.nodes[idx]['position'] for idx in bd], axis=0)
+        common_attrs = defaultdict(list)
+        for idx in idxs:
+            for key, val in G.nodes[idx].items():
+                common_attrs[key].append(val)
+        for key, vals in common_attrs.items():
+            if len(vals) == len(idxs) and are_all_equal(vals):
+                CG_mol.nodes[bead_idx][key] = vals[0]
+
         for k, vals in attrs.items():
             CG_mol.nodes[bead_idx][k] = vals[bead_idx]
 
