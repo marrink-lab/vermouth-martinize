@@ -280,7 +280,7 @@ def apply_rubber_band(molecule, selector,
         are not kept.
     bond_type: int
         Gromacs bond function type to apply to the elastic network bonds.
-    domain_criterion: Callback
+    domain_criterion: Callable
         Function to establish if two atoms are part of the same domain. Elastic
         bonds are only added within a domain. By default, all the atoms in
         the molecule are considered part of the same domain. The function
