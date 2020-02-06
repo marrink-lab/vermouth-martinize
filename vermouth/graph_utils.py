@@ -99,6 +99,36 @@ def categorical_maximum_common_subgraph(graph1, graph2, attributes=tuple()):
     return matches
 
 
+def _items_with_common_values(graph, nodes=None):
+    """
+    Finds all node attributes of nodes in graph that all have the same values.
+    Returns a dict of node attribute/common value pairs
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+    nodes: collections.abc.Iterable or None
+        If None, consider all nodes. All nodes must be in graph.
+
+    Returns
+    -------
+    dict
+    """
+    if not nodes:
+        nodes = set(graph.nodes)
+    common_attrs = defaultdict(list)
+    for idx in nodes:
+        for key, val in graph.nodes[idx].items():
+            common_attrs[key].append(val)
+    common_attrs = dict(common_attrs)
+    for key, vals in list(common_attrs.items()):
+        if len(vals) == len(nodes) and are_all_equal(vals):
+            common_attrs[key] = vals[0]
+        else:
+            del common_attrs[key]
+    return common_attrs
+
+
 def blockmodel(G, partitions, **attrs):
     """
     Analogous to networkx.blockmodel, but can deal with incomplete partitions,
@@ -133,13 +163,8 @@ def blockmodel(G, partitions, **attrs):
         bd = G.subgraph(idxs)
         CG_mol.add_node(bead_idx)
         CG_mol.nodes[bead_idx]['graph'] = bd
-        common_attrs = defaultdict(list)
-        for idx in idxs:
-            for key, val in G.nodes[idx].items():
-                common_attrs[key].append(val)
-        for key, vals in common_attrs.items():
-            if len(vals) == len(idxs) and are_all_equal(vals):
-                CG_mol.nodes[bead_idx][key] = vals[0]
+        common_attributes = _items_with_common_values(G, idxs)
+        CG_mol.nodes[bead_idx].update(common_attributes)
 
         for k, vals in attrs.items():
             CG_mol.nodes[bead_idx][k] = vals[bead_idx]
@@ -254,13 +279,14 @@ def get_attrs(node, attrs):
     ----------
     node: dict
         The dict from which items should be taken.
-    attrs: Sequence
+    attrs: collections.abc.Iterable
         The keys which values should be taken.
 
     Returns
     -------
     tuple
-        A tuple of (node[attr] for every attr in attrs). 
+        A tuple containing the value of every key in attrs in the same order,
+        where missing values are `None`.
     """
     return tuple(node.get(attr) for attr in attrs)
 

@@ -46,8 +46,9 @@ def parse_residue_spec(resspec):
     # <chain>-<resname><resid>
     *chain, res = resspec.split('-', 1)
     res, *resid = res.split('#', 1)
-    if resid:  # '0' is False
+    if resid:  # [] if False
         resname = res
+        resid = resid[0]
     else:
         idx = 0
         for idx, char in reversed(list(enumerate(res, 1))):
