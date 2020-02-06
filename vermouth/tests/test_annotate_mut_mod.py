@@ -16,13 +16,13 @@ Contains unittests for vermouth.processors.annotate_mut_mod.
 """
 
 import pytest
-import vermouth
 from vermouth.molecule import Molecule
 from vermouth.forcefield import ForceField
 from vermouth.processors.annotate_mut_mod import (
     parse_residue_spec,
     _subdict,
-    annotate_modifications
+    annotate_modifications,
+    AnnotateMutMod
 )
 from vermouth.tests.datafiles import (
     FF_UNIVERSAL_TEST,
@@ -132,3 +132,47 @@ def test_annotate_modifications(example_mol, modifications, mutations, expected_
 def test_annotate_modifications_error(example_mol, modifications, mutations):
     with pytest.raises(NameError):
         annotate_modifications(example_mol, modifications, mutations)
+
+
+@pytest.mark.parametrize('mutations,expected_mut', [
+    ([], {}),
+    ([('A-A1', 'ALA')], {0: {'mutation': ['ALA']}}),
+    (
+        [('A', 'ALA')],
+        {0: {'mutation': ['ALA']},
+         1: {'mutation': ['ALA']},
+         2: {'mutation': ['ALA']},
+         4: {'mutation': ['ALA']},
+         5: {'mutation': ['ALA']},
+         6: {'mutation': ['ALA']},}
+    ),
+    (
+        [('B-2', 'ALA')],
+        {5: {'mutation': ['ALA']},
+         6: {'mutation': ['ALA']},
+         7: {'mutation': ['ALA']},}
+    )
+])
+@pytest.mark.parametrize('modifications,expected_mod', [
+    ([], {}),
+    ([('A-A1', 'C-ter')], {0: {'modification': ['C-ter']}}),
+    (
+        [('A-A1', 'C-ter'),
+         ('A-A1', 'HSD')],
+        {0: {'modification': ['C-ter', 'HSD']}}
+    ),
+    ([('B1', 'C-ter'),], {}),
+    (
+        [('B2', 'C-ter'),],
+        {3: {'modification': ['C-ter']},
+         7: {'modification': ['C-ter']},}
+    ),
+    ([('B1', 'C-ter'),], {}),
+])
+def test_annotate_mutmod_processor(example_mol, modifications, mutations, expected_mod, expected_mut):
+
+    AnnotateMutMod(modifications, mutations).run_molecule(example_mol)
+    for node_idx, mods in expected_mod.items():
+        assert _subdict(mods, example_mol.nodes[node_idx])
+    for node_idx, mods in expected_mut.items():
+        assert _subdict(mods, example_mol.nodes[node_idx])
