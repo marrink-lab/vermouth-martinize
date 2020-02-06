@@ -51,8 +51,9 @@ def parse_residue_spec(resspec):
         resid = resid[0]
     else:
         idx = 0
-        for idx, char in reversed(list(enumerate(res, 1))):
+        for idx, char in reversed(list(enumerate(res))):
             if not char.isdigit():
+                idx += 1
                 break
         resname = res[:idx]
         resid = res[idx:]
