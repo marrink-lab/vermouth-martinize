@@ -541,3 +541,25 @@ def test_make_residue_graph(nodes1, edges1, nodes2, edges2):
         assert expected.has_edge(idx, jdx) and expected.edges[idx, jdx] == data
         edges_seen.add(frozenset((idx, jdx)))
     assert set(frozenset(edge) for edge in expected.edges) == edges_seen
+
+@pytest.mark.parametrize('nodes, attrs, expected', [
+    ([], [], {}),
+    ([], [1], {}),
+    ([{}, {}], [], {tuple(): {0, 1}}),
+    ([{1: 1}, {1: 1}], [], {tuple(): {0, 1}}),
+    ([{1: 1}, {1: 1}], [1], {(1,): {0, 1}}),
+    ([{1: 1}, {1: 2}], [1], {(1,): {0}, (2,): {1}}),
+    ([{1: 1}, {1: 1, 2: 2}], [1], {(1,): {0, 1}}),
+    ([{1: 1, 2: 1}, {1: 1, 2: 2}], [1], {(1,): {0, 1}}),
+    ([{1: 1, 2: 1}, {1: 1, 2: 2}], [1, 2], {(1, 1): {0}, (1, 2): {1}}),
+    ([{1: 1}, {1: 1, 2: 2}], [1, 2], {(1, None): {0}, (1, 2): {1}}),
+
+])
+def test_collect_residues(nodes, attrs, expected):
+    """
+    Tests for ``collect_residues``
+    """
+    graph = nx.Graph()
+    graph.add_nodes_from(enumerate(nodes))
+    found = vermouth.graph_utils.collect_residues(graph, attrs)
+    assert found == expected
