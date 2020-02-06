@@ -112,14 +112,13 @@ def _get_reference_residue(residue, force_field):
                            ' were requested.',
                            residue['chain'], residue['resname'], residue['resid'],
                            len(mutation))
-        else:
-            mutation = mutation[0]
-            LOGGER.info('Mutation residue {}-{}{} to {}',
-                        residue['chain'], residue['resname'], residue['resid'],
-                        mutation)
-            residue['resname'] = mutation
-
-    resname = residue['resname']
+        mutation = mutation[0]
+        LOGGER.info('Mutating residue {}-{}{} to {}',
+                    residue['chain'], residue['resname'], residue['resid'],
+                    mutation)
+        resname = mutation
+    else:
+        resname = residue['resname']
     reference_block = force_field.reference_graphs[resname]
 
     if 'modification' in residue:
@@ -182,6 +181,8 @@ def make_reference(mol):
         chain = residues.nodes[residx]['chain']
         residue = residues.nodes[residx]['graph']
         reference = _get_reference_residue(residues.nodes[residx], mol.force_field)
+        if 'mutation' in residues.nodes[residx]:
+            resname = residues.nodes[residx]['mutation'][0]
         add_element_attr(reference)
         add_element_attr(residue)
         # We are going to sort the nodes of reference and residue by atomname.
