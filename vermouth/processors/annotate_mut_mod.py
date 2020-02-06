@@ -123,9 +123,9 @@ def annotate_modifications(molecule, modifications, mutations):
 class AnnotateMutMod(Processor):
     def __init__(self, modifications=None, mutations=None):
         if not modifications:
-            modifications = {}
+            modifications = []
         if not mutations:
-            mutations = {}
+            mutations = []
         self.modifications = []
         for resspec, val in modifications:
             self.modifications.append((parse_residue_spec(resspec), val))
