@@ -78,9 +78,9 @@ def _subdict(dict1, dict2):
     return True
 
 
-def annotate_modifications(molecule, modifications):
+def annotate_modifications(molecule, modifications, mutations):
     """
-    Annotate nodes in molecule with the desired modifications.
+    Annotate nodes in molecule with the desired modifications and mutations
 
     Parameters
     ----------
@@ -89,45 +89,49 @@ def annotate_modifications(molecule, modifications):
         The modifications to apply. The first element is a dictionary contain
         the attributes a residue has to fulfill. It can contain the elements
         'chain', 'resname' and 'resid'. The second element is the modification
-        or mutation that should be applied.
+        that should be applied.
+    mutations: list[tuple[dict, str]]
+        The mutations to apply. The first element is a dictionary contain
+        the attributes a residue has to fulfill. It can contain the elements
+        'chain', 'resname' and 'resid'. The second element is the mutation that
+        should be applied.
 
     Raises
     ------
     NameError
         When a modification is not recognized.
     """
-    if not modifications:
+    if not modifications and not mutations:
         return
 
     residues = collect_residues(molecule)
     for residue, node_idxs in residues.items():
         residue = dict(zip(('chain', 'resid', 'resname'), residue))
-        for resspec, mod in modifications:
-            if _subdict(resspec, residue):
-                if (mod in molecule.force_field.blocks
-                        and mod in molecule.force_field.modifications):
-                    raise NameError('{} is known as both a Block and a '
-                                   'Modification for force field {}'
-                                   ''.format(mod, molecule.force_field.name))
-
-                if mod in molecule.force_field.blocks:
-                    key = 'mutation'
-                elif mod in molecule.force_field.modifications:
-                    key = 'modification'
-                else:
-                    raise NameError('{} is known as neither a Block nor a '
-                                   'Modification for force field {}'
-                                   ''.format(mod, molecule.force_field.name))
-                for node_idx in node_idxs:
-                    molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
+        for mutmod, key, library in [(modifications, 'modification', molecule.force_field.modifications),
+                                     (mutations, 'mutation', molecule.force_field.blocks)]:
+            for resspec, mod in mutmod:
+                if _subdict(resspec, residue):
+                    if mod not in library:
+                        raise NameError('{} is not known as a {} for '
+                                        'force field {}'
+                                       ''.format(mod, key, molecule.force_field.name))
+                    for node_idx in node_idxs:
+                        molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
 
 
 class AnnotateMutMod(Processor):
-    def __init__(self, modifications={}):
+    def __init__(self, modifications=None, mutations=None):
+        if not modifications:
+            modifications = {}
+        if not mutations:
+            mutations = {}
         self.modifications = []
         for resspec, val in modifications:
             self.modifications.append((parse_residue_spec(resspec), val))
+        self.mutations = []
+        for resspec, val in mutations:
+            self.mutations.append((parse_residue_spec(resspec), val))
 
     def run_molecule(self, molecule):
-        annotate_modifications(molecule, self.modifications)
+        annotate_modifications(molecule, self.modifications, self.mutations)
         return molecule
