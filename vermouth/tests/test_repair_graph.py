@@ -17,6 +17,7 @@
 Test graph reparation and related operations.
 """
 import copy
+import logging
 
 import networkx as nx
 import pytest
@@ -272,7 +273,25 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, m
             if mutations:
                 assert mol.nodes[node_idx]['resname'] == mutations[0]
             if modifications:
-                print(mol.nodes[node_idx])
                 assert mol.nodes[node_idx].get('modification') == modifications
             resid1_atomnames.add(mol.nodes[node_idx]['atomname'])
     assert resid1_atomnames == set(atomnames.split())
+
+
+@pytest.mark.parametrize('resid,mutations,modifications',[
+    (2, [], ['GLU-H']),  # The glutamate chain and N-ter are removed
+    (2, ['ALA', 'LEU'], [])
+])
+def test_repair_graph_with_mutation_modification_error(system_mod, caplog, resid, mutations, modifications):
+    mol = system_mod.molecules[0]
+    # Let's mutate res1 to ALA
+    for node_idx in mol:
+        if mol.nodes[node_idx].get('resid') == resid:
+            if mutations:
+                mol.nodes[node_idx]['mutation'] = mutations
+            if modifications:
+                mol.nodes[node_idx]['modification'] = modifications
+    with pytest.raises(ValueError), caplog.at_level(logging.WARNING):
+        assert not caplog.records
+        mol = vermouth.RepairGraph().run_molecule(mol)
+        assert len(caplog.records) == 1

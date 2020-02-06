@@ -75,10 +75,12 @@ def _patch_modification(block, modification):
         LOGGER.error("Modification {} doesn't fit on Block {}", modification.name,
                      block.name)
         raise ValueError("Cannot apply modification to block")
-    elif len(anchor_block_to_mod) > 1:
+    # This probably can't happen, since atoms in Modifications /should/ have
+    # atomnames. Which should be unique. So, nocover.
+    elif len(anchor_block_to_mod) > 1:  # pragma: nocover
         LOGGER.error("Modification {} fits on Block {} in {} ways",
-                     modification.name, block.name, len(anchor_block_to_mod))
-        raise ValueError("Cannot apply modification to block")
+                     modification.name, block.name, len(anchor_block_to_mod))  # pragma: nocover
+        raise ValueError("Cannot apply modification to block")  # pragma: nocover
 
     anchor_block_to_mod = anchor_block_to_mod[0]
     anchor_mod_to_block = {val: key for key, val in anchor_block_to_mod.items()}
@@ -108,10 +110,11 @@ def _get_reference_residue(residue, force_field):
     if 'mutation' in residue:
         mutation = residue['mutation']
         if not are_all_equal(mutation):
-            LOGGER.warning('Can only mutate residue {}-{}{} once, {} mutations'
-                           ' were requested.',
-                           residue['chain'], residue['resname'], residue['resid'],
-                           len(mutation))
+            message = 'Can only mutate residue {}-{}{} once, {} mutations were requested.'
+            LOGGER.error(message, residue['chain'], residue['resname'],
+                         residue['resid'], len(mutation))
+            raise ValueError(message.format(residue['chain'], residue['resname'],
+                             residue['resid'], len(mutation)))
         mutation = mutation[0]
         LOGGER.info('Mutating residue {}-{}{} to {}',
                     residue['chain'], residue['resname'], residue['resid'],
