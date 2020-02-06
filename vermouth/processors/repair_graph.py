@@ -421,6 +421,8 @@ def repair_graph(molecule, reference_graph, include_graph=True):
         for idx in extra:
             molecule.nodes[idx]['PTM_atom'] = True
             found.nodes[idx]['PTM_atom'] = True
+            if molecule.nodes[idx].get('mutation') or molecule.nodes[idx].get('modification'):
+                molecule.remove_node(idx)
 
     return molecule
 
