@@ -122,11 +122,18 @@ def _get_reference_residue(residue, force_field):
     reference_block = force_field.reference_graphs[resname]
 
     if 'modification' in residue:
-        for mod_name in residue['modification']:
+        modifications = residue['modification']
+        for mod_name in modifications:
             LOGGER.info('Applying modification {} to residue {}-{}{}',
                         mod_name, residue['chain'], resname, residue['resid'])
             mod = force_field.modifications[mod_name]
             reference_block = _patch_modification(reference_block, mod)
+        for node_idx in reference_block:
+            reference_block.nodes[node_idx]['modification'] = modifications
+    if 'mutation' in residue:
+        for node_idx in reference_block:
+            reference_block.nodes[node_idx]['mutation'] = mutation
+
     return reference_block
 
 
