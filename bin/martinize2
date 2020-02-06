@@ -94,7 +94,7 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
 
 
 def pdb_to_universal(system, delete_unknown=False, force_field=None,
-                     modifications=[],
+                     modifications=None,
                      bonds_from_name=True, bonds_from_dist=True, bonds_fudge=1,
                      write_graph=None, write_repair=None, write_canon=None):
     """
@@ -102,6 +102,8 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     """
     if force_field is None:
         force_field = vermouth.forcefield.get_native_force_field('universal')
+    if modifications is None:
+        modifications = []
     canonicalized = system.copy()
     canonicalized.force_field = force_field
     LOGGER.debug('Annotating required mutations and modifications.', type='step')
