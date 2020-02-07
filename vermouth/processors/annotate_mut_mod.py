@@ -18,16 +18,18 @@ Provides a processor that annotates a molecule with desired mutations and
 modifications.
 """
 
+import networkx as nx
+
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
-from ..utils import format_atom_string
-from ..graph_utils import collect_residues
+from ..utils import maxes
+from ..graph_utils import make_residue_graph
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
 def parse_residue_spec(resspec):
     """
-    Parse a residue specification: [<chain>-][<resname>][[#]<resid>] where 
+    Parse a residue specification: [<chain>-][<resname>][[#]<resid>] where
     resid is /[0-9]+/.
     If resname ends in a number and a resid is also specified, the # separator
     is required.
@@ -79,6 +81,45 @@ def _subdict(dict1, dict2):
     return True
 
 
+def residue_matches(resspec, residue_graph, res_idx):
+    res_node = residue_graph.nodes[res_idx]
+    residue = {key: res_node.get(key)
+               for key in 'chain resid resname insertion_code'.split()}
+    out = True
+    if resspec.get('resname', '')[-3:] == 'ter':
+        # Find all residues with degree 1: the ones with the lowest resid will
+        # be cter, the ones with the highest resid nter.
+        termini = [idx for idx in residue_graph if residue_graph.degree[idx] == 1]
+        get_resid = lambda idx: residue_graph.nodes[idx].get('resid')
+        # FIXME: Once residue_graph is a digraph we can do something much much
+        #        more clever, addressing arbitrarily branched polymers and
+        #        termini
+        if resspec['resname'] == 'cter':
+            return res_idx in maxes(termini, key=lambda x: -get_resid(x))
+        elif resspec['resname'] == 'nter':
+            return res_idx in maxes(termini, key=get_resid)
+        else:
+            raise KeyError("Don't know any terminus with name '{}'".format(resspec['resname']))
+
+        out = out and residue_graph.degree[res_idx] == 1
+        del resspec['resname']
+    return out and _subdict(resspec, residue)
+
+
+def format_resname(res):
+    chain = res.get('chain', '')
+    out = ''
+    if chain:
+        out += chain + '-'
+    resname = res.get('resname')
+    out += resname
+    if resname and resname[-1].isdigit():
+        out += '#'
+    out += str(res.get('resid', ''))
+    out += res.get('insertion_code', '')
+    return out
+
+
 def annotate_modifications(molecule, modifications, mutations):
     """
     Annotate nodes in molecule with the desired modifications and mutations
@@ -105,18 +146,20 @@ def annotate_modifications(molecule, modifications, mutations):
     if not modifications and not mutations:
         return
 
-    residues = collect_residues(molecule)
-    for residue, node_idxs in residues.items():
-        residue = dict(zip(('chain', 'resid', 'resname'), residue))
+    residue_graph = make_residue_graph(molecule)
+    for res_idx in residue_graph:
         for mutmod, key, library in [(modifications, 'modification', molecule.force_field.modifications),
                                      (mutations, 'mutation', molecule.force_field.blocks)]:
             for resspec, mod in mutmod:
-                if _subdict(resspec, residue):
+                if residue_matches(resspec, residue_graph, res_idx):
                     if mod not in library:
                         raise NameError('{} is not known as a {} for '
                                         'force field {}'
                                        ''.format(mod, key, molecule.force_field.name))
-                    for node_idx in node_idxs:
+                    res = residue_graph.nodes[res_idx]
+                    LOGGER.debug('Annotating {} with {} {}',
+                                 format_resname(res), key, mod)
+                    for node_idx in res['graph']:
                         molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
 
 

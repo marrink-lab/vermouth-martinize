@@ -108,8 +108,6 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
         mutations = []
     canonicalized = system.copy()
     canonicalized.force_field = force_field
-    LOGGER.debug('Annotating required mutations and modifications.', type='step')
-    vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
 
     LOGGER.info('Guessing the bonds.', type='step')
     vermouth.MakeBonds(allow_name=bonds_from_name,
@@ -118,6 +116,9 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
+
+    LOGGER.debug('Annotating required mutations and modifications.', type='step')
+    vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
     LOGGER.info('Repairing the graph.', type='step')
     vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(canonicalized)
     if write_repair is not None:

@@ -33,16 +33,17 @@ from vermouth.tests.datafiles import (
 def example_mol():
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     nodes = [
-        {'chain': 'A', 'resname': 'A', 'resid': 1},  # 0
-        {'chain': 'A', 'resname': 'A', 'resid': 2},  # 1
-        {'chain': 'A', 'resname': 'A', 'resid': 2},  # 2
-        {'chain': 'A', 'resname': 'B', 'resid': 2},  # 3
-        {'chain': 'B', 'resname': 'A', 'resid': 1},  # 4
-        {'chain': 'B', 'resname': 'A', 'resid': 2},  # 5
-        {'chain': 'B', 'resname': 'A', 'resid': 2},  # 6
-        {'chain': 'B', 'resname': 'B', 'resid': 2},  # 7
+        {'chain': 'A', 'resname': 'A', 'resid': 1},  # 0, R1
+        {'chain': 'A', 'resname': 'A', 'resid': 2},  # 1, R2
+        {'chain': 'A', 'resname': 'A', 'resid': 2},  # 2, R2
+        {'chain': 'A', 'resname': 'B', 'resid': 2},  # 3, R3
+        {'chain': 'B', 'resname': 'A', 'resid': 1},  # 4, R4
+        {'chain': 'B', 'resname': 'A', 'resid': 2},  # 5, R5
+        {'chain': 'B', 'resname': 'A', 'resid': 2},  # 6, R5
+        {'chain': 'B', 'resname': 'B', 'resid': 2},  # 7, R6
     ]
     mol.add_nodes_from(enumerate(nodes))
+    mol.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (4, 7)])
     return mol
 
 
@@ -61,6 +62,7 @@ def example_mol():
     ('PO4#3', {'resname': 'PO4', 'resid': 3}),
     ('PO43', {'resname': 'PO', 'resid': 43}),
     ('A-B-C#D#1', {'chain': 'A', 'resid': 1, 'resname': 'B-C#D'}),
+    ('ter', {'resname': 'ter'})
 ])
 def test_parse_residue_spec(spec, expected):
     found = parse_residue_spec(spec)
@@ -99,7 +101,13 @@ def test_subdict(dict1, dict2, expected):
         {5: {'mutation': ['ALA']},
          6: {'mutation': ['ALA']},
          7: {'mutation': ['ALA']},}
-    )
+    ),
+    (
+        [({'resname': 'nter'}, 'ALA')],
+        {5: {'mutation': ['ALA']},
+         6: {'mutation': ['ALA']},
+         7: {'mutation': ['ALA']},},
+    ),
 ])
 @pytest.mark.parametrize('modifications,expected_mod', [
     ([], {}),
@@ -116,6 +124,10 @@ def test_subdict(dict1, dict2, expected):
          7: {'modification': ['C-ter']},}
     ),
     ([({'resname': 'B', 'resid': 1}, 'C-ter'),], {}),
+    (
+        [({'resname': 'cter'}, 'C-ter')],
+        {0: {'modification': ['C-ter']},},
+    ),
 ])
 def test_annotate_modifications(example_mol, modifications, mutations, expected_mod, expected_mut):
     annotate_modifications(example_mol, modifications, mutations)
