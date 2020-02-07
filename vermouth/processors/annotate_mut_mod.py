@@ -45,7 +45,7 @@ def parse_residue_spec(resspec):
     # A-LYS2 or PO4#2
     # <chain>-<resname><resid>
     *chain, res = resspec.split('-', 1)
-    res, *resid = res.split('#', 1)
+    res, *resid = res.rsplit('#', 1)
     if resid:  # [] if False
         resname = res
         resid = resid[0]

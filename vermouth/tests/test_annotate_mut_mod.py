@@ -60,8 +60,7 @@ def example_mol():
     ('#2', {'resid': 2}),
     ('PO4#3', {'resname': 'PO4', 'resid': 3}),
     ('PO43', {'resname': 'PO', 'resid': 43}),
-
-
+    ('A-B-C#D#1', {'chain': 'A', 'resid': 1, 'resname': 'B-C#D'}),
 ])
 def test_parse_residue_spec(spec, expected):
     found = parse_residue_spec(spec)
