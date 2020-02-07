@@ -240,9 +240,9 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     system = nx.disjoint_union_all(system.molecules)
     non_edges = set()
 
-    residue_groups = collect_residues(system, ('mol_idx', 'chain', 'resid', 'resname'))
+    residue_groups = collect_residues(system, ('mol_idx chain resid resname insertion_code'.split()))
 
-    for ((mol_idx, chain, resid, resname), idxs) in residue_groups.items():
+    for ((mol_idx, chain, resid, resname, insertion_code), idxs) in residue_groups.items():
         if not allow_name:
             break
         try:
