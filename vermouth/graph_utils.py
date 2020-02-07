@@ -193,7 +193,7 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
     ----------
     graph: networkx.Graph
         The graph to condense.
-    attrs: collections.abc.Iterable[Hashable]
+    attrs: collections.abc.Iterable[collections.abc.Hashable]
         The node attributes that determine node equivalence.
 
     Returns

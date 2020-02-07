@@ -82,6 +82,26 @@ def _subdict(dict1, dict2):
 
 
 def residue_matches(resspec, residue_graph, res_idx):
+    """
+    Returns True iff resspec desribes residue_graph.nodes[res_idx]. The
+    'resname's nter and cter match match the residues with a degree of 1 and 
+    with the lowest and highest residue numbers respectively.
+
+    Parameters
+    ----------
+    resspec: dict
+        Attributes that must be present in the residue node. 'resname' is
+        treated specially as described above.
+    residue_graph: networkx.Graph
+        A graph with one node per residue.
+    res_idx: collections.abc.Hashable
+        A node index in residue_graph.
+
+    Returns
+    -------
+    bool
+        Whether resspec describes the node res_idx in residue_graph.
+    """
     res_node = residue_graph.nodes[res_idx]
     residue = {key: res_node.get(key)
                for key in 'chain resid resname insertion_code'.split()}
@@ -94,9 +114,9 @@ def residue_matches(resspec, residue_graph, res_idx):
         # FIXME: Once residue_graph is a digraph we can do something much much
         #        more clever, addressing arbitrarily branched polymers and
         #        termini
-        if resspec['resname'] == 'cter':
+        if resspec['resname'] == 'nter':
             return res_idx in maxes(termini, key=lambda x: -get_resid(x))
-        elif resspec['resname'] == 'nter':
+        elif resspec['resname'] == 'cter':
             return res_idx in maxes(termini, key=get_resid)
         else:
             raise KeyError("Don't know any terminus with name '{}'".format(resspec['resname']))
@@ -106,7 +126,11 @@ def residue_matches(resspec, residue_graph, res_idx):
     return out and _subdict(resspec, residue)
 
 
-def format_resname(res):
+def _format_resname(res):
+    """
+    Provisional function that performs the opposite of parse_residue_spec.
+    Poorly tested, use at own risk.
+    """
     chain = res.get('chain', '')
     out = ''
     if chain:
@@ -158,7 +182,7 @@ def annotate_modifications(molecule, modifications, mutations):
                                        ''.format(mod, key, molecule.force_field.name))
                     res = residue_graph.nodes[res_idx]
                     LOGGER.debug('Annotating {} with {} {}',
-                                 format_resname(res), key, mod)
+                                 _format_resname(res), key, mod)
                     for node_idx in res['graph']:
                         molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
 

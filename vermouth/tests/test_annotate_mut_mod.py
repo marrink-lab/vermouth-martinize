@@ -103,7 +103,7 @@ def test_subdict(dict1, dict2, expected):
          7: {'mutation': ['ALA']},}
     ),
     (
-        [({'resname': 'nter'}, 'ALA')],
+        [({'resname': 'cter'}, 'ALA')],
         {5: {'mutation': ['ALA']},
          6: {'mutation': ['ALA']},
          7: {'mutation': ['ALA']},},
@@ -125,7 +125,7 @@ def test_subdict(dict1, dict2, expected):
     ),
     ([({'resname': 'B', 'resid': 1}, 'C-ter'),], {}),
     (
-        [({'resname': 'cter'}, 'C-ter')],
+        [({'resname': 'nter'}, 'C-ter')],
         {0: {'modification': ['C-ter']},},
     ),
 ])
