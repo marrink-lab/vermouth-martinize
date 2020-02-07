@@ -205,10 +205,15 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
     # Create partitions. These will contain all nodes, even those without e.g.
     # a resname, since those will get resname None
     residue_idxs = collect_residues(graph, attrs)
-    res_graph = nx.quotient_graph(graph, residue_idxs.values(), relabel=True)
+    res_graph = nx.quotient_graph(graph,
+                                  sorted(residue_idxs.values(), key=min),
+                                  relabel=True)
     # Using this equivalence function rather than the preformed partitions
     # Creates an equivalent graph, but the node indices are numbered
     # differently. At the very least it would require a change in the tests.
+    # Note2: This would probably break e.g. the DSSP processor, because the
+    # ordering of residues in the molecule comes from here, and is used by 
+    # molecule.iter_residues.
     # def node_equiv(idx, jdx):
     #     return get_attrs(graph.nodes[idx], attrs) == get_attrs(graph.nodes[jdx], attrs)
     # res_graph = nx.quotient_graph(graph, node_equiv, relabel=True)

@@ -839,7 +839,7 @@ class Molecule(nx.Graph):
         collections.abc.Generator
         """
         residue_graph = graph_utils.make_residue_graph(self)
-        return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
+        return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in sorted(residue_graph.nodes))
 
     def edges_between(self, n_bunch1, n_bunch2, data=False):
         """
