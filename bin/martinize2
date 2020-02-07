@@ -375,9 +375,6 @@ def entry():
                                 'Virtual Sites GoMartini.'))
 
     prot_group = parser.add_argument_group('Protein description')
-    prot_group.add_argument('-nt', dest='neutral_termini',
-                            action='store_true', default=False,
-                            help='Set neutral termini (charged is default)')
     prot_group.add_argument('-scfix', dest='scfix',
                             action='store_true', default=False,
                             help='Apply side chain corrections.')
@@ -397,6 +394,25 @@ def entry():
                             'The format is <chain>-<resname><resid>:<modification>.'
                             ' Elements of the specification can be omitted as '
                             'required.')
+    prot_group.add_argument('-nter', dest='modifications', action='append',
+                            type=lambda s: ['nter', s], default=[],
+                            help='Shorthand for patching N-termini. An '
+                            'N-terminus is defined as a residue which is '
+                            'connected to 1 other residue, and has the highest '
+                            'resid.')
+    prot_group.add_argument('-cter', dest='modifications', action='append',
+                            type=lambda s: ['cter', s], default=[],
+                            help='Shorthand for patching N-termini. An '
+                            'N-terminus is defined as a residue which is '
+                            'connected to 1 other residue, and has the lowest '
+                            'resid.')
+    # Unfortunately there's no action=extend_const. append_const *almost* does
+    # what we need, but it makes the resulting list too deep: 
+    # [[['cter', 'COOH-ter'], ['nter', 'NH2-ter']], ['ASP3', 'ASP0']]
+    prot_group.add_argument('-nt', dest='neutral_termini',
+                            action='store_true', default=False,
+                            help='Set neutral termini (charged is default). '
+                            'Alias for "-nter NH2-ter -cter COOH-ter"')
 
     debug_group = parser.add_argument_group('Debugging options')
     debug_group.add_argument('-write-graph', type=Path, default=None,
@@ -496,6 +512,10 @@ def entry():
     for grp in args.ignore_res:
         ignore_res.update(*grp)
 
+    if args.neutral_termini:
+        args.modifications.append(['cter', 'COOH-ter'])
+        args.modifications.append(['nter', 'NH2-ter'])
+
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
@@ -540,11 +560,6 @@ def entry():
                        'angles for extended regions of proteins (-extdih).',
                        target_ff.name, type='missing-feature')
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
-    if args.neutral_termini and not target_ff.has_feature('neutral_termini'):
-        LOGGER.warning('The force field "{}" does not have specific '
-                       'parameters for neutral termini (-nt).',
-                       target_ff.name, type='missing-feature')
-    vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
     if args.scfix and not target_ff.has_feature('scfix'):
         LOGGER.warning('The force field "{}" does not define angle and '
                        'torsion for the side chain corrections (-scfix).',
@@ -569,10 +584,6 @@ def entry():
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
     )
-
-    if args.neutral_termini:
-        LOGGER.info('Making termini neutral.', type='step')
-        vermouth.NeutralTermini(force_field=known_force_fields[args.to_ff]).run_system(system)
 
     # Apply a rubber band elastic network is required.
     if args.elastic:

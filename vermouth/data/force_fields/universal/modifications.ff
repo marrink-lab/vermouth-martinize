@@ -39,6 +39,18 @@ N HN2
 N HN3
 
 [ modification ]
+NH2-ter
+[ atoms ]
+CA {"element": "C"}
+N {"element": "N"}
+HN {"element": "H", "replace": {"atomname": "HN1"}}
+HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}
+[ edges ]
+N CA
+N HN
+N HN2
+
+[ modification ]
 GLU-H
 [ atoms ]
 CD {"element": "C"}
