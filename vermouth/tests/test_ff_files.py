@@ -37,6 +37,22 @@ class TestBlock:
         assert ff.blocks['GLY'].nrexcl == 3
 
     @staticmethod
+    def test_multiple_moleculetype():
+        lines = """
+            [ moleculetype ]
+            GLY  3
+            
+            [ moleculetype ]
+            VAL 2
+            """
+        lines = textwrap.dedent(lines).splitlines()
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        vermouth.ffinput.read_ff(lines, ff)
+        assert list(ff.blocks) == ['GLY', 'VAL']
+        assert ff.blocks['GLY'].nrexcl == 3
+        assert ff.blocks['VAL'].nrexcl == 2
+
+    @staticmethod
     def test_atoms():
         lines = """
         [ moleculetype ]
@@ -1041,7 +1057,7 @@ def test_variables():
     del ff.variables['float']
     assert ff.variables == {'integer': 1, 'string': 'mass',
                             'dictionary': {'a': 1, 'b': {'plop': 'toto'}}}
-
+test_variables()
 
 def test_variables_existing():
     """

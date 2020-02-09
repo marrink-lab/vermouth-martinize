@@ -17,8 +17,6 @@ Helper functions for parsers
 """
 from collections import deque
 
-from .ffinput import _tokenize, _parse_macro, _substitute_macros
-
 # This file contains helper methods and infrastructure for parsers. The class
 # SectionLineParser in particular is a powerful tool that is intended to make
 # parsing section based files easier. There's a fair chance it turned out to be
@@ -84,6 +82,7 @@ class LineParser:
       - :meth:`finalize` is called at the end of the file.
     """
     COMMENT_CHAR = '#'
+
     def parse(self, file_handle):
         """
         Reads lines from `file_handle`, and calls :meth:`dispatch` to find
@@ -286,8 +285,18 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         -------
         bool
             ``True`` iff `line` is a section header.
+
+        Raises
+        ------
+        IOError
+            The line starts like a section header but looks misformatted.
         """
-        return line.startswith('[') and line.endswith(']')
+        if line.startswith('[') :
+            if line.endswith(']'):
+                return True
+            else:
+                raise IOError('Section header looks misformatted.')
+        return False
 
     @SectionParser.section_parser('macros')
     def _macros(self, line, lineno=0):
@@ -323,3 +332,205 @@ def split_comments(line, comment_char=';'):
         return data, ''
     else:
         return data, split[1].strip()
+
+
+def _tokenize(line):
+    """
+    Split an interaction line into its elementary components.
+
+    An interaction line is any uncommented and non empty line that follows a
+    section header about an interaction type. Such a line is composed of the
+    following parts:
+
+    * a list of atoms involved in the interaction,
+    * an optional delimiter that indicates the end of the atom list,
+    * a list of parameters for the interaction.
+
+    The list of atoms is *a minima* a list of atom references. In blocks, these
+    references can be atom 1-based indices referring to the order of the atoms
+    in the "[ atoms ]" section. It is however more readable, and more robust,
+    to refer to atoms by their name. Only the reference by name is allowed in
+    links, as links may not have a full "[ atoms ]" section. In links, each
+    atom reference can be complemented by atom attributes to specify the  scope
+    of the link. These attribute follow the atom reference and are formatted
+    like a python dictionary.
+
+    The end-of-atoms delimiter is useful for interaction types that are not
+    explicitly encoded in the parser. It allows to indicate when the list of
+    atoms ends, and where the list of parameters starts. Two dashes ("--") are
+    used as the delimiter. The delimiter is optional for the interaction types
+    that are explicitly encoded in the parser and that refer to a fixed number
+    of atoms.
+
+    The list of parameters will be copied as-is in an ITP file.
+
+    In its simplest form, an interaction line is what is used in an ITP file.
+    Here is an example for a bond:
+
+        2  3  1  0.2  1000
+
+    The two first numbers refer to the second and third atoms of the block,
+    respectively. The next three values are the parameters for a bond (*i.e.*
+    the function type, the equilibrium distance, and the force constant).
+
+    The two first numbers could be replaced by the corresponding atom names:
+
+        PO4  GL1  1 0.2  1000
+
+    where "PO4" and "GL1" are the names of the second and third atoms of the
+    block.
+
+    Optionally, the "--" delimiter can be used after the list of atoms:
+
+        PO4  GL1  --  1 0.2  1000
+
+    If the line is part of a link, then the atom selection may be limited in
+    scope. Atom attributes is how to implement such scope limitation:
+
+        BB {'resname': 'ALA', 'secstruc': 'H'} BB {'resname': 'LYS', 'secstruc': 'H', 'order': +1} 1 0.2 1000
+
+    Here, we add a bond to the current link. At one end of the bond is the atom
+    named "BB" and annotated as part of an alpha helix ('secstruc': 'H') of a
+    residue called "ALA". On the other end of the link is an other
+    atom named "BB" that is part of an alpha helix, but that is part of the
+    next residue ('order': +1) if this next residue is named "LYS".
+
+    The order parameter has a shortcut in the form of a + or - prefix to the
+    atom reference name. Then, "+ATOM" refers to "ATOM" in the next residue,
+    and is equivalent to "ATOM {'order': +1}"; "-ATOM" refers to the previous
+    residue. There can be multiple + or -, "++ATOM" is equivalent to "ATOM
+    {'order': +2}".
+
+    When using attributes, the optional delimiter can increase the readability:
+
+        BB {'resname': 'ALA', 'secstruc': 'H'} +BB {'resname': 'LYS', 'secstruc': 'H'} -- 1 0.2 1000
+
+    Tokens on an interaction line are its different elements. These elements
+    are considered as one token each: am atom reference, a set of atom
+    attributes, the optional delimiter, each space-separated element of the
+    parameter list. The line above splits into the following tokens:
+
+    * ``BB``
+    * ``{'resname': 'ALA', 'secstruc': 'H'}``
+    * ``+BB``
+    * ``{'resname': 'LYS', 'secstruc': 'H'}``
+    * ``--``
+    * ``1``
+    * ``0.2``
+    * ``1000``
+
+    Atom attributes can be written next to the previous or the next token
+    without an explicit separator. The two following lines yield the same three
+    tokens:
+
+        ATOM1{attributes}ATOM2
+        ATOM1 {attributes} ATOM2
+
+    Parameters
+    ----------
+    line: str
+
+    Returns
+    -------
+    list of str
+    """
+    separators = ' \t\n'
+    tokens = []
+    start = 0
+    end = -1
+    # Find the first non-separator character
+    for start, char in enumerate(line):
+        if char not in separators:
+            break
+
+    # Find the tokens. This has to be a while-loop because we cannot predict
+    # what will be the next value of start.
+    while start < len(line):
+        end = start
+        # We count the brackets because if a token starts with an opening
+        # bracket, we want to end it with the *matching* closing bracket.
+        # Note also that we do not yet implement a way to escape a bracket, nor
+        # do we check if the bracket is not part of a string.
+        brackets = 0
+        for end, end_char in enumerate(line[start:], start=start):
+            if end_char == '{':
+                # We reached an opening bracket. If it is the first character
+                # of the token or if we are already engaged in a bracketized
+                # token, then we go on. But if the current token was not
+                # a bracketized token, it means we are at the beginning of
+                # a new token, so we treat the opening bracket as a separator.
+                if not brackets and end != start:
+                    end -= 1
+                    break
+                brackets += 1
+            elif end_char == '}':
+                brackets -= 1
+                if not brackets:
+                    break
+            elif end_char in separators:
+                if not brackets:
+                    # We reached a separator. We do not want the separator to
+                    # be included in the token, so we push the end by one
+                    # character to the left.
+                    end -= 1
+                    break
+        if brackets > 0:
+            msg = 'Unexpected end of line. A closing bracket is missing.'
+            raise IOError(msg)
+        elif brackets < 0:
+            msg = 'An opening bracket is missing.'
+            raise IOError(msg)
+
+        token = line[start:end + 1]
+        if token:
+            tokens.append(token)
+
+        # Find the beginning of the next token.
+        start = end + 1
+        while start < len(line) and line[start] in separators:
+            start += 1
+    return tokens
+
+
+def _substitute_macros(line, macros):
+    r"""
+    Substitute macros by their content.
+
+    A macro starts with a '$' and ends with one amongst ' ${}\n\t"'.
+
+    Parameters
+    ----------
+    line: str
+        The line to fix.
+    macros: dict[str, str]
+        Keys are macro names, values are the replacement content.
+
+    Returns
+    -------
+    str
+    """
+    start = None
+    while True:  # stops when start < 0
+        start = line.find('$', start)
+        if start < 0:
+            break
+        for end, char in enumerate(line[start + 1:], start=start + 1):
+            if char in ' \t\n{}$"':
+                break
+        else: # no break
+            end += 1
+        macro_name = line[start + 1:end]
+        macro_value = macros[macro_name]
+        line = line[:start] + macro_value + line[end:]
+        end = start + len(macro_value)
+    return line
+
+
+def _parse_macro(tokens, macros):
+    if len(tokens) > 2:
+        raise IOError('Unexpected column in macro definition.')
+    elif len(tokens) < 2:
+        raise IOError('Missing column in macro definition.')
+    macro_name = tokens.popleft()
+    macro_value = tokens.popleft()
+    macros[macro_name] = macro_value

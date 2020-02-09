@@ -32,8 +32,12 @@ from .molecule import (
     Choice, NotDefinedOrNot,
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
+from .parser_utils import (
+    SectionLineParser, _tokenize, _parse_macro, _substitute_macros,
+)
 
 # Python 3.4 does not raise JSONDecodeError but ValueError.
+
 try:
     from json import JSONDecodeError
 except ImportError:
@@ -51,196 +55,275 @@ PARAMETER_EFFECTORS = {
 }
 
 
-def _tokenize(line):
-    """
-    Split an interaction line into its elementary components.
+class FFDirector(SectionLineParser):
+    COMMENT_CHAR = ';'
+    interactions_natoms = {
+        'bonds': 2,
+        'angles': 3,
+        'dihedrals': 4,
+        'impropers': 4,
+        'constraints': 2,
+        'virtual_sites2': 3,
+        'pairs': 2,
+    }
 
-    An interaction line is any uncommented and non empty line that follows a
-    section header about an interaction type. Such a line is composed of the
-    following parts:
+    def __init__(self, force_field):
+        super().__init__()
+        self.force_field = force_field
+        self.current_block = None
+        self.current_link = None
+        self.current_modification = None
+        self.blocks = collections.OrderedDict()
+        self.links = []
+        self.modifications = []
 
-    * a list of atoms involved in the interaction,
-    * an optional delimiter that indicates the end of the atom list,
-    * a list of parameters for the interaction.
+        self.header_actions = {
+            ('moleculetype', ): self._new_block,
+            ('link', ): self._new_link,
+            ('modification', ): self._new_modification,
+        }
 
-    The list of atoms is *a minima* a list of atom references. In blocks, these
-    references can be atom 1-based indices referring to the order of the atoms
-    in the "[ atoms ]" section. It is however more readable, and more robust,
-    to refer to atoms by their name. Only the reference by name is allowed in
-    links, as links may not have a full "[ atoms ]" section. In links, each
-    atom reference can be complemented by atom attributes to specify the  scope
-    of the link. These attribute follow the atom reference and are formatted
-    like a python dictionary.
+    def parse_header(self, line, lineno=0):
+        """
+        Parses a section header with line number `lineno`. Sets :attr:`section`
+        when applicable. Does not check whether `line` is a valid section
+        header.
 
-    The end-of-atoms delimiter is useful for interaction types that are not
-    explicitly encoded in the parser. It allows to indicate when the list of
-    atoms ends, and where the list of parameters starts. Two dashes ("--") are
-    used as the delimiter. The delimiter is optional for the interaction types
-    that are explicitly encoded in the parser and that refer to a fixed number
-    of atoms.
+        Parameters
+        ----------
+        line: str
+        lineno: str
 
-    The list of parameters will be copied as-is in an ITP file.
+        Returns
+        -------
+        object
+            The result of calling :meth:`finalize_section`, which is called
+            if a section ends.
 
-    In its simplest form, an interaction line is what is used in an ITP file.
-    Here is an example for a bond:
+        Raises
+        ------
+        KeyError
+            If the section header is unknown.
+        """
+        prev_section = self.section
 
-        2  3  1  0.2  1000
+        ended = []
+        section = self.section + [line.strip('[ ]').casefold()]
+        if tuple(section[-1:]) in self.METH_DICT:
+            self.section = section[-1:]
+        else:
+            wildcard_section = tuple(section[:-1] + ['*'])
+            while (tuple(section) not in self.METH_DICT
+                   and wildcard_section not in self.METH_DICT
+                   and len(section) > 1):
+                ended.append(section.pop(-2))  # [a, b, c, d] -> [a, b, d]
+                wildcard_section = tuple(section[:-1] + ['*'])
+            self.section = section
 
-    The two first numbers refer to the second and third atoms of the block,
-    respectively. The next three values are the parameters for a bond (*i.e.*
-    the function type, the equilibrium distance, and the force constant).
+        result = None
+        if prev_section:
+            result = self.finalize_section(prev_section, ended)
 
-    The two first numbers could be replaced by the corresponding atom names:
+        action = self.header_actions.get(tuple(self.section))
+        if action is not None:
+            action()
 
-        PO4  GL1  1 0.2  1000
+        return result
 
-    where "PO4" and "GL1" are the names of the second and third atoms of the
-    block.
+    def parse_section(self, line, lineno):
+        """
+        Parse `line` with line number `lineno` by looking up the section in
+        :attr:`METH_DICT` and calling that method.
 
-    Optionally, the "--" delimiter can be used after the list of atoms:
+        On the contrary to the SectionLineParser, we can have wildcard sections.
+        Wildcard sections cannot have children sections.
 
-        PO4  GL1  --  1 0.2  1000
+        Parameters
+        ----------
+        line: str
+        lineno: int
 
-    If the line is part of a link, then the atom selection may be limited in
-    scope. Atom attributes is how to implement such scope limitation:
+        Returns
+        -------
+        object
+            The result returned by calling the registered method.
+        """
+        line = _substitute_macros(line, self.macros)
+        wildcard_section = tuple(self.section[:-1] + ['*'])
+        end_section = []
+        if self.section:
+            end_section = self.section[-1]
+        if tuple(self.section) in self.METH_DICT:
+            method, kwargs = self.METH_DICT[tuple(self.section)]
+        elif wildcard_section in self.METH_DICT and end_section not in self.METH_DICT:
+            method, kwargs = self.METH_DICT[wildcard_section]
+        else:
+            raise IOError("Can't parse line {} in section '{}' because the "
+                          "section is unknown".format(lineno, self.section))
+        try:
+            return method(self, line, lineno, **kwargs)
+        except Exception as error:
+            raise IOError("Problems parsing line {}. I think it should be a "
+                          "'{}' line, but I can't parse it as such."
+                          "".format(lineno, self.section)) from error
 
-        BB {'resname': 'ALA', 'secstruc': 'H'} BB {'resname': 'LYS', 'secstruc': 'H', 'order': +1} 1 0.2 1000
+    def finalize(self, lineno=0):
+        for block in self.blocks.values():
+            # Because of hos they are described in gromacs, proper and improper
+            # dihedral angles are all under the [ dihedrals ] section. However
+            # the way they are treated differently in the library, at least on how
+            # they generate edges. Here we move the all the impropers into their own
+            # [ impropers ] section.
+            propers = []
+            impropers = []
+            for dihedral in block.interactions.get('dihedrals', []):
+                if dihedral.parameters and dihedral.parameters[0] == '2':
+                    impropers.append(dihedral)
+                else:
+                    propers.append(dihedral)
+            block.interactions['dihedrals'] = propers
+            block.interactions['impropers'] = impropers
+            block.make_edges_from_interactions()
+        for link in self.links:
+            link.make_edges_from_interactions()
+        self.force_field.blocks.update(self.blocks)
+        self.force_field.links.extend(self.links)
+        modifications = {mod.name: mod for mod in self.modifications}
+        self.force_field.modifications.update(modifications)
+        super().finalize(lineno=lineno)
 
-    Here, we add a bond to the current link. At one end of the bond is the atom
-    named "BB" and annotated as part of an alpha helix ('secstruc': 'H') of a
-    residue called "ALA". On the other end of the link is an other
-    atom named "BB" that is part of an alpha helix, but that is part of the
-    next residue ('order': +1) if this next residue is named "LYS".
+    def get_context(self, context_type):
+        possible_contexts = {
+            'block': self.current_block,
+            'link': self.current_link,
+            'molmeta': self.current_link,
+            'modification': self.current_modification,
+        }
+        return possible_contexts[context_type]
 
-    The order parameter has a shortcut in the form of a + or - prefix to the
-    atom reference name. Then, "+ATOM" refers to "ATOM" in the next residue,
-    and is equivalent to "ATOM {'order': +1}"; "-ATOM" refers to the previous
-    residue. There can be multiple + or -, "++ATOM" is equivalent to "ATOM
-    {'order': +2}".
+    def has_context(self):
+        open_contexts = [
+            self.current_block, self.current_link, self.current_modification]
+        return open_contexts != ([None] * len(open_contexts))
 
-    When using attributes, the optional delimiter can increase the readability:
+    def _new_block(self):
+        self.current_block = Block(force_field=self.force_field)
 
-        BB {'resname': 'ALA', 'secstruc': 'H'} +BB {'resname': 'LYS', 'secstruc': 'H'} -- 1 0.2 1000
+    def _new_link(self):
+        self.current_link = Link(force_field=self.force_field)
+        self.links.append(self.current_link)
 
-    Tokens on an interaction line are its different elements. These elements
-    are considered as one token each: am atom reference, a set of atom
-    attributes, the optional delimiter, each space-separated element of the
-    parameter list. The line above splits into the following tokens:
+    def _new_modification(self):
+        self.current_modification = Link(force_field=self.force_field)
+        self.modifications.append(self.current_modification)
 
-    * ``BB``
-    * ``{'resname': 'ALA', 'secstruc': 'H'}``
-    * ``+BB``
-    * ``{'resname': 'LYS', 'secstruc': 'H'}``
-    * ``--``
-    * ``1``
-    * ``0.2``
-    * ``1000``
+    @SectionLineParser.section_parser('variables')
+    def _variables(self, line, lineno=0):
+        if self.has_context():
+            raise IOError('The [variables] section must be defined '
+                          'before the blocks, links, and modifications.')
+        tokens = _tokenize(line)
+        _parse_variables(tokens, self.force_field, 'variables')
 
-    Atom attributes can be written next to the previous or the next token
-    without an explicit separator. The two following lines yield the same three
-    tokens:
+    @SectionLineParser.section_parser('moleculetype')
+    def _block(self, line, lineno=0):
+        name, nrexcl = line.split()
+        self.current_block.name = name
+        self.current_block.nrexcl = int(nrexcl)
+        self.blocks[name] = self.current_block
 
-        ATOM1{attributes}ATOM2
-        ATOM1 {attributes} ATOM2
+    @SectionLineParser.section_parser('moleculetype', 'atoms')
+    def _block_atoms(self, line, lineno=0):
+        tokens = collections.deque(_tokenize(line))
+        _parse_block_atom(tokens, self.current_block)
 
-    Parameters
-    ----------
-    line: str
+    @SectionLineParser.section_parser('moleculetype', 'edges',
+                                      negate=False, context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'non-edges',
+                                      negate=True, context_type='block')
+    @SectionLineParser.section_parser('link', 'edges',
+                                      negate=False, context_type='link')
+    @SectionLineParser.section_parser('link', 'non-edges',
+                                      negate=True, context_type='link')
+    @SectionLineParser.section_parser('modification', 'edges',
+                                      negate=False, context_type='modification')
+    def _edges(self, line, lineno=0, negate=False, context_type=''):
+        context = self.get_context(context_type)
+        tokens = collections.deque(_tokenize(line))
+        _parse_edges(tokens, context, context_type, negate=negate)
 
-    Returns
-    -------
-    list of str
-    """
-    separators = ' \t\n'
-    tokens = []
-    start = 0
-    end = -1
-    # Find the first non-separator character
-    for start, char in enumerate(line):
-        if char not in separators:
-            break
+    @SectionLineParser.section_parser('moleculetype', '*', context_type='block')
+    @SectionLineParser.section_parser('link', '*', context_type='link')
+    @SectionLineParser.section_parser('modification', '*', context_type='modification')
+    def _interactions(self, line, lineno=0, context_type=''):
+        context = self.get_context(context_type)
+        interaction_name = self.section[-1]
+        delete = False
+        if interaction_name.startswith('!'):
+            interaction_name = interaction_name[1:]
+            delete = True
+        tokens = collections.deque(_tokenize(line))
+        if tokens[0] == '#meta':
+            _parse_meta(
+                tokens,
+                context,
+                context_type=context_type,
+                section=interaction_name,
+            )
+        else:
+            n_atoms = self.interactions_natoms.get(interaction_name)
+            _base_parser(
+                tokens,
+                context,
+                context_type=context_type,
+                section=interaction_name,
+                natoms=n_atoms,
+                delete=delete,
+            )
 
-    # Find the tokens. This has to be a while-loop because we cannot predict
-    # what will be the next value of start.
-    while start < len(line):
-        end = start
-        # We count the brackets because if a token starts with an opening
-        # bracket, we want to end it with the *matching* closing bracket.
-        # Note also that we do not yet implement a way to escape a bracket, nor
-        # do we check if the bracket is not part of a string.
-        brackets = 0
-        for end, end_char in enumerate(line[start:], start=start):
-            if end_char == '{':
-                # We reached an opening bracket. If it is the first character
-                # of the token or if we are already engaged in a bracketized
-                # token, then we go on. But if the current token was not
-                # a bracketized token, it means we are at the beginning of
-                # a new token, so we treat the opening bracket as a separator.
-                if not brackets and end != start:
-                    end -= 1
-                    break
-                brackets += 1
-            elif end_char == '}':
-                brackets -= 1
-                if not brackets:
-                    break
-            elif end_char in separators:
-                if not brackets:
-                    # We reached a separator. We do not want the separator to
-                    # be included in the token, so we push the end by one
-                    # character to the left.
-                    end -= 1
-                    break
-        if brackets > 0:
-            msg = 'Unexpected end of line. A closing bracket is missing.'
-            raise IOError(msg)
-        elif brackets < 0:
-            msg = 'An opening bracket is missing.'
-            raise IOError(msg)
+    @SectionLineParser.section_parser('moleculetype', 'patterns')
+    @SectionLineParser.section_parser('moleculetype', 'features')
+    @SectionLineParser.section_parser('moleculetype', 'non-edge')
+    @SectionLineParser.section_parser('modifications', 'non-edge')
+    def _invalid_out_of_link(self, line, lineno=0):
+        raise IOError('The "{}" section is only valid in links.'
+                      .format(self.section[-1]))
 
-        token = line[start:end + 1]
-        if token:
-            tokens.append(token)
+    @SectionLineParser.section_parser('link', context_type='link')
+    @SectionLineParser.section_parser('link', 'molmeta', context_type='molmeta')
+    def _link(self, line, lineno=0, context_type=''):
+        tokens = collections.deque(_tokenize(line))
+        _parse_link_attribute(tokens, self.current_link, context_type)
 
-        # Find the beginning of the next token.
-        start = end + 1
-        while start < len(line) and line[start] in separators:
-            start += 1
-    return tokens
+    @SectionLineParser.section_parser('modification')
+    def _modification(self, line, lineno=0):
+        self.current_modification.name = line
 
+    @SectionLineParser.section_parser('link', 'atoms')
+    def _link_atoms(self, line, lineno=0):
+        tokens = collections.deque(_tokenize(line))
+        _parse_link_atom(tokens, self.current_link)
 
-def _substitute_macros(line, macros):
-    r"""
-    Substitute macros by their content.
+    @SectionLineParser.section_parser('modification', 'atoms')
+    def _modification_atoms(self, line, lineno=0):
+        tokens = collections.deque(_tokenize(line))
+        _parse_link_atom(tokens, self.current_modification,
+                         defaults={'PTM_atom': False},
+                         treat_prefix=False)
 
-    A macro starts with a '$' and ends with one amongst ' ${}\n\t"'.
+    @SectionLineParser.section_parser('link', 'patterns', context_type='link')
+    @SectionLineParser.section_parser('modification', 'patterns', context_type='modification')
+    def _link_patterns(self, line, lineno=0, context_type=''):
+        context = self.get_context(context_type)
+        tokens = collections.deque(_tokenize(line))
+        _parse_patterns(tokens, context, context_type)
 
-    Parameters
-    ----------
-    line: str
-        The line to fix.
-    macros: dict[str, str]
-        Keys are macro names, values are the replacement content.
-
-    Returns
-    -------
-    str
-    """
-    start = None
-    while True:  # stops when start < 0
-        start = line.find('$', start)
-        if start < 0:
-            break
-        for end, char in enumerate(line[start + 1:], start=start + 1):
-            if char in ' \t\n{}$"':
-                break
-        else: # no break
-            end += 1
-        macro_name = line[start + 1:end]
-        macro_value = macros[macro_name]
-        line = line[:start] + macro_value + line[end:]
-        end = start + len(macro_value)
-    return line
+    @SectionLineParser.section_parser('link', 'features', context_type='link')
+    @SectionLineParser.section_parser('modification', 'features', context_type='modification')
+    def _link_features(self, line, lineno=0, context_type=''):
+        context = self.get_context(context_type)
+        tokens = collections.deque(_tokenize(line))
+        _parse_features(tokens, context, context_type)
 
 
 def _some_atoms_left(tokens, atoms, natoms):
@@ -707,16 +790,6 @@ def _parse_link_atom(tokens, context, defaults=None, treat_prefix=True):
         context.add_node(prefixed_reference, **full_attributes)
 
 
-def _parse_macro(tokens, macros):
-    if len(tokens) > 2:
-        raise IOError('Unexpected column in macro definition.')
-    elif len(tokens) < 2:
-        raise IOError('Missing column in macro definition.')
-    macro_name = tokens.popleft()
-    macro_value = tokens.popleft()
-    macros[macro_name] = macro_value
-
-
 def _parse_link_attribute(tokens, context, section):
     if len(tokens) > 2:
         raise IOError('Unexpected column in section "{}".'.format(section))
@@ -788,7 +861,7 @@ def _parse_edges(tokens, context, context_type, negate):
         error_message = 'Atom with name {} not found for {} {}'
         for prefixed_atom in prefixed_atoms:
             atomname = prefixed_atom[0]
-            if atomname not in context and context_type == 'modifications':
+            if atomname not in context and context_type == 'modification':
                 raise KeyError(error_message.format(atomname, context_type,
                                                     context.name))
         context.add_edge(prefixed_atoms[0][0], prefixed_atoms[1][0])
@@ -954,3 +1027,8 @@ def read_ff(lines, force_field):
     force_field.links.extend(links)
     modifications = {mod.name: mod for mod in modifications}
     force_field.modifications.update(modifications)
+
+
+def read_ff(lines, force_field):
+    director = FFDirector(force_field)
+    return list(director.parse(iter(lines)))
