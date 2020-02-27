@@ -108,6 +108,12 @@ def test_subdict(dict1, dict2, expected):
          6: {'mutation': ['ALA']},
          7: {'mutation': ['ALA']},},
     ),
+    (
+        [({'resid': 2, 'chain': 'B'}, 'none')],  # none is not an existing modification...
+        {5: {'mutation': ['none']},
+         6: {'mutation': ['none']},
+         7: {'mutation': ['none']},}
+    ),
 ])
 @pytest.mark.parametrize('modifications,expected_mod', [
     ([], {}),

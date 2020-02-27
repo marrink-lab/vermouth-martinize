@@ -120,9 +120,6 @@ def residue_matches(resspec, residue_graph, res_idx):
             return res_idx in maxes(termini, key=get_resid)
         else:
             raise KeyError("Don't know any terminus with name '{}'".format(resspec['resname']))
-
-        out = out and residue_graph.degree[res_idx] == 1
-        del resspec['resname']
     return out and _subdict(resspec, residue)
 
 
@@ -176,7 +173,7 @@ def annotate_modifications(molecule, modifications, mutations):
                                      (mutations, 'mutation', molecule.force_field.blocks)]:
             for resspec, mod in mutmod:
                 if residue_matches(resspec, residue_graph, res_idx):
-                    if mod not in library:
+                    if mod != 'none' and mod not in library:
                         raise NameError('{} is not known as a {} for '
                                         'force field {}'
                                        ''.format(mod, key, molecule.force_field.name))

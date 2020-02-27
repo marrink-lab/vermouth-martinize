@@ -256,7 +256,8 @@ def test_renaming(renamed_graph):
     (1, ['ALA'], [], 'O C CA HA N HN CB HB1 HB2 HB3'),  # The glutamate chain and N-ter are removed
     (1, [], ['N-ter'], 'O C CA HA N H HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # HE1 got removed
     (2, ['ALA'], ['N-ter', 'C-ter'], 'O OXT C CA HA N H HN CB HB1 HB2 HB3'),
-    (2, ['GLU'], [], 'O C CA HA N HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2')  # Added glutamate sidechain
+    (2, ['GLU'], [], 'O C CA HA N HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # Added glutamate sidechain
+    (5, ['GLY'], ['none'], 'N CA C O HN HA1 HA2'),  # Remove O2 from C-ter mod
 ])
 def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, modifications, atomnames):
     mol = system_mod.molecules[0]
