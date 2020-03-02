@@ -18,6 +18,8 @@ Provides a processor that can add edges to a graph based on geometric criteria.
 """
 
 from collections import defaultdict
+import multiprocessing
+import functools
 import networkx as nx
 import numpy as np
 
@@ -295,6 +297,64 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
 
     return molecules
 
+def make_bonds_mol(molecule, force_field, allow_name=True, allow_dist=True, fudge=1.0):
+    """Creates bonds within separate molecules, without the system.
+
+    First, edges will be created based on residue and atom names. Second, edges
+    will be created based on a distance criterion. Nodes in system must have
+    `position` and `element` attributes. The possible distance between nodes is
+    determined by values in `VDW_RADII`. Edges within residues will only be
+    guessed between atoms that are not known in the reference Block.
+
+    Notes
+    -----
+    Edges for residues for which no block can be found will be added based on
+        the distance criterion. A warning will be issued if this is the case.
+
+    Elements that are not in `VDW_RADII` do not make bonds based on distances.
+
+    Parameters
+    ----------
+    molecule: :class:`~vermouth.molecule.Molecule`
+        The molecule in which to add edges.
+    fudge: :class:`~numbers.Number`
+        Scale the allowed distance by this factor.
+
+    Returns
+    -------
+    :class:`~vermouth.molecule.Molecule`
+        Molecule in which edges have been added based on atom names
+        and possibly distance. Molecules can be disconnected within
+        residues.
+    """
+
+    molecule = nx.disjoint_union_all([molecule])
+    non_edges = set()
+
+    residue_groups = _collect_residues(molecule)
+
+    for ((_, chain, resid, resname), idxs) in residue_groups.items():
+        if not allow_name:
+            break
+        try:
+            # Try adding bonds within the residue based on atom names
+            non_edges.update(_bonds_from_names(molecule, resname, idxs, force_field))
+        except KeyError as error:
+            # ... if that doesn't work, fall back to distance
+            message = "Can't add bonds based on atom names for residue {}-{}{} because {}."
+            if allow_dist:
+                _bonds_from_distance(molecule, idxs, fudge=fudge)
+                message += " Falling back to distance criteria."
+            LOGGER.warning(message,
+                           chain, resname, resid, error, force_field.name)
+    # And finally, add edges based on distance, but ignore any edges that would
+    # otherwise have been added by name. So only edges between residues will be
+    # added, and edges involving atoms which are not known to the blocks (PTMs,
+    # termini, ...)
+    if allow_dist:
+        _bonds_from_distance(molecule, non_edges=non_edges, fudge=fudge)
+
+    return molecule
 
 class MakeBonds(Processor):
     def __init__(self, allow_name=True, allow_dist=True, fudge=1):
@@ -311,6 +371,22 @@ class MakeBonds(Processor):
                           allow_dist=self.allow_dist,
                           fudge=self.fudge)
         system.molecules = mols
+        # Restore the force field in each molecule. Setting the force field
+        # at the system level propagates it to all the molecules.
+        system.force_field = system.force_field
+        LOGGER.info('{} molecules after guessing bonds', len(system.molecules))
+
+    def run_system_mp(self, system, threads=1):
+        if not system.molecules:
+            # No molecules means nothing to do.
+            return
+
+        p = multiprocessing.Pool(threads)
+        mbm = functools.partial(make_bonds_mol, force_field=system.force_field,
+                                allow_name=self.allow_name,
+                                allow_dist=self.allow_dist,
+                                fudge=self.fudge)
+        system.molecules = p.map(mbm, system.molecules)
         # Restore the force field in each molecule. Setting the force field
         # at the system level propagates it to all the molecules.
         system.force_field = system.force_field

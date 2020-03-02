@@ -95,7 +95,8 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
 
 def pdb_to_universal(system, delete_unknown=False, force_field=None,
                      bonds_from_name=True, bonds_from_dist=True, bonds_fudge=1,
-                     write_graph=None, write_repair=None, write_canon=None):
+                     write_graph=None, write_repair=None, write_canon=None,
+                     threads=None):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
@@ -104,9 +105,14 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     canonicalized = system.copy()
     canonicalized.force_field = force_field
     LOGGER.info('Guessing the bonds.', type='step')
-    vermouth.MakeBonds(allow_name=bonds_from_name,
-                       allow_dist=bonds_from_dist,
-                       fudge=bonds_fudge).run_system(canonicalized)
+    mbp = vermouth.MakeBonds(
+                  allow_name=bonds_from_name,
+                  allow_dist=bonds_from_dist,
+                  fudge=bonds_fudge)
+    if threads > 1:
+        mbp.run_system_mp(canonicalized, threads)
+    else:
+        mbp.run_system(canonicalized)
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
@@ -394,6 +400,13 @@ def entry():
                              help='Enable debug logging output. Can be given '
                                   'multiple times.', default=0)
 
+    custom_group = parser.add_argument_group('Custom options (by Matthijs)')
+    custom_group.add_argument('-T', dest='threads', type=int, default=1,
+                              help='Optionally use multiprocessing to speed'
+                                   'up bond creation. Only use when you\'re'
+                                   'very sure that your input file is correct.'
+                                   'Very likely to break something.')
+
     args = parser.parse_args()
     if args.elastic and args.govs_includes:
         parser.error('A rubber band elastic network and GoMartini are not '
@@ -490,6 +503,7 @@ def entry():
         write_graph=args.write_graph,
         write_repair=args.write_repair,
         write_canon=args.write_canon,
+        threads=args.threads
     )
 
     LOGGER.info('Read input.', type='step')
