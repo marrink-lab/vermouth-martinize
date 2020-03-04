@@ -22,7 +22,9 @@ class Processor:
     """
     An abstract base class for processors. Subclasses must implement a
     `run_molecule` method.
+    Has nproc attribute that is changed by a CLI flag
     """
+    nproc = 1
     def run_system(self, system):
         """
         Process `system`.
