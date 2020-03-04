@@ -216,17 +216,14 @@ def _bonds_from_names(graph, resname, nodes, force_field):
     return non_edges
 
 
-def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
-    """Creates bonds within molecules in the system.
+def make_bonds(molecule, allow_name=True, allow_dist=True, fudge=1.0):
+    """Creates bonds within a molecule.
 
     First, edges will be created based on residue and atom names. Second, edges
     will be created based on a distance criterion. Nodes in system must have
     `position` and `element` attributes. The possible distance between nodes is
     determined by values in `VDW_RADII`. Edges within residues will only be
     guessed between atoms that are not known in the reference Block.
-    The system will be split into connected components, keeping residues
-    (identified by chain, residue name and residue id) within the same molecule.
-    This does mean that the final molecules can be disconnected.
 
     Notes
     -----
@@ -237,42 +234,34 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
 
     Parameters
     ----------
-    system: :class:`~vermouth.system.System`
-        The system in which to add edges.
+    molecule: :class:`~vermouth.molecule.Molecule`
+        The molecule in which to add edges.
     fudge: :class:`~numbers.Number`
         Scale the allowed distance by this factor.
 
     Returns
     -------
-    List[:class:`~vermouth.molecule.Molecule`]
-        Molecules in system, in which edges have been added based on atom names
-        and possibly distance. The molecules have been split into connected
-        components keeping residues intact. Molecules can be disconnected within
+    :class:`~vermouth.molecule.Molecule`
+        Molecule in which edges have been added based on atom names
+        and possibly distance. Molecules can be disconnected within
         residues.
     """
-    force_field = system.force_field
 
-    # Separate molecules should remain separate molecules, even if they have
-    # poorly chosen chain/resname/resid combinations. So add a mol_idx attribute
-    for mol_idx, molecule in enumerate(system.molecules):
-        nx.set_node_attributes(molecule, mol_idx, 'mol_idx')
-
-    system = nx.disjoint_union_all(system.molecules)
     non_edges = set()
 
-    residue_groups = _collect_residues(system)
+    residue_groups = _collect_residues(molecule)
 
     for ((mol_idx, chain, resid, resname), idxs) in residue_groups.items():
         if not allow_name:
             break
         try:
             # Try adding bonds within the residue based on atom names
-            non_edges.update(_bonds_from_names(system, resname, idxs, force_field))
+            non_edges.update(_bonds_from_names(molecule, resname, idxs, force_field))
         except KeyError as error:
             # ... if that doesn't work, fall back to distance
             message = "Can't add bonds based on atom names for residue {}-{}{} because {}."
             if allow_dist:
-                _bonds_from_distance(system, idxs, fudge=fudge)
+                _bonds_from_distance(molecule, idxs, fudge=fudge)
                 message += " Falling back to distance criteria."
             LOGGER.warning(message,
                            chain, resname, resid, error, force_field.name)
@@ -281,19 +270,9 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     # added, and edges involving atoms which are not known to the blocks (PTMs,
     # termini, ...)
     if allow_dist:
-        _bonds_from_distance(system, non_edges=non_edges, fudge=fudge)
+        _bonds_from_distance(molecule, non_edges=non_edges, fudge=fudge)
 
-    # Split the system into connected components. We do want to keep residues
-    # together, so make a residue graph (1 node per residue) first, and use that
-    # to find the connected components.
-    residue_graph = nx.quotient_graph(system, residue_groups.values())
-    molecules = []
-    for node_idxs in nx.connected_components(residue_graph):
-        node_idxs = set().union(*node_idxs)
-        mol = Molecule(system.subgraph(node_idxs))
-        molecules.append(mol)
-
-    return molecules
+    return molecule
 
 
 class MakeBonds(Processor):
