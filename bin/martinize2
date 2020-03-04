@@ -95,7 +95,7 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
 
 def pdb_to_universal(system, delete_unknown=False, force_field=None,
                      bonds_from_name=True, bonds_from_dist=True, bonds_fudge=1,
-                     write_graph=None, write_repair=None, write_canon=None):
+                     write_graph=None, write_repair=None, write_canon=None, nproc=1):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
@@ -106,7 +106,7 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     LOGGER.info('Guessing the bonds.', type='step')
     vermouth.MakeBonds(allow_name=bonds_from_name,
                        allow_dist=bonds_from_dist,
-                       fudge=bonds_fudge).run_system(canonicalized)
+                       fudge=bonds_fudge, nproc=nproc).run_system(canonicalized)
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
@@ -121,7 +121,7 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
         vermouth.pdb.write_pdb(canonicalized, str(write_canon),
                                omit_charges=True, nan_missing_pos=True)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
-    vermouth.SortMoleculeAtoms().run_system(canonicalized) # was system
+    vermouth.SortMoleculeAtoms().run_system(canonicalized)
     return canonicalized
 
 
@@ -376,6 +376,13 @@ def entry():
                             type=_cys_argument,
                             default='none', help='Cystein bonds')
 
+    exp_group = parser.add_argument_group('Experimental options')
+    exp_group.add_argument('-nproc', dest='nproc', type=int, default=1,
+                            help='Optionally use multiprocessing to speed'
+                                  'up bond creation. Only use when you\'re'
+                                  'very sure that your input file is correct.'
+                                  'Very likely to break something.')
+
     debug_group = parser.add_argument_group('Debugging options')
     debug_group.add_argument('-write-graph', type=Path, default=None,
                              help='Write the graph as PDB after the MakeBonds step.')
@@ -490,6 +497,7 @@ def entry():
         write_graph=args.write_graph,
         write_repair=args.write_repair,
         write_canon=args.write_canon,
+        nproc=args.nproc
     )
 
     LOGGER.info('Read input.', type='step')
