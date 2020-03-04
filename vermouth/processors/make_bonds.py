@@ -313,3 +313,9 @@ class MakeBonds(Processor):
         # at the system level propagates it to all the molecules.
         system.force_field = system.force_field
         LOGGER.info('{} molecules after guessing bonds', len(system.molecules))
+
+    def run_molecule(self, molecule):
+        return make_bonds(molecule,
+                          allow_name=self.allow_name,
+                          allow_dist=self.allow_dist,
+                          fudge=self.fudge)
