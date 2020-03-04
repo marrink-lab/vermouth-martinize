@@ -17,7 +17,6 @@
 Provides an abstract base class for processors.
 """
 import multiprocessing
-import functools
 
 class Processor:
     """
@@ -33,13 +32,9 @@ class Processor:
         system: vermouth.system.System
             The system to process. Is modified in-place.
         """
-        if self.nproc and self.nproc > 1:
+        if hasattr(self, 'nproc') and self.nproc > 1:
             pool = multiprocessing.Pool(self.nproc)
-            partial_run_molecule = functools.partial(self.run_molecule, force_field=system.force_field,
-                                    allow_name=self.allow_name,
-                                    allow_dist=self.allow_dist,
-                                    fudge=self.fudge)
-            system.molecules = pool.map(partial_run_molecule, system.molecules)
+            system.molecules = pool.map(self.run_molecule, system.molecules)
         else:
             mols = []
             for molecule in system.molecules:
