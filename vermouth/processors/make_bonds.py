@@ -285,11 +285,30 @@ class MakeBonds(Processor):
         if not system.molecules:
             # No molecules means nothing to do.
             return
-        mols = make_bonds(system,
-                          allow_name=self.allow_name,
-                          allow_dist=self.allow_dist,
-                          fudge=self.fudge)
-        system.molecules = mols
+
+        # Separate molecules should remain separate molecules, even if they have
+        # poorly chosen chain/resname/resid combinations. So add a mol_idx attribute
+        for mol_idx, molecule in enumerate(system.molecules):
+            nx.set_node_attributes(molecule, mol_idx, 'mol_idx')
+        # If using multiple processors, run the system normally
+        if self.nproc and self.nproc > 1:
+            super().run_system(system)
+        # If not using multiple processors, compose molecules into one
+        else:
+            system = nx.disjoint_union_all(system.molecules)
+            super().run_system(system)
+            # Split the system into connected components. We do want to keep residues
+            # together, so make a residue graph (1 node per residue) first, and use that
+            # to find the connected components.
+            residue_groups = _collect_residues(system)
+            residue_graph = nx.quotient_graph(system, residue_groups.values())
+            molecules = []
+            for node_idxs in nx.connected_components(residue_graph):
+                node_idxs = set().union(*node_idxs)
+                mol = Molecule(system.subgraph(node_idxs))
+                molecules.append(mol)
+            system.molecules = molecules
+
         # Restore the force field in each molecule. Setting the force field
         # at the system level propagates it to all the molecules.
         system.force_field = system.force_field
