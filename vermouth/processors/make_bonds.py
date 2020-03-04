@@ -293,7 +293,7 @@ class MakeBonds(Processor):
         for mol_idx, molecule in enumerate(system.molecules):
             nx.set_node_attributes(molecule, mol_idx, 'mol_idx')
         # If using multiple processors, run the system normally
-        if self.nproc and self.nproc > 1:
+        if hasattr(self, 'nproc') and self.nproc > 1:
             super().run_system(system)
         # If not using multiple processors, compose molecules into one
         else:
