@@ -246,6 +246,7 @@ def make_bonds(molecule, allow_name=True, allow_dist=True, fudge=1.0):
         and possibly distance. Molecules can be disconnected within
         residues.
     """
+    force_field = molecule.force_field
 
     non_edges = set()
 
@@ -276,10 +277,11 @@ def make_bonds(molecule, allow_name=True, allow_dist=True, fudge=1.0):
 
 
 class MakeBonds(Processor):
-    def __init__(self, allow_name=True, allow_dist=True, fudge=1):
+    def __init__(self, allow_name=True, allow_dist=True, fudge=1, nproc=1):
         self.allow_name = allow_name
         self.allow_dist = allow_dist
         self.fudge = fudge
+        self.nproc = nproc
 
     def run_system(self, system):
         if not system.molecules:
@@ -295,7 +297,9 @@ class MakeBonds(Processor):
             super().run_system(system)
         # If not using multiple processors, compose molecules into one
         else:
-            system = nx.disjoint_union_all(system.molecules)
+            system.molecules = [nx.disjoint_union_all(system.molecules)]
+            system.force_field = system.force_field
+            # Then run the system
             super().run_system(system)
             # Split the system into connected components. We do want to keep residues
             # together, so make a residue graph (1 node per residue) first, and use that
