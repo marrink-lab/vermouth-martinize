@@ -181,7 +181,19 @@ def test_make_bonds(nodes, edges, expected_edges):
         mol.add_nodes_from(enumerate(node_set))
         mol.add_edges_from(edge_set)
         system.add_molecule(mol)
+    system_mp = system.copy()
+
     MakeBonds().run_system(system)
+    # Make sure number of connected components is the same
+    assert len(system.molecules) == len(expected_edges)
+    # Make sure that for every molecule found, the edges are correct
+    for found_mol, ref_edges in zip(system.molecules, expected_edges):
+        assert dict(found_mol.edges) == ref_edges
+
+    # Also test making bonds with multiprocessing
+    mb = MakeBonds()
+    mb.nproc = 2
+    mb.run_system(system)
     # Make sure number of connected components is the same
     assert len(system.molecules) == len(expected_edges)
     # Make sure that for every molecule found, the edges are correct
