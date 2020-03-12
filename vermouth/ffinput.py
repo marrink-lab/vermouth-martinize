@@ -125,7 +125,7 @@ class FFDirector(SectionLineParser):
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
-        if action is not None:
+        if action:
             action()
 
         return result
