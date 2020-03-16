@@ -113,12 +113,9 @@ class FFDirector(SectionLineParser):
         if tuple(section[-1:]) in self.METH_DICT:
             self.section = section[-1:]
         else:
-            wildcard_section = tuple(section[:-1] + ['*'])
             while (tuple(section) not in self.METH_DICT
-                   and wildcard_section not in self.METH_DICT
                    and len(section) > 1):
                 ended.append(section.pop(-2))  # [a, b, c, d] -> [a, b, d]
-                wildcard_section = tuple(section[:-1] + ['*'])
             self.section = section
                           
         result = None
@@ -152,14 +149,14 @@ class FFDirector(SectionLineParser):
             The result returned by calling the registered method.
         """
         line = _substitute_macros(line, self.macros)
-        wildcard_section = tuple(self.section[:-1] + ['*'])
+        #wildcard_section = tuple(self.section[:-1] + ['*'])
         end_section = []
         if self.section:
             end_section = self.section[-1]
         if tuple(self.section) in self.METH_DICT:
             method, kwargs = self.METH_DICT[tuple(self.section)]
-        elif wildcard_section in self.METH_DICT:
-            method, kwargs = self.METH_DICT[wildcard_section]
+        #elif wildcard_section in self.METH_DICT:
+        #    method, kwargs = self.METH_DICT[wildcard_section]
         else:
             raise IOError("Can't parse line {} in section '{}' because the "
                           "section is unknown".format(lineno, self.section))
@@ -282,9 +279,42 @@ class FFDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         _parse_edges(tokens, context, context_type, negate=negate)
 
-    @SectionLineParser.section_parser('moleculetype', '*', context_type='block')
-    @SectionLineParser.section_parser('link', '*', context_type='link')
-    @SectionLineParser.section_parser('modification', '*', context_type='modification')
+    @SectionLineParser.section_parser('moleculetype', 'bonds', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'angles', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'dihedrals', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'impropers', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'constraints', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'pairs', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'exclusions', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sites2', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn', context_type='block')
+    @SectionLineParser.section_parser('link', 'bonds', context_type='link')
+    @SectionLineParser.section_parser('link', 'angles', context_type='link')
+    @SectionLineParser.section_parser('link', 'dihedrals', context_type='link')
+    @SectionLineParser.section_parser('link', 'constraints', context_type='link')
+    @SectionLineParser.section_parser('link', 'pairs', context_type='link')
+    @SectionLineParser.section_parser('link', 'exclusions', context_type='link')
+    @SectionLineParser.section_parser('link', 'virtual_sites2', context_type='link')
+    @SectionLineParser.section_parser('link', 'impropers', context_type='link')
+    @SectionLineParser.section_parser('link', 'virtual_sitesn', context_type='link')
+    @SectionLineParser.section_parser('link', '!impropers', context_type='link')
+    @SectionLineParser.section_parser('link', '!bonds', context_type='link')
+    @SectionLineParser.section_parser('link', '!angles', context_type='link')
+    @SectionLineParser.section_parser('link', '!dihedrals', context_type='link')
+    @SectionLineParser.section_parser('link', '!constraints', context_type='link')
+    @SectionLineParser.section_parser('link', '!pairs', context_type='link')
+    @SectionLineParser.section_parser('link', '!exclusions', context_type='link')
+    @SectionLineParser.section_parser('link', '!virtual_sites2', context_type='link')
+    @SectionLineParser.section_parser('link', '!virtual_sitesn', context_type='link')
+    @SectionLineParser.section_parser('modification', 'bonds', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'angles', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'dihedrals', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'constraints', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'pairs', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'exclusions', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'virtual_sites2', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'impropers', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'virtual_sitesn', context_type='modification')
     def _interactions(self, line, lineno=0, context_type=''):
         context = self.get_context(context_type)
         interaction_name = self.section[-1]
