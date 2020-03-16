@@ -146,7 +146,7 @@ class FFDirector(SectionLineParser):
         Returns
         -------
         object
-            The result returned by calling the registered method.
+           The result returned by calling the registered method.
         """
         line = _substitute_macros(line, self.macros)
         #wildcard_section = tuple(self.section[:-1] + ['*'])
@@ -173,6 +173,8 @@ class FFDirector(SectionLineParser):
         Called once a section is finished. It appends the current_links list
         to the links and update the block dictionary with current_block. Thereby it
         finishes the reading a given section. 
+
+        Parameters
         ---------
         previous_section: list[str]
             The last parsed section.
