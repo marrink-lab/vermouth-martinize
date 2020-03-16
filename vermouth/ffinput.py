@@ -105,8 +105,9 @@ class FFDirector(SectionLineParser):
         KeyError
             If the section header is unknown.
         """
+                        
         prev_section = self.section
-        
+
         ended = []
         section = self.section + [line.strip('[ ]').casefold()]
         if tuple(section[-1:]) in self.METH_DICT:
@@ -119,9 +120,11 @@ class FFDirector(SectionLineParser):
                 ended.append(section.pop(-2))  # [a, b, c, d] -> [a, b, d]
                 wildcard_section = tuple(section[:-1] + ['*'])
             self.section = section
-
+                          
         result = None
-        if prev_section:
+
+        if len(prev_section) != 0:
+            print(len(prev_section))
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
@@ -167,7 +170,35 @@ class FFDirector(SectionLineParser):
                           "'{}' line, but I can't parse it as such."
                           "".format(lineno, self.section)) from error
 
+    def finalize_section(self, pervious_section, ended_section):
+
+        """
+        Called once a section is finished. It appends the current_links list
+        to the links and update the block dictionary with current_block. Thereby it
+        finishes the reading a given section. 
+        ---------
+        previous_section: list[str]
+            The last parsed section.
+        ended_section: list[str]
+            The sections that have been ended.
+        """
+
+        # type comparison is what makes this work!
+        
+        if type(self.current_block) != type(None):
+           self.blocks[self.current_block.name] = self.current_block
+
+        if type(self.current_link) != type(None):
+           self.links.append(self.current_link)
+       
     def finalize(self, lineno=0):
+
+        # super needs to go first because it calls finilze_section
+        # which appends the last links and blocks. If it does not 
+        # the blocks are not updated into the ff directory
+
+        super().finalize(lineno=lineno)
+
         for block in self.blocks.values():
             # Because of hos they are described in gromacs, proper and improper
             # dihedral angles are all under the [ dihedrals ] section. However
@@ -190,7 +221,6 @@ class FFDirector(SectionLineParser):
         self.force_field.links.extend(self.links)
         modifications = {mod.name: mod for mod in self.modifications}
         self.force_field.modifications.update(modifications)
-        super().finalize(lineno=lineno)
 
     def get_context(self, context_type):
         possible_contexts = {
@@ -211,7 +241,7 @@ class FFDirector(SectionLineParser):
 
     def _new_link(self):
         self.current_link = Link(force_field=self.force_field)
-        self.links.append(self.current_link)
+#        self.links.append(self.current_link)
 
     def _new_modification(self):
         self.current_modification = Link(force_field=self.force_field)
@@ -230,7 +260,7 @@ class FFDirector(SectionLineParser):
         name, nrexcl = line.split()
         self.current_block.name = name
         self.current_block.nrexcl = int(nrexcl)
-        self.blocks[name] = self.current_block
+#        self.blocks[self.current_block.name] = self.current_block
 
     @SectionLineParser.section_parser('moleculetype', 'atoms')
     def _block_atoms(self, line, lineno=0):

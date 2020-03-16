@@ -108,6 +108,7 @@ class LineParser:
             if not line:
                 continue
             result = self.dispatch(line)(line, lineno)
+                         
             if result is not None:
                 yield result
 
