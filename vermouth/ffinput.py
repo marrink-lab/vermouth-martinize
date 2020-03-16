@@ -155,7 +155,7 @@ class FFDirector(SectionLineParser):
             end_section = self.section[-1]
         if tuple(self.section) in self.METH_DICT:
             method, kwargs = self.METH_DICT[tuple(self.section)]
-        elif wildcard_section in self.METH_DICT and end_section not in self.METH_DICT:
+        elif wildcard_section in self.METH_DICT:
             method, kwargs = self.METH_DICT[wildcard_section]
         else:
             raise IOError("Can't parse line {} in section '{}' because the "
