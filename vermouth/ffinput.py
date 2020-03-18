@@ -180,42 +180,18 @@ class FFDirector(SectionLineParser):
 
         # type comparison is what makes this work!
         
-        if type(self.current_block) != type(None):
-           self.blocks[self.current_block.name] = self.current_block
+        if self.current_block is not None:
 
-        if type(self.current_link) != type(None):
-           self.links.append(self.current_link)
-       
-    def finalize(self, lineno=0):
+           self.current_block.make_edges_from_interactions()
 
-        # super needs to go first because it calls finilze_section
-        # which appends the last links and blocks. If it does not 
-        # the blocks are not updated into the ff directory
+           self.force_field.blocks[self.current_block.name] =  self.current_block
 
-        super().finalize(lineno=lineno)
+        if self.current_link is not None:
+           self.current_link.make_edges_from_interactions()
+           self.force_field.links.append(self.current_link)
 
-        for block in self.blocks.values():
-            # Because of hos they are described in gromacs, proper and improper
-            # dihedral angles are all under the [ dihedrals ] section. However
-            # the way they are treated differently in the library, at least on how
-            # they generate edges. Here we move the all the impropers into their own
-            # [ impropers ] section.
-            propers = []
-            impropers = []
-            for dihedral in block.interactions.get('dihedrals', []):
-                if dihedral.parameters and dihedral.parameters[0] == '2':
-                    impropers.append(dihedral)
-                else:
-                    propers.append(dihedral)
-            block.interactions['dihedrals'] = propers
-            block.interactions['impropers'] = impropers
-            block.make_edges_from_interactions()
-        for link in self.links:
-            link.make_edges_from_interactions()
-        self.force_field.blocks.update(self.blocks)
-        self.force_field.links.extend(self.links)
-        modifications = {mod.name: mod for mod in self.modifications}
-        self.force_field.modifications.update(modifications)
+        if self.current_modification is not None:
+           self.force_field.modifications[self.current_modification.name] = self.current_modification
 
     def get_context(self, context_type):
         possible_contexts = {
@@ -239,7 +215,6 @@ class FFDirector(SectionLineParser):
 
     def _new_modification(self):
         self.current_modification = Link(force_field=self.force_field)
-        self.modifications.append(self.current_modification)
 
     @SectionLineParser.section_parser('variables')
     def _variables(self, line, lineno=0):
@@ -277,7 +252,6 @@ class FFDirector(SectionLineParser):
 
     @SectionLineParser.section_parser('moleculetype', 'bonds', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'angles', context_type='block')
-    @SectionLineParser.section_parser('moleculetype', 'dihedrals', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'impropers', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'constraints', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'pairs', context_type='block')
@@ -336,6 +310,51 @@ class FFDirector(SectionLineParser):
                 natoms=n_atoms,
                 delete=delete,
             )
+
+    @SectionLineParser.section_parser('moleculetype', 'dihedrals', context_type='block')
+    def _dih_interactions(self, line, lineno=0, context_type=''):
+          context = self.get_context(context_type)
+          interaction_name = self.section[-1]
+          delete = False
+          if interaction_name.startswith('!'):
+              interaction_name = interaction_name[1:]
+              delete = True
+          tokens = collections.deque(_tokenize(line))
+          if tokens[0] == '#meta':
+              _parse_meta(
+                  tokens,
+                  context,
+                  context_type=context_type,
+                  section=interaction_name,
+              )
+          else:
+              n_atoms = self.interactions_natoms.get(interaction_name)
+              _base_parser(
+                  tokens,
+                  context,
+                  context_type=context_type,
+                  section=interaction_name,
+                  natoms=n_atoms,
+                  delete=delete,
+              )
+    
+          # Because of how they are described in gromacs, proper and improper
+          # dihedral angles are all under the [ dihedrals ] section. However
+          # the way they are treated differently in the library, at least on how
+          # they generate edges. Here we move the all the impropers into their own
+          # [ impropers ] section.
+    
+          propers = []
+          impropers = []
+          for dihedral in self.current_block.interactions.get('dihedrals', []):
+              if dihedral.parameters and dihedral.parameters[0] == '2':
+                  impropers.append(dihedral)
+              else:
+                  propers.append(dihedral)
+    
+          self.current_block.interactions['dihedrals'] = propers
+          self.current_block.interactions['impropers'] = impropers
+
 
     @SectionLineParser.section_parser('moleculetype', 'patterns')
     @SectionLineParser.section_parser('moleculetype', 'features')
