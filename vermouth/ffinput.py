@@ -85,7 +85,7 @@ class FFDirector(SectionLineParser):
 
     def parse_header(self, line, lineno=0):
         """
-        Parses a section header with line number `lineno`. Sets :attr:`section`
+        Parses a section header with line number `lineno`. Sets :attr:`vermouth.parser_utils.SectionLineParser.section` 
         when applicable. Does not check whether `line` is a valid section
         header.
 
@@ -133,7 +133,7 @@ class FFDirector(SectionLineParser):
     def parse_section(self, line, lineno):
         """
         Parse `line` with line number `lineno` by looking up the section in
-        :attr:`METH_DICT` and calling that method.
+        :attr:`vermouth.parser_utils.SectionLineParser.METH_DICT` and calling that method.
 
         On the contrary to the SectionLineParser, we can have wildcard sections.
         Wildcard sections cannot have children sections.
