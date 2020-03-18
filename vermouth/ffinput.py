@@ -129,39 +129,6 @@ class FFDirector(SectionLineParser):
 
         return result
 
-    def parse_section(self, line, lineno):
-        """
-        Parse `line` with line number `lineno` by looking up the section in
-        :attr:`vermouth.parser_utils.SectionLineParser.METH_DICT` and calling that method.
-
-        On the contrary to the SectionLineParser, we can have wildcard sections.
-        Wildcard sections cannot have children sections.
-
-        Parameters
-        ----------
-        line: str
-        lineno: int
-
-        Returns
-        -------
-        object
-           The result returned by calling the registered method.
-        """
-        line = _substitute_macros(line, self.macros)
-        end_section = []
-        if self.section:
-            end_section = self.section[-1]
-        if tuple(self.section) in self.METH_DICT:
-            method, kwargs = self.METH_DICT[tuple(self.section)]
-        else:
-            raise IOError("Can't parse line {} in section '{}' because the "
-                          "section is unknown".format(lineno, self.section))
-        try:
-            return method(self, line, lineno, **kwargs)
-        except Exception as error:
-            raise IOError("Problems parsing line {}. I think it should be a "
-                          "'{}' line, but I can't parse it as such."
-                          "".format(lineno, self.section)) from error
 
     def finalize_section(self, pervious_section, ended_section):
 
@@ -181,9 +148,7 @@ class FFDirector(SectionLineParser):
         # type comparison is what makes this work!
         
         if self.current_block is not None:
-
            self.current_block.make_edges_from_interactions()
-
            self.force_field.blocks[self.current_block.name] =  self.current_block
 
         if self.current_link is not None:
@@ -316,9 +281,6 @@ class FFDirector(SectionLineParser):
           context = self.get_context(context_type)
           interaction_name = self.section[-1]
           delete = False
-          if interaction_name.startswith('!'):
-              interaction_name = interaction_name[1:]
-              delete = True
           tokens = collections.deque(_tokenize(line))
           if tokens[0] == '#meta':
               _parse_meta(
