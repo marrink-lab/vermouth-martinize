@@ -121,7 +121,6 @@ class FFDirector(SectionLineParser):
         result = None
 
         if len(prev_section) != 0:
-            print(len(prev_section))
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
@@ -149,14 +148,11 @@ class FFDirector(SectionLineParser):
            The result returned by calling the registered method.
         """
         line = _substitute_macros(line, self.macros)
-        #wildcard_section = tuple(self.section[:-1] + ['*'])
         end_section = []
         if self.section:
             end_section = self.section[-1]
         if tuple(self.section) in self.METH_DICT:
             method, kwargs = self.METH_DICT[tuple(self.section)]
-        #elif wildcard_section in self.METH_DICT:
-        #    method, kwargs = self.METH_DICT[wildcard_section]
         else:
             raise IOError("Can't parse line {} in section '{}' because the "
                           "section is unknown".format(lineno, self.section))
@@ -240,7 +236,6 @@ class FFDirector(SectionLineParser):
 
     def _new_link(self):
         self.current_link = Link(force_field=self.force_field)
-#        self.links.append(self.current_link)
 
     def _new_modification(self):
         self.current_modification = Link(force_field=self.force_field)
@@ -259,7 +254,6 @@ class FFDirector(SectionLineParser):
         name, nrexcl = line.split()
         self.current_block.name = name
         self.current_block.nrexcl = int(nrexcl)
-#        self.blocks[self.current_block.name] = self.current_block
 
     @SectionLineParser.section_parser('moleculetype', 'atoms')
     def _block_atoms(self, line, lineno=0):
