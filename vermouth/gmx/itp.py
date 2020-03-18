@@ -242,3 +242,4 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
         for line in post_section_lines.get(name, []):
             outfile.write(line + '\n')
         outfile.write('\n')
+

@@ -151,8 +151,8 @@ class ITPDirector(SectionLineParser):
 
 
         elif line != '#endif' and self.current_meta == None:
-           tag = line.split('#ifdef')[1]
-           self.current_meta = tag
+           condition, tag = line.split()
+           self.current_meta = {'tag':tag,'condition':condition}
 
         else:
            raise IOError("Your #ifdef section is orderd incorrectly." 
@@ -488,7 +488,7 @@ def _base_parser(tokens, context, context_type, section, current_meta, natoms=No
 
     apply_to_all_interactions = context._apply_to_all_interactions[section]
     if current_meta:
-       meta = {"ifdef":current_meta}
+       meta = {current_meta['condition']:current_meta['tag']}
     else:
        meta = {} #dict(collections.ChainMap(meta, apply_to_all_interactions))
  
