@@ -59,8 +59,16 @@ class ITPDirector(SectionLineParser):
         'impropers': 4,
         'constraints': 2,
         'virtual_sites2': 3,
+        'virtual_sites3': 4,
+        'virtual_sites4': 5,
         'pairs': 2,
-        'position_restraints':1
+        'pairs_nb':2,
+        'position_restraints':1,
+        'distance_restraints':2,
+        'dihedral_restraints':4,
+        'orientation_restraints':2,
+        'angle_restraints':4,
+        'angle_restraints_z':2
     }
 
     def __init__(self, force_field):
@@ -475,6 +483,7 @@ def _base_parser(tokens, context, context_type, section, current_meta, natoms=No
     parameters = _parse_interaction_parameters(tokens)
 
     apply_to_all_interactions = context._apply_to_all_interactions[section]
+
     if current_meta:
        meta = {current_meta['condition']:current_meta['tag']}
     else:
