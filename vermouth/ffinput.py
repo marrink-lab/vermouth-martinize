@@ -85,7 +85,7 @@ class FFDirector(SectionLineParser):
 
     def parse_header(self, line, lineno=0):
         """
-        Parses a section header with line number `lineno`. Sets :attr:`section`
+        Parses a section header with line number `lineno`. Sets :attr:`vermouth.parser_utils.SectionLineParser.section` 
         when applicable. Does not check whether `line` is a valid section
         header.
 
@@ -121,7 +121,6 @@ class FFDirector(SectionLineParser):
         result = None
 
         if len(prev_section) != 0:
-            print(len(prev_section))
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
@@ -130,42 +129,6 @@ class FFDirector(SectionLineParser):
 
         return result
 
-    def parse_section(self, line, lineno):
-        """
-        Parse `line` with line number `lineno` by looking up the section in
-        :attr:`METH_DICT` and calling that method.
-
-        On the contrary to the SectionLineParser, we can have wildcard sections.
-        Wildcard sections cannot have children sections.
-
-        Parameters
-        ----------
-        line: str
-        lineno: int
-
-        Returns
-        -------
-        object
-           The result returned by calling the registered method.
-        """
-        line = _substitute_macros(line, self.macros)
-        #wildcard_section = tuple(self.section[:-1] + ['*'])
-        end_section = []
-        if self.section:
-            end_section = self.section[-1]
-        if tuple(self.section) in self.METH_DICT:
-            method, kwargs = self.METH_DICT[tuple(self.section)]
-        #elif wildcard_section in self.METH_DICT:
-        #    method, kwargs = self.METH_DICT[wildcard_section]
-        else:
-            raise IOError("Can't parse line {} in section '{}' because the "
-                          "section is unknown".format(lineno, self.section))
-        try:
-            return method(self, line, lineno, **kwargs)
-        except Exception as error:
-            raise IOError("Problems parsing line {}. I think it should be a "
-                          "'{}' line, but I can't parse it as such."
-                          "".format(lineno, self.section)) from error
 
     def finalize_section(self, pervious_section, ended_section):
 
@@ -184,42 +147,16 @@ class FFDirector(SectionLineParser):
 
         # type comparison is what makes this work!
         
-        if type(self.current_block) != type(None):
-           self.blocks[self.current_block.name] = self.current_block
+        if self.current_block is not None:
+           self.current_block.make_edges_from_interactions()
+           self.force_field.blocks[self.current_block.name] =  self.current_block
 
-        if type(self.current_link) != type(None):
-           self.links.append(self.current_link)
-       
-    def finalize(self, lineno=0):
+        if self.current_link is not None:
+           self.current_link.make_edges_from_interactions()
+           self.force_field.links.append(self.current_link)
 
-        # super needs to go first because it calls finilze_section
-        # which appends the last links and blocks. If it does not 
-        # the blocks are not updated into the ff directory
-
-        super().finalize(lineno=lineno)
-
-        for block in self.blocks.values():
-            # Because of hos they are described in gromacs, proper and improper
-            # dihedral angles are all under the [ dihedrals ] section. However
-            # the way they are treated differently in the library, at least on how
-            # they generate edges. Here we move the all the impropers into their own
-            # [ impropers ] section.
-            propers = []
-            impropers = []
-            for dihedral in block.interactions.get('dihedrals', []):
-                if dihedral.parameters and dihedral.parameters[0] == '2':
-                    impropers.append(dihedral)
-                else:
-                    propers.append(dihedral)
-            block.interactions['dihedrals'] = propers
-            block.interactions['impropers'] = impropers
-            block.make_edges_from_interactions()
-        for link in self.links:
-            link.make_edges_from_interactions()
-        self.force_field.blocks.update(self.blocks)
-        self.force_field.links.extend(self.links)
-        modifications = {mod.name: mod for mod in self.modifications}
-        self.force_field.modifications.update(modifications)
+        if self.current_modification is not None:
+           self.force_field.modifications[self.current_modification.name] = self.current_modification
 
     def get_context(self, context_type):
         possible_contexts = {
@@ -240,11 +177,9 @@ class FFDirector(SectionLineParser):
 
     def _new_link(self):
         self.current_link = Link(force_field=self.force_field)
-#        self.links.append(self.current_link)
 
     def _new_modification(self):
         self.current_modification = Link(force_field=self.force_field)
-        self.modifications.append(self.current_modification)
 
     @SectionLineParser.section_parser('variables')
     def _variables(self, line, lineno=0):
@@ -259,7 +194,6 @@ class FFDirector(SectionLineParser):
         name, nrexcl = line.split()
         self.current_block.name = name
         self.current_block.nrexcl = int(nrexcl)
-#        self.blocks[self.current_block.name] = self.current_block
 
     @SectionLineParser.section_parser('moleculetype', 'atoms')
     def _block_atoms(self, line, lineno=0):
@@ -283,7 +217,6 @@ class FFDirector(SectionLineParser):
 
     @SectionLineParser.section_parser('moleculetype', 'bonds', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'angles', context_type='block')
-    @SectionLineParser.section_parser('moleculetype', 'dihedrals', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'impropers', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'constraints', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'pairs', context_type='block')
@@ -342,6 +275,48 @@ class FFDirector(SectionLineParser):
                 natoms=n_atoms,
                 delete=delete,
             )
+
+    @SectionLineParser.section_parser('moleculetype', 'dihedrals', context_type='block')
+    def _dih_interactions(self, line, lineno=0, context_type=''):
+          context = self.get_context(context_type)
+          interaction_name = self.section[-1]
+          delete = False
+          tokens = collections.deque(_tokenize(line))
+          if tokens[0] == '#meta':
+              _parse_meta(
+                  tokens,
+                  context,
+                  context_type=context_type,
+                  section=interaction_name,
+              )
+          else:
+              n_atoms = self.interactions_natoms.get(interaction_name)
+              _base_parser(
+                  tokens,
+                  context,
+                  context_type=context_type,
+                  section=interaction_name,
+                  natoms=n_atoms,
+                  delete=delete,
+              )
+    
+          # Because of how they are described in gromacs, proper and improper
+          # dihedral angles are all under the [ dihedrals ] section. However
+          # the way they are treated differently in the library, at least on how
+          # they generate edges. Here we move the all the impropers into their own
+          # [ impropers ] section.
+    
+          propers = []
+          impropers = []
+          for dihedral in self.current_block.interactions.get('dihedrals', []):
+              if dihedral.parameters and dihedral.parameters[0] == '2':
+                  impropers.append(dihedral)
+              else:
+                  propers.append(dihedral)
+    
+          self.current_block.interactions['dihedrals'] = propers
+          self.current_block.interactions['impropers'] = impropers
+
 
     @SectionLineParser.section_parser('moleculetype', 'patterns')
     @SectionLineParser.section_parser('moleculetype', 'features')

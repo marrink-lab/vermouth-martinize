@@ -48,7 +48,7 @@ class TestBlock:
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
         vermouth.ffinput.read_ff(lines, ff)
-        assert list(ff.blocks) == ['GLY', 'VAL']
+        assert set(ff.blocks) == {'GLY', 'VAL'}
         assert ff.blocks['GLY'].nrexcl == 3
         assert ff.blocks['VAL'].nrexcl == 2
 
