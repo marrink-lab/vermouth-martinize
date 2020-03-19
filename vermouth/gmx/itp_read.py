@@ -206,41 +206,6 @@ class ITPDirector(SectionLineParser):
                            
         return result
 
-    def parse_section(self, line, lineno):
-        """
-        Parse `line` with line number `lineno` by looking up the section in
-        :attr:`METH_DICT` and calling that method.
-
-        On the contrary to the SectionLineParser, we can have wildcard sections.
-        Wildcard sections cannot have children sections.
-
-        Parameters
-        ----------
-        line: str
-        lineno: int
-
-        Returns
-        -------
-        object
-           The result returned by calling the registered method.
-        """
-        print('line 2', line)
-        line = _substitute_macros(line, self.macros)
-        end_section = []
-        if self.section:
-            end_section = self.section[-1]
-        if tuple(self.section) in self.METH_DICT:
-            method, kwargs = self.METH_DICT[tuple(self.section)]
-        else:
-            raise IOError("Can't parse line {} in section '{}' because the "
-                          "section is unknown".format(lineno, self.section))
-        try:
-            return method(self, line, lineno, **kwargs)
-        except Exception as error:
-            raise IOError("Problems parsing line {}. I think it should be a "
-                          "'{}' line, but I can't parse it as such."
-                          "".format(lineno, self.section)) from error
-
     def finalize_section(self, pervious_section, ended_section):
 
         """
@@ -255,31 +220,18 @@ class ITPDirector(SectionLineParser):
         ended_section: list[str]
             The sections that have been ended.
         """
-
-        # type comparison is what makes this work!
         
-        if type(self.current_block) != type(None):
-           self.blocks[self.current_block.name] = self.current_block
+        if self.current_block is not None:
+           self.force_field.blocks[self.current_block.name] = self.current_block
        
-    def finalize(self, lineno=0):
-
-        # super needs to go first because it calls finilze_section
-        # which appends the last links and blocks. If it does not 
-        # the blocks are not updated into the ff directory
-
-        super().finalize(lineno=lineno)
-        self.force_field.blocks.update(self.blocks)
-
     def _new_block(self):
         self.current_block = Block(force_field=self.force_field)
-
 
     @SectionLineParser.section_parser('moleculetype')
     def _block(self, line, lineno=0):
         name, nrexcl = line.split()
         self.current_block.name = name
         self.current_block.nrexcl = int(nrexcl)
-#        self.blocks[self.current_block.name] = self.current_block
 
     @SectionLineParser.section_parser('moleculetype', 'atoms')
     def _block_atoms(self, line, lineno=0):
@@ -294,7 +246,6 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'pairs', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'exclusions', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2', context_type='block')
-    @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'position_restraints', context_type='block')
 
     def _interactions(self, line, lineno=0, context_type=''):
@@ -316,6 +267,43 @@ class ITPDirector(SectionLineParser):
             delete=delete,
             current_meta=self.current_meta
             )
+
+
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn', context_type='block')
+    def _vsn_interactions(self, line, lineno=0, context_type=''):
+
+        context = self.current_block
+        interaction_name = self.section[-1]
+        delete = False
+
+        tokens = collections.deque(_tokenize(line))
+
+        n_atoms = self.interactions_natoms.get(interaction_name)
+
+        _base_parser(
+            tokens,
+            context,
+            context_type=context_type,
+            section=interaction_name,
+            natoms=n_atoms,
+            delete=delete,
+            current_meta=self.current_meta
+            )
+   
+        # we need to reorder the atoms and interactions, because for virtual_sitesn
+        # the function type is on section position followed by an undefined number
+        # of atom indices from which the VS is built
+ 
+        if '--' not in line:
+           first_atom = context.interactions['virtual_sitesn'][-1].atoms[0]
+           other_atoms = context.interactions['virtual_sitesn'][-1].atoms[2:]
+           atoms = [first_atom] + other_atoms
+   
+           sec_atom = context.interactions['virtual_sitesn'][-1].atoms[1]
+           params = [sec_atom]+context.interactions['virtual_sitesn'][-1].parameters
+       
+           context.interactions['virtual_sitesn'][-1].atoms[:]=atoms
+           context.interactions['virtual_sitesn'][-1].parameters[:]=params
 
 
 def _some_atoms_left(tokens, atoms, natoms):
