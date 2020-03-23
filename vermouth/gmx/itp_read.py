@@ -32,24 +32,17 @@ from vermouth.parser_utils import (
 
 class ITPDirector(SectionLineParser):
     COMMENT_CHAR = ';'
-    interactions_natoms = {
-        'bonds': 2,
-        'angles': 3,
-        'dihedrals': 4,
-        'impropers': 4,
-        'constraints': 2,
-        'virtual_sites2': 3,
-        'virtual_sites3': 4,
-        'virtual_sites4': 5,
-        'pairs': 2,
-        'pairs_nb':2,
-        'position_restraints':1,
-        'distance_restraints':2,
-        'dihedral_restraints':4,
-        'orientation_restraints':2,
-        'angle_restraints':4,
-        'angle_restraints_z':2
-    }
+
+    atom_idxs = {'bonds'               : [0,1],
+                'position_restraints' : [0],
+                'angles'              : [0,1,2],
+                'constraints'         : [0,1],
+                'dihedrals'           : [0,1,2,3],
+                'pairs'               : [0,1],
+                'exclusions'          : [":"],
+                'virtual_sitesn'      : [0,"2:"],
+                'virtual_sites3'      : [0,1,2,3],
+                'virtual_sites3'      : [0,1,2,3]}
 
     def __init__(self, force_field):
         super().__init__()
@@ -226,93 +219,71 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'pairs', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'exclusions', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'position_restraints', context_type='block')
     def _interactions(self, line, lineno=0, context_type=''):
         context = self.current_block
         interaction_name = self.section[-1]
         tokens = collections.deque(_tokenize(line))
 
-        n_atoms = self.interactions_natoms.get(interaction_name)
+        atom_idxs = self.atom_idxs.get(interaction_name)
 
         self._base_parser(
             tokens,
             context,
             context_type=context_type,
             section=interaction_name,
-            natoms=n_atoms,
+            atom_idxs=atom_idxs,
             current_meta=self.current_meta
             )
 
 
-    @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn', context_type='block')
-    def _vsn_interactions(self, line, lineno=0, context_type=''):
-
-        context = self.current_block
-        interaction_name = self.section[-1]
-        tokens = collections.deque(_tokenize(line))
-
-        n_atoms = self.interactions_natoms.get(interaction_name)
-
-        self._base_parser(
-            tokens,
-            context,
-            context_type=context_type,
-            section=interaction_name,
-            natoms=n_atoms,
-            current_meta=self.current_meta
-            )
-   
-        # we need to reorder the atoms and interactions, because for virtual_sitesn
-        # the function type is on section position followed by an undefined number
-        # of atom indices from which the VS is built
- 
-        if '--' not in line:
-           first_atom = context.interactions['virtual_sitesn'][-1].atoms[0]
-           other_atoms = context.interactions['virtual_sitesn'][-1].atoms[2:]
-           atoms = [first_atom] + other_atoms
-  
-           sec_atom = context.interactions['virtual_sitesn'][-1].atoms[1]
-           params = [sec_atom]+context.interactions['virtual_sitesn'][-1].parameters
-       
-           context.interactions['virtual_sitesn'][-1].atoms[:]=atoms
-           context.interactions['virtual_sitesn'][-1].parameters[:]=params
-
-
-    def _some_atoms_left(self, tokens, atoms, natoms):
+    def _string_to_slice(self, string):
        """
-       Return True if the token list expected to contain atoms.
+
+       """
+       #adopted from https://stackoverflow.com/questions/680826/python-create-slice-object-from-string
+       return slice(*map(lambda x: int(x.strip()) if x.strip() else None, string.split(':')))
    
-       If the number of atoms is known before hand, then the function compares the
-       number of already found atoms to the expected number. 
-   
-       Parameters
-       ----------
+    def _split_atoms_and_parameters(self, tokens, atom_idxs):
+       """
+       Returns atoms from line based on the indices defined in `atom_idxs`.
+       It also interprets slices etc. stored as strings. 
+
+       Parameters:
+       ------------
        tokens: collections.deque[str]
            Deque of token to inspect. The deque **can be modified** in place.
-       atoms: list
-           List of already found atoms.
-       natoms: int or None
-           The number of expected atoms if known, else None.
-   
-       Returns
-       -------
-       bool
+       atom_idxs: list of ints or strings that are valid python slices
+
+       Returns:
+       -----------
+       list
        """
-       if not tokens:
-           return False
-       if natoms is not None and len(atoms) >= natoms:
-           return False
-       return True
-   
-   
-    def _get_atoms(self, tokens, natoms):
        atoms = []
+       remove = []
+       # first we extract the atoms from the indices given using
+       # ints or slices
+       tokens=list(tokens)
+       for idx in atom_idxs:
+           if isinstance(idx,int):
+              atoms.append([tokens[idx],{}])
+              remove.append(idx)
+           elif isinstance(idx,str):
+              _slice = self._string_to_slice(idx)
+              atoms += [ [atom,{}] for atom in tokens[_slice]]
+              idx_range = range(0,len(tokens))
+              remove += [i for i in idx_range[_slice]]
+           else:
+              raise IOError
 
-       while tokens and self._some_atoms_left(tokens, atoms, natoms):
-           token = tokens.popleft()
-           atoms.append([token, {}])
+       # everything that is left are parameters, which we
+       # get by simply deleting the atoms from tokens
+       print(remove)
+       for index in sorted(remove, reverse=True):
+           del tokens[index]
 
-       return atoms
+       return atoms, tokens
    
    
     def _treat_block_interaction_atoms(self, atoms, context, section):
@@ -345,23 +316,12 @@ class ITPDirector(SectionLineParser):
            all_references.append(reference)
        return all_references
    
-   
-    def _parse_interaction_parameters(self, tokens):
-       parameters = []
-       for token in tokens:
-           parameter = token
-           parameters.append(parameter)
-       return parameters
-   
 
-    def _base_parser(self, tokens, context, context_type, section, current_meta, natoms=None):
+    def _base_parser(self, tokens, context, context_type, section, current_meta, atom_idxs):
    
-       # Group the atoms and their attributes
-       atoms = self._get_atoms(tokens, natoms)
-   
-       if natoms is not None and len(atoms) != natoms:
-           raise IOError('Found {} atoms while {} were expected.'
-                         .format(len(atoms), natoms))
+       # split atoms and parameters
+                    
+       atoms, parameters = self._split_atoms_and_parameters(tokens, atom_idxs)
    
        # Normalize the atom references.
        # Blocks and links treat these references differently.
@@ -375,11 +335,8 @@ class ITPDirector(SectionLineParser):
        # * interactions create nodes
    
        treated_atoms = self._treat_block_interaction_atoms(atoms, context, section)
-   
-       # Everything that is not atoms are the interaction parameters    
-       parameters = self._parse_interaction_parameters(tokens)
-   
        apply_to_all_interactions = context._apply_to_all_interactions[section]
+
    
        if current_meta:
           meta = {current_meta['condition']:current_meta['tag']}

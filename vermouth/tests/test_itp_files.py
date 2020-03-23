@@ -424,37 +424,43 @@ class TestITP:
         with pytest.raises(IOError):
              vermouth.gmx.itp_read.read_itp(lines, ff)
 
-#   @staticmethod
-#   def test_virtual_sitesn():
-#       """
-#       test if index and atoms are curretly distinguished for
-#       this type of interaction
-#       """
-#       lines = """
-#       [ moleculetype ]
-#       GLY 1
+    @staticmethod
+    def test_virtual_sitesn():
+        """
+        test if index and atoms are curretly distinguished for
+        this type of interaction
+        """
+        lines = """
+        [ moleculetype ]
+        GLY 1
 
-#       [ atoms ]
-#       1 P4 1 ALA BB 1
-#       2 P4 1 ALA SC1 1
-#       3 P4 1 ALA SC2 1
-#       4 P4 1 ALA SC3 1
-#       5 P4 1 ALA SC4 1
-#       6 VS 1 ALA SC5 1
+        [ atoms ]
+        1 P4 1 ALA BB 1
+        2 P4 1 ALA SC1 1
+        3 P4 1 ALA SC2 1
+        4 P4 1 ALA SC3 1
+        5 P4 1 ALA SC4 1
+        6 VS 1 ALA SC5 1
 
-#       [ virtual_sitesn ]
-#       6  2  1 2 3 4
-#       ;6  10  1 2 3 4
-#       """
-#       lines = textwrap.dedent(lines)
-#       lines = lines.splitlines()
+        [ virtual_sitesn ]
+        6  2  1 2 3 4
+        6  10  1 2 3 4
+        """
+        lines = textwrap.dedent(lines)
+        lines = lines.splitlines()
 
-#       ff = vermouth.forcefield.ForceField(name='test_ff')
-#       vermouth.gmx.itp_read.read_itp(lines, ff)
-#       VS = vermouth.molecule.Interaction(
-#               atoms=[5, 0, 1, 2, 3], parameters=['2'], meta={},
-#           )
-#       assert ff.blocks['GLY'].interactions['virtual_sitesn'][0] == VS
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        vermouth.gmx.itp_read.read_itp(lines, ff)
+        VS1 = vermouth.molecule.Interaction(
+                atoms=[5, 0, 1, 2, 3], parameters=['2'], meta={},
+            )
+
+        VS2 = vermouth.molecule.Interaction(
+                atoms=[5, 0, 1, 2, 3], parameters=['10'], meta={},
+            )
+
+        assert ff.blocks['GLY'].interactions['virtual_sitesn'][0] == VS1
+        assert ff.blocks['GLY'].interactions['virtual_sitesn'][1] == VS2
 
     @staticmethod
     @pytest.mark.parametrize('def_statements, bonds', 
@@ -588,3 +594,38 @@ class TestITP:
             
         assert ff.blocks['GLY'].interactions['dihedrals'] == dih
 
+    @staticmethod
+    def test_excluions():
+        """
+        test if can read exclusions with 
+        variable number of excluded atoms properly. 
+        """
+        lines = """
+        [ moleculetype ]
+        GLY 1
+
+        [ atoms ]
+        1 P4 1 ALA BB 1
+        2 P4 1 ALA SC1 1
+        3 P4 1 ALA SC2 1
+        4 P4 1 ALA SC3 1
+        [ exclusions ]
+        1   2   3   4  
+        2   3   4  
+        3   4    
+        """
+        
+        lines = textwrap.dedent(lines)
+        lines = lines.splitlines()
+
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        vermouth.gmx.itp_read.read_itp(lines, ff)
+
+        excl = [vermouth.molecule.Interaction(
+                 atoms=[0, 1, 2, 3], parameters=[], meta={}),
+               vermouth.molecule.Interaction(
+                 atoms=[1, 2, 3], parameters=[], meta={}),
+               vermouth.molecule.Interaction(
+                 atoms=[2, 3], parameters=[], meta={})]
+            
+        assert ff.blocks['GLY'].interactions['exclusions'] == excl
