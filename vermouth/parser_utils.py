@@ -176,8 +176,7 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         -------
         collections.abc.Callable
             The method that should be used to parse `line`.
-        """
-                   
+        """                   
         if self.is_section_header(line):
             return self.parse_header
         else:

@@ -67,13 +67,13 @@ class TestITP:
         vermouth.gmx.itp_read.read_itp(lines, ff)
         block = ff.blocks['GLY']
         assert len(block.nodes) == 3
-        assert block.nodes['1'] == {'atomname': 'BB', 'atype': 'P4',
+        assert block.nodes[0] == {'index':1,'atomname': 'BB', 'atype': 'P4',
                                      'resname': 'ALA', 'resid': 1,
                                      'charge_group': 1}
-        assert block.nodes['2'] == {'atomname': 'SC1', 'atype': 'P3',
+        assert block.nodes[1] == {'index':2,'atomname': 'SC1', 'atype': 'P3',
                                       'resname': 'ALA', 'resid': 1,
                                       'charge_group': 2, 'charge': -3.0}
-        assert block.nodes['3'] == {'atomname': 'SC2', 'atype': 'P2',
+        assert block.nodes[2] == {'index':3,'atomname': 'SC2', 'atype': 'P2',
                                       'resname': 'ALA', 'resid': 1,
                                       'charge_group': 3,'charge':-3,'mass':72}
 
@@ -94,7 +94,6 @@ class TestITP:
         [ bonds ]
         1 2 1 0.2 100
         2 3 4 0.6 700
-        3 1 -- 9 plop toto
         """
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
@@ -103,13 +102,10 @@ class TestITP:
 
         bonds = [
             vermouth.molecule.Interaction(
-                atoms=['1', '2'], parameters=['1', '0.2', '100'], meta={},
+                atoms=[0, 1], parameters=['1', '0.2', '100'], meta={},
             ),
             vermouth.molecule.Interaction(
-                atoms=['2', '3'], parameters=['4', '0.6', '700'],meta={},
-            ),
-            vermouth.molecule.Interaction(
-                atoms=['3', '1'], parameters=['9', 'plop', 'toto'], meta={},
+                atoms=[1, 2], parameters=['4', '0.6', '700'],meta={},
             ),
         ]
         assert block.interactions['bonds'] == bonds
@@ -132,7 +128,6 @@ class TestITP:
         [ bonds ]
         1 2   1 0.2 100
         1 3   4 0.6 700 
-        2 3 -- 9 plop toto
         """
 
         lines = textwrap.dedent(lines).splitlines()
@@ -142,15 +137,13 @@ class TestITP:
 
         bonds = [
             vermouth.molecule.Interaction(
-                atoms=['1', '2'], parameters=['1', '0.2', '100'], meta={},
+                atoms=[0, 1], parameters=['1', '0.2', '100'], meta={},
             ),
             vermouth.molecule.Interaction(
-                atoms=['1', '3'], parameters=['4', '0.6', '700'],
+                atoms=[0, 2], parameters=['4', '0.6', '700'],
                 meta={},
             ),
-            vermouth.molecule.Interaction(
-                atoms=['2', '3'], parameters=['9', 'plop', 'toto'], meta={},
-            ),
+        
         ]
         assert block.interactions['bonds'] == bonds
 
@@ -451,6 +444,7 @@ class TestITP:
 
         [ virtual_sitesn ]
         6  2  1 2 3 4
+        ;6  10  1 2 3 4
         """
         lines = textwrap.dedent(lines)
         lines = lines.splitlines()
@@ -458,7 +452,7 @@ class TestITP:
         ff = vermouth.forcefield.ForceField(name='test_ff')
         vermouth.gmx.itp_read.read_itp(lines, ff)
         VS = vermouth.molecule.Interaction(
-                atoms=['6', '1','2','3','4'], parameters=['2'], meta={},
+                atoms=[5, 0, 1, 2, 3], parameters=['2'], meta={},
             )
         assert ff.blocks['GLY'].interactions['virtual_sitesn'][0] == VS
 
@@ -470,18 +464,18 @@ class TestITP:
          2  3
          #endif""",
          [vermouth.molecule.Interaction(
-               atoms=['1', '2'], parameters=[], meta={"#ifdef":"FLEXIBLE"}),
+               atoms=[0, 1], parameters=[], meta={"#ifdef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
-               atoms=['2', '3'], parameters=[], meta={"#ifdef":"FLEXIBLE"})]), 
+               atoms=[1, 2], parameters=[], meta={"#ifdef":"FLEXIBLE"})]), 
         ("""#ifndef FLEXIBLE
          [ bonds ]
          1   2
          2   3
          #endif""",
          [vermouth.molecule.Interaction(
-             atoms=['1', '2'], parameters=[], meta={"#ifndef":"FLEXIBLE"}),
+             atoms=[0, 1], parameters=[], meta={"#ifndef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
-             atoms=['2', '3'], parameters=[], meta={"#ifndef":"FLEXIBLE"})]), 
+             atoms=[1, 2], parameters=[], meta={"#ifndef":"FLEXIBLE"})]), 
         ("""[ bonds ]
          1   2
          #ifdef FLEXIBLE
@@ -489,11 +483,11 @@ class TestITP:
          #endif
          3  4""", 
          [vermouth.molecule.Interaction(
-              atoms=['1', '2'], parameters=[], meta={}),
+              atoms=[0, 1], parameters=[], meta={}),
           vermouth.molecule.Interaction(
-              atoms=['2', '3'], parameters=[],meta={"#ifdef":"FLEXIBLE"}),
+              atoms=[1, 2], parameters=[],meta={"#ifdef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
-              atoms=['3', '4'], parameters=[],meta={})])
+              atoms=[2, 3], parameters=[],meta={})])
         ))
 
     def test_defs(def_statements, bonds):
@@ -537,7 +531,10 @@ class TestITP:
          #ifdef FLEXIBLE
          2   3
          #endif
-         3  4"""))
+         3  4""",
+         """[ bonds ]
+         #include random
+         """))
     def test_def_fails(def_fail_statements):
         """
         test if incorrectly formatted ifdefs raise 
@@ -583,11 +580,11 @@ class TestITP:
         vermouth.gmx.itp_read.read_itp(lines, ff)
 
         dih = [vermouth.molecule.Interaction(
-                atoms=['1','2','3','4'], parameters=['1','A'], meta={}),
+                atoms=[0, 1, 2, 3], parameters=['1','A'], meta={}),
               vermouth.molecule.Interaction(
-                atoms=['1','2','3','4'], parameters=['1','B'], meta={}),
+                atoms=[0, 1, 2, 3], parameters=['1','B'], meta={}),
               vermouth.molecule.Interaction(
-                atoms=['1','2','3','4'], parameters=['1','C'], meta={})]
+                atoms=[0, 1, 2, 3], parameters=['1','C'], meta={})]
             
         assert ff.blocks['GLY'].interactions['dihedrals'] == dih
 

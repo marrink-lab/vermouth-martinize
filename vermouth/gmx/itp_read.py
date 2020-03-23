@@ -72,13 +72,11 @@ class ITPDirector(SectionLineParser):
     }
 
     def __init__(self, force_field):
-
         super().__init__()
         self.force_field = force_field
         self.current_block = None
         self.current_meta = None
         self.blocks = collections.OrderedDict()
-
         self.header_actions = {
             ('moleculetype', ): self._new_block
         }
@@ -102,12 +100,12 @@ class ITPDirector(SectionLineParser):
 
         if self.is_section_header(line):
             return self.parse_header
-        elif self.is_def(line):
-            return self.parse_def
+        elif self.is_pragma(line):
+            return self.parse_pragma
         else:
             return self.parse_section
 
-    def is_def(self, line):
+    def is_pragma(self, line):
         """
         Parameters
         ----------
@@ -118,15 +116,10 @@ class ITPDirector(SectionLineParser):
         -------
         bool
             ``True`` iff `line` is a def statement.
-
         """
-        if line.startswith('#') :
-           return True
-        else:
-           return False
+        return line.startswith('#') 
 
-
-    def parse_def(self, line, lineno=0):
+    def parse_pragma(self, line, lineno=0):
         """
         Parses the beginning and end of define sections
         with line number `lineno`. Sets :attr:`current_meta`
@@ -149,23 +142,25 @@ class ITPDirector(SectionLineParser):
             If the def sections are missformatted
         """
                         
-        if line == '#endif' and self.current_meta != None:
-           self.current_meta=None
-
-        elif line == '#endif' and self.current_meta == None:
-           raise IOError("Your #ifdef section is orderd incorrectly." 
-			 "At line {} I read #endif but I haven not read"
-                         "a ifdef before.".format(lineno)) from error
-
-
-        elif line != '#endif' and self.current_meta == None:
-           condition, tag = line.split()
-           self.current_meta = {'tag':tag,'condition':condition}
-
+        if line == '#endif':
+            if self.current_meta != None:
+                self.current_meta=None
+            elif self.current_meta == None:
+                 raise IOError("Your #ifdef section is orderd incorrectly." 
+			       "At line {} I read #endif but I haven not read"
+                               "a ifdef before.".format(lineno)) 
+        elif line.startswith("#ifdef") or line.startswith("#ifndef") :
+           if self.current_meta == None:
+              condition, tag = line.split()
+              self.current_meta = {'tag': tag,'condition': condition}
+           elif self.current_meta != None:
+                raise IOError("Your #ifdef section is orderd incorrectly." 
+	  		      "At line {} I read #ifdef but there is still"
+                              "an open ifdef section from before.".format(lineno)) 
+        # Guard against unkown pragmas like #if or #include
         else:
-           raise IOError("Your #ifdef section is orderd incorrectly." 
-			 "At line {} I read #endif but I haven not read"
-                         "a ifdef before.".format(lineno)) from error
+             raise IOError("Don't know how to parse pargma {} at" 
+     	                   "line {}.".format(line, lineno)) 
 
     def parse_header(self, line, lineno=0):
         """
@@ -188,8 +183,7 @@ class ITPDirector(SectionLineParser):
         ------
         KeyError
             If the section header is unknown.
-        """
-                        
+        """                       
         prev_section = self.section
 
         ended = []
@@ -204,8 +198,7 @@ class ITPDirector(SectionLineParser):
                           
         result = None
 
-        if len(prev_section) != 0:
-            print(len(prev_section))
+        if len(prev_section) != 0:                                   
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
@@ -215,7 +208,6 @@ class ITPDirector(SectionLineParser):
         return result
 
     def finalize_section(self, pervious_section, ended_section):
-
         """
         Called once a section is finished. It appends the current_links list
         to the links and update the block dictionary with current_block. Thereby it
@@ -244,7 +236,7 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'atoms')
     def _block_atoms(self, line, lineno=0):
         tokens = collections.deque(_tokenize(line))
-        _parse_block_atom(tokens, self.current_block)
+        self._parse_block_atom(tokens, self.current_block)
 
     @SectionLineParser.section_parser('moleculetype', 'bonds', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'angles', context_type='block')
@@ -255,9 +247,7 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'exclusions', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'position_restraints', context_type='block')
-
     def _interactions(self, line, lineno=0, context_type=''):
-
         context = self.current_block
         interaction_name = self.section[-1]
         delete = False
@@ -266,7 +256,7 @@ class ITPDirector(SectionLineParser):
 
         n_atoms = self.interactions_natoms.get(interaction_name)
 
-        _base_parser(
+        self._base_parser(
             tokens,
             context,
             context_type=context_type,
@@ -288,7 +278,7 @@ class ITPDirector(SectionLineParser):
 
         n_atoms = self.interactions_natoms.get(interaction_name)
 
-        _base_parser(
+        self._base_parser(
             tokens,
             context,
             context_type=context_type,
@@ -314,220 +304,225 @@ class ITPDirector(SectionLineParser):
            context.interactions['virtual_sitesn'][-1].parameters[:]=params
 
 
-def _some_atoms_left(tokens, atoms, natoms):
-    """
-    Return True if the token list expected to contain atoms.
-
-    If the number of atoms is known before hand, then the function compares the
-    number of already found atoms to the expected number. If the '--' token if
-    found, it is removed from the token list and there is no atom left.
-
-    Parameters
-    ----------
-    tokens: collections.deque[str]
-        Deque of token to inspect. The deque **can be modified** in place.
-    atoms: list
-        List of already found atoms.
-    natoms: int or None
-        The number of expected atoms if known, else None.
-
-    Returns
-    -------
-    bool
-    """
-    if not tokens:
-        return False
-    if tokens and tokens[0] == '--':
-        tokens.popleft()
-        return False
-    if natoms is not None and len(atoms) >= natoms:
-        return False
-    return True
-
-
-def _parse_atom_attributes(token):
-    """
-    Parse bracketed tokens.
-
-    Parameters
-    ----------
-    token: str
-        Token in the form of a json dictionary.
-
-    Returns
-    -------
-    dict
-    """
-    if not token.strip().startswith('{'):
-        raise ValueError('The token should start with a curly bracket.')
-    try:
-        attributes = json.loads(token)
-    except JSONDecodeError as error:
-        raise ValueError('The following value is not a valid atom attribute token: "{}".'
-                         .format(token)) from error
-    modifications = {}
-    for key, value in attributes.items():
-        try:
-            if '|' in value:
-                modifications[key] = Choice(value.split('|'))
-        except TypeError:
-            pass
-    attributes.update(modifications)
-    return attributes
-
-
-def _get_atoms(tokens, natoms):
-    atoms = []
-    while tokens and _some_atoms_left(tokens, atoms, natoms):
-        token = tokens.popleft()
-        if token.startswith('{'):
-            msg = 'Found atom attributes without an atom reference.'
-            raise IOError(msg)
-        if tokens:
-            next_token = tokens[0]
-        else:
-            next_token = ''
-        if next_token.startswith('{'):
-            atoms.append([token, _parse_atom_attributes(next_token)])
-            tokens.popleft()
-        else:
-            atoms.append([token, {}])
-    return atoms
-
-
-def _treat_block_interaction_atoms(atoms, context, section):
-    atom_names = list(context.nodes)
-    all_references = []
-    for atom in atoms:
-        reference = atom[0]
-        if reference.isdigit():
-            # The indices in the file are 1-based
-            reference = int(reference) - 1
-            try:
-                reference = atom_names[reference]
-            except IndexError:
-                msg = ('There are {} atoms defined in the block "{}". '
-                       'Interaction in section "{}" cannot refer to '
-                       'atom index {}.')
-                raise IOError(msg.format(len(context), context.name,
-                                         section, reference + 1))
-            atom[0] = reference
-        else:
-            if reference not in context:
-                msg = ('There is no atom "{}" defined in the block "{}". '
-                       'Section "{}" cannot refer to it.')
-                raise IOError(msg.format(reference, context.name, section))
-            if reference[0] in '+-<>':
-                msg = ('Atom names in blocks cannot be prefixed with + or -. '
-                       'The name "{}", used in section "{}" of the block "{}" '
-                       'is not valid in a block.')
-                raise IOError(msg.format(reference, section, context.name))
-        all_references.append(reference)
-    return all_references
-
-
-def _parse_interaction_parameters(tokens):
-    parameters = []
-    for token in tokens:
-        if _is_param_effector(token):
-            effector_name, effector_param_str = token.split('(', 1)
-            effector_param_str = effector_param_str[:-1]  # Remove the closing parenthesis
-            try:
-                effector_class = PARAMETER_EFFECTORS[effector_name]
-            except KeyError:
-                raise IOError('{} is not a known parameter effector.'
-                              .format(effector_name))
-            if '|' in effector_param_str:
-                effector_param_str, effector_format = effector_param_str.split('|')
-            else:
-                effector_format = None
-            effector_param = [elem.strip() for elem in effector_param_str.split(',')]
-            parameter = effector_class(effector_param, format_spec=effector_format)
-        else:
-            parameter = token
-        parameters.append(parameter)
-    return parameters
-
-
-def _is_param_effector(token):
-    return (
-        '(' in token
-        and not token.startswith('(')
-        and token.endswith(')')
-    )
-
-
-def _base_parser(tokens, context, context_type, section, current_meta, natoms=None, delete=False):
-
-    # Group the atoms and their attributes
-    atoms = _get_atoms(tokens, natoms)
-
-    if natoms is not None and len(atoms) != natoms:
-        raise IOError('Found {} atoms while {} were expected.'
-                      .format(len(atoms), natoms))
-
-    # Normalize the atom references.
-    # Blocks and links treat these references differently.
-    # For blocks:
-    # * references can be written as indices or atom names
-    # * a reference cannot be prefixed by + or -
-    # * an interaction cannot create a new atom
-    # For links:
-    # * references must be atom names, but they can be prefixed with one or
-    #   more + or - to signify the order in the sequence
-    # * interactions create nodes
-
-    treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
-
-    # Everything that is not atoms are the interaction parameters    
-    parameters = _parse_interaction_parameters(tokens)
-
-    apply_to_all_interactions = context._apply_to_all_interactions[section]
-
-    if current_meta:
-       meta = {current_meta['condition']:current_meta['tag']}
-    else:
-       meta = {} #dict(collections.ChainMap(meta, apply_to_all_interactions))
- 
-    interaction = Interaction(
-                  atoms=treated_atoms,
-                  parameters=parameters,
-                  meta=meta,
-                  )
-
-    interaction_list = context.interactions.get(section, [])
-    interaction_list.append(interaction)
-    context.interactions[section] = interaction_list
-
-
-def _parse_block_atom(tokens, context):
-
-    # deque does not support slicing
-    first_six = (tokens.popleft() for _ in range(6))
-    index, atype, resid, resname, name, charge_group = first_six
+    def _some_atoms_left(self, tokens, atoms, natoms):
+       """
+       Return True if the token list expected to contain atoms.
+   
+       If the number of atoms is known before hand, then the function compares the
+       number of already found atoms to the expected number. If the '--' token is
+       found, it is removed from the token list and there is no atom left.
+   
+       Parameters
+       ----------
+       tokens: collections.deque[str]
+           Deque of token to inspect. The deque **can be modified** in place.
+       atoms: list
+           List of already found atoms.
+       natoms: int or None
+           The number of expected atoms if known, else None.
+   
+       Returns
+       -------
+       bool
+       """
+       if not tokens:
+           return False
+       if tokens and tokens[0] == '--':
+           tokens.popleft()
+           return False
+       if natoms is not None and len(atoms) >= natoms:
+           return False
+       return True
+   
+   
+    def _parse_atom_attributes(self, token):
+       """
+       Parse bracketed tokens.
+   
+       Parameters
+       ----------
+       token: str
+           Token in the form of a json dictionary.
+   
+       Returns
+       -------
+       dict
+       """
+       if not token.strip().startswith('{'):
+           raise ValueError('The token should start with a curly bracket.')
+       try:
+           attributes = json.loads(token)
+       except JSONDecodeError as error:
+           raise ValueError('The following value is not a valid atom attribute token: "{}".'
+                            .format(token)) from error
+       modifications = {}
+       for key, value in attributes.items():
+           try:
+               if '|' in value:
+                   modifications[key] = Choice(value.split('|'))
+           except TypeError:
+               pass
+       attributes.update(modifications)
+       return attributes
+   
+   
+    def _get_atoms(self, tokens, natoms):
+       atoms = []
+       while tokens and self._some_atoms_left(tokens, atoms, natoms):
+           token = tokens.popleft()
+           if token.startswith('{'):
+               msg = 'Found atom attributes without an atom reference.'
+               raise IOError(msg)
+           if tokens:
+               next_token = tokens[0]
+           else:
+               next_token = ''
+           if next_token.startswith('{'):
+               atoms.append([token, _parse_atom_attributes(next_token)])
+               tokens.popleft()
+           else:
+               atoms.append([token, {}])
+       return atoms
+   
+   
+    def _treat_block_interaction_atoms(self, atoms, context, section):
+       atom_names = list(context.nodes)
+       all_references = []
+       for atom in atoms:
+           reference = atom[0]
+           if reference.isdigit():
+               # The indices in the file are 1-based
+               reference = int(reference) - 1
+               try:
+                   reference = atom_names[reference]
+               except IndexError:
+                   msg = ('There are {} atoms defined in the block "{}". '
+                          'Interaction in section "{}" cannot refer to '
+                          'atom index {}.')
+                   raise IOError(msg.format(len(context), context.name,
+                                            section, reference + 1))
+               atom[0] = reference
+           else:
+               if reference not in context:
+                   msg = ('There is no atom "{}" defined in the block "{}". '
+                          'Section "{}" cannot refer to it.')
+                   raise IOError(msg.format(reference, context.name, section))
+               if reference[0] in '+-<>':
+                   msg = ('Atom names in blocks cannot be prefixed with + or -. '
+                          'The name "{}", used in section "{}" of the block "{}" '
+                          'is not valid in a block.')
+                   raise IOError(msg.format(reference, section, context.name))
+           all_references.append(reference)
+       return all_references
+   
+   
+    def _parse_interaction_parameters(self, tokens):
+       parameters = []
+       for token in tokens:
+           if self._is_param_effector(token):
+               effector_name, effector_param_str = token.split('(', 1)
+               effector_param_str = effector_param_str[:-1]  # Remove the closing parenthesis
+               try:
+                   effector_class = PARAMETER_EFFECTORS[effector_name]
+               except KeyError:
+                   raise IOError('{} is not a known parameter effector.'
+                                 .format(effector_name))
+               if '|' in effector_param_str:
+                   effector_param_str, effector_format = effector_param_str.split('|')
+               else:
+                   effector_format = None
+               effector_param = [elem.strip() for elem in effector_param_str.split(',')]
+               parameter = effector_class(effector_param, format_spec=effector_format)
+           else:
+               parameter = token
+           parameters.append(parameter)
+       return parameters
+   
+   
+    def _is_param_effector(self,token):
+       return (
+           '(' in token
+           and not token.startswith('(')
+           and token.endswith(')')
+       )
+   
+   
+    def _base_parser(self, tokens, context, context_type, section, current_meta, natoms=None, delete=False):
+   
+       # Group the atoms and their attributes
+       atoms = self._get_atoms(tokens, natoms)
+   
+       if natoms is not None and len(atoms) != natoms:
+           raise IOError('Found {} atoms while {} were expected.'
+                         .format(len(atoms), natoms))
+   
+       # Normalize the atom references.
+       # Blocks and links treat these references differently.
+       # For blocks:
+       # * references can be written as indices or atom names
+       # * a reference cannot be prefixed by + or -
+       # * an interaction cannot create a new atom
+       # For links:
+       # * references must be atom names, but they can be prefixed with one or
+       #   more + or - to signify the order in the sequence
+       # * interactions create nodes
+   
+       treated_atoms = self._treat_block_interaction_atoms(atoms, context, section)
+   
+       # Everything that is not atoms are the interaction parameters    
+       parameters =self. _parse_interaction_parameters(tokens)
+   
+       apply_to_all_interactions = context._apply_to_all_interactions[section]
+   
+       if current_meta:
+          meta = {current_meta['condition']:current_meta['tag']}
+       else:
+          meta = {} #dict(collections.ChainMap(meta, apply_to_all_interactions))
     
-    if str(index) in context:
-        msg = ('There is already an atom named "{}" in the block "{}". '
-               'Atom names must be unique within a block.')
-        raise IOError(msg.format(name, context.name))
+       interaction = Interaction(
+                     atoms=treated_atoms,
+                     parameters=parameters,
+                     meta=meta,
+                     )
+   
+       interaction_list = context.interactions.get(section, [])
+       interaction_list.append(interaction)
+       context.interactions[section] = interaction_list
+   
+   
+    def _parse_block_atom(self, tokens, context):
+   
+       # deque does not support slicing
+       first_six = (tokens.popleft() for _ in range(6))
+       index, atype, resid, resname, name, charge_group = first_six
+       # since the index becomes the node name and all graphs start with 0
+       # index it makes more sense to also directly start at 0
+       index = int(index) -1
 
-    atom = {
-        'atomname': name,
-        'atype': atype,
-        'resname': resname,
-        'resid': int(resid),
-        'charge_group': int(charge_group),
-    }
-
-    # charge and mass are optional, but charge has to be defined for mass to be
-    if tokens:
-        atom['charge'] = float(tokens.popleft())
-    if tokens:
-        atom['mass'] = float(tokens.popleft())
-
-    attributes={}
-    context.add_atom_from_index(dict(collections.ChainMap(attributes, atom)), index=index)
-
+       if index in context:
+           msg = ('There is already an atom with index "{}" in the block "{}". '
+                  'Atom indices must be unique within a block.')
+           raise IOError(msg.format(name, context.name))
+   
+       atom = {
+           # for bookkeping purposes let's keep the actual index i.e. +1 here
+           'index'   : index +1,
+           'atomname': name,
+           'atype': atype,
+           'resname': resname,
+           'resid': int(resid),
+           'charge_group': int(charge_group),
+       }
+   
+       # charge and mass are optional, but charge has to be defined for mass to be
+       if tokens:
+           atom['charge'] = float(tokens.popleft())
+       if tokens:
+           atom['mass'] = float(tokens.popleft())
+   
+       attributes={}
+       context.add_atom_from_index(dict(collections.ChainMap(attributes, atom)), index=index)
+   
 def read_itp(lines, force_field):
-    director = ITPDirector(force_field)
-    return list(director.parse(iter(lines)))
+   director = ITPDirector(force_field)
+   return list(director.parse(iter(lines)))
