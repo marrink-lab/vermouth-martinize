@@ -996,24 +996,6 @@ class Block(Molecule):
             raise ValueError('Atom has no atomname: "{}".'.format(atom))
         self.add_node(name, **atom)
 
-
-    def add_atom_from_index(self, atom, index):
-        """
-        Sane as add_atom but use index name 
-
-        Parameters
-        ----------
-        atom: collections.abc.Mapping
-            The attributes of the atom to add. Must contain 'atomname'
-
-        Raises
-        ------
-        ValueError
-            If `atom` does not contain 'atomname'
-        """
-        self.add_node(index, **atom)
-
-
     @property
     def atoms(self):
         for node in self.nodes():

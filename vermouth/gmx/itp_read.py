@@ -385,7 +385,7 @@ class ITPDirector(SectionLineParser):
            atom['mass'] = float(tokens.popleft())
    
        attributes={}
-       context.add_atom_from_index(dict(collections.ChainMap(attributes, atom)), index=index)
+       context.add_node(index,**dict(collections.ChainMap(attributes, atom)))
    
 def read_itp(lines, force_field):
    director = ITPDirector(force_field)
