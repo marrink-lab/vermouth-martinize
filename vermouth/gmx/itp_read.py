@@ -28,27 +28,7 @@ from vermouth.molecule import (
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
 from vermouth.parser_utils import (
-    SectionLineParser, _tokenize, _parse_macro, _substitute_macros,
-)
-
-# Python 3.4 does not raise JSONDecodeError but ValueError.
-
-try:
-    from json import JSONDecodeError
-except ImportError:
-    JSONDecodeError = ValueError
-
-VALUE_PREDICATES = {
-    'not': NotDefinedOrNot,
-}
-
-PARAMETER_EFFECTORS = {
-    'dist': ParamDistance,
-    'angle': ParamAngle,
-    'dihedral': ParamDihedral,
-    'dihphase': ParamDihedralPhase,
-}
-
+    SectionLineParser, _tokenize )
 
 class ITPDirector(SectionLineParser):
     COMMENT_CHAR = ';'
@@ -250,8 +230,6 @@ class ITPDirector(SectionLineParser):
     def _interactions(self, line, lineno=0, context_type=''):
         context = self.current_block
         interaction_name = self.section[-1]
-        delete = False
-
         tokens = collections.deque(_tokenize(line))
 
         n_atoms = self.interactions_natoms.get(interaction_name)
@@ -262,7 +240,6 @@ class ITPDirector(SectionLineParser):
             context_type=context_type,
             section=interaction_name,
             natoms=n_atoms,
-            delete=delete,
             current_meta=self.current_meta
             )
 
@@ -272,8 +249,6 @@ class ITPDirector(SectionLineParser):
 
         context = self.current_block
         interaction_name = self.section[-1]
-        delete = False
-
         tokens = collections.deque(_tokenize(line))
 
         n_atoms = self.interactions_natoms.get(interaction_name)
@@ -284,7 +259,6 @@ class ITPDirector(SectionLineParser):
             context_type=context_type,
             section=interaction_name,
             natoms=n_atoms,
-            delete=delete,
             current_meta=self.current_meta
             )
    
@@ -296,7 +270,7 @@ class ITPDirector(SectionLineParser):
            first_atom = context.interactions['virtual_sitesn'][-1].atoms[0]
            other_atoms = context.interactions['virtual_sitesn'][-1].atoms[2:]
            atoms = [first_atom] + other_atoms
-   
+  
            sec_atom = context.interactions['virtual_sitesn'][-1].atoms[1]
            params = [sec_atom]+context.interactions['virtual_sitesn'][-1].parameters
        
@@ -309,8 +283,7 @@ class ITPDirector(SectionLineParser):
        Return True if the token list expected to contain atoms.
    
        If the number of atoms is known before hand, then the function compares the
-       number of already found atoms to the expected number. If the '--' token is
-       found, it is removed from the token list and there is no atom left.
+       number of already found atoms to the expected number. 
    
        Parameters
        ----------
@@ -327,61 +300,18 @@ class ITPDirector(SectionLineParser):
        """
        if not tokens:
            return False
-       if tokens and tokens[0] == '--':
-           tokens.popleft()
-           return False
        if natoms is not None and len(atoms) >= natoms:
            return False
        return True
    
    
-    def _parse_atom_attributes(self, token):
-       """
-       Parse bracketed tokens.
-   
-       Parameters
-       ----------
-       token: str
-           Token in the form of a json dictionary.
-   
-       Returns
-       -------
-       dict
-       """
-       if not token.strip().startswith('{'):
-           raise ValueError('The token should start with a curly bracket.')
-       try:
-           attributes = json.loads(token)
-       except JSONDecodeError as error:
-           raise ValueError('The following value is not a valid atom attribute token: "{}".'
-                            .format(token)) from error
-       modifications = {}
-       for key, value in attributes.items():
-           try:
-               if '|' in value:
-                   modifications[key] = Choice(value.split('|'))
-           except TypeError:
-               pass
-       attributes.update(modifications)
-       return attributes
-   
-   
     def _get_atoms(self, tokens, natoms):
        atoms = []
+
        while tokens and self._some_atoms_left(tokens, atoms, natoms):
            token = tokens.popleft()
-           if token.startswith('{'):
-               msg = 'Found atom attributes without an atom reference.'
-               raise IOError(msg)
-           if tokens:
-               next_token = tokens[0]
-           else:
-               next_token = ''
-           if next_token.startswith('{'):
-               atoms.append([token, _parse_atom_attributes(next_token)])
-               tokens.popleft()
-           else:
-               atoms.append([token, {}])
+           atoms.append([token, {}])
+
        return atoms
    
    
@@ -419,35 +349,12 @@ class ITPDirector(SectionLineParser):
     def _parse_interaction_parameters(self, tokens):
        parameters = []
        for token in tokens:
-           if self._is_param_effector(token):
-               effector_name, effector_param_str = token.split('(', 1)
-               effector_param_str = effector_param_str[:-1]  # Remove the closing parenthesis
-               try:
-                   effector_class = PARAMETER_EFFECTORS[effector_name]
-               except KeyError:
-                   raise IOError('{} is not a known parameter effector.'
-                                 .format(effector_name))
-               if '|' in effector_param_str:
-                   effector_param_str, effector_format = effector_param_str.split('|')
-               else:
-                   effector_format = None
-               effector_param = [elem.strip() for elem in effector_param_str.split(',')]
-               parameter = effector_class(effector_param, format_spec=effector_format)
-           else:
-               parameter = token
+           parameter = token
            parameters.append(parameter)
        return parameters
    
-   
-    def _is_param_effector(self,token):
-       return (
-           '(' in token
-           and not token.startswith('(')
-           and token.endswith(')')
-       )
-   
-   
-    def _base_parser(self, tokens, context, context_type, section, current_meta, natoms=None, delete=False):
+
+    def _base_parser(self, tokens, context, context_type, section, current_meta, natoms=None):
    
        # Group the atoms and their attributes
        atoms = self._get_atoms(tokens, natoms)
@@ -470,7 +377,7 @@ class ITPDirector(SectionLineParser):
        treated_atoms = self._treat_block_interaction_atoms(atoms, context, section)
    
        # Everything that is not atoms are the interaction parameters    
-       parameters =self. _parse_interaction_parameters(tokens)
+       parameters = self._parse_interaction_parameters(tokens)
    
        apply_to_all_interactions = context._apply_to_all_interactions[section]
    
