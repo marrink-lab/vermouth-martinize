@@ -34,8 +34,8 @@ class SectionParser(type):
     """
     def __new__(mcs, name, bases, attrs, **kwargs):
         obj = super().__new__(mcs, name, bases, attrs, **kwargs)
-        if not hasattr(obj, 'METH_DICT'):
-            obj.METH_DICT = {}
+        #if not hasattr(obj, 'METH_DICT'):
+        obj.METH_DICT = {}
         mapping = obj.METH_DICT
 
         for attribute_name in dir(obj):

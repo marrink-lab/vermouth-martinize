@@ -58,7 +58,8 @@ class ITPDirector(SectionLineParser):
         """
         Looks at `line` to see what kind of line it is, and returns either
         :meth:`parse_header` if `line` is a section header or
-        :meth:`parse_section` otherwise. Calls :meth:`is_section_header` to see
+        :meth:`vermouth.parser_utils.SectionLineParser.parse_section` otherwise. 
+        Calls :meth:`vermouth.parser_utils.SectionLineParser.is_section_header` to see 
         whether `line` is a section header or not.
 
         Parameters
@@ -95,7 +96,7 @@ class ITPDirector(SectionLineParser):
     def parse_pragma(self, line, lineno=0):
         """
         Parses the beginning and end of define sections
-        with line number `lineno`. Sets :attr:`current_meta`
+        with line number `lineno`. Sets attr current_meta
         when applicable. Does check if ifdefs overlap.
 
         Parameters
@@ -137,7 +138,8 @@ class ITPDirector(SectionLineParser):
 
     def parse_header(self, line, lineno=0):
         """
-        Parses a section header with line number `lineno`. Sets :attr:`section`
+        Parses a section header with line number `lineno`. Sets 
+        :attr:`vermouth.parser_utils.SectionLineParser.section`
         when applicable. Does not check whether `line` is a valid section
         header.
 
