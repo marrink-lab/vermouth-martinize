@@ -40,7 +40,7 @@ class TestITP:
         lines = """
             [ moleculetype ]
             GLY  3
-            
+
             [ moleculetype ]
             VAL 2
             """
@@ -59,7 +59,7 @@ class TestITP:
 
         [ atoms ]
         1 P4  1  ALA  BB  1
-        2 P3\t1\tALA  SC1 2 -3 
+        2 P3\t1\tALA  SC1 2 -3
         3 P2  1  ALA  SC2 3 -3 72
         """
         lines = textwrap.dedent(lines).splitlines()
@@ -127,7 +127,7 @@ class TestITP:
 
         [ bonds ]
         1 2   1 0.2 100
-        1 3   4 0.6 700 
+        1 3   4 0.6 700
         """
 
         lines = textwrap.dedent(lines).splitlines()
@@ -143,91 +143,9 @@ class TestITP:
                 atoms=[0, 2], parameters=['4', '0.6', '700'],
                 meta={},
             ),
-        
+
         ]
         assert block.interactions['bonds'] == bonds
-
-#  @staticmethod
-#  @pytest.mark.parametrize(
-#      'interaction_lines, edges', (
-#          (  # regular bonds create edges
-#              """
-#              [ bonds ]
-#              1 2
-#              2 3
-#              """,
-#              (('1', '2'), ('2', '3')),
-#          ),
-#           (  # regular angles create edges
-#               """
-#               [ angles ]
-#               1   2   3
-#               2   3   4
-#               """,
-#               (('1', '2'), ('2', '3'), ('3', '4')),
-#           ),
-#           (  # regular dihedrals create edges
-#               """
-#               [dihedrals]
-#               1 2 3 4
-#               """,
-#               (('1', '2'), ('2', '3'), ('3', '4')),
-#           ),
-#           (  # impropers do not create edges
-#               """
-#               [ impropers ]
-#               1   2    3    4
-#               """,
-#               (),
-#           ),
-#           (
-#               """
-#               [ dihedrals ]
-#               1   2   3  4   2 ; gromacs dihedrals of type 2 are impropers
-#               """,
-#               (),
-#           ),
-#       #    (  # the edge section creates edges
-#       #        """
-#       #        [ edges ]
-#       #        SC1 SC2
-#       #        BB SC3
-#       #        """,
-#       #        (('SC1', 'SC2'), ('BB', 'SC3')),
-#       #    ),
-#       #   (  # edges can be deactivated from interactions
-#       #       """
-#       #       [ bonds ]
-#       #       BB SC1 -- {"edge": false}
-#       #       SC2 SC3 -- {"edge": true}
-#       #       """,
-#       #       (('SC2', 'SC3')),
-#       #   ),
-#       )
-#   )
-
-#   def test_interaction_edges(interaction_lines, edges):
-#       """
-#       Edges are created where expected.
-#       """
-#       lines = """
-#       [ moleculetype ]
-#       GLY 1
-
-#       [ atoms ]
-#       1 P4 1 ALA BB 1
-#       2 P3 1 ALA SC1 2
-#       3 P2 1 ALA SC2 3
-#       4 P2 1 ALA SC3 3
-#       """
-#       lines = textwrap.dedent(lines) + textwrap.dedent(interaction_lines)
-#       lines = lines.splitlines()
-#       ff = vermouth.forcefield.ForceField(name='test_ff')
-#       vermouth.gmx.itp_read.read_itp(lines, ff)
-#       block = ff.blocks['GLY']
-
-#       assert (set(frozenset(edge) for edge in block.edges)
-#               == set(frozenset(edge) for edge in edges))
 
     @staticmethod
     @pytest.mark.parametrize('interaction_lines', (
@@ -235,6 +153,10 @@ class TestITP:
         """
         [ bonds ]
         1 6
+        """,
+        """
+        [ bonds ]
+        1 -6
         """,
         # Refers, by name, to a non-defined atom (SC2 does not exist)
         """
@@ -287,77 +209,6 @@ class TestITP:
         ff = vermouth.forcefield.ForceField(name='test_ff')
         with pytest.raises(IOError):
             vermouth.ffinput.read_ff(lines, ff)
-
-#    @staticmethod
-#   def test_interaction_hash_meta():
-#       """
-#       Make sure that the `#meta` lines are accounted for.
-#       """
-#       lines = """
-#       [ moleculetype ]
-#       GLY  3
-
-#       [ atoms ]
-#       1 P4 1 ALA BB 1
-#       2 P4 1 ALA SC1 1
-#       3 P4 1 ALA SC2 1
-#       4 P4 1 ALA SC3 1
-#       5 P4 1 ALA SC4 1
-
-#       [ bonds ]
-#       1 2 -- {"custom": 0}
-#       #meta {"first meta": "a", "first meta 2": "b"}
-#       2 3 -- {"custom": 1}
-#       3 4
-#       #meta {"first meta": 10, "second meta": 20}
-#       4 5
-#       """
-#       lines = textwrap.dedent(lines)
-#       lines = lines.splitlines()
-
-#       ff = vermouth.forcefield.ForceField(name='test_ff')
-#       vermouth.ffinput.read_ff(lines, ff)
-#       interactions = ff.blocks['GLY'].interactions['bonds']
-#       meta = [interaction.meta for interaction in interactions]
-#       expected = [
-#           {'custom': 0},
-#           {'first meta': 'a', 'first meta 2': 'b', 'custom': 1},
-#           {'first meta': 'a', 'first meta 2': 'b'},
-#           {'first meta': 10, 'first meta 2': 'b', 'second meta': 20},
-#       ]
-#       assert meta == expected
-
-#   @staticmethod
-#   @pytest.mark.parametrize('meta_line', (
-#       # Extra column
-#       '#meta {"a": 0, "b": 1} "plop"',
-#       # Missing column
-#       '#meta',
-#       # The value is not a dict
-#       '#meta "plop"'
-#   ))
-#   def test_invalid_meta(meta_line):
-#       """
-#       #meta lines fail when misformatted.
-#       """
-#       lines = """
-#       [ moleculetype ]
-#       GLY 1
-
-#       [ atoms ]
-#       1 P4 1 ALA BB 1
-#       2 P4 1 ALA SC1 1
-
-#       [ bonds ]
-#       {}
-#       BB SC1
-#       """
-#       lines = textwrap.dedent(lines).format(meta_line)
-#       lines = lines.splitlines()
-
-#       ff = vermouth.forcefield.ForceField(name='test_ff')
-#       with pytest.raises(IOError):
-#           vermouth.ffinput.read_ff(lines, ff)
 
     @staticmethod
     @pytest.mark.parametrize('section_name', (
@@ -463,16 +314,16 @@ class TestITP:
         assert ff.blocks['GLY'].interactions['virtual_sitesn'][1] == VS2
 
     @staticmethod
-    @pytest.mark.parametrize('def_statements, bonds', 
+    @pytest.mark.parametrize('def_statements, bonds',
         (("""#ifdef FLEXIBLE
          [ bonds ]
-         1  2 
+         1  2
          2  3
          #endif""",
          [vermouth.molecule.Interaction(
                atoms=[0, 1], parameters=[], meta={"#ifdef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
-               atoms=[1, 2], parameters=[], meta={"#ifdef":"FLEXIBLE"})]), 
+               atoms=[1, 2], parameters=[], meta={"#ifdef":"FLEXIBLE"})]),
         ("""#ifndef FLEXIBLE
          [ bonds ]
          1   2
@@ -481,13 +332,13 @@ class TestITP:
          [vermouth.molecule.Interaction(
              atoms=[0, 1], parameters=[], meta={"#ifndef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
-             atoms=[1, 2], parameters=[], meta={"#ifndef":"FLEXIBLE"})]), 
+             atoms=[1, 2], parameters=[], meta={"#ifndef":"FLEXIBLE"})]),
         ("""[ bonds ]
          1   2
          #ifdef FLEXIBLE
          2   3
          #endif
-         3  4""", 
+         3  4""",
          [vermouth.molecule.Interaction(
               atoms=[0, 1], parameters=[], meta={}),
           vermouth.molecule.Interaction(
@@ -500,7 +351,7 @@ class TestITP:
         """
         test the handling if ifdefs and ifndefs at
         different positions in itp-file
-        """      
+        """
         lines = """
         [ moleculetype ]
         GLY 1
@@ -510,8 +361,8 @@ class TestITP:
         2 P4 1 ALA SC1 1
         3 P4 1 ALA SC2 1
         4 P4 1 ALA SC3 1
-        """ 
-      
+        """
+
         new_lines = lines + def_statements
         new_lines = textwrap.dedent(new_lines)
         new_lines = new_lines.splitlines()
@@ -521,13 +372,22 @@ class TestITP:
 
     @staticmethod
     @pytest.mark.parametrize('def_fail_statements',(
-         """[ bonds ]
+         """[ atoms ]
+         1 P4 1 ALA BB 1
+         2 P4 1 ALA SC1 1
+         [ bonds ]
          1   2
          #fdef FLEXIBLE
          2   3
          #endif
          3  4""",
-         """[ bonds ]
+         """
+         [ atoms ]
+         1 P4 1 ALA BB 1
+         2 P4 1 ALA SC1 1
+         3 P4 1 ALA SC2 1
+         4 P4 1 ALA SC3 1
+         [ bonds ]
          1   2
          #ifdef FLEXIBLE
          2   3
@@ -538,12 +398,39 @@ class TestITP:
          2   3
          #endif
          3  4""",
-         """[ bonds ]
+         """[ atoms ]
+         1 P4 1 ALA SC1 1
+         2 P4  1 ALA SC1 1
+         [ bonds ]
          #include random
+         """,
+         """[atoms]
+         1 P4  1 ALA SC1 1
+         2 P4  1 ALA SC1 1
+         [ bonds ]
+         1   2   A B
+         #endif
+         """,
+         """[ atoms ]
+         1 P4  1 ALA SC1 1
+         2 P4  1 ALA SC1 1
+         3 P4  1 ALA SC1 1
+         [ bonds ]
+         #ifdef FLEXIBLE
+         1   2   A  B
+         #ifdef RANDOM
+         1    3  A   B
+         """,
+         """[ atoms ]
+         1 P4 1 ALA SC1 1
+         2 P4  1 ALA SC1 1
+         [ bonds ]
+         1   2 A B
+         #if
          """))
     def test_def_fails(def_fail_statements):
         """
-        test if incorrectly formatted ifdefs raise 
+        test if incorrectly formatted ifdefs raise
         appropiate error
         """
         lines = """
@@ -555,14 +442,14 @@ class TestITP:
         new_lines = new_lines.splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
         with pytest.raises(IOError):
-             vermouth.gmx.itp_read.read_itp(lines, ff)
-   
+             vermouth.gmx.itp_read.read_itp(new_lines, ff)
+
     @staticmethod
     def test_multiple_interactions():
         """
         test if we can multiple interactions
         using the same atom indices but different
-        parameters. 
+        parameters.
         """
         lines = """
         [ moleculetype ]
@@ -576,9 +463,9 @@ class TestITP:
         [ dihedrals ]
         1   2   3   4  1  A
         1   2   3   4  1  B
-        1   2   3   4  1  C  
+        1   2   3   4  1  C
         """
-        
+
         lines = textwrap.dedent(lines)
         lines = lines.splitlines()
 
@@ -591,14 +478,14 @@ class TestITP:
                 atoms=[0, 1, 2, 3], parameters=['1','B'], meta={}),
               vermouth.molecule.Interaction(
                 atoms=[0, 1, 2, 3], parameters=['1','C'], meta={})]
-            
+
         assert ff.blocks['GLY'].interactions['dihedrals'] == dih
 
     @staticmethod
     def test_excluions():
         """
-        test if can read exclusions with 
-        variable number of excluded atoms properly. 
+        test if can read exclusions with
+        variable number of excluded atoms properly.
         """
         lines = """
         [ moleculetype ]
@@ -610,11 +497,11 @@ class TestITP:
         3 P4 1 ALA SC2 1
         4 P4 1 ALA SC3 1
         [ exclusions ]
-        1   2   3   4  
-        2   3   4  
-        3   4    
+        1   2   3   4
+        2   3   4
+        3   4
         """
-        
+
         lines = textwrap.dedent(lines)
         lines = lines.splitlines()
 
@@ -627,5 +514,40 @@ class TestITP:
                  atoms=[1, 2, 3], parameters=[], meta={}),
                vermouth.molecule.Interaction(
                  atoms=[2, 3], parameters=[], meta={})]
-            
+
         assert ff.blocks['GLY'].interactions['exclusions'] == excl
+
+
+    @staticmethod
+    @pytest.mark.parametrize('test_lines',(
+         """[ atoms ]
+         1 P4 1 ALA BB 1
+         1 P4 1 ALA BB 1
+         """,
+         """[ atoms ]
+         1 P4 1 ALA BB 1
+         [ bonds ]
+         10  15   A
+         """,
+         """[ atoms ]
+         -1   P4 1 ALA BB 1
+         """,
+         """[ atoms ]
+         AA   P4   ALA BB 1
+         """))
+    def test_atom_block_errors(test_lines):
+        """
+        test if incorrectly formatted ifdefs raise
+        appropiate error
+        """
+        lines = """
+        [ moleculetype ]
+        GLY 1
+        """
+        new_lines = lines + test_lines
+        new_lines = textwrap.dedent(new_lines)
+        new_lines = new_lines.splitlines()
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        with pytest.raises(IOError):
+             vermouth.gmx.itp_read.read_itp(new_lines, ff)
+

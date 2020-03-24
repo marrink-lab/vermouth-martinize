@@ -168,7 +168,7 @@ class ITPDirector(SectionLineParser):
         result = None
 
         if len(prev_section) != 0:
-            result = self.finalize_section(prev_section,ended)
+            result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
         if action:
@@ -185,6 +185,16 @@ class ITPDirector(SectionLineParser):
 
         if self.current_block is not None:
             self.force_field.blocks[self.current_block.name] = self.current_block
+
+    def finalize(self, lineno=0):
+        """
+        We need to check if all pragmas actually closed.
+        """
+        if self.current_meta is not None:
+            raise IOError("Your #ifdef section is orderd incorrectly."
+                         "There is no #endif for the last pragma..")
+
+        super().finalize()
 
     def _new_block(self):
         self.current_block = Block(force_field=self.force_field)
@@ -279,6 +289,10 @@ class ITPDirector(SectionLineParser):
         for atom in atoms:
             reference = atom[0]
             if reference.isdigit():
+                if int(reference) < 1:
+                    msg = ('In section {} is a negative atom reference, which is not allowed.')
+                    raise IOError(msg.format(section.name))
+
                # The indices in the file are 1-based
                 reference = int(reference) - 1
                 try:
@@ -345,6 +359,11 @@ class ITPDirector(SectionLineParser):
         index, atype, resid, resname, name, charge_group = first_six
         # since the index becomes the node name and all graphs start with 0
         # index it makes more sense to also directly start at 0
+
+        if int(index) < 1:
+            msg = ('In section {} is a negative atom reference, which is not allowed.')
+            raise IOError(msg.format(section.name))
+
         index = int(index) -1
 
         if index in context:
