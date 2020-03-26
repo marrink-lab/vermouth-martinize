@@ -607,17 +607,25 @@ class Molecule(nx.Graph):
 
         Parameters
         ----------
+        ignore_keys: list
+        List of keys to ignore from 'template_attributes'.
         **attrs: collections.abc.Mapping
-            The attributes and their desired values.
+            The attributes and their desired values
 
         Yields
         ------
         collections.abc.Hashable
             All atom indices that match the specified `attrs`
         """
+        try:
+            ignore = attrs['ignore']
+            del attrs['ignore']
+        except KeyError:
+            ignore = []
+
         for node_idx in self:
             node = self.nodes[node_idx]
-            if attributes_match(node, attrs):
+            if attributes_match(node, attrs, ignore_keys=ignore):
                 yield node_idx
 
     def __getattr__(self, name):
@@ -757,7 +765,7 @@ class Molecule(nx.Graph):
     # instance, the assumed default for the `PTM_atom` attribute is False.
     def same_nodes(self, other, ignore_attr=()):
         """
-        Returns `True` if the nodes are the same and in the same order.
+        Returnsignore = if the nodes are the same and in the same order.
 
         The equality criteria used for the attribute values are those of
         :func:`vermouth.utils.are_different`.
@@ -909,6 +917,58 @@ class Molecule(nx.Graph):
         for node in nodes:
             self._remove_interactions_with_node(node)
 
+    def apply_link_between_residues(self, link, resids):
+        """
+        Applies a link between specific residues, if and only if
+        the link atoms incl. all attributes match at most one atom
+        in a respective link.
+
+        Parameters
+        ----------
+        link: :class:`vermouth.Molecule.Link`
+            A vermouth link definition
+        resids: list
+            a list of node attributes used for link matching aside from
+            the residue ordering
+        """
+        # parked this here because importing it seems to fail apparently
+        # because some relative references are used in do_links.py
+        def _build_link_interaction_from(molecule, interaction, match):
+            atoms = tuple(match[idx] for idx in interaction.atoms)
+            parameters = [
+                param(molecule, match) if callable(param) else param
+                for param in interaction.parameters
+            ]
+            new_interaction = interaction._replace(
+                atoms=atoms,
+                parameters=parameters
+            )
+            return new_interaction
+
+        # we have to go on resid or at least one criterion otherwise
+        # the matching will be super slow, if we need to iterate
+        # over all combintions of a possible link
+        nx.set_node_attributes(link, dict(zip(link.nodes, resids)), 'resid')
+
+        link_to_mol = {}
+        for node in link.nodes:
+            attrs = link.nodes[node]
+            attrs.update({'ignore':['order']})
+            matchs = [ atom for atom in self.find_atoms(**attrs)]
+
+            if len(matchs) == 1:
+               link_to_mol[node] = matchs[0]
+            else:
+               raise KeyError
+
+        for inter_type in link.interactions:
+            for interaction in link.interactions[inter_type]:
+                new_interaction = _build_link_interaction_from(self, interaction, link_to_mol)
+                self.add_or_replace_interaction(inter_type, *new_interaction)
+                atoms = interaction.atoms
+                new_edges = [ (link_to_mol[atoms[i]], link_to_mol[atoms[i+1]]) for i in
+                               range(0,len(atoms)-1)]
+                self.add_edges_from(new_edges)
 
 class Block(Molecule):
     """

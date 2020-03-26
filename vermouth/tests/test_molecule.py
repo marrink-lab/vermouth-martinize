@@ -1243,3 +1243,4 @@ def test_str_method(mol, moltype):
             assert '{} {}'.format(len(interactions), itype) in found
         else:
             assert '{} {}'.format(0, itype) not in found
+
