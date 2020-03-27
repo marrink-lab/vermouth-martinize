@@ -947,27 +947,28 @@ class Molecule(nx.Graph):
 
         # we have to go on resid or at least one criterion otherwise
         # the matching will be super slow, if we need to iterate
-        # over all combintions of a possible link
+        # over all combintions of a possible links.
         nx.set_node_attributes(link, dict(zip(link.nodes, resids)), 'resid')
 
         link_to_mol = {}
         for node in link.nodes:
             attrs = link.nodes[node]
             attrs.update({'ignore':['order']})
-            matchs = [ atom for atom in self.find_atoms(**attrs)]
+            matchs = [atom for atom in self.find_atoms(**attrs)]
 
             if len(matchs) == 1:
-               link_to_mol[node] = matchs[0]
+                link_to_mol[node] = matchs[0]
             else:
-               raise KeyError
+                msg = "Found no matchs for atom {} in resiue {}. Cannot apply link."
+                raise KeyError(msg.format(attrs["atomname"], attrs["resid"]))
 
         for inter_type in link.interactions:
             for interaction in link.interactions[inter_type]:
                 new_interaction = _build_link_interaction_from(self, interaction, link_to_mol)
                 self.add_or_replace_interaction(inter_type, *new_interaction)
                 atoms = interaction.atoms
-                new_edges = [ (link_to_mol[atoms[i]], link_to_mol[atoms[i+1]]) for i in
-                               range(0,len(atoms)-1)]
+                new_edges = [(link_to_mol[atoms[i]], link_to_mol[atoms[i+1]]) for i in
+                             range(0, len(atoms)-1)]
                 self.add_edges_from(new_edges)
 
 class Block(Molecule):

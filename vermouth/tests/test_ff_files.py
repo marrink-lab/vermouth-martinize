@@ -21,7 +21,6 @@ import numpy as np
 import vermouth.ffinput
 import vermouth.forcefield
 import vermouth.molecule
-import vermouth.gmx.itp_read
 
 class TestBlock:
     @staticmethod
