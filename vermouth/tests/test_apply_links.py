@@ -96,13 +96,6 @@ class TestApplyLinks:
          BB   +BB  1  0.350  1250""",
          [1,4],
          ),
-	(# no match considering the order parameter
-         """
-         [ link ]
-         [ bonds ]
-         BB   BB  1  0.350  1250""",
-         [1,4],
-         ),
         (# no match due to incorrect atom name
          """
          [ link ]
