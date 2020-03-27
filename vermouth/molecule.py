@@ -607,8 +607,6 @@ class Molecule(nx.Graph):
 
         Parameters
         ----------
-        ignore_keys: list
-        List of keys to ignore from 'template_attributes'.
         **attrs: collections.abc.Mapping
             The attributes and their desired values
 
@@ -925,7 +923,7 @@ class Molecule(nx.Graph):
 
         Parameters
         ----------
-        link: :class:`vermouth.Molecule.Link`
+        link: :class:`vermouth.molecule.Link`
             A vermouth link definition
         resids: list
             a list of node attributes used for link matching aside from
