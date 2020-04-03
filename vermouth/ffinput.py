@@ -129,8 +129,20 @@ class FFDirector(SectionLineParser):
 
         return result
 
+    def finalize(self, *args, **kwargs):
+        # We teach the forcefield what constitutes a protein residue.
+        # Replaces whatever the forcefield already knew.
+        try:
+            protein_resnames = self.macros['protein_resnames']
+            protein_resnames = protein_resnames.replace('"','').split("|")
+            protein_resnames = set(filter(None, protein_resnames))
+            self.force_field.protein_resnames = protein_resnames
+        except KeyError:
+            pass
+        return super().finalize(*args, **kwargs)
 
-    def finalize_section(self, pervious_section, ended_section):
+
+    def finalize_section(self, previous_section, ended_section):
 
         """
         Called once a section is finished. It appends the current_links list
@@ -368,7 +380,7 @@ def _some_atoms_left(tokens, atoms, natoms):
     Return True if the token list expected to contain atoms.
 
     If the number of atoms is known before hand, then the function compares the
-    number of already found atoms to the expected number. If the '--' token if
+    number of already found atoms to the expected number. If the '--' token is
     found, it is removed from the token list and there is no atom left.
 
     Parameters

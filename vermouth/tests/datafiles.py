@@ -43,6 +43,7 @@ DSSP_OUTPUT = TEST_DATA / 'dssp_1bta.ssd'
 
 # Test force fields
 FF_UNIVERSAL_TEST = TEST_DATA / 'force_fields' / 'universal-test'
+FF_UNIVERSAL_CUSTOMPROT = TEST_DATA / 'force_fields' / 'universal-customprot'
 FF_PEPPLANE = TEST_DATA / 'force_fields' / 'pepplane'
 FF_MARTINI_TEST = TEST_DATA / 'force_fields' / 'martini-test'
 

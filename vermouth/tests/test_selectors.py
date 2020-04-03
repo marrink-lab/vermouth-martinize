@@ -21,12 +21,27 @@ import functools
 import pytest
 
 import vermouth
+import vermouth.forcefield
+import vermouth.processors
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
     PDB_PROTEIN,
     PDB_NOT_PROTEIN,
     PDB_PARTIALLY_PROTEIN,
+    FF_UNIVERSAL_CUSTOMPROT,
 )
+
+
+
+def read_with_ff(struct, forcefield):
+    """
+    Read a structure file with the specified forcefield
+    """
+    ff = vermouth.forcefield.ForceField(forcefield)
+    system = vermouth.System()
+    vermouth.processors.PDBInput(struct).run_system(system)
+    system.force_field = ff
+    return system.molecules
 
 
 @pytest.mark.parametrize(
@@ -36,6 +51,8 @@ from vermouth.tests.datafiles import (
         (PDB_NOT_PROTEIN, False),
         (PDB_PARTIALLY_PROTEIN, False),
     ]]
+    +
+    [(read_with_ff(PDB_PARTIALLY_PROTEIN, FF_UNIVERSAL_CUSTOMPROT), True)]
 )
 def test_is_protein(molecules, reference_answer):
     """

@@ -57,6 +57,7 @@ class ForceField:
     name: str
     variables: dict
     reference_graphs: dict
+    protein_resnames: set or None
     """
 
     def __init__(self, directory=None, name=None):
@@ -65,6 +66,7 @@ class ForceField:
         self.modifications = {}
         self.renamed_residues = {}
         self.variables = {}
+        self.protein_resnames = None
         self.name = None
         if directory is not None:
             self.read_from(directory)

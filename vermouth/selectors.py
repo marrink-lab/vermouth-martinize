@@ -20,31 +20,41 @@ import numpy as np
 from .molecule import attributes_match
 
 
-# TODO: Make that list part of the force fields
 PROTEIN_RESIDUES = set(('ALA', 'ARG', 'ASP', 'ASN', 'CYS',
                         'GLU', 'GLN', 'GLY', 'HIS', 'ILE',
                         'LEU', 'LYS', 'MET', 'PHE', 'PRO',
                         'SER', 'THR', 'TRP', 'TYR', 'VAL'))
 
 
-def is_protein(molecule):
+def is_protein(molecule, canonical=False):
     """
-    Return True if all the residues in the molecule are protein residues.
+    Return True if all the residues in `molecule` are protein residues.
 
     The function tests if the residue name of all the atoms in the input
-    molecule are in ``PROTEIN_RESIDUES``.
+    molecule are defined as such in the molecule's force field .ff files (under
+    the 'protein_resnames' macro). If `canonical` is set to `True`, or if the
+    force field provides no such info, the residues are compared to
+    ``PROTEIN_RESIDUES`` instead.
 
     Parameters
     ----------
     molecule: Molecule
         The molecule to test.
+    canonical: bool
+        Whether comparison should be done to the canonical set
+        ``PROTEIN_RESIDUES`` instead to what the force field defines.
 
     Returns
     -------
     bool
     """
+    if (not canonical and molecule.force_field is not None and
+        molecule.force_field.protein_resnames is not None):
+        cmp_set = molecule.force_field.protein_resnames
+    else:
+        cmp_set = PROTEIN_RESIDUES
     return all(
-        molecule.nodes[n_idx].get('resname') in PROTEIN_RESIDUES
+        molecule.nodes[n_idx].get('resname') in cmp_set
         for n_idx in molecule
     )
 
