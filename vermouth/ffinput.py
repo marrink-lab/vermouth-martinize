@@ -105,22 +105,22 @@ class FFDirector(SectionLineParser):
         KeyError
             If the section header is unknown.
         """
-                        
-        prev_section = self.section
-
+        prev_section = None
         ended = []
         section = self.section + [line.strip('[ ]').casefold()]
+
         if tuple(section[-1:]) in self.METH_DICT:
+            prev_section = self.section
             self.section = section[-1:]
         else:
             while (tuple(section) not in self.METH_DICT
                    and len(section) > 1):
                 ended.append(section.pop(-2))  # [a, b, c, d] -> [a, b, d]
             self.section = section
-                          
+
         result = None
 
-        if len(prev_section) != 0:
+        if prev_section:
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
