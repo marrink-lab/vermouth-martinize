@@ -276,7 +276,7 @@ class ITPDirector(SectionLineParser):
 
         # everything that is left are parameters, which we
         # get by simply deleting the atoms from tokens
-        print(remove)
+ 
         for index in sorted(remove, reverse=True):
             del tokens[index]
 

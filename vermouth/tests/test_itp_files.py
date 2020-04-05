@@ -90,10 +90,14 @@ class TestITP:
         1 P4 1 ALA BB 1
         2 P3 1 ALA SC1 2
         3 P2 1 ALA SC2 3
+        4 P2 1 ALA SC3 3
 
         [ bonds ]
         1 2 1 0.2 100
         2 3 4 0.6 700
+        [ angles ]
+        1  2  3 params
+        2  3  4 params
         """
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
@@ -108,7 +112,17 @@ class TestITP:
                 atoms=[1, 2], parameters=['4', '0.6', '700'],meta={},
             ),
         ]
+
+        angles = [
+            vermouth.molecule.Interaction(
+                atoms=[0, 1, 2], parameters=['params'], meta={},
+            ),
+            vermouth.molecule.Interaction(
+                atoms=[1, 2, 3], parameters=['params'],meta={},
+            ),
+        ]
         assert block.interactions['bonds'] == bonds
+        assert block.interactions['angles'] == angles
 
 
     @staticmethod
