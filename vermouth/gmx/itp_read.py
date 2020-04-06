@@ -121,7 +121,7 @@ class ITPDirector(SectionLineParser):
         elif line.startswith("#ifdef") or line.startswith("#ifndef"):
             if self.current_meta is None:
                 condition, tag = line.split()
-                self.current_meta = {'tag': tag, 'condition': condition}
+                self.current_meta = {'tag': tag, 'condition': condition.replace("#","")}
             elif self.current_meta is not None:
                 raise IOError("Your #ifdef section is orderd incorrectly."
                               "At line {} I read #ifdef but there is still"
