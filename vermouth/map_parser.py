@@ -471,15 +471,6 @@ class MappingDirector(SectionLineParser):
 
     Attributes
     ----------
-    RESNAME_NUM_SEP: str
-        The character that separates a resname from a resnumber in shorthand
-        block formats.
-    RESIDUE_ATOM_SET: str
-        The character that separates a residue identifier from an atomname.
-    COMMENT_CHAR: str
-        The character that starts a comment.
-    NO_FETCH_BLOCK: str
-        The character that specifies no block should be fetched automatically.
     builder
         The builder used to build the :class:`Mapping` object. By default
         :class:`MappingBuilder`.
@@ -499,9 +490,16 @@ class MappingDirector(SectionLineParser):
         A dictionary of known macros.
     """
     RESNAME_NUM_SEP = '#'
+    """
+    The character that separates a resname from a resnumber in shorthand block
+    formats.
+    """
     RESIDUE_ATOM_SEP = ':'
+    """The character that separates a residue identifier from an atomname."""
     COMMENT_CHAR = ';'
+    """The character that starts a comment."""
     NO_FETCH_BLOCK = '!'
+    """The character that specifies no block should be fetched automatically."""
     SECTION_ENDS = ['block', 'modification']
 
     def __init__(self, force_fields, builder=None):
