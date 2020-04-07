@@ -54,8 +54,6 @@ class Mapping:
         :attr:`blocks_from` to what node key in :attr:`blocks_to` it
         contributes to with what weight.
         ``{node_from: {node_to: weight, ...}, ...}``.
-    reverse_mapping: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
-        .. autoattribute:: reverse_mapping
 
     Note
     ----
