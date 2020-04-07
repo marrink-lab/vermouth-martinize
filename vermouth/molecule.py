@@ -1165,7 +1165,8 @@ class Block(Molecule):
                 )
                 mol.add_interaction(
                     name, atoms,
-                    interaction.parameters
+                    interaction.parameters,
+                    meta=interaction.meta
                 )
         for edge in self.edges:
             mol.add_edge(*(name_to_idx[node] for node in edge))
