@@ -106,12 +106,13 @@ class FFDirector(SectionLineParser):
             If the section header is unknown.
         """
                         
-        prev_section = self.section
+        prev_section = None
 
         ended = []
         section = self.section + [line.strip('[ ]').casefold()]
         if tuple(section[-1:]) in self.METH_DICT:
             self.section = section[-1:]
+            prev_section = self.section
         else:
             while (tuple(section) not in self.METH_DICT
                    and len(section) > 1):
@@ -120,7 +121,7 @@ class FFDirector(SectionLineParser):
                           
         result = None
 
-        if len(prev_section) != 0:
+        if prev_section:
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
