@@ -146,16 +146,13 @@ def _items_with_common_values(graph, nodes=None):
     """
     if not nodes:
         nodes = set(graph.nodes)
+
     common_attrs = defaultdict(list)
     for idx in nodes:
         for key, val in graph.nodes[idx].items():
             common_attrs[key].append(val)
-    common_attrs = dict(common_attrs)
-    for key, vals in list(common_attrs.items()):
-        if len(vals) == len(nodes) and are_all_equal(vals):
-            common_attrs[key] = vals[0]
-        else:
-            del common_attrs[key]
+    common_attrs = {key: vals[0] for key, vals in common_attrs.items()
+                    if len(vals) == len(nodes) and are_all_equal(vals)}
     return common_attrs
 
 

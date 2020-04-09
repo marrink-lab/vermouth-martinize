@@ -167,10 +167,15 @@ def annotate_modifications(molecule, modifications, mutations):
     if not modifications and not mutations:
         return
 
+    # We need to do very similar but not quite identical things for
+    # modifications and mutations. Associate them with the correct name and  FF
+    # elements.
+    associations = [(modifications, 'modification', molecule.force_field.modifications),
+                    (mutations, 'mutation', molecule.force_field.blocks)]
+
     residue_graph = make_residue_graph(molecule)
     for res_idx in residue_graph:
-        for mutmod, key, library in [(modifications, 'modification', molecule.force_field.modifications),
-                                     (mutations, 'mutation', molecule.force_field.blocks)]:
+        for mutmod, key, library in associations:
             for resspec, mod in mutmod:
                 if residue_matches(resspec, residue_graph, res_idx):
                     if mod != 'none' and mod not in library:
