@@ -156,7 +156,7 @@ def test_martinize2_moltypes(tmpdir, deduplicate):
     expected = ['molecule_{}.itp'.format(i) for i in range(n_outputs)]
 
     proc = subprocess.Popen(command, cwd=str(tmpdir))
-    exit_code = proc.wait(timeout=60)
+    exit_code = proc.wait(timeout=90)
     assert exit_code == 0
 
     itp_files = sorted(os.path.basename(fname) for fname in glob(str(tmpdir / '*.itp')))

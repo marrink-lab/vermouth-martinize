@@ -17,10 +17,12 @@
 Test graph reparation and related operations.
 """
 import copy
+import logging
 
 import networkx as nx
 import pytest
 import vermouth
+from vermouth.molecule import Link
 import vermouth.forcefield
 
 
@@ -32,7 +34,7 @@ def build_forcefield_with_mods():
     -------
     vermouth.ForceField
     """
-    nter = nx.Graph(name='N-ter')
+    nter = Link(name='N-ter')
     nter.add_nodes_from((
         (0, {'atomname': 'CA', 'PTM_atom': False, 'element': 'C'}),
         (1, {'atomname': 'N', 'PTM_atom': False, 'element': 'N'}),
@@ -41,7 +43,7 @@ def build_forcefield_with_mods():
     ))
     nter.add_edges_from([[0, 1], [1, 2], [1, 3]])
 
-    cter = nx.Graph(name='C-ter')
+    cter = Link(name='C-ter')
     cter.add_nodes_from((
         (0, {'atomname': 'C', 'PTM_atom': False, 'element': 'C'}),
         (1, {'atomname': 'O', 'PTM_atom': False, 'element': 'O'}),
@@ -49,7 +51,7 @@ def build_forcefield_with_mods():
     ))
     cter.add_edges_from([[0, 1], [0, 2]])
 
-    gluh = nx.Graph(name='GLU-H')
+    gluh = Link(name='GLU-H')
     gluh.add_nodes_from((
         (0, {'atomname': 'CD', 'PTM_atom': False, 'element': 'C'}),
         (1, {'atomname': 'OE1', 'PTM_atom': False, 'element': 'O'}),
@@ -59,6 +61,7 @@ def build_forcefield_with_mods():
     gluh.add_edges_from([[0, 1], [0, 2], [1, 3]])
 
     forcefield = copy.copy(vermouth.forcefield.get_native_force_field('universal'))
+    forcefield.modifications = {}
     for mod in [nter, gluh, cter]:
         forcefield.modifications[mod.name] = mod
     forcefield.renamed_residues[('GLU', ('GLU-H', 'N-ter'))] = 'GLU0'
@@ -246,3 +249,51 @@ def test_renaming(renamed_graph):
             assert node['resname'] == 'GLU0'
         else:
             assert node['resname'] == 'GLY'
+
+
+
+@pytest.mark.parametrize('resid,mutations,modifications,atomnames',[
+    (1, ['ALA'], [], 'O C CA HA N HN CB HB1 HB2 HB3'),  # The glutamate chain and N-ter are removed
+    (1, [], ['N-ter'], 'O C CA HA N H HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # HE1 got removed
+    (2, ['ALA'], ['N-ter', 'C-ter'], 'O OXT C CA HA N H HN CB HB1 HB2 HB3'),
+    (2, ['GLU'], [], 'O C CA HA N HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # Added glutamate sidechain
+    (5, ['GLY'], ['none'], 'N CA C O HN HA1 HA2'),  # Remove O2 from C-ter mod
+])
+def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, modifications, atomnames):
+    mol = system_mod.molecules[0]
+    # Let's mutate res1 to ALA
+    for node_idx in mol:
+        if mol.nodes[node_idx].get('resid') == resid:
+            if mutations:
+                mol.nodes[node_idx]['mutation'] = mutations
+            if modifications:
+                mol.nodes[node_idx]['modification'] = modifications
+    mol = vermouth.RepairGraph().run_molecule(mol)
+    resid1_atomnames = set()
+    for node_idx in mol:
+        if mol.nodes[node_idx].get('resid') == resid:
+            if mutations:
+                assert mol.nodes[node_idx]['resname'] == mutations[0]
+            if modifications:
+                assert mol.nodes[node_idx].get('modification') == modifications
+            resid1_atomnames.add(mol.nodes[node_idx]['atomname'])
+    assert resid1_atomnames == set(atomnames.split())
+
+
+@pytest.mark.parametrize('resid,mutations,modifications',[
+    (2, [], ['GLU-H']),  # The glutamate chain and N-ter are removed
+    (2, ['ALA', 'LEU'], [])
+])
+def test_repair_graph_with_mutation_modification_error(system_mod, caplog, resid, mutations, modifications):
+    mol = system_mod.molecules[0]
+    # Let's mutate res1 to ALA
+    for node_idx in mol:
+        if mol.nodes[node_idx].get('resid') == resid:
+            if mutations:
+                mol.nodes[node_idx]['mutation'] = mutations
+            if modifications:
+                mol.nodes[node_idx]['modification'] = modifications
+    with pytest.raises(ValueError), caplog.at_level(logging.WARNING):
+        assert not caplog.records
+        mol = vermouth.RepairGraph().run_molecule(mol)
+        assert len(caplog.records) == 1

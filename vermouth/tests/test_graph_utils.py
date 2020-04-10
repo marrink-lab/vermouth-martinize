@@ -268,143 +268,6 @@ def test_categorical_maximum_common_subgraph(node_data1, edges1, node_data2,
     assert make_into_set(found) == make_into_set(expected)
 
 
-@pytest.mark.parametrize('node_data, edges, partitions, attrs, expected_nodes, expected_edges', [
-    ([], {}, [], {}, [], {}),
-    ([{}], {}, [[0]], {}, [{}], {}),
-    (
-        [{}, {}],
-        {},
-        [[0, 1]],
-        {},
-        [{}],
-        {}
-    ),
-    (
-        [{}, {}],
-        {(0, 1): {}},
-        [[0, 1]],
-        {},
-        [{}],
-        {}
-    ),
-    (
-        [{}, {}],
-        {(0, 1): {}},
-        [[0, 1]],
-        {'id': [0]},
-        [{'id': 0}],
-        {}
-    ),
-    (
-        [{}, {}, {}, {}],
-        {(0, 1): {}, (1, 2): {}, (2, 3): {}},
-        [[0, 1], [2, 3]],
-        {'id': [0, 1]},
-        [{'id': 0}, {'id': 1}],
-        {(0, 1): {'weight': 1.0}}
-    ),
-    (
-        [{}, {}, {}, {}],
-        {(0, 1): {}, (1, 2): {'weight': 0.5}, (2, 3): {}},
-        [[0, 1], [2, 3]],
-        {'id': [0, 1]},
-        [{'id': 0}, {'id': 1}],
-        {(0, 1): {'weight': 0.5}}
-    ),
-    (
-        [{}, {}, {}, {}],
-        {(0, 1): {}, (2, 3): {}},
-        [[0, 1], [2, 3]],
-        {'id': [0, 1]},
-        [{'id': 0}, {'id': 1}],
-        {}
-    ),
-    (
-        [{}, {}, {}, {}],
-        {(0, 1): {}, (2, 3): {}},
-        [[0, 1], [2]],
-        {'id': [0, 1]},
-        [{'id': 0}, {'id': 1}],
-        {}
-    ),
-    (
-        [{}, {}, {}, {}],
-        {(0, 1): {}, (2, 3): {}},
-        [[0, 1]],
-        {'id': [0]},
-        [{'id': 0}],
-        {}
-    ),
-    (
-        [{}, {}, {}, {}],
-        {(0, 1): {}, (1, 2): {}, (2, 3): {}, (3, 0): {'weight': 0.5}},
-        [[0, 1], [2, 3]],
-        {'id': [0, 1]},
-        [{'id': 0}, {'id': 1}],
-        {(0, 1): {'weight': 1.5}}
-    ),
-    (
-        [{}, {}, {}, {}],
-        {(0, 1): {}, (1, 2): {}, (2, 3): {}},
-        [[0, 1], [2, 3]],
-        {'id': [0, 1], 'attr': ['a', 'b']},
-        [{'id': 0, 'attr': 'a'}, {'id': 1, 'attr': 'b'}],
-        {(0, 1): {'weight': 1.0}}
-    ),
-    pytest.param([{}, {}, {}, {}],
-                 {(0, 1): {}, (1, 2): {}, (2, 3): {}},
-                 [[0, 1], [2, 3]],
-                 {'id': [1], 'attr': ['a', 'b']},
-                 [{'id': 0, 'attr': 'a'}, {'id': 1, 'attr': 'b'}],
-                 {(0, 1): {'weight': 1.0}},
-                 marks=pytest.mark.xfail(raises=IndexError)),
-])
-def test_blockmodel(node_data, edges, partitions, attrs, expected_nodes, expected_edges):
-    """
-    Tests for the function ``blockmodel``.
-    """
-    graph = basic_molecule(node_data, edges)
-    found = vermouth.graph_utils.blockmodel(graph, partitions, **attrs)
-    expected = basic_molecule(expected_nodes, expected_edges)
-    pprint(("Found nodes", found.nodes(data=True)))
-    pprint(("Expected nodes", expected.nodes(data=True)))
-
-    for node in found:
-        data = found.nodes[node]
-        subgraph = data['graph']
-        assert len(subgraph.nodes) == data['nnodes']
-        assert len(subgraph.edges) == data['nedges']
-        assert nx.density(subgraph) == data['density']
-        del found.nodes[node]['graph']
-        del found.nodes[node]['nnodes']
-        del found.nodes[node]['nedges']
-        del found.nodes[node]['density']
-
-    assert found.nodes(data=True) == expected.nodes(data=True)
-    edges_seen = set()
-    for idx, jdx, data in found.edges(data=True):
-        assert expected.has_edge(idx, jdx) and expected.edges[idx, jdx] == data
-        edges_seen.add(frozenset((idx, jdx)))
-    assert set(frozenset(edge) for edge in expected.edges) == edges_seen
-
-
-def test_blockmodel_graph_attr():
-    """
-    Make sure the function ``blockmodel`` produces node attributes ``'graph'``,
-    ``'nnodes'`` and ``'nedges'`` that have the correct values.
-    """
-    graph = basic_molecule([{}, {}, {}], {(0, 1): {}, (1, 2): {}})
-    found = vermouth.graph_utils.blockmodel(graph, [[0], [1, 2]])
-    assert found.nodes[0]['nnodes'] == 1
-    assert found.nodes[0]['nnodes'] == len(found.nodes[0]['graph'].nodes)
-    assert found.nodes[1]['nnodes'] == 2
-    assert found.nodes[1]['nnodes'] == len(found.nodes[1]['graph'].nodes)
-    assert found.nodes[0]['nedges'] == 0
-    assert found.nodes[0]['nedges'] == len(found.nodes[0]['graph'].edges)
-    assert found.nodes[1]['nedges'] == 1
-    assert found.nodes[1]['nedges'] == len(found.nodes[1]['graph'].edges)
-
-
 @pytest.mark.parametrize('nodes1, nodes2, match, expected', [
     ([], [], {}, 0),
     (
@@ -467,41 +330,41 @@ def test_rate_match(nodes1, nodes2, match, expected):
     ([], {}, [], {}),
     (
         [{'chain': 0, 'resid': 0, 'resname': 0}], {},
-        [{'chain': 0, 'resid': 0, 'resname': 0, 'atomname': 0}], {}
+        [{'chain': 0, 'resid': 0, 'resname': 0}], {}
     ),
     (
         [{'chain': 0, 'resid': 0, 'resname': 1}], {},
-        [{'chain': 0, 'resid': 0, 'resname': 1, 'atomname': 1}], {}
+        [{'chain': 0, 'resid': 0, 'resname': 1}], {}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1}], {},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1}], {}
+        [{'chain': 0, 'resid': 2, 'resname': 1}], {}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5}], {},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1}], {}
+        [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5}], {}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
          {'chain': 0, 'resid': 2, 'resname': 1, 'attr': 7}],
         {},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1}],
+        [{'chain': 0, 'resid': 2, 'resname': 1}],
         {}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
-         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}],
+        [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
+         {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {(0, 1): {}},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
-         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}],
+        [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
+         {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {(0, 1): {'weight': 1}}
     ),
     (
@@ -509,8 +372,8 @@ def test_rate_match(nodes1, nodes2, match, expected):
          {'chain': 0, 'resid': 2, 'resname': 1, 'attr': 6},
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {(2, 1): {}},
-        [{'chain': 0, 'resid': 2, 'resname': 1, 'atomname': 1},
-         {'chain': 0, 'resid': 2, 'resname': 2, 'atomname': 2}],
+        [{'chain': 0, 'resid': 2, 'resname': 1},
+         {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {(0, 1): {'weight': 1}}
     ),
 ])
@@ -541,3 +404,25 @@ def test_make_residue_graph(nodes1, edges1, nodes2, edges2):
         assert expected.has_edge(idx, jdx) and expected.edges[idx, jdx] == data
         edges_seen.add(frozenset((idx, jdx)))
     assert set(frozenset(edge) for edge in expected.edges) == edges_seen
+
+@pytest.mark.parametrize('nodes, attrs, expected', [
+    ([], [], {}),
+    ([], [1], {}),
+    ([{}, {}], [], {tuple(): {0, 1}}),
+    ([{1: 1}, {1: 1}], [], {tuple(): {0, 1}}),
+    ([{1: 1}, {1: 1}], [1], {(1,): {0, 1}}),
+    ([{1: 1}, {1: 2}], [1], {(1,): {0}, (2,): {1}}),
+    ([{1: 1}, {1: 1, 2: 2}], [1], {(1,): {0, 1}}),
+    ([{1: 1, 2: 1}, {1: 1, 2: 2}], [1], {(1,): {0, 1}}),
+    ([{1: 1, 2: 1}, {1: 1, 2: 2}], [1, 2], {(1, 1): {0}, (1, 2): {1}}),
+    ([{1: 1}, {1: 1, 2: 2}], [1, 2], {(1, None): {0}, (1, 2): {1}}),
+
+])
+def test_collect_residues(nodes, attrs, expected):
+    """
+    Tests for ``collect_residues``
+    """
+    graph = nx.Graph()
+    graph.add_nodes_from(enumerate(nodes))
+    found = vermouth.graph_utils.collect_residues(graph, attrs)
+    assert found == expected
