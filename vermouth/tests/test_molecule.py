@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 import vermouth
 import vermouth.molecule
+import vermouth.forcefield
 from vermouth.molecule import Interaction, Molecule
 
 from .molecule_strategies import random_molecule, random_block, random_link
@@ -1243,3 +1244,29 @@ def test_str_method(mol, moltype):
             assert '{} {}'.format(len(interactions), itype) in found
         else:
             assert '{} {}'.format(0, itype) not in found
+
+def test_to_molecule():
+    """
+    Test if the to molecule function gives
+    expected results.
+    """
+    force_field = vermouth.forcefield.ForceField("test")
+    test_block = vermouth.molecule.Block()
+    test_block.add_edges_from([('A','B'), ('B','C')])
+    test_block.interactions["bonds"] = [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),]
+
+    molecule = test_block.to_molecule()
+
+    ref_bonds = [ Interaction(atoms=(0, 1),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=(1, 2),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),]
+    assert ref_bonds == molecule.interactions['bonds']
