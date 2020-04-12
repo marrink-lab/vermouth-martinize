@@ -68,12 +68,13 @@ class ITPDirector(SectionLineParser):
 
         if self.is_section_header(line):
             return self.parse_header
-        elif self.is_pragma(line):
+        elif ITPDirector.is_pragma(line):
             return self.parse_pragma
         else:
             return self.parse_section
 
-    def is_pragma(self, line):
+    @staticmethod
+    def is_pragma(line):
         """
         Parameters
         ----------
