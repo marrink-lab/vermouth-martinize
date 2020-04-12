@@ -19,8 +19,7 @@ Read GROMACS .itp files.
 
 import collections
 from vermouth.molecule import (Block, Interaction)
-from vermouth.parser_utils import (
-    SectionLineParser, _tokenize)
+from vermouth.parser_utils import (SectionLineParser, _tokenize)
 
 class ITPDirector(SectionLineParser):
     """
@@ -34,8 +33,8 @@ class ITPDirector(SectionLineParser):
                  'constraints'         : [0, 1],
                  'dihedrals'           : [0, 1, 2, 3],
                  'pairs'               : [0, 1],
-                 'exclusions'          : [":"],
-                 'virtual_sitesn'      : [0, "2:"],
+                 'exclusions'          : [slice(None, None)],
+                 'virtual_sitesn'      : [0, slice(2, None)],
                  'virtual_sites2'      : [0, 1, 2, 3],
                  'virtual_sites3'      : [0, 1, 2, 3]}
 
@@ -123,9 +122,10 @@ class ITPDirector(SectionLineParser):
                 condition, tag = line.split()
                 self.current_meta = {'tag': tag, 'condition': condition.replace("#","")}
             elif self.current_meta is not None:
-                raise IOError("Your #ifdef section is orderd incorrectly."
-                              "At line {} I read #ifdef but there is still"
-                              "an open ifdef section from before.".format(lineno))
+                raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
+                              "At line {} I read {} but there is still"
+                              "an open #ifdef/#ifndef sectiona from"
+                              "before.".format(lineno, line.split()[0]))
         # Guard against unkown pragmas like #if or #include
         else:
             raise IOError("Don't know how to parse pargma {} at"
@@ -161,7 +161,7 @@ class ITPDirector(SectionLineParser):
         if tuple(section[-1:]) in self.METH_DICT:
             self.section = section[-1:]
         else:
-            while (tuple(section) not in self.METH_DICT and len(section) > 1):
+            while tuple(section) not in self.METH_DICT and len(section) > 1:
                 ended.append(section.pop(-2))  # [a, b, c, d] -> [a, b, d]
             self.section = section
 
@@ -180,7 +180,7 @@ class ITPDirector(SectionLineParser):
         """
         Called once a section is finished. It appends the current_links list
         to the links and update the block dictionary with current_block. Thereby it
-        finishes the reading a given section.
+        finishes reading a given section.
         """
 
         if self.current_block is not None:
@@ -188,10 +188,11 @@ class ITPDirector(SectionLineParser):
 
     def finalize(self, lineno=0):
         """
-        We need to check if all pragmas actually closed.
+        Called at the end of the file and checks that all pragmas are closed
+        before calling the parent method.
         """
         if self.current_meta is not None:
-            raise IOError("Your #ifdef section is orderd incorrectly."
+            raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
                          "There is no #endif for the last pragma..")
 
         super().finalize()
@@ -201,12 +202,19 @@ class ITPDirector(SectionLineParser):
 
     @SectionLineParser.section_parser('moleculetype')
     def _block(self, line, lineno=0):
+        """
+        Parses the line directly following the '[moleculetype]'
+        directive and stores the block name and exclusions.
+         """
         name, nrexcl = line.split()
         self.current_block.name = name
         self.current_block.nrexcl = int(nrexcl)
 
     @SectionLineParser.section_parser('moleculetype', 'atoms')
     def _block_atoms(self, line, lineno=0):
+        """
+        Parses the lines of the [atoms] directive.
+        """
         tokens = collections.deque(_tokenize(line))
         self._parse_block_atom(tokens, self.current_block)
 
@@ -221,6 +229,11 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn')
     @SectionLineParser.section_parser('moleculetype', 'position_restraints')
     def _interactions(self, line, lineno=0):
+        """
+        Parses all interaction lines that are not directives (i.e. within []).
+        Note that each interaction is enumerated explicitly to guard against typos
+        and also interactions for which the format is unknown.
+        """
         context = self.current_block
         interaction_name = self.section[-1]
         tokens = collections.deque(_tokenize(line))
@@ -249,13 +262,6 @@ class ITPDirector(SectionLineParser):
         -----------
         list
         """
-        def _string_to_slice(string):
-            """
-            """
-            #adopted from https://stackoverflow.com/questions/680826/
-            #python-create-slice-object-from-string
-            return slice(*map(lambda x: int(x.strip()) if x.strip() else None,
-                              string.split(':')))
 
         atoms = []
         remove = []
@@ -266,17 +272,16 @@ class ITPDirector(SectionLineParser):
             if isinstance(idx, int):
                 atoms.append([tokens[idx], {}])
                 remove.append(idx)
-            elif isinstance(idx, str):
-                _slice = _string_to_slice(idx)
-                atoms += [[atom, {}] for atom in tokens[_slice]]
+            elif isinstance(idx, slice):
+                atoms += [[atom, {}] for atom in tokens[idx]]
                 idx_range = range(0, len(tokens))
-                remove += [i for i in idx_range[_slice]]
+                remove += [i for i in idx_range[idx]]
             else:
                 raise IOError
 
         # everything that is left are parameters, which we
         # get by simply deleting the atoms from tokens
- 
+
         for index in sorted(remove, reverse=True):
             del tokens[index]
 
@@ -284,13 +289,30 @@ class ITPDirector(SectionLineParser):
 
 
     def _treat_block_interaction_atoms(self, atoms, context, section):
+        """
+        Takes the atom indices associated with an interaction line
+        and converts it to zero based indices. It also performas some
+        format checks. It checks that:
+
+              - the indices are not negative or zero
+              - the indices refere to an existing atom
+              - atoms have no prefixes
+
+        Parameters
+        -----------
+        atom_idxs: list of ints or strings that are valid python slices
+        context: :class:`vermouth.molecule.Block`
+            The current block we parse
+        section: str
+            The current section header
+        """
         atom_names = list(context.nodes)
         all_references = []
         for atom in atoms:
             reference = atom[0]
             if reference.isdigit():
                 if int(reference) < 1:
-                    msg = ('In section {} is a negative atom reference, which is not allowed.')
+                    msg = 'In section {} is a negative atom reference, which is not allowed.'
                     raise IOError(msg.format(section.name))
 
                # The indices in the file are 1-based
@@ -317,28 +339,30 @@ class ITPDirector(SectionLineParser):
             all_references.append(reference)
         return all_references
 
-
     def _base_parser(self, tokens, context, section, atom_idxs):
+        """
+        Converts an interaction line into a vermouth interaction
+        tuple. It updates the block interactions in place.
 
+        Parameters
+        ----------
+        tokens: collections.deque[str]
+            Deque of token to inspect. The deque **can be modified** in place.
+        context: :class:`vermouth.molecule.Block`
+            The current block we parse
+        section: str
+            The current section header
+        atom_idxs: list of ints or strings that are valid python slices
+        """
         # split atoms and parameters
 
         atoms, parameters = self._split_atoms_and_parameters(tokens, atom_idxs)
 
-        # Normalize the atom references.
-        # Blocks and links treat these references differently.
-        # For blocks:
-        # * references can be written as indices or atom names
-        # * a reference cannot be prefixed by + or -
-        # * an interaction cannot create a new atom
-        # For links:
-        # * references must be atom names, but they can be prefixed with one or
-        #   more + or - to signify the order in the sequence
-        # * interactions create nodes
-
+        # perform check on the atom ids
         treated_atoms = self._treat_block_interaction_atoms(atoms, context, section)
 
         if self.current_meta:
-            meta = {self.current_meta['condition']:self.current_meta['tag']}
+            meta = {self.current_meta['condition']: self.current_meta['tag']}
         else:
             meta = {} #dict(collections.ChainMap(meta, apply_to_all_interactions))
 
@@ -347,13 +371,20 @@ class ITPDirector(SectionLineParser):
             parameters=parameters,
             meta=meta,)
 
-        interaction_list = context.interactions.get(section, [])
-        interaction_list.append(interaction)
-        context.interactions[section] = interaction_list
-
+        context.interactions[section] = context.interactions.get(section, []) + [interaction]
 
     def _parse_block_atom(self, tokens, context):
+        """
+        Converts the lines of the atom directive to graph nodes and
+        sets the values (i.e. atomtype) as attributes.
 
+        Parameters
+        ----------
+        tokens: collections.deque[str]
+            Deque of token to inspect. The deque **can be modified** in place.
+        context: :class:`vermouth.molecule.Block`
+            The current block we parse
+        """
         # deque does not support slicing
         first_six = (tokens.popleft() for _ in range(6))
         index, atype, resid, resname, name, charge_group = first_six
@@ -364,7 +395,7 @@ class ITPDirector(SectionLineParser):
             msg = ('In section {} is a negative atom reference, which is not allowed.')
             raise IOError(msg.format(section.name))
 
-        index = int(index) -1
+        index = int(index) - 1
 
         if index in context:
             msg = ('There is already an atom with index "{}" in the block "{}". '
@@ -372,8 +403,8 @@ class ITPDirector(SectionLineParser):
             raise IOError(msg.format(name, context.name))
 
         atom = {
-            # for bookkeping purposes let's keep the actual index i.e. +1 here
-            'index'   : index +1,
+            # for bookkeeping purposes let's keep the actual index i.e. +1 here
+            'index'   : index + 1,
             'atomname': name,
             'atype': atype,
             'resname': resname,
@@ -388,6 +419,7 @@ class ITPDirector(SectionLineParser):
             atom['mass'] = float(tokens.popleft())
 
         attributes = {}
+
         context.add_node(index, **dict(collections.ChainMap(attributes, atom)))
 
 def read_itp(lines, force_field):

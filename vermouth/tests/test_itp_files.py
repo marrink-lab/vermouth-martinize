@@ -67,13 +67,13 @@ class TestITP:
         vermouth.gmx.itp_read.read_itp(lines, ff)
         block = ff.blocks['GLY']
         assert len(block.nodes) == 3
-        assert block.nodes[0] == {'index':1,'atomname': 'BB', 'atype': 'P4',
+        assert block.nodes[0] == {'index': 1,'atomname': 'BB', 'atype': 'P4',
                                      'resname': 'ALA', 'resid': 1,
                                      'charge_group': 1}
-        assert block.nodes[1] == {'index':2,'atomname': 'SC1', 'atype': 'P3',
+        assert block.nodes[1] == {'index': 2,'atomname': 'SC1', 'atype': 'P3',
                                       'resname': 'ALA', 'resid': 1,
                                       'charge_group': 2, 'charge': -3.0}
-        assert block.nodes[2] == {'index':3,'atomname': 'SC2', 'atype': 'P2',
+        assert block.nodes[2] == {'index': 3,'atomname': 'SC2', 'atype': 'P2',
                                       'resname': 'ALA', 'resid': 1,
                                       'charge_group': 3,'charge':-3,'mass':72}
 
@@ -335,18 +335,18 @@ class TestITP:
          2  3
          #endif""",
          [vermouth.molecule.Interaction(
-               atoms=[0, 1], parameters=[], meta={"#ifdef":"FLEXIBLE"}),
+               atoms=[0, 1], parameters=[], meta={"ifdef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
-               atoms=[1, 2], parameters=[], meta={"#ifdef":"FLEXIBLE"})]),
+               atoms=[1, 2], parameters=[], meta={"ifdef":"FLEXIBLE"})]),
         ("""#ifndef FLEXIBLE
          [ bonds ]
          1   2
          2   3
          #endif""",
          [vermouth.molecule.Interaction(
-             atoms=[0, 1], parameters=[], meta={"#ifndef":"FLEXIBLE"}),
+             atoms=[0, 1], parameters=[], meta={"ifndef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
-             atoms=[1, 2], parameters=[], meta={"#ifndef":"FLEXIBLE"})]),
+             atoms=[1, 2], parameters=[], meta={"ifndef":"FLEXIBLE"})]),
         ("""[ bonds ]
          1   2
          #ifdef FLEXIBLE
@@ -356,7 +356,7 @@ class TestITP:
          [vermouth.molecule.Interaction(
               atoms=[0, 1], parameters=[], meta={}),
           vermouth.molecule.Interaction(
-              atoms=[1, 2], parameters=[],meta={"#ifdef":"FLEXIBLE"}),
+              atoms=[1, 2], parameters=[],meta={"ifdef":"FLEXIBLE"}),
           vermouth.molecule.Interaction(
               atoms=[2, 3], parameters=[],meta={})])
         ))
@@ -385,7 +385,7 @@ class TestITP:
         assert ff.blocks['GLY'].interactions['bonds'] == bonds
 
     @staticmethod
-    @pytest.mark.parametrize('def_fail_statements',(
+    @pytest.mark.parametrize('pragma_fail_statements',(
          """[ atoms ]
          1 P4 1 ALA BB 1
          2 P4 1 ALA SC1 1
@@ -442,16 +442,16 @@ class TestITP:
          1   2 A B
          #if
          """))
-    def test_def_fails(def_fail_statements):
+    def test_pragma_fails(pragma_fail_statements):
         """
-        test if incorrectly formatted ifdefs raise
+        test if incorrect use of pragmas raises
         appropiate error
         """
         lines = """
         [ moleculetype ]
         GLY 1
         """
-        new_lines = lines + def_fail_statements
+        new_lines = lines + pragma_fail_statements
         new_lines = textwrap.dedent(new_lines)
         new_lines = new_lines.splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
@@ -496,7 +496,7 @@ class TestITP:
         assert ff.blocks['GLY'].interactions['dihedrals'] == dih
 
     @staticmethod
-    def test_excluions():
+    def test_exclusions():
         """
         test if can read exclusions with
         variable number of excluded atoms properly.
