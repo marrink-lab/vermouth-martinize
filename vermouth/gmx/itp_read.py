@@ -120,7 +120,7 @@ class ITPDirector(SectionLineParser):
         elif line.startswith("#ifdef") or line.startswith("#ifndef"):
             if self.current_meta is None:
                 condition, tag = line.split()
-                self.current_meta = {'tag': tag, 'condition': condition.replace("#","")}
+                self.current_meta = {'tag': tag, 'condition': condition.replace("#", "")}
             elif self.current_meta is not None:
                 raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
                               "At line {} I read {} but there is still"
@@ -176,11 +176,18 @@ class ITPDirector(SectionLineParser):
 
         return result
 
-    def finalize_section(self, prev_section, ended_section):
+    def finalize_section(self, pervious_section, ended_section):
         """
         Called once a section is finished. It appends the current_links list
         to the links and update the block dictionary with current_block. Thereby it
         finishes reading a given section.
+
+        Parameters
+        ---------
+        previous_section: list[str]
+            The last parsed section.
+        ended_section: list[str]
+            The sections that have been ended.
         """
 
         if self.current_block is not None:
@@ -193,7 +200,7 @@ class ITPDirector(SectionLineParser):
         """
         if self.current_meta is not None:
             raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
-                         "There is no #endif for the last pragma..")
+                          "There is no #endif for the last pragma.")
 
         super().finalize()
 
@@ -275,7 +282,7 @@ class ITPDirector(SectionLineParser):
             elif isinstance(idx, slice):
                 atoms += [[atom, {}] for atom in tokens[idx]]
                 idx_range = range(0, len(tokens))
-                remove += [i for i in idx_range[idx]]
+                remove += idx_range[idx]
             else:
                 raise IOError
 
@@ -392,8 +399,8 @@ class ITPDirector(SectionLineParser):
         # index it makes more sense to also directly start at 0
 
         if int(index) < 1:
-            msg = ('In section {} is a negative atom reference, which is not allowed.')
-            raise IOError(msg.format(section.name))
+            msg = ('One of your atoms has a negative atom reference, which is not allowed.')
+            raise IOError(msg)
 
         index = int(index) - 1
 
@@ -423,5 +430,15 @@ class ITPDirector(SectionLineParser):
         context.add_node(index, **dict(collections.ChainMap(attributes, atom)))
 
 def read_itp(lines, force_field):
+    """
+    Parses `lines` of itp format and adds the
+    molecule as a block to `force_field`.
+
+    Parameters
+    ----------
+    lines: list
+        list of lines of an itp file
+    force_field: :class:`vermouth.forcefield.ForceField`
+    """
     director = ITPDirector(force_field)
     return list(director.parse(iter(lines)))
