@@ -242,8 +242,16 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'pairs')
     @SectionLineParser.section_parser('moleculetype', 'exclusions')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sites3')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sites4')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn')
     @SectionLineParser.section_parser('moleculetype', 'position_restraints')
+    @SectionLineParser.section_parser('moleculetype', 'pairs_nb')
+    @SectionLineParser.section_parser('moleculetype', 'SETTLE')
+    @SectionLineParser.section_parser('moleculetype', 'distance_restraints')
+    @SectionLineParser.section_parser('moleculetype', 'orientation_restraints')
+    @SectionLineParser.section_parser('moleculetype', 'angle_restraints')
+    @SectionLineParser.section_parser('moleculetype', 'angle_restraints_z')
     def _interactions(self, line, lineno=0):
         """
         Parses all interaction lines that are not directives (i.e. within []).
