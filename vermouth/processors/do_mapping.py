@@ -485,7 +485,8 @@ def attrs_from_node(node, attrs):
     dict
     """
     if 'replace' in node:
-        node = node.copy().update(node['replace'])
+        node = node.copy()
+        node.update(node['replace'])
     return {attr: val for attr, val in node.items() if attr in attrs}
 
 
