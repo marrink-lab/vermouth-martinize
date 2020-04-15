@@ -33,7 +33,7 @@ from .molecule import (
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
 )
 from .parser_utils import (
-    SectionLineParser, _tokenize, _parse_macro, _substitute_macros,
+    SectionLineParser, _tokenize, _substitute_macros, _parse_macro
 )
 
 # Python 3.4 does not raise JSONDecodeError but ValueError.
@@ -85,7 +85,7 @@ class FFDirector(SectionLineParser):
 
     def parse_header(self, line, lineno=0):
         """
-        Parses a section header with line number `lineno`. Sets :attr:`vermouth.parser_utils.SectionLineParser.section` 
+        Parses a section header with line number `lineno`. Sets :attr:`vermouth.parser_utils.SectionLineParser.section`
         when applicable. Does not check whether `line` is a valid section
         header.
 
@@ -105,22 +105,24 @@ class FFDirector(SectionLineParser):
         KeyError
             If the section header is unknown.
         """
-                        
-        prev_section = self.section
+
+        prev_section = None
 
         ended = []
         section = self.section + [line.strip('[ ]').casefold()]
         if tuple(section[-1:]) in self.METH_DICT:
+            prev_section = self.section
             self.section = section[-1:]
+
         else:
             while (tuple(section) not in self.METH_DICT
                    and len(section) > 1):
                 ended.append(section.pop(-2))  # [a, b, c, d] -> [a, b, d]
             self.section = section
-                          
+
         result = None
 
-        if len(prev_section) != 0:
+        if prev_section:
             result = self.finalize_section(prev_section, ended)
 
         action = self.header_actions.get(tuple(self.section))
@@ -135,7 +137,7 @@ class FFDirector(SectionLineParser):
         """
         Called once a section is finished. It appends the current_links list
         to the links and update the block dictionary with current_block. Thereby it
-        finishes the reading a given section. 
+        finishes the reading a given section.
 
         Parameters
         ---------
@@ -145,18 +147,16 @@ class FFDirector(SectionLineParser):
             The sections that have been ended.
         """
 
-        # type comparison is what makes this work!
-        
         if self.current_block is not None:
-           self.current_block.make_edges_from_interactions()
-           self.force_field.blocks[self.current_block.name] =  self.current_block
+            self.current_block.make_edges_from_interactions()
+            self.force_field.blocks[self.current_block.name] = self.current_block
 
         if self.current_link is not None:
-           self.current_link.make_edges_from_interactions()
-           self.force_field.links.append(self.current_link)
+            self.current_link.make_edges_from_interactions()
+            self.force_field.links.append(self.current_link)
 
         if self.current_modification is not None:
-           self.force_field.modifications[self.current_modification.name] = self.current_modification
+            self.force_field.modifications[self.current_modification.name] = self.current_modification
 
     def get_context(self, context_type):
         possible_contexts = {
@@ -278,44 +278,44 @@ class FFDirector(SectionLineParser):
 
     @SectionLineParser.section_parser('moleculetype', 'dihedrals', context_type='block')
     def _dih_interactions(self, line, lineno=0, context_type=''):
-          context = self.get_context(context_type)
-          interaction_name = self.section[-1]
-          delete = False
-          tokens = collections.deque(_tokenize(line))
-          if tokens[0] == '#meta':
-              _parse_meta(
-                  tokens,
-                  context,
-                  context_type=context_type,
-                  section=interaction_name,
-              )
-          else:
-              n_atoms = self.interactions_natoms.get(interaction_name)
-              _base_parser(
-                  tokens,
-                  context,
-                  context_type=context_type,
-                  section=interaction_name,
-                  natoms=n_atoms,
-                  delete=delete,
-              )
-    
+        context = self.get_context(context_type)
+        interaction_name = self.section[-1]
+        delete = False
+        tokens = collections.deque(_tokenize(line))
+        if tokens[0] == '#meta':
+            _parse_meta(
+                tokens,
+                context,
+                context_type=context_type,
+                section=interaction_name,
+            )
+        else:
+            n_atoms = self.interactions_natoms.get(interaction_name)
+            _base_parser(
+                tokens,
+                context,
+                context_type=context_type,
+                section=interaction_name,
+                natoms=n_atoms,
+                delete=delete,
+            )
+
           # Because of how they are described in gromacs, proper and improper
           # dihedral angles are all under the [ dihedrals ] section. However
           # the way they are treated differently in the library, at least on how
           # they generate edges. Here we move the all the impropers into their own
           # [ impropers ] section.
-    
-          propers = []
-          impropers = []
-          for dihedral in self.current_block.interactions.get('dihedrals', []):
-              if dihedral.parameters and dihedral.parameters[0] == '2':
-                  impropers.append(dihedral)
-              else:
-                  propers.append(dihedral)
-    
-          self.current_block.interactions['dihedrals'] = propers
-          self.current_block.interactions['impropers'] = impropers
+
+        propers = []
+        impropers = []
+        for dihedral in self.current_block.interactions.get('dihedrals', []):
+            if dihedral.parameters and dihedral.parameters[0] == '2':
+                impropers.append(dihedral)
+            else:
+                propers.append(dihedral)
+
+        self.current_block.interactions['dihedrals'] = propers
+        self.current_block.interactions['impropers'] = impropers
 
 
     @SectionLineParser.section_parser('moleculetype', 'patterns')
@@ -799,7 +799,7 @@ def _parse_block_atom(tokens, context):
 def _parse_link_atom(tokens, context, defaults=None, treat_prefix=True):
     if len(tokens) > 2:
         raise IOError('Unexpected column in link atom definition.')
-    elif len(tokens) < 2:
+    if len(tokens) < 2:
         raise IOError('Missing column in link atom definition.')
     reference = tokens[0]
     if defaults is None:
@@ -830,7 +830,7 @@ def _parse_link_atom(tokens, context, defaults=None, treat_prefix=True):
 def _parse_link_attribute(tokens, context, section):
     if len(tokens) > 2:
         raise IOError('Unexpected column in section "{}".'.format(section))
-    elif len(tokens) < 2:
+    if len(tokens) < 2:
         raise IOError('Missing column in section "{}".'.format(section))
     key, value = tokens
     if '|' in value:
@@ -872,7 +872,7 @@ def _parse_meta(tokens, context, context_type, section):
         msg = ('Unexpected column when defining meta attributes for section '
                '"{}" of a {}. {} tokens read instead of 2.')
         raise IOError(msg.format(section, context_type, len(tokens)))
-    elif len(tokens) < 2:
+    if len(tokens) < 2:
         msg = 'Missing column when defining meta attributes for section "{}" of a {}.'
         raise IOError(msg.format(section, context_type))
     attributes = json.loads(tokens[-1])
@@ -914,7 +914,7 @@ def _parse_patterns(tokens, context, context_type):
 def _parse_variables(tokens, force_field, section):
     if len(tokens) > 2:
         raise IOError('Unexpected column in section "{}".'.format(section))
-    elif len(tokens) < 2:
+    if len(tokens) < 2:
         raise IOError('Missing column in section "{}".'.format(section))
     key, value = tokens
     try:

@@ -41,7 +41,7 @@ class TestBlock:
         lines = """
             [ moleculetype ]
             GLY  3
-            
+
             [ moleculetype ]
             VAL 2
             """
@@ -684,26 +684,6 @@ class TestLink:
             ]},
             (),
         ),
-     #  (  # Unknown interaction that does not add an edge
-     #      """
-     #      [link]
-     #      [unknown_interaction]
-     #      BB SC1 SC2
-     #      """,
-     #      (
-     #          ('BB', {'atomname': 'BB', 'order': 0}),
-     #          ('SC1', {'atomname': 'SC1', 'order': 0}),
-     #          ('SC2', {'atomname': 'SC2', 'order': 0}),
-     #      ),
-     #      {'unknown_interaction': [
-     #          vermouth.molecule.Interaction(
-     #              atoms=['BB', 'SC1', 'SC2'],
-     #              parameters=[],
-     #              meta={},
-     #          ),
-     #      ]},
-     #      (),
-     #  ),
         (  # Atom already in the link
             """
             [link]
@@ -802,6 +782,37 @@ class TestLink:
         assert link.interactions == interactions
         assert (set(frozenset(edge) for edge in link.edges)
                 == set(frozenset(edge) for edge in edges))
+
+
+    @staticmethod
+    def test_number_of_links():
+        """
+        Links are stored in a list so unlike blocks
+        they are not overwritten when they are returned
+        from the parsers. Thus we should check not only
+        that the expected links are in but also how many
+        there are.
+        """
+        lines="""
+        [ moleculetype ]
+        GLY 1
+        [ atoms ]
+        1 P4 1 ALA BB 1
+        [ link ]
+        [ bonds ]
+        BB +BB params
+        BB SC1 params
+        [ angles ]
+        BB +BB ++BB params
+        [ link ]
+        [ bonds ]
+        BB SC2 params
+        """
+        lines = textwrap.dedent(lines).splitlines()
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        vermouth.ffinput.read_ff(lines, ff)
+
+        assert len(ff.links) == 2
 
     @staticmethod
     def test_negative_interactions():
@@ -1293,3 +1304,5 @@ def test_misformed_lines(lines):
     ff = vermouth.forcefield.ForceField(name='test_ff')
     with pytest.raises(IOError):
         vermouth.ffinput.read_ff(lines, ff)
+
+
