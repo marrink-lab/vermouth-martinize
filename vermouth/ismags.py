@@ -555,8 +555,6 @@ class ISMAGS:
         """
         Does the same as :meth:`find_isomorphisms` if :attr:`graph` and
         :attr:`subgraph` have the same number of nodes.
-
-        .. automethod:: find_isomorphisms
         """
         if len(self.graph) == len(self.subgraph):
             yield from self.subgraph_isomorphisms_iter(symmetry=symmetry)
@@ -564,8 +562,6 @@ class ISMAGS:
     def subgraph_isomorphisms_iter(self, symmetry=True):
         """
         Alternative name for :meth:`find_isomorphisms`.
-
-        .. automethod:: find_isomorphisms
         """
         return self.find_isomorphisms(symmetry)
 
