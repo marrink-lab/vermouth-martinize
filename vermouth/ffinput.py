@@ -63,8 +63,19 @@ class FFDirector(SectionLineParser):
         'dihedrals': 4,
         'impropers': 4,
         'constraints': 2,
-        'virtual_sites2': 3,
         'pairs': 2,
+        'pairs_nb': 2,
+        'SETTLE': 1,
+        'virtual_sites2': 3,
+        'virtual_sites3': 4,
+        'virtual_sites4': 5,
+        'virtual_sitesn': 1,
+        'position_restraints': 1,
+        'distance_restraints': 2,
+        'dihedral_restraints': 4,
+        'orientation_restraints': 2,
+        'angle_restraints': 4,
+        'angle_restraints_z': 2
     }
 
     def __init__(self, force_field):
@@ -221,35 +232,76 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'constraints', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'pairs', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'exclusions', context_type='block')
+
+    @SectionLineParser.section_parser('moleculetype', 'pairs_nb', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'SETTLE', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sites3', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sites4', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'position_restraints', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'distance_restraints', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'dihedral_restraints', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'orientation_restraints', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'angle_restraints', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'angle_restraints_z', context_type='block')
     @SectionLineParser.section_parser('link', 'bonds', context_type='link')
     @SectionLineParser.section_parser('link', 'angles', context_type='link')
+    @SectionLineParser.section_parser('link', 'impropers', context_type='link')
     @SectionLineParser.section_parser('link', 'dihedrals', context_type='link')
     @SectionLineParser.section_parser('link', 'constraints', context_type='link')
     @SectionLineParser.section_parser('link', 'pairs', context_type='link')
     @SectionLineParser.section_parser('link', 'exclusions', context_type='link')
+    @SectionLineParser.section_parser('link', 'pairs_nb', context_type='block')
+    @SectionLineParser.section_parser('link', 'SETTLE', context_type='link')
     @SectionLineParser.section_parser('link', 'virtual_sites2', context_type='link')
-    @SectionLineParser.section_parser('link', 'impropers', context_type='link')
+    @SectionLineParser.section_parser('link', 'virtual_sites3', context_type='link')
+    @SectionLineParser.section_parser('link', 'virtual_sites4', context_type='link')
     @SectionLineParser.section_parser('link', 'virtual_sitesn', context_type='link')
-    @SectionLineParser.section_parser('link', '!impropers', context_type='link')
+    @SectionLineParser.section_parser('link', 'position_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', 'distance_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', 'dihedral_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', 'orientation_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', 'angle_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', 'angle_restraints_z', context_type='link')
     @SectionLineParser.section_parser('link', '!bonds', context_type='link')
     @SectionLineParser.section_parser('link', '!angles', context_type='link')
+    @SectionLineParser.section_parser('link', '!impropers', context_type='link')
     @SectionLineParser.section_parser('link', '!dihedrals', context_type='link')
     @SectionLineParser.section_parser('link', '!constraints', context_type='link')
     @SectionLineParser.section_parser('link', '!pairs', context_type='link')
     @SectionLineParser.section_parser('link', '!exclusions', context_type='link')
+    @SectionLineParser.section_parser('link', '!pairs_nb', context_type='link')
+    @SectionLineParser.section_parser('link', '!SETTLE', context_type='link')
     @SectionLineParser.section_parser('link', '!virtual_sites2', context_type='link')
+    @SectionLineParser.section_parser('link', '!virtual_sites3', context_type='link')
+    @SectionLineParser.section_parser('link', '!virtual_sites4', context_type='link')
     @SectionLineParser.section_parser('link', '!virtual_sitesn', context_type='link')
+    @SectionLineParser.section_parser('link', '!position_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', '!distance_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', '!dihedral_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', '!orientation_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', '!angle_restraints', context_type='link')
+    @SectionLineParser.section_parser('link', '!angle_restraints_z', context_type='link')
     @SectionLineParser.section_parser('modification', 'bonds', context_type='modification')
     @SectionLineParser.section_parser('modification', 'angles', context_type='modification')
     @SectionLineParser.section_parser('modification', 'dihedrals', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'impropers', context_type='modification')
     @SectionLineParser.section_parser('modification', 'constraints', context_type='modification')
     @SectionLineParser.section_parser('modification', 'pairs', context_type='modification')
     @SectionLineParser.section_parser('modification', 'exclusions', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'pairs_nb', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'SETTLE', context_type='modification')
     @SectionLineParser.section_parser('modification', 'virtual_sites2', context_type='modification')
-    @SectionLineParser.section_parser('modification', 'impropers', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'virtual_sites3', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'virtual_sites4', context_type='modification')
     @SectionLineParser.section_parser('modification', 'virtual_sitesn', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'position_restraints', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'distance_restraints', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'dihedral_restraints', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'orientation_restraints', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'angle_restraints', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'angle_restraints_z', context_type='modification')
     def _interactions(self, line, lineno=0, context_type=''):
         context = self.get_context(context_type)
         interaction_name = self.section[-1]
