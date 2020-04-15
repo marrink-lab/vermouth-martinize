@@ -69,7 +69,6 @@ class FFDirector(SectionLineParser):
         'virtual_sites2': 3,
         'virtual_sites3': 4,
         'virtual_sites4': 5,
-        'virtual_sitesn': 1,
         'position_restraints': 1,
         'distance_restraints': 2,
         'dihedral_restraints': 4,
