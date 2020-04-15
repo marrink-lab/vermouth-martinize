@@ -27,16 +27,24 @@ class ITPDirector(SectionLineParser):
     """
     COMMENT_CHAR = ';'
 
-    atom_idxs = {'bonds'               : [0, 1],
-                 'position_restraints' : [0],
-                 'angles'              : [0, 1, 2],
-                 'constraints'         : [0, 1],
-                 'dihedrals'           : [0, 1, 2, 3],
-                 'pairs'               : [0, 1],
-                 'exclusions'          : [slice(None, None)],
-                 'virtual_sitesn'      : [0, slice(2, None)],
-                 'virtual_sites2'      : [0, 1, 2, 3],
-                 'virtual_sites3'      : [0, 1, 2, 3]}
+    atom_idxs = {'bonds': [0, 1],
+                 'position_restraints': [0],
+                 'angles': [0, 1, 2],
+                 'constraints': [0, 1],
+                 'dihedrals': [0, 1, 2, 3],
+                 'pairs': [0, 1],
+                 'exclusions': [slice(None, None)],
+                 'virtual_sitesn': [0, slice(2, None)],
+                 'virtual_sites2': [0, 1, 2, 3],
+                 'virtual_sites3': [0, 1, 2, 3],
+                 'pairs_nb': [0, 1],
+                 'SETTLE': [0],
+                 'virtual_sites4': [slice(0, 5)],
+                 'distance_restraints':  [0, 1],
+                 'dihedral_restraints':  [slice(0, 4)],
+                 'orientation_restraints': [0, 1],
+                 'angle_restraints': [slice(0, 4)],
+                 'angle_restraints_z': [0, 1]}
 
     def __init__(self, force_field):
         super().__init__()
@@ -68,7 +76,7 @@ class ITPDirector(SectionLineParser):
 
         if self.is_section_header(line):
             return self.parse_header
-        elif ITPDirector.is_pragma(line):
+        elif self.is_pragma(line):
             return self.parse_pragma
         else:
             return self.parse_section
@@ -125,7 +133,7 @@ class ITPDirector(SectionLineParser):
             elif self.current_meta is not None:
                 raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
                               "At line {} I read {} but there is still"
-                              "an open #ifdef/#ifndef sectiona from"
+                              "an open #ifdef/#ifndef section from"
                               "before.".format(lineno, line.split()[0]))
         # Guard against unkown pragmas like #if or #include
         else:
@@ -400,7 +408,7 @@ class ITPDirector(SectionLineParser):
         # index it makes more sense to also directly start at 0
 
         if int(index) < 1:
-            msg = ('One of your atoms has a negative atom reference, which is not allowed.')
+            msg = 'One of your atoms has a negative atom reference, which is not allowed.'
             raise IOError(msg)
 
         index = int(index) - 1
