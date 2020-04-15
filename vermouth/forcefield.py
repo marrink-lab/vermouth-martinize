@@ -56,7 +56,6 @@ class ForceField:
     renamed_residues: dict
     name: str
     variables: dict
-    reference_graphs: dict
     """
 
     def __init__(self, directory=None, name=None):

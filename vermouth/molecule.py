@@ -164,16 +164,11 @@ class LinkParameterEffector:
     instance will be validated against that number; else, the user can pass an
     arbitrary number of keys without validation.
 
-    Attributes
-    ----------
-    n_keys_asked: int
-        Class attribute describing the number of keys required.
-
-
     .. automethod:: __call__
     .. automethod:: _apply
     """
     n_keys_asked = None
+    """Class attribute describing the number of keys required."""
 
     def __init__(self, keys, format_spec=None):
         """
@@ -840,7 +835,7 @@ class Molecule(nx.Graph):
         collections.abc.Generator
         """
         residue_graph = graph_utils.make_residue_graph(self)
-        return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in residue_graph.nodes)
+        return (tuple(residue_graph.nodes[res]['graph'].nodes) for res in sorted(residue_graph.nodes))
 
     def edges_between(self, n_bunch1, n_bunch2, data=False):
         """
@@ -929,11 +924,6 @@ class Block(Molecule):
     ----------
     name: str or None
         The name of the residue. Set to `None` if undefined.
-    atoms: collections.abc.Iterator[dict]
-        The atoms in the residue. Each atom is a dict with *a minima* a key
-        'name' for the name of the atom, and a key 'atype' for the atom type.
-        An atom can also have a key 'charge', 'charge_group', 'comment', or any
-        arbitrary key.
     interactions: dict
         All the known interactions. Each item of the dictionary is a type of
         interaction, with the key being the name of the kind of interaction
@@ -999,6 +989,16 @@ class Block(Molecule):
 
     @property
     def atoms(self):
+        """"
+        The atoms in the residue. Each atom is a dict with *a minima* a key
+        'name' for the name of the atom, and a key 'atype' for the atom type.
+        An atom can also have a key 'charge', 'charge_group', 'comment', or any
+        arbitrary key.
+
+        Returns
+        -------
+        collections.abc.Iterator[dict]
+        """
         for node in self.nodes():
             node_attr = self.nodes[node]
             # In pre-blocks, some nodes correspond to particles in neighboring

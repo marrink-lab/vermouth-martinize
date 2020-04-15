@@ -152,10 +152,13 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         The current section.
     macros: dict[str, str]
         A set of subsitution rules as parsed from a `macros` section.
-    METH_DICT: dict[tuple[str], tuple[collections.abc.Callable, dict[str]]]
-        A dict of all known parser methods, mapping section names to the
-        function to be called and the associated keyword arguments.
     """
+    METH_DICT = {}
+    """
+    A dict of all known parser methods, mapping section names to the
+    function to be called and the associated keyword arguments.
+    """
+
     def __init__(self, *args, **kwargs):
         self.macros = {}
         self.section = []
