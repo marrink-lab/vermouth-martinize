@@ -115,11 +115,12 @@ class FFDirector(SectionLineParser):
         KeyError
             If the section header is unknown.
         """
-
+        
         prev_section = None
 
         ended = []
         section = self.section + [line.strip('[ ]').casefold()]
+
         if tuple(section[-1:]) in self.METH_DICT:
             prev_section = self.section
             self.section = section[-1:]
