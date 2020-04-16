@@ -232,7 +232,6 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'constraints', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'pairs', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'exclusions', context_type='block')
-
     @SectionLineParser.section_parser('moleculetype', 'pairs_nb', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'SETTLE', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2', context_type='block')
@@ -248,7 +247,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('link', 'bonds', context_type='link')
     @SectionLineParser.section_parser('link', 'angles', context_type='link')
     @SectionLineParser.section_parser('link', 'impropers', context_type='link')
-    @SectionLineParser.section_parser('link', 'dihedrals', context_type='link')
+
     @SectionLineParser.section_parser('link', 'constraints', context_type='link')
     @SectionLineParser.section_parser('link', 'pairs', context_type='link')
     @SectionLineParser.section_parser('link', 'exclusions', context_type='link')
@@ -267,7 +266,6 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('link', '!bonds', context_type='link')
     @SectionLineParser.section_parser('link', '!angles', context_type='link')
     @SectionLineParser.section_parser('link', '!impropers', context_type='link')
-    @SectionLineParser.section_parser('link', '!dihedrals', context_type='link')
     @SectionLineParser.section_parser('link', '!constraints', context_type='link')
     @SectionLineParser.section_parser('link', '!pairs', context_type='link')
     @SectionLineParser.section_parser('link', '!exclusions', context_type='link')
@@ -285,7 +283,6 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('link', '!angle_restraints_z', context_type='link')
     @SectionLineParser.section_parser('modification', 'bonds', context_type='modification')
     @SectionLineParser.section_parser('modification', 'angles', context_type='modification')
-    @SectionLineParser.section_parser('modification', 'dihedrals', context_type='modification')
     @SectionLineParser.section_parser('modification', 'impropers', context_type='modification')
     @SectionLineParser.section_parser('modification', 'constraints', context_type='modification')
     @SectionLineParser.section_parser('modification', 'pairs', context_type='modification')
@@ -328,7 +325,10 @@ class FFDirector(SectionLineParser):
                 delete=delete,
             )
 
+    @SectionLineParser.section_parser('link', 'dihedrals', context_type='link')
+    @SectionLineParser.section_parser('link', '!dihedrals', context_type='link')
     @SectionLineParser.section_parser('moleculetype', 'dihedrals', context_type='block')
+    @SectionLineParser.section_parser('modification', 'dihedrals', context_type='modification')
     def _dih_interactions(self, line, lineno=0, context_type=''):
         context = self.get_context(context_type)
         interaction_name = self.section[-1]
