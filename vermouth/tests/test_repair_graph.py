@@ -112,9 +112,9 @@ def build_system_mod(force_field):
         # Residue 2 has missing atoms (HA1 and HA2, the hydrogen of the C
         # alpha; HN the hydrogen on the N-ter nitrogen and O, the oxygen at the
         # C-ter)
-        (17, {'resid': 2, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
-        (18, {'resid': 2, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'C'}),
-        (19, {'resid': 2, 'resname': 'GLY', 'atomname': 'C', 'chain': 'A', 'element': 'C'}),
+        (17, {'resid': 2, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N', 'common': 'a'}),
+        (18, {'resid': 2, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'C', 'common': 'a'}),
+        (19, {'resid': 2, 'resname': 'GLY', 'atomname': 'C', 'chain': 'A', 'element': 'C', 'common': 'a'}),
         # Residue 3 has only N and C specified, everything else is missing.
         (20, {'resid': 3, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
         (21, {'resid': 3, 'resname': 'GLY', 'atomname': 'O', 'chain': 'A', 'element': 'O'}),
@@ -243,6 +243,21 @@ def test_name_canonicalized(canonicalized_graph, key, expected_names):
     assert molecule.nodes[key]['atomname'] in expected_names
 
 
+@pytest.mark.parametrize('resid, expected_attrs', [
+    (2, {'resid': 2, 'resname': 'GLY', 'chain': 'A', 'common': 'a'})
+])
+def test_common_attributes(repaired_graph, resid, expected_attrs):
+    """Test that attributes that are common to all nodes in a residue end up in
+    reconstructed nodes."""
+    mol = repaired_graph.molecules[0]
+    for node_idx in mol:
+        node = mol.nodes[node_idx]
+        if node.get('resid') == resid:
+            for key, val in expected_attrs.items():
+                assert key in node
+                assert node[key] == val
+
+
 def test_renaming(renamed_graph):
     for node in renamed_graph.molecules[0].nodes.values():
         if node['resid'] == 1:
@@ -273,7 +288,7 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, m
     for node_idx in mol:
         if mol.nodes[node_idx].get('resid') == resid:
             if mutations:
-                assert mol.nodes[node_idx]['resname'] == mutations[0]
+                assert mol.nodes[node_idx]['resname'] == mutations[0], mol.nodes[node_idx]
             if modifications:
                 assert mol.nodes[node_idx].get('modification') == modifications
             resid1_atomnames.add(mol.nodes[node_idx]['atomname'])

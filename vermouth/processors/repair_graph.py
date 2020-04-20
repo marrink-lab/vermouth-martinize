@@ -194,6 +194,7 @@ def make_reference(mol):
         reference = _get_reference_residue(residues.nodes[residx], mol.force_field)
         if 'mutation' in residues.nodes[residx]:
             resname = residues.nodes[residx]['mutation'][0]
+            residues.nodes[residx]['resname'] = resname
         add_element_attr(reference)
         add_element_attr(residue)
         # We are going to sort the nodes of reference and residue by atomname.
@@ -273,9 +274,8 @@ def make_reference(mol):
         # "unsort" the matches
         match = {old_ref_names[ref]: old_res_names[res] for ref, res in match.items()}
 
-        reference_graph.add_node(residx, chain=chain, reference=reference,
-                                 found=residue, resname=resname, resid=resid,
-                                 match=match)
+        reference_graph.add_node(residx, reference=reference, found=residue, 
+                                 match=match, **residues.nodes[residx])
     reference_graph.add_edges_from(residues.edges())
     return reference_graph
 
