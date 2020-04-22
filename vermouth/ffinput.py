@@ -360,14 +360,14 @@ class FFDirector(SectionLineParser):
 
         propers = []
         impropers = []
-        for dihedral in self.current_block.interactions.get('dihedrals', []):
+        for dihedral in context.interactions.get('dihedrals', []):
             if dihedral.parameters and dihedral.parameters[0] == '2':
                 impropers.append(dihedral)
             else:
                 propers.append(dihedral)
 
-        self.current_block.interactions['dihedrals'] = propers
-        self.current_block.interactions['impropers'] = impropers
+        context.interactions['dihedrals'] = propers
+        context.interactions['impropers'] = impropers
 
 
     @SectionLineParser.section_parser('moleculetype', 'patterns')
