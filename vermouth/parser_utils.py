@@ -34,8 +34,8 @@ class SectionParser(type):
     """
     def __new__(mcs, name, bases, attrs, **kwargs):
         obj = super().__new__(mcs, name, bases, attrs, **kwargs)
-        if not hasattr(obj, 'METH_DICT'):
-            obj.METH_DICT = {}
+        #if not hasattr(obj, 'METH_DICT'):
+        obj.METH_DICT = {}
         mapping = obj.METH_DICT
 
         for attribute_name in dir(obj):
@@ -179,7 +179,7 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         -------
         collections.abc.Callable
             The method that should be used to parse `line`.
-        """
+        """                   
         if self.is_section_header(line):
             return self.parse_header
         else:

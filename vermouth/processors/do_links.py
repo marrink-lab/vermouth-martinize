@@ -212,9 +212,9 @@ def match_order(order1, resid1, order2, resid2):
 def match_link(molecule, link):
     if not attributes_match(molecule.meta, link.molecule_meta):
         return
-
+                            
     GM = nx.isomorphism.GraphMatcher(molecule, link, node_match=_atoms_match)
-
+                                      
     raw_matches = GM.subgraph_isomorphisms_iter()
     for raw_match in raw_matches:
         # raw_match: mol -> link

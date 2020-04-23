@@ -115,11 +115,12 @@ class FFDirector(SectionLineParser):
         KeyError
             If the section header is unknown.
         """
-
+        
         prev_section = None
 
         ended = []
         section = self.section + [line.strip('[ ]').casefold()]
+
         if tuple(section[-1:]) in self.METH_DICT:
             prev_section = self.section
             self.section = section[-1:]
@@ -359,14 +360,14 @@ class FFDirector(SectionLineParser):
 
         propers = []
         impropers = []
-        for dihedral in self.current_block.interactions.get('dihedrals', []):
+        for dihedral in context.interactions.get('dihedrals', []):
             if dihedral.parameters and dihedral.parameters[0] == '2':
                 impropers.append(dihedral)
             else:
                 propers.append(dihedral)
 
-        self.current_block.interactions['dihedrals'] = propers
-        self.current_block.interactions['impropers'] = impropers
+        context.interactions['dihedrals'] = propers
+        context.interactions['impropers'] = impropers
 
 
     @SectionLineParser.section_parser('moleculetype', 'patterns')
