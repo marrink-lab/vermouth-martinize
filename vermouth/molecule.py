@@ -681,6 +681,7 @@ class Molecule(nx.Graph):
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
+                #print(atoms, interaction.meta)
                 self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:
@@ -1165,7 +1166,8 @@ class Block(Molecule):
                 )
                 mol.add_interaction(
                     name, atoms,
-                    interaction.parameters
+                    interaction.parameters,
+                    meta=interaction.meta
                 )
         for edge in self.edges:
             mol.add_edge(*(name_to_idx[node] for node in edge))
