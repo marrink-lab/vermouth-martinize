@@ -193,6 +193,13 @@ def make_reference(mol):
         residue = residues.nodes[residx]['graph']
         reference = _get_reference_residue(residues.nodes[residx], mol.force_field)
         if 'mutation' in residues.nodes[residx]:
+            # We need to do this, since we need to propagate all common
+            # attributes in the input residue to any reconstructed atoms. 
+            # make_residue_graph already picks up on all the common attributes
+            # and sets those as residue/node attributes, but any mutation needs
+            # to be propagated as well, otherwise the newly constructed atoms
+            # will end up with the old residue name. This way, we can just add
+            # *all* attributes in the residue graph to the new atoms.
             resname = residues.nodes[residx]['mutation'][0]
             residues.nodes[residx]['resname'] = resname
         add_element_attr(reference)
@@ -274,6 +281,10 @@ def make_reference(mol):
         # "unsort" the matches
         match = {old_ref_names[ref]: old_res_names[res] for ref, res in match.items()}
 
+        # The residue graph has attributes which are common to all atoms in the
+        # input residue, so propagate those to new atoms. These attributes are
+        # things like residue name (see above in case of mutations), resid, 
+        # insertion code, etc.
         reference_graph.add_node(residx, reference=reference, found=residue, 
                                  match=match, **residues.nodes[residx])
     reference_graph.add_edges_from(residues.edges())

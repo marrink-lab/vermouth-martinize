@@ -111,7 +111,8 @@ def build_system_mod(force_field):
         (16, {'resid': 1, 'resname': 'GLU', 'atomname': 'HN', 'chain': 'A', 'element': 'H'}),
         # Residue 2 has missing atoms (HA1 and HA2, the hydrogen of the C
         # alpha; HN the hydrogen on the N-ter nitrogen and O, the oxygen at the
-        # C-ter)
+        # C-ter). 'common' is an arbitrary attribute name with identical values,
+        # which should be propagated to reconstructed atoms.
         (17, {'resid': 2, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N', 'common': 'a'}),
         (18, {'resid': 2, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'C', 'common': 'a'}),
         (19, {'resid': 2, 'resname': 'GLY', 'atomname': 'C', 'chain': 'A', 'element': 'C', 'common': 'a'}),
@@ -288,7 +289,7 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, m
     for node_idx in mol:
         if mol.nodes[node_idx].get('resid') == resid:
             if mutations:
-                assert mol.nodes[node_idx]['resname'] == mutations[0], mol.nodes[node_idx]
+                assert mol.nodes[node_idx]['resname'] == mutations[0]
             if modifications:
                 assert mol.nodes[node_idx].get('modification') == modifications
             resid1_atomnames.add(mol.nodes[node_idx]['atomname'])
