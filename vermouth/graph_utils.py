@@ -176,6 +176,46 @@ def get_attrs(node, attrs):
     return tuple(node.get(attr) for attr in attrs)
 
 
+def partition_graph(graph, partitions):
+    """
+    Create a new graph based on `graph`, where nodes are aggregated based on
+    `partitions`, similar to :func:`~networkx.algorithm.minors.quotient_graph`,
+    except that it only accepts pre-made partitions, and edges are not given
+    a 'weight' attribute. Much fast than the quotient_graph, since it creates
+    edges based on existing edges rather than trying all possible combinations.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph to partition
+    partitions: collections.abc.Iterable[collections.abc.Iterable[collections.abc.Hashable]]
+        E.g. a list of lists of node indices, describing the partitions. Will
+        be sorted by lowest index.
+
+    Returns
+    -------
+    networkx.Graph
+        The coarser graph.
+    """
+    new_graph = nx.Graph()
+    partitions = sorted(partitions, key=min)
+    mapping = {}
+    for idx, node_idxs in enumerate(partitions):
+        subgraph = nx.subgraph(graph, node_idxs)
+        new_graph.add_node(idx,
+                           graph=nx.subgraph(graph, node_idxs),
+                           nnodes=len(subgraph),
+                           nedges=len(subgraph.edges),
+                           density=nx.density(subgraph))
+        mapping.update({node_idx: idx for node_idx in node_idxs})
+
+    for idx, jdx in graph.edges:
+        if mapping[idx] != mapping[jdx]:
+            new_idx, new_jdx = mapping[idx], mapping[jdx]
+            new_graph.add_edge(new_idx, new_jdx)
+    return new_graph
+
+
 def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_code')):
     """
     Create a new graph based on `graph`, where nodes with identical attribute
@@ -202,9 +242,10 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
     # Create partitions. These will contain all nodes, even those without e.g.
     # a resname, since those will get resname None
     residue_idxs = collect_residues(graph, attrs)
-    res_graph = nx.quotient_graph(graph,
-                                  sorted(residue_idxs.values(), key=min),
-                                  relabel=True)
+    # res_graph = nx.quotient_graph(graph,
+    #                               sorted(residue_idxs.values(), key=min),
+    #                               relabel=True)
+    res_graph = partition_graph(graph, residue_idxs.values())
     # Using this equivalence function rather than the preformed partitions
     # Creates an equivalent graph, but the node indices are numbered
     # differently. At the very least it would require a change in the tests.
@@ -217,7 +258,6 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
     for res_idx in res_graph:
         res_node = res_graph.nodes[res_idx]
         res_node.update(_items_with_common_values(res_node['graph']))
-        # res_node['atomname'] = res_node.get('resname')
     return res_graph
 
 

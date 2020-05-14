@@ -25,7 +25,7 @@ from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import format_atom_string
-from ..graph_utils import collect_residues
+from ..graph_utils import collect_residues, partition_graph
 
 from ..log_helpers import StyleAdapter, get_logger
 
@@ -241,7 +241,6 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     non_edges = set()
 
     residue_groups = collect_residues(system, ('mol_idx chain resid resname insertion_code'.split()))
-
     for ((mol_idx, chain, resid, resname, insertion_code), idxs) in residue_groups.items():
         if not allow_name:
             break
@@ -262,14 +261,13 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     # termini, ...)
     if allow_dist:
         _bonds_from_distance(system, non_edges=non_edges, fudge=fudge)
-
     # Split the system into connected components. We do want to keep residues
     # together, so make a residue graph (1 node per residue) first, and use that
     # to find the connected components.
-    residue_graph = nx.quotient_graph(system, residue_groups.values())
     molecules = []
-    for node_idxs in nx.connected_components(residue_graph):
-        node_idxs = set().union(*node_idxs)
+    residue_graph = partition_graph(system, residue_groups.values())
+    for res_node_idxs in nx.connected_components(residue_graph):
+        node_idxs = set().union(*(residue_graph.nodes[rni]['graph'] for rni in res_node_idxs))
         mol = Molecule(system.subgraph(node_idxs))
         molecules.append(mol)
 
