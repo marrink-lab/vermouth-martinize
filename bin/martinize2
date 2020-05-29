@@ -43,7 +43,6 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings
 )
-from vermouth.processors.apply_rubber_band import always_true, same_chain
 
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
 # not work as intended. Investigation required.
@@ -631,12 +630,12 @@ def entry():
     if args.elastic:
         LOGGER.info('Setting the rubber bands.', type='step')
         if args.rb_unit == 'molecule':
-            domain_criterion = always_true
+            domain_criterion = vermouth.processors.apply_rubber_band.always_true
         elif args.rb_unit == 'all':
             vermouth.MergeAllMolecules().run_system(system)
-            domain_criterion = always_true
+            domain_criterion = vermouth.processors.apply_rubber_band.always_true
         elif args.rb_unit == 'chain':
-            domain_criterion = same_chain
+            domain_criterion = vermouth.processors.apply_rubber_band.same_chain
         else:
             message = 'Unknown value for -eunit: "{}".'.format(args.rb_unit)
             LOGGER.critical(message)
