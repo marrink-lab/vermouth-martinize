@@ -118,7 +118,6 @@ class ITPDirector(SectionLineParser):
         IOError
             If the def sections are missformatted
         """
-
         if line == '#endif':
             if self.current_meta is not None:
                 self.current_meta = None
@@ -126,6 +125,18 @@ class ITPDirector(SectionLineParser):
                 raise IOError("Your #ifdef section is orderd incorrectly."
                               "At line {} I read #endif but I haven not read"
                               "a ifdef before.".format(lineno))
+
+        elif line.startswith("#else"):
+            if self.current_meta is None:
+               raise IOError("Your #ifdef section is orderd incorrectly."
+                             "At line {} I read #endif but I haven not read"
+                             "a ifdef before.".format(lineno))
+            else:
+               inverse = {"ifdef": "ifndef", "ifndef": "ifdef"}
+               tag = self.current_meta["tag"]
+               condition = inverse[self.current_meta["condition"]]
+               self.current_meta = {'tag': tag, 'condition': condition.replace("#", "")}
+
         elif line.startswith("#ifdef") or line.startswith("#ifndef"):
             if self.current_meta is None:
                 condition, tag = line.split()
