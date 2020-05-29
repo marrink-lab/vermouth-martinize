@@ -94,6 +94,7 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
 
 
 def pdb_to_universal(system, delete_unknown=False, force_field=None,
+                     modifications=None, mutations=None,
                      bonds_from_name=True, bonds_from_dist=True, bonds_fudge=1,
                      write_graph=None, write_repair=None, write_canon=None):
     """
@@ -101,8 +102,13 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     """
     if force_field is None:
         force_field = vermouth.forcefield.get_native_force_field('universal')
+    if modifications is None:
+        modifications = []
+    if mutations is None:
+        mutations = []
     canonicalized = system.copy()
     canonicalized.force_field = force_field
+
     LOGGER.info('Guessing the bonds.', type='step')
     vermouth.MakeBonds(allow_name=bonds_from_name,
                        allow_dist=bonds_from_dist,
@@ -110,6 +116,9 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
+
+    LOGGER.debug('Annotating required mutations and modifications.', type='step')
+    vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
     LOGGER.info('Repairing the graph.', type='step')
     vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(canonicalized)
     if write_repair is not None:
@@ -121,7 +130,7 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
         vermouth.pdb.write_pdb(canonicalized, str(write_canon),
                                omit_charges=True, nan_missing_pos=True)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
-    vermouth.SortMoleculeAtoms().run_system(system)
+    vermouth.SortMoleculeAtoms().run_system(canonicalized) # was system
     return canonicalized
 
 
@@ -371,15 +380,44 @@ def entry():
                                 'Virtual Sites GoMartini.'))
 
     prot_group = parser.add_argument_group('Protein description')
-    prot_group.add_argument('-nt', dest='neutral_termini',
-                            action='store_true', default=False,
-                            help='Set neutral termini (charged is default)')
     prot_group.add_argument('-scfix', dest='scfix',
                             action='store_true', default=False,
                             help='Apply side chain corrections.')
     prot_group.add_argument('-cys', dest='cystein_bridge',
                             type=_cys_argument,
                             default='none', help='Cystein bonds')
+    prot_group.add_argument('-mutate', dest='mutations', action='append',
+                            type=lambda s: s.split(':'), default=[],
+                            help='Mutate a residue. Desired mutation is '
+                            'specified as, e.g. A-PHE45:ALA. The format is '
+                            '<chain>-<resname><resid>:<new resname>. Elements '
+                            'of the specification can be omitted as required.')
+    prot_group.add_argument('-modify', dest='modifications', action='append',
+                            type=lambda s: s.split(':'), default=[],
+                            help='Add a modification to a residue. Desired '
+                            'modification is specified as, e.g. A-ASP45:ASP0. '
+                            'The format is <chain>-<resname><resid>:<modification>.'
+                            ' Elements of the specification can be omitted as '
+                            'required.')
+    prot_group.add_argument('-nter', dest='modifications', action='append',
+                            type=lambda s: ['nter', s], default=[],
+                            help='Shorthand for patching N-termini. An '
+                            'N-terminus is defined as a residue which is '
+                            'connected to 1 other residue, and has the highest '
+                            'resid.')
+    prot_group.add_argument('-cter', dest='modifications', action='append',
+                            type=lambda s: ['cter', s], default=[],
+                            help='Shorthand for patching N-termini. An '
+                            'N-terminus is defined as a residue which is '
+                            'connected to 1 other residue, and has the lowest '
+                            'resid.')
+    # Unfortunately there's no action=extend_const. append_const *almost* does
+    # what we need, but it makes the resulting list too deep: 
+    # [[['cter', 'COOH-ter'], ['nter', 'NH2-ter']], ['ASP3', 'ASP0']]
+    prot_group.add_argument('-nt', dest='neutral_termini',
+                            action='store_true', default=False,
+                            help='Set neutral termini (charged is default). '
+                            'Alias for "-nter NH2-ter -cter COOH-ter"')
 
     debug_group = parser.add_argument_group('Debugging options')
     debug_group.add_argument('-write-graph', type=Path, default=None,
@@ -479,6 +517,10 @@ def entry():
     for grp in args.ignore_res:
         ignore_res.update(*grp)
 
+    if args.neutral_termini:
+        args.modifications.append(['cter', 'COOH-ter'])
+        args.modifications.append(['nter', 'NH2-ter'])
+
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
@@ -492,6 +534,8 @@ def entry():
         bonds_from_name=bonds_from_name,
         bonds_from_dist=bonds_from_dist,
         bonds_fudge=args.bonds_fudge,
+        modifications=args.modifications,
+        mutations=args.mutations,
         write_graph=args.write_graph,
         write_repair=args.write_repair,
         write_canon=args.write_canon,
@@ -521,11 +565,6 @@ def entry():
                        'angles for extended regions of proteins (-extdih).',
                        target_ff.name, type='missing-feature')
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
-    if args.neutral_termini and not target_ff.has_feature('neutral_termini'):
-        LOGGER.warning('The force field "{}" does not have specific '
-                       'parameters for neutral termini (-nt).',
-                       target_ff.name, type='missing-feature')
-    vermouth.SetMoleculeMeta(neutral_termini=args.neutral_termini).run_system(system)
     if args.scfix and not target_ff.has_feature('scfix'):
         LOGGER.warning('The force field "{}" does not define angle and '
                        'torsion for the side chain corrections (-scfix).',
@@ -551,9 +590,27 @@ def entry():
         delete_unknown=True,
     )
 
-    if args.neutral_termini:
-        LOGGER.info('Making termini neutral.', type='step')
-        vermouth.NeutralTermini(force_field=known_force_fields[args.to_ff]).run_system(system)
+    # Apply a rubber band elastic network is required.
+    if args.elastic:
+        LOGGER.info('Setting the rubber bands.', type='step')
+        if args.rb_selection is not None:
+            selector = functools.partial(
+                selectors.proto_select_attribute_in,
+                attribute='atomname',
+                values=args.rb_selection,
+            )
+        else:
+            selector = selectors.select_backbone
+        rubber_band_processor = vermouth.ApplyRubberBand(
+            lower_bound=args.rb_lower_bound,
+            upper_bound=args.rb_upper_bound,
+            decay_factor=args.rb_decay_factor,
+            decay_power=args.rb_decay_power,
+            base_constant=args.rb_force_constant,
+            minimum_force=args.rb_minimum_force,
+            selector=selector,
+        )
+        rubber_band_processor.run_system(system)
 
     # Apply position restraints if required.
     if args.posres != 'none':
