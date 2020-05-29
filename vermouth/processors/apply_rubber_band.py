@@ -123,7 +123,7 @@ def are_connected(graph, left, right, separation):
     return nodes_are_connected
 
 
-def build_connectivity_matrix(graph, separation, selection=None):
+def build_connectivity_matrix(graph, separation, selected_nodes):
     """
     Build a connectivity matrix based on the separation between nodes in a graph.
 
@@ -150,11 +150,8 @@ def build_connectivity_matrix(graph, separation, selection=None):
     separation: int
         The maximum number of nodes in the shortest path between two nodes of
         interest for these two nodes to be considered connected. Must be >= 0.
-    selection: collections.abc.Collection
-        A list of node keys to work on. If this argument is set, then the
-        matrix is built only for the nodes in the selection; the whole graph is
-        used to determine the paths. If set to `None` (default), then the matrix
-        is built for all the nodes.
+    selected_nodes: collections.abc.Collection
+        A list of nodes to work on.
 
     Returns
     -------
@@ -162,28 +159,29 @@ def build_connectivity_matrix(graph, separation, selection=None):
         A boolean matrix.
     """
     if separation < 0:
-        raise ValueError('Separation has to be null or positive.')
+        raise ValueError('Separation has to be zero or positive.')
     if separation == 0:
         # The connectivity matrix with a separation of 0 is the adjacency
         # matrix. Thankfully, networkx can directly give it to us a a numpy
         # matrix.
-        return np.asarray(nx.to_numpy_matrix(graph, nodelist=selection).astype(bool))
-    if selection is None:
-        selection = slice(None, None, None)
+        return np.asarray(nx.to_numpy_matrix(graph, nodelist=selected_nodes).astype(bool))
     size = graph.number_of_nodes()
     correspondence = {node: index for index, node in enumerate(graph.nodes)}
+    # the matrix will be reduced before returning it but nx.all_pairs_shortest_path_length
+    # does not take a subset of nodes
     connectivity = np.zeros((size, size), dtype=bool)
     # separation is provided in term of nodes while the path is provided in
     # terms of edges, hence `separation + 1`.
     distance_pairs = nx.all_pairs_shortest_path_length(graph, cutoff=separation + 1)
+    #only gets "positive" entries due to the cutoff argument above
     for origin, target_and_distances in distance_pairs:
         for target in target_and_distances:
             connectivity[correspondence[origin], correspondence[target]] = True
     np.fill_diagonal(connectivity, False)
-    return connectivity[:, selection][selection]
+    return connectivity[:, selected_nodes][selected_nodes]
 
 
-def build_pair_matrix(graph, criterion, selection):
+def build_pair_matrix(graph, criterion, selected_nodes):
     """
     Build a boolean matrix telling if a pair of nodes fulfil a criterion.
 
@@ -194,28 +192,43 @@ def build_pair_matrix(graph, criterion, selection):
     criterion: collections.abc.Callable
         A function that determines if a pair of nodes fulfill the criterion.
         It takes a graph and two node keys as arguments and returns a boolean.
-    selection: collections.abc.Collection
-        A list of node keys to work on. If this argument is set, then the
-        matrix is built only for the nodes in the selection. If set to
-        `None` (default), then the matrix is built for all the nodes.
+    selected_nodes: collections.abc.Collection
+        A list of nodes to work on.
 
     Returns
     -------
     numpy.ndarray
         A boolean matrix.
     """
-    if selection is None:
-        size = len(graph)
-        selected_nodes = graph.nodes
-    else:
-        size = len(selection)
-        selected_nodes = (node for node in graph.nodes if node in selection)
+    size = len(selected_nodes)
     share_domain = np.zeros((size, size), dtype=bool)
     node_combinations = itertools.combinations(enumerate(selected_nodes), 2)
     for (idx, key_idx), (jdx, key_jdx) in node_combinations:
         share_domain[idx, jdx] = criterion(graph, key_idx, key_jdx)
         share_domain[jdx, idx] = share_domain[idx, jdx]
     return share_domain
+
+
+def _apply_selection(graph, selection=None):
+    """
+    Select nodes from `graph` based on `selection`
+    criterion and return a list of nodes.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph/molecule to work on.
+    selection: collections.abc.Collection
+        A list of node keys to work on. If this argument is set, then the
+        matrix is built only for the nodes in the selection. If set to
+        `None` (default), then the matrix is built for all the nodes.
+    """
+    if selection is None:
+        selected_nodes = graph.nodes
+    else:
+        selected_nodes = (node for node in graph.nodes if node in selection)
+
+    return selected_nodes
 
 
 def apply_rubber_band(molecule, selector,
@@ -249,7 +262,7 @@ def apply_rubber_band(molecule, selector,
 
     Only nodes that are in the same domain can be connected by the elastic
     network. The 'domain_criterion' argument accepts a callback that determines
-    if two nodes are in the same domain. That callbacks accepts a graph and two
+    if two nodes are in the same domain. That callback accepts a graph and two
     node keys as argument and returns whether or not the nodes are in the same
     domain as a boolean.
 
@@ -309,10 +322,14 @@ def apply_rubber_band(molecule, selector,
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,
                                         base_constant, minimum_force)
+    # we select the nodes here so the selection list has the same
+    # order in build_connectivity_matrix and build_pair matrix
+    selected_nodes = _apply_selection(molecule, selection=selection)
+    print(selected_nodes)
     connected = build_connectivity_matrix(molecule, res_min_dist - 1,
-                                          selection=selection)
+                                          selected_nodes=selected_nodes)
     same_domain = build_pair_matrix(molecule, domain_criterion,
-                                    selection=selection)
+                                    selected_nodes=selected_nodes)
     can_be_linked = (~connected) & same_domain
     # Multiply the force constant by 0 if the nodes cannot be linked.
     constants *= can_be_linked
@@ -343,7 +360,7 @@ def same_chain(graph, left, right):
     Returns ``True`` is the nodes are part of the same chain.
 
     Nodes are considered part of the same chain if they both have the same value
-    under the "chain" attribute, or if none of the 2 nodes have that attribute.
+    under the "chain" attribute, or if neither of the 2 nodes have that attribute.
 
     Parameters
     ----------

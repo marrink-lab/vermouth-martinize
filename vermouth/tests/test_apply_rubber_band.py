@@ -55,9 +55,10 @@ def disconnected_graph():
     return graph
 
 
+
+
 @pytest.mark.parametrize('separation', (0, 1, 2, 3, 7))
 @pytest.mark.parametrize('selection', (
-    None,  # Use all the nodes, implicitly
     list(range(16)),  # Use all the nodes, explicitly
     list(range(8)),  # Only the first component
     list(range(8, 16)),  # Only the second component
@@ -95,7 +96,6 @@ def test_build_connectivity_matrix(disconnected_graph, separation, selection):
 
 
 @pytest.mark.parametrize('selection', (
-        None,  # Use all the nodes, implicitly
         list(range(16)),  # Use all the nodes, explicitly
         list(range(8)),  # Only the first component
         list(range(8, 16)),  # Only the second component
@@ -117,10 +117,26 @@ def test_build_pair_matrix(disconnected_graph, selection, extra_edges):
     expected[:8, :8] = True
     expected[8:, 8:] = True
     np.fill_diagonal(expected, False)
-    if selection is not None:
-        expected = expected[:, selection][selection]
+    expected = expected[:, selection][selection]
 
     disconnected_graph.add_edges_from(extra_edges)
     domains = apply_rubber_band.build_pair_matrix(
         disconnected_graph, have_same_chain, selection)
     assert np.all(domains == expected)
+
+@pytest.mark.parametrize('selection', (
+        None, # Use all nodes
+        list(range(16)),  # Use all the nodes, explicitly
+        list(range(8)),  # Only the first component
+        list(range(8, 16)),  # Only the second component
+        list(range(0, 16, 2)),  # Every other nodes
+))
+def test_apply_section(disconnected_graph, selection):
+    """
+    Test if the selection criterion and the default for
+    None is applied correctly.
+    """
+    selected_nodes = apply_rubber_band._apply_selection(disconnected_graph, selection)
+    if selection == None:
+       selection = disconnected_graph.nodes
+    assert set(selected_nodes) == set(selection)
