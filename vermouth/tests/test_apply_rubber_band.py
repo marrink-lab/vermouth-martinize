@@ -55,8 +55,6 @@ def disconnected_graph():
     return graph
 
 
-
-
 @pytest.mark.parametrize('separation', (0, 1, 2, 3, 7))
 @pytest.mark.parametrize('selection', (
     list(range(16)),  # Use all the nodes, explicitly
@@ -140,3 +138,47 @@ def test_apply_section(disconnected_graph, selection):
     if selection == None:
        selection = disconnected_graph.nodes
     assert set(selected_nodes) == set(selection)
+
+@pytest.mark.parametrize('nodes, edges, outcome', (
+    ([1, 2, 3],
+     [(1, 2), (2, 3)],
+     True),
+    ([1, 2, 3],
+     [(2, 3)],
+     False)
+))
+def test_are_connected(nodes, edges, outcome):
+    graph = nx.Graph()
+    graph.add_nodes_from(nodes)
+    graph.add_edges_from(edges)
+    assert are_connected(graph, 1, 2, 1) == outcome
+
+@pytest.mark.parametrize('nodes, edges, chain, outcome', (
+    ([1, 2, 3],
+     {1:"A", 2:"A", 3:"C"},
+     [(1, 2), (2, 3)],
+     True),
+    ([1, 2, 3],
+     {1:"A", 2:"B", 3:"C"},
+     [(1, 2), (2, 3)],
+     False)
+))
+def test_same_chain(nodes, edges, chain, outcome):
+    graph = nx.Graph()
+    graph.add_nodes_from(nodes)
+    graph.add_edges_from(edges)
+    nx.set_node_attributes(graph, chain, "chain")
+    assert same_chain(graph, 1, 1) == outcome
+
+def test_compute_force_constants():
+     compute_force_constants(distance_matrix, lower_bound, upper_bound,
+                             decay_factor, decay_power, base_constant,
+                            minimum_force)
+
+
+def test_self_distance_matrix(coordinates):
+     self_distance_matrix(coordinates)
+
+
+def test_compute_decay():
+    compute_decay(distance, shift, rate, power)
