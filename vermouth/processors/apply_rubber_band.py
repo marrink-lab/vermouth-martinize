@@ -226,7 +226,7 @@ def _apply_selection(graph, selection=None):
     if selection is None:
         selected_nodes = graph.nodes
     else:
-        selected_nodes = (node for node in graph.nodes if node in selection)
+        selected_nodes = [node for node in graph.nodes if node in selection]
 
     return selected_nodes
 
