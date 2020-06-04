@@ -105,22 +105,22 @@ def residue_matches(resspec, residue_graph, res_idx):
     res_node = residue_graph.nodes[res_idx]
     residue = {key: res_node.get(key)
                for key in 'chain resid resname insertion_code'.split()}
-    out = True
-    if resspec.get('resname', '')[-3:] == 'ter':
-        # Find all residues with degree 1: the ones with the lowest resid will
-        # be cter, the ones with the highest resid nter.
-        termini = [idx for idx in residue_graph if residue_graph.degree[idx] == 1]
-        get_resid = lambda idx: residue_graph.nodes[idx].get('resid')
+    if resspec.get('resname', '')[-3:] == 'ter' and residue_graph.degree[res_idx] == 1:
+        # Find all residues with degree 1: the ones with a resid lower than
+        # their neighbour will be Nter, those with a resid higher than their
+        # neighbour Cter
         # FIXME: Once residue_graph is a digraph we can do something much much
         #        more clever, addressing arbitrarily branched polymers and
         #        termini
+        neighbour = list(residue_graph[res_idx])[0]  # Only one neighbour by definition.
+        get_resid = lambda idx: residue_graph.nodes[idx].get('resid', 0)
         if resspec['resname'] == 'nter':
-            return res_idx in maxes(termini, key=lambda x: -get_resid(x))
+            return get_resid(res_idx) < get_resid(neighbour)
         elif resspec['resname'] == 'cter':
-            return res_idx in maxes(termini, key=get_resid)
+            return get_resid(res_idx) > get_resid(neighbour)
         else:
             raise KeyError("Don't know any terminus with name '{}'".format(resspec['resname']))
-    return out and _subdict(resspec, residue)
+    return _subdict(resspec, residue)
 
 
 def _format_resname(res):
