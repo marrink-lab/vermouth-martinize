@@ -141,7 +141,7 @@ def are_all_equal(iterable):
 
     iterator = iter(iterable)
     first = next(iterator, None)
-    return all(item == first for item in iterator)
+    return all(np.all(item == first) for item in iterator)
 
 
 def are_different(left, right):

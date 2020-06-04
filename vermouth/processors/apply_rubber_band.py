@@ -324,7 +324,7 @@ def apply_rubber_band(molecule, selector,
                                         base_constant, minimum_force)
     # we select the nodes here so the selection list has the same
     # order in build_connectivity_matrix and build_pair matrix
-    selected_nodes = _apply_selection(molecule, selection=selection)
+    selected_nodes = selection #_apply_selection(molecule, selection=selection)
     print(selected_nodes)
     connected = build_connectivity_matrix(molecule, res_min_dist - 1,
                                           selected_nodes=selected_nodes)

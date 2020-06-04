@@ -17,10 +17,12 @@
 Test graph reparation and related operations.
 """
 import copy
+import logging
 
 import networkx as nx
 import pytest
 import vermouth
+from vermouth.molecule import Link
 import vermouth.forcefield
 
 
@@ -32,7 +34,7 @@ def build_forcefield_with_mods():
     -------
     vermouth.ForceField
     """
-    nter = nx.Graph(name='N-ter')
+    nter = Link(name='N-ter')
     nter.add_nodes_from((
         (0, {'atomname': 'CA', 'PTM_atom': False, 'element': 'C'}),
         (1, {'atomname': 'N', 'PTM_atom': False, 'element': 'N'}),
@@ -41,7 +43,7 @@ def build_forcefield_with_mods():
     ))
     nter.add_edges_from([[0, 1], [1, 2], [1, 3]])
 
-    cter = nx.Graph(name='C-ter')
+    cter = Link(name='C-ter')
     cter.add_nodes_from((
         (0, {'atomname': 'C', 'PTM_atom': False, 'element': 'C'}),
         (1, {'atomname': 'O', 'PTM_atom': False, 'element': 'O'}),
@@ -49,7 +51,7 @@ def build_forcefield_with_mods():
     ))
     cter.add_edges_from([[0, 1], [0, 2]])
 
-    gluh = nx.Graph(name='GLU-H')
+    gluh = Link(name='GLU-H')
     gluh.add_nodes_from((
         (0, {'atomname': 'CD', 'PTM_atom': False, 'element': 'C'}),
         (1, {'atomname': 'OE1', 'PTM_atom': False, 'element': 'O'}),
@@ -59,6 +61,7 @@ def build_forcefield_with_mods():
     gluh.add_edges_from([[0, 1], [0, 2], [1, 3]])
 
     forcefield = copy.copy(vermouth.forcefield.get_native_force_field('universal'))
+    forcefield.modifications = {}
     for mod in [nter, gluh, cter]:
         forcefield.modifications[mod.name] = mod
     forcefield.renamed_residues[('GLU', ('GLU-H', 'N-ter'))] = 'GLU0'
@@ -108,10 +111,11 @@ def build_system_mod(force_field):
         (16, {'resid': 1, 'resname': 'GLU', 'atomname': 'HN', 'chain': 'A', 'element': 'H'}),
         # Residue 2 has missing atoms (HA1 and HA2, the hydrogen of the C
         # alpha; HN the hydrogen on the N-ter nitrogen and O, the oxygen at the
-        # C-ter)
-        (17, {'resid': 2, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
-        (18, {'resid': 2, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'C'}),
-        (19, {'resid': 2, 'resname': 'GLY', 'atomname': 'C', 'chain': 'A', 'element': 'C'}),
+        # C-ter). 'common' is an arbitrary attribute name with identical values,
+        # which should be propagated to reconstructed atoms.
+        (17, {'resid': 2, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N', 'common': 'a'}),
+        (18, {'resid': 2, 'resname': 'GLY', 'atomname': 'CA', 'chain': 'A', 'element': 'C', 'common': 'a'}),
+        (19, {'resid': 2, 'resname': 'GLY', 'atomname': 'C', 'chain': 'A', 'element': 'C', 'common': 'a'}),
         # Residue 3 has only N and C specified, everything else is missing.
         (20, {'resid': 3, 'resname': 'GLY', 'atomname': 'N', 'chain': 'A', 'element': 'N'}),
         (21, {'resid': 3, 'resname': 'GLY', 'atomname': 'O', 'chain': 'A', 'element': 'O'}),
@@ -240,9 +244,72 @@ def test_name_canonicalized(canonicalized_graph, key, expected_names):
     assert molecule.nodes[key]['atomname'] in expected_names
 
 
+@pytest.mark.parametrize('resid, expected_attrs', [
+    (2, {'resid': 2, 'resname': 'GLY', 'chain': 'A', 'common': 'a'})
+])
+def test_common_attributes(repaired_graph, resid, expected_attrs):
+    """Test that attributes that are common to all nodes in a residue end up in
+    reconstructed nodes."""
+    mol = repaired_graph.molecules[0]
+    for node_idx in mol:
+        node = mol.nodes[node_idx]
+        if node.get('resid') == resid:
+            for key, val in expected_attrs.items():
+                assert key in node
+                assert node[key] == val
+
+
 def test_renaming(renamed_graph):
     for node in renamed_graph.molecules[0].nodes.values():
         if node['resid'] == 1:
             assert node['resname'] == 'GLU0'
         else:
             assert node['resname'] == 'GLY'
+
+
+
+@pytest.mark.parametrize('resid,mutations,modifications,atomnames',[
+    (1, ['ALA'], [], 'O C CA HA N HN CB HB1 HB2 HB3'),  # The glutamate chain and N-ter are removed
+    (1, [], ['N-ter'], 'O C CA HA N H HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # HE1 got removed
+    (2, ['ALA'], ['N-ter', 'C-ter'], 'O OXT C CA HA N H HN CB HB1 HB2 HB3'),
+    (2, ['GLU'], [], 'O C CA HA N HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # Added glutamate sidechain
+    (5, ['GLY'], ['none'], 'N CA C O HN HA1 HA2'),  # Remove O2 from C-ter mod
+])
+def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, modifications, atomnames):
+    mol = system_mod.molecules[0]
+    # Let's mutate res1 to ALA
+    for node_idx in mol:
+        if mol.nodes[node_idx].get('resid') == resid:
+            if mutations:
+                mol.nodes[node_idx]['mutation'] = mutations
+            if modifications:
+                mol.nodes[node_idx]['modification'] = modifications
+    mol = vermouth.RepairGraph().run_molecule(mol)
+    resid1_atomnames = set()
+    for node_idx in mol:
+        if mol.nodes[node_idx].get('resid') == resid:
+            if mutations:
+                assert mol.nodes[node_idx]['resname'] == mutations[0]
+            if modifications:
+                assert mol.nodes[node_idx].get('modification') == modifications
+            resid1_atomnames.add(mol.nodes[node_idx]['atomname'])
+    assert resid1_atomnames == set(atomnames.split())
+
+
+@pytest.mark.parametrize('resid,mutations,modifications',[
+    (2, [], ['GLU-H']),  # The glutamate chain and N-ter are removed
+    (2, ['ALA', 'LEU'], [])
+])
+def test_repair_graph_with_mutation_modification_error(system_mod, caplog, resid, mutations, modifications):
+    mol = system_mod.molecules[0]
+    # Let's mutate res1 to ALA
+    for node_idx in mol:
+        if mol.nodes[node_idx].get('resid') == resid:
+            if mutations:
+                mol.nodes[node_idx]['mutation'] = mutations
+            if modifications:
+                mol.nodes[node_idx]['modification'] = modifications
+    with pytest.raises(ValueError), caplog.at_level(logging.WARNING):
+        assert not caplog.records
+        mol = vermouth.RepairGraph().run_molecule(mol)
+        assert len(caplog.records) == 1

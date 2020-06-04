@@ -43,4 +43,4 @@ from .quote import Quoter
 from .go_vs_includes import GoVirtIncludes
 from .sort_molecule_atoms import SortMoleculeAtoms
 from .merge_all_molecules import MergeAllMolecules
-from .neutral_termini import NeutralTermini
+from .annotate_mut_mod import AnnotateMutMod

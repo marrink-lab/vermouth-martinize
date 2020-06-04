@@ -18,11 +18,12 @@ Provides a processor that repairs a graph based on a reference.
 """
 import networkx as nx
 
+from ..molecule import Block
 from .processor import Processor
 from ..graph_utils import *  # FIXME
 from ..ismags import ISMAGS
 from ..log_helpers import StyleAdapter, get_logger
-from ..utils import format_atom_string
+from ..utils import format_atom_string, are_all_equal
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -48,6 +49,96 @@ def get_default(dictionary, attr, default):
     if item is None:
         item = default
     return item
+
+
+def _node_equal(node1, node2):
+    return node1.get('atomname') == node2.get('atomname')
+
+
+def _patch_modification(block, modification):
+    """
+    Applies, in order, modifications to block and returns a new Block.
+    Modifications are applied by overlaying the anchor of a modification with
+    the block and adding the remaining nodes and edges.
+    """
+    anchor_idxs = set()
+    for mod_idx in modification:
+        if not modification.nodes[mod_idx]['PTM_atom']:
+            anchor_idxs.add(mod_idx)
+    anchor = nx.subgraph(modification, anchor_idxs)
+    non_anchor_idxs = set(modification) - anchor_idxs
+    non_anchor = nx.subgraph(modification, non_anchor_idxs)
+
+    ismags = ISMAGS(block, anchor, node_match=_node_equal)
+    anchor_block_to_mod = list(ismags.subgraph_isomorphisms_iter())
+    if not anchor_block_to_mod:
+        LOGGER.error("Modification {} doesn't fit on Block {}", modification.name,
+                     block.name)
+        raise ValueError("Cannot apply modification to block")
+    # This probably can't happen, since atoms in Modifications /should/ have
+    # atomnames. Which should be unique. So, nocover.
+    elif len(anchor_block_to_mod) > 1:  # pragma: nocover
+        LOGGER.error("Modification {} fits on Block {} in {} ways",
+                     modification.name, block.name, len(anchor_block_to_mod))  # pragma: nocover
+        raise ValueError("Cannot apply modification to block")  # pragma: nocover
+
+    anchor_block_to_mod = anchor_block_to_mod[0]
+    anchor_mod_to_block = {val: key for key, val in anchor_block_to_mod.items()}
+
+    result = Block(nx.union(block, non_anchor, rename=(None, modification.name+'-')))
+    for mod_idx, mod_jdx in modification.edges_between(anchor_idxs, non_anchor_idxs):
+        if mod_idx in non_anchor_idxs:
+            mod_idx, mod_jdx = mod_jdx, mod_idx
+        # mod_idx is always in anchor, and thus in block.
+        block_idx = anchor_mod_to_block[mod_idx]
+        # Because of how nx.union renamed nodes in non_anchor
+        mod_jdx = '{}-{}'.format(modification.name, mod_jdx)
+        result.add_edge(block_idx, mod_jdx)
+    return result
+
+
+def _get_reference_residue(residue, force_field):
+    """
+    Uses the 'mutation', 'modify' and 'resname' attributes of `residue` to find
+    or generate the correct reference residue, based on `force_field`. Mutation
+    takes priority over resname, and the corresponding block will be taken from
+    the FF. Afterwards, all modifications in modify will be taken from the FF
+    and applied.
+
+    Returns the generated reference block.
+    """
+    if 'mutation' in residue:
+        mutation = residue['mutation']
+        if not are_all_equal(mutation):
+            message = 'Can only mutate residue {}-{}{} once, {} mutations were requested.'
+            LOGGER.error(message, residue['chain'], residue['resname'],
+                         residue['resid'], len(mutation))
+            raise ValueError(message.format(residue['chain'], residue['resname'],
+                             residue['resid'], len(mutation)))
+        mutation = mutation[0]
+        LOGGER.info('Mutating residue {}-{}{} to {}',
+                    residue['chain'], residue['resname'], residue['resid'],
+                    mutation)
+        resname = mutation
+    else:
+        resname = residue['resname']
+    reference_block = force_field.reference_graphs[resname]
+
+    if 'modification' in residue:
+        modifications = residue['modification']
+        for mod_name in modifications:
+            LOGGER.info('Applying modification {} to residue {}-{}{}',
+                        mod_name, residue['chain'], resname, residue['resid'])
+            if mod_name != 'none':
+                mod = force_field.modifications[mod_name]
+                reference_block = _patch_modification(reference_block, mod)
+        for node_idx in reference_block:
+            reference_block.nodes[node_idx]['modification'] = modifications
+    if 'mutation' in residue:
+        for node_idx in reference_block:
+            reference_block.nodes[node_idx]['mutation'] = mutation
+
+    return reference_block
 
 
 def make_reference(mol):
@@ -100,7 +191,17 @@ def make_reference(mol):
         resid = residues.nodes[residx]['resid']
         chain = residues.nodes[residx]['chain']
         residue = residues.nodes[residx]['graph']
-        reference = mol.force_field.reference_graphs[resname]
+        reference = _get_reference_residue(residues.nodes[residx], mol.force_field)
+        if 'mutation' in residues.nodes[residx]:
+            # We need to do this, since we need to propagate all common
+            # attributes in the input residue to any reconstructed atoms. 
+            # make_residue_graph already picks up on all the common attributes
+            # and sets those as residue/node attributes, but any mutation needs
+            # to be propagated as well, otherwise the newly constructed atoms
+            # will end up with the old residue name. This way, we can just add
+            # *all* attributes in the residue graph to the new atoms.
+            resname = residues.nodes[residx]['mutation'][0]
+            residues.nodes[residx]['resname'] = resname
         add_element_attr(reference)
         add_element_attr(residue)
         # We are going to sort the nodes of reference and residue by atomname.
@@ -151,6 +252,8 @@ def make_reference(mol):
 
         # If we assume residue > reference the tests run *way* faster, but the
         # actual program becomes *much* *much* slower.
+        # TODO: swap ref_copy and res_copy so that the smaller graph is the
+        #       "subgraph"?
         ismags = ISMAGS(ref_copy, res_copy,
                         node_match=nx.isomorphism.categorical_node_match('element', None),
                         cache=symmetry_cache)
@@ -178,9 +281,12 @@ def make_reference(mol):
         # "unsort" the matches
         match = {old_ref_names[ref]: old_res_names[res] for ref, res in match.items()}
 
-        reference_graph.add_node(residx, chain=chain, reference=reference,
-                                 found=residue, resname=resname, resid=resid,
-                                 match=match)
+        # The residue graph has attributes which are common to all atoms in the
+        # input residue, so propagate those to new atoms. These attributes are
+        # things like residue name (see above in case of mutations), resid, 
+        # insertion code, etc.
+        reference_graph.add_node(residx, reference=reference, found=residue, 
+                                 match=match, **residues.nodes[residx])
     reference_graph.add_edges_from(residues.edges())
     return reference_graph
 
@@ -338,6 +444,8 @@ def repair_graph(molecule, reference_graph, include_graph=True):
         for idx in extra:
             molecule.nodes[idx]['PTM_atom'] = True
             found.nodes[idx]['PTM_atom'] = True
+            if molecule.nodes[idx].get('mutation') or molecule.nodes[idx].get('modification'):
+                molecule.remove_node(idx)
 
     return molecule
 

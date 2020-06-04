@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 import itertools
 import networkx as nx
 
-from .utils import maxes, first_alpha
+from .utils import maxes, first_alpha, are_all_equal
 
 
 def add_element_attr(molecule):
@@ -98,72 +99,6 @@ def categorical_maximum_common_subgraph(graph1, graph2, attributes=tuple()):
     return matches
 
 
-def blockmodel(G, partitions, **attrs):
-    """
-    Analogous to networkx.blockmodel, but can deal with incomplete partitions,
-    and assigns ``attrs`` to nodes.
-
-    Parameters
-    ----------
-    G: networkx.Graph
-        The graph to partition
-    parititions: collections.abc.Iterable[collections.abc.Iterable]
-        Each element contains the node indices that construct the new node.
-    **attrs: dict[str, collections.abc.Iterable]
-        Attributes to assign to new nodes. Attribute values are assigned to the
-        new nodes in order.
-
-    Returns
-    -------
-    networkx.Graph
-        A new graph where every node is a subgraph as specified by partitions.
-        Node attributes:
-
-            :graph: Subgraph of constructing nodes.
-            :nnodes: Number of nodes in ``graph``.
-            :nedges: Number of edges in ``graph``.
-            :density: Density of ``graph``.
-            :attrs.keys(): As specified by ``**attrs``.
-    """
-    # TODO: Change this to use nx.quotient_graph.
-    attrs = {key: list(val) for key, val in attrs.items()}
-    CG_mol = nx.Graph()
-    for bead_idx, idxs in enumerate(partitions):
-        bd = G.subgraph(idxs)
-        CG_mol.add_node(bead_idx)
-        CG_mol.nodes[bead_idx]['graph'] = bd
-        # TODO: CoM instead of CoG
-#        CG_mol.nodes[bead_idx]['position'] = np.mean([bd.nodes[idx]['position'] for idx in bd], axis=0)
-        for k, vals in attrs.items():
-            CG_mol.nodes[bead_idx][k] = vals[bead_idx]
-
-        CG_mol.nodes[bead_idx]['nnodes'] = bd.number_of_nodes()
-        CG_mol.nodes[bead_idx]['nedges'] = bd.number_of_edges()
-        CG_mol.nodes[bead_idx]['density'] = nx.density(bd)
-
-    block_mapping = {}
-    for n in CG_mol:
-        nodes_in_block = CG_mol.nodes[n]['graph'].nodes()
-        block_mapping.update(dict.fromkeys(nodes_in_block, n))
-
-    for u, v, d in G.edges(data=True):
-        try:
-            bmu = block_mapping[u]
-            bmv = block_mapping[v]
-        except KeyError:
-            # Atom not represented
-            continue
-        if bmu == bmv:  # no self loops
-            continue
-        # For graphs and digraphs add single weighted edge
-        weight = d.get('weight', 1.0)  # default to 1 if no weight specified
-        if CG_mol.has_edge(bmu, bmv):
-            CG_mol[bmu][bmv]['weight'] += weight
-        else:
-            CG_mol.add_edge(bmu, bmv, weight=weight)
-    return CG_mol
-
-
 def rate_match(residue, bead, match):
     """
     A helper function which rates how well ``match`` describes the isomorphism
@@ -194,49 +129,122 @@ def rate_match(residue, bead, match):
                for rdx, bdx in match.items())
 
 
-def make_residue_graph(mol):
+def _items_with_common_values(graph, nodes=None):
     """
-    Creates a graph with one node per residue; as identified by the tuple
-    (chain identifier, residue index, residue name).
+    Finds all node attributes of nodes in graph that all have the same values.
+    Returns a dict of node attribute/common value pairs
 
     Parameters
     ----------
-    mol: networkx.Graph
-        The atomistic graph. Required node attributes:
+    graph: networkx.Graph
+    nodes: collections.abc.Iterable or None
+        If None, consider all nodes. All nodes must be in graph.
 
-            :chain: The chain identifier.
-            :resid: The residue index.
-            :resname: The residue name.
+    Returns
+    -------
+    dict
+    """
+    if not nodes:
+        nodes = set(graph.nodes)
+
+    common_attrs = defaultdict(list)
+    for idx in nodes:
+        for key, val in graph.nodes[idx].items():
+            common_attrs[key].append(val)
+    common_attrs = {key: vals[0] for key, vals in common_attrs.items()
+                    if len(vals) == len(nodes) and are_all_equal(vals)}
+    return common_attrs
+
+
+def get_attrs(node, attrs):
+    """
+    Returns multiple values from a dictionary in order.
+
+    Parameters
+    ----------
+    node: dict
+        The dict from which items should be taken.
+    attrs: collections.abc.Iterable
+        The keys which values should be taken.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the value of every key in attrs in the same order,
+        where missing values are `None`.
+    """
+    return tuple(node.get(attr) for attr in attrs)
+
+
+def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_code')):
+    """
+    Create a new graph based on `graph`, where nodes with identical attribute
+    values for the attribute names in `attrs` will be contracted into a single,
+    coarser node. With the default arguments it will create a graph with one
+    node per residue.
+    Resulting (coarse) nodes will have the same attributes as the constructing
+    nodes, but only those that have identical values. In addition, they'll have
+    attributes 'graph', 'nnodes', 'nedges' and 'density'.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph to condense.
+    attrs: collections.abc.Iterable[collections.abc.Hashable]
+        The node attributes that determine node equivalence.
 
     Returns
     -------
     networkx.Graph
-        A graph with one node per residue. Node attributes:
-
-            :chain: The chain identifier.
-            :graph: The atomistic subgraph.
-            :density: The density of ``graph``.
-            :nedges: The number of edges in ``graph``.
-            :nnodes: The number of nodes in ``graph``.
-            :resid: The residue index.
-            :resname: The residue name.
-            :atomname: The residue name.
+        The resulting coarser graph, where equivalent nodes are contracted to a
+        single node.
     """
-    def keyfunc(node_idx):
-        return mol.nodes[node_idx]['chain'], mol.nodes[node_idx]['resid'], mol.nodes[node_idx]['resname']
-    nodes = sorted(mol.nodes, key=keyfunc)
-    keys = []
-    grps = []
-    for key, grp in itertools.groupby(nodes, keyfunc):
-        keys.append(key)
-        grps.append(list(grp))
-    if keys:
-        chain, resids, resnames = map(list, zip(*keys))
-    else:
-        chain, resids, resnames = [], [], []
-    res_graph = blockmodel(mol, grps, chain=chain, resid=resids,
-                           resname=resnames, atomname=resnames)
+    # Create partitions. These will contain all nodes, even those without e.g.
+    # a resname, since those will get resname None
+    residue_idxs = collect_residues(graph, attrs)
+    res_graph = nx.quotient_graph(graph,
+                                  sorted(residue_idxs.values(), key=min),
+                                  relabel=True)
+    # Using this equivalence function rather than the preformed partitions
+    # Creates an equivalent graph, but the node indices are numbered
+    # differently. At the very least it would require a change in the tests.
+    # Note2: This would probably break e.g. the DSSP processor, because the
+    # ordering of residues in the molecule comes from here, and is used by 
+    # molecule.iter_residues.
+    # def node_equiv(idx, jdx):
+    #     return get_attrs(graph.nodes[idx], attrs) == get_attrs(graph.nodes[jdx], attrs)
+    # res_graph = nx.quotient_graph(graph, node_equiv, relabel=True)
+    for res_idx in res_graph:
+        res_node = res_graph.nodes[res_idx]
+        res_node.update(_items_with_common_values(res_node['graph']))
+        # res_node['atomname'] = res_node.get('resname')
     return res_graph
+
+
+def collect_residues(graph, attrs=('chain', 'resid', 'resname', 'insertion_code')):
+    """
+    Creates groups of indices based on the node attributes with keys `attrs`.
+    All nodes in graph will be part of exactly one group.
+
+    Parameters
+    ----------
+    graph: :class:`networkx.Graph`
+        The graph whose node indices should be grouped.
+    attrs: :class:`~collections.abc.Sequence`
+        The attribute keys that should be used to group node indices. The
+        associated values should be hashable.
+
+    Returns
+    -------
+    dict[tuple, set]
+        The keys are the found node attributes, the values the associated node
+        indices.
+    """
+    residues = defaultdict(set)
+    for node_idx in graph:
+        key = get_attrs(graph.nodes[node_idx], attrs=attrs)
+        residues[key].add(node_idx)
+    return dict(residues)
 
 
 # We can't inherit from nx.isomorphism.GraphMatcher to override
