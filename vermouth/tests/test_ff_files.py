@@ -513,6 +513,69 @@ class TestBlock:
         with pytest.raises(IOError):
             vermouth.ffinput.read_ff(lines, ff)
 
+    @staticmethod
+    @pytest.mark.parametrize('interaction_lines, expected', (
+        [
+            """
+            [ dihedrals ]
+            BB SC1 SC2 SC3 2 1 2 3 4
+            BB SC1 SC2 SC4 1
+            """,
+            {'impropers': [vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC3'.split(),
+                                                         parameters='2 1 2 3 4'.split(),
+                                                         meta={})],
+             'dihedrals': [vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC4'.split(),
+                                                         parameters=['1'],
+                                                         meta={})]}
+        ],
+        [
+            """
+            [ dihedrals ]
+            BB SC1 SC2 SC3 1 1 2 3 4
+            BB SC1 SC2 SC4 1
+            """,
+            {'dihedrals': [vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC3'.split(),
+                                                         parameters='1 1 2 3 4'.split(),
+                                                         meta={}), 
+                           vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC4'.split(),
+                                                         parameters=['1'],
+                                                         meta={})],
+             'impropers': []}
+        ],
+        [
+            """
+            [ dihedrals ]
+            BB SC1 SC2 SC3 2 1 2 3 4
+            BB SC1 SC2 SC4 2
+            """,
+            {'impropers': [vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC3'.split(),
+                                                         parameters='2 1 2 3 4'.split(),
+                                                         meta={}),
+                           vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC4'.split(),
+                                                         parameters=['2'],
+                                                         meta={})],
+             'dihedrals': []}
+        ],
+    ))
+    def test_multiple_impropers(interaction_lines, expected):
+        lines = """
+        [ moleculetype ]
+        XOXO 1
+
+        [ atoms ]
+        1 P4 1 ALA BB 1
+        2 P3 1 ALA SC1 2
+        3 P2 1 ALA SC2 3
+        4 P2 1 ALA SC3 3
+        5 P2 1 ALA SC4 3
+        """
+        lines = textwrap.dedent(lines) + textwrap.dedent(interaction_lines)
+        lines = lines.splitlines()
+
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        vermouth.ffinput.read_ff(lines, ff)
+        assert ff.blocks['XOXO'].interactions == expected
+
 
 class TestLink:
     @staticmethod

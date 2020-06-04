@@ -359,7 +359,7 @@ class FFDirector(SectionLineParser):
           # [ impropers ] section.
 
         propers = []
-        impropers = []
+        impropers = context.interactions.get('impropers', [])
         for dihedral in context.interactions.get('dihedrals', []):
             if dihedral.parameters and dihedral.parameters[0] == '2':
                 impropers.append(dihedral)
