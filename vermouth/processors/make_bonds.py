@@ -109,18 +109,19 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
     else:
         pairs = {}
 
+    nodes = graph.nodes
     for (idx1, idx2), dist in pairs.items():
         if idx1 >= idx2:
             continue
         node_idx1 = idx_to_nodenum[idx1]
         node_idx2 = idx_to_nodenum[idx2]
-        atom1 = graph.nodes[node_idx1]
-        atom2 = graph.nodes[node_idx2]
-        element1 = atom1['element']
-        element2 = atom2['element']
 
         if frozenset((node_idx1, node_idx2)) in non_edges:
             continue
+        atom1 = nodes[node_idx1]
+        atom2 = nodes[node_idx2]
+        element1 = atom1['element']
+        element2 = atom2['element']
 
         bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
         if dist <= bond_distance * fudge and not graph.has_edge(node_idx1, node_idx2):
