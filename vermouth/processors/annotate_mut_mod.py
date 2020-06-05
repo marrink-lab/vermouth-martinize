@@ -18,11 +18,8 @@ Provides a processor that annotates a molecule with desired mutations and
 modifications.
 """
 
-import networkx as nx
-
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
-from ..utils import maxes
 from ..graph_utils import make_residue_graph
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -83,8 +80,8 @@ def _subdict(dict1, dict2):
 
 def residue_matches(resspec, residue_graph, res_idx):
     """
-    Returns True iff resspec desribes residue_graph.nodes[res_idx]. The
-    'resname's nter and cter match match the residues with a degree of 1 and 
+    Returns True iff resspec describes residue_graph.nodes[res_idx]. The
+    'resname's nter and cter match the residues with a degree of 1 and
     with the lowest and highest residue numbers respectively.
 
     Parameters
@@ -105,21 +102,20 @@ def residue_matches(resspec, residue_graph, res_idx):
     res_node = residue_graph.nodes[res_idx]
     residue = {key: res_node.get(key)
                for key in 'chain resid resname insertion_code'.split()}
-    if resspec.get('resname', '')[-3:] == 'ter' and residue_graph.degree[res_idx] == 1:
-        # Find all residues with degree 1: the ones with a resid lower than
-        # their neighbour will be Nter, those with a resid higher than their
-        # neighbour Cter
-        # FIXME: Once residue_graph is a digraph we can do something much much
-        #        more clever, addressing arbitrarily branched polymers and
-        #        termini
-        neighbour = list(residue_graph[res_idx])[0]  # Only one neighbour by definition.
-        get_resid = lambda idx: residue_graph.nodes[idx].get('resid', 0)
-        if resspec['resname'] == 'nter':
-            return get_resid(res_idx) < get_resid(neighbour)
-        elif resspec['resname'] == 'cter':
-            return get_resid(res_idx) > get_resid(neighbour)
-        else:
-            raise KeyError("Don't know any terminus with name '{}'".format(resspec['resname']))
+    # Find all residues with degree 1: the ones with a resid lower than
+    # their neighbour will be Nter, those with a resid higher than their
+    # neighbour Cter
+    # FIXME: Once residue_graph is a digraph we can do something much much
+    #        more clever, addressing arbitrarily branched polymers and
+    #        termini
+    neighbour = list(residue_graph[res_idx])[0]  # Only one neighbour by definition.
+    resid = residue_graph.nodes[res_idx].get('resid', 0)
+    neighbour_resid = residue_graph.nodes[neighbour].get('resid', 0)
+    resname = resspec.get('resname')
+    if resname == 'nter' and residue_graph.degree[res_idx] == 1:
+        return resid < neighbour_resid
+    elif resname == 'cter' and residue_graph.degree[res_idx] == 1:
+        return resid > neighbour_resid
     return _subdict(resspec, residue)
 
 
@@ -181,7 +177,7 @@ def annotate_modifications(molecule, modifications, mutations):
                     if mod != 'none' and mod not in library:
                         raise NameError('{} is not known as a {} for '
                                         'force field {}'
-                                       ''.format(mod, key, molecule.force_field.name))
+                                        ''.format(mod, key, molecule.force_field.name))
                     res = residue_graph.nodes[res_idx]
                     LOGGER.debug('Annotating {} with {} {}',
                                  _format_resname(res), key, mod)
