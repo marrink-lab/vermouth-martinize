@@ -18,15 +18,25 @@ transformation on molecular structures and topologies using graph algorithms.
 
 ## Disclaimer
 
-Martinize2 and Vermouth are under developpement. Bugs can occur. If you encounter an issue, please report it on <https://github.com/marrink-lab/vermouth-martinize/issues>. Carefully check your input and output files before
+Martinize2 and Vermouth are under development. Bugs can occur. If you encounter an issue, please report it on
+<https://github.com/marrink-lab/vermouth-martinize/issues>. Carefully check your input and output files before
 using them; read the messages displayed by the program.
 
 ## Installation
 
-Martinize2 and vermouth require python 3.5 or greater. They can be installed
-using the `pip` command:
+Martinize2 and vermouth require python 3.5 or greater. They are distributed via [PyPi][pypi_vermouth], and can be
+installed using the `pip` command:
+    
+    pip install vermouth
+
+This installs the last released version. You can update an existing installation by running `pip install -U vermouth`.
+In some cases you may want to experiment with running the latest development version. You can install this version with
+the following command: 
 
     pip install git+https://github.com/marrink-lab/vermouth-martinize.git#vermouth
+
+Note that vermouth and Martinize2, in particular development versions, may contain bugs that cause it to produce
+incorrect topologies. Check the produced output carefully!
 
 The behavior of the `pip` command can vary depending of the specificity of your
 python installation. See the [documentation on installing a python
@@ -77,6 +87,7 @@ academic paper is left to our sole discretion.
 [Martini]: http://cgmartini.nl
 [Martini tutorials]: http://cgmartini.nl/index.php/tutorials-general-introduction-gmx5
 [Gromacs]: http://www.gromacs.org
+[pypi_vermouth]: https://pypi.org/project/vermouth/
 [pipdoc]: https://packaging.python.org/tutorials/installing-packages/#installing-packages
 [license]: https://github.com/marrink-lab/vermouth-martinize/blob/master/LICENSE
 [github]: https://github.com/marrink-lab/vermouth-martinize
