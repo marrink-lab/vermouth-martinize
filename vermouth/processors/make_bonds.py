@@ -94,6 +94,8 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
             if subn in nodes and graph.nodes[subn].get('element') in VDW_RADII
         )
     }
+    # Guard against the case where there are no atoms with known elements, which
+    # max does *not* like.
     if idx_to_nodenum:
         max_dist = max(VDW_RADII[graph.nodes[idx]['element']] for idx in idx_to_nodenum.values())
     else:

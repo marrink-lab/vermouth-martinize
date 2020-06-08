@@ -242,10 +242,13 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
     # Create partitions. These will contain all nodes, even those without e.g.
     # a resname, since those will get resname None
     residue_idxs = collect_residues(graph, attrs)
+    res_graph = partition_graph(graph, residue_idxs.values())
+    # Alternatively we can use nx.quotient_graph, but that slows down the
+    # program for large-ish molecules, since quotient_graph scales as O(N^2).
+    # Our partition_graph scales much better, as O(E*N) (number of edges, nodes)
     # res_graph = nx.quotient_graph(graph,
     #                               sorted(residue_idxs.values(), key=min),
     #                               relabel=True)
-    res_graph = partition_graph(graph, residue_idxs.values())
     # Using this equivalence function rather than the preformed partitions
     # Creates an equivalent graph, but the node indices are numbered
     # differently. At the very least it would require a change in the tests.
