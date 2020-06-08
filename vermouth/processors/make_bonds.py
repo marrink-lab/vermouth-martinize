@@ -94,7 +94,11 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
             if subn in nodes and graph.nodes[subn].get('element') in VDW_RADII
         )
     }
-    max_dist = max(VDW_RADII.values()) * fudge
+    if idx_to_nodenum:
+        max_dist = max(VDW_RADII[graph.nodes[idx]['element']] for idx in idx_to_nodenum.values())
+    else:
+        max_dist = 0
+    max_dist *= fudge
 
     positions = np.array([
         graph.nodes[node]['position']
