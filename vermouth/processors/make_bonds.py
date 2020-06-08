@@ -25,7 +25,7 @@ from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import format_atom_string
-from ..graph_utils import collect_residues
+from ..graph_utils import collect_residues, partition_graph
 
 from ..log_helpers import StyleAdapter, get_logger
 
@@ -94,7 +94,13 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
             if subn in nodes and graph.nodes[subn].get('element') in VDW_RADII
         )
     }
-    max_dist = max(VDW_RADII.values()) * fudge
+    # Guard against the case where there are no atoms with known elements, which
+    # max does *not* like.
+    if idx_to_nodenum:
+        max_dist = max(VDW_RADII[graph.nodes[idx]['element']] for idx in idx_to_nodenum.values())
+    else:
+        max_dist = 0
+    max_dist *= fudge
 
     positions = np.array([
         graph.nodes[node]['position']
@@ -109,18 +115,19 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
     else:
         pairs = {}
 
+    nodes = graph.nodes
     for (idx1, idx2), dist in pairs.items():
         if idx1 >= idx2:
             continue
         node_idx1 = idx_to_nodenum[idx1]
         node_idx2 = idx_to_nodenum[idx2]
-        atom1 = graph.nodes[node_idx1]
-        atom2 = graph.nodes[node_idx2]
-        element1 = atom1['element']
-        element2 = atom2['element']
 
         if frozenset((node_idx1, node_idx2)) in non_edges:
             continue
+        atom1 = nodes[node_idx1]
+        atom2 = nodes[node_idx2]
+        element1 = atom1['element']
+        element2 = atom2['element']
 
         bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
         if dist <= bond_distance * fudge and not graph.has_edge(node_idx1, node_idx2):
@@ -241,7 +248,6 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     non_edges = set()
 
     residue_groups = collect_residues(system, ('mol_idx chain resid resname insertion_code'.split()))
-
     for ((mol_idx, chain, resid, resname, insertion_code), idxs) in residue_groups.items():
         if not allow_name:
             break
@@ -262,14 +268,13 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     # termini, ...)
     if allow_dist:
         _bonds_from_distance(system, non_edges=non_edges, fudge=fudge)
-
     # Split the system into connected components. We do want to keep residues
     # together, so make a residue graph (1 node per residue) first, and use that
     # to find the connected components.
-    residue_graph = nx.quotient_graph(system, residue_groups.values())
     molecules = []
-    for node_idxs in nx.connected_components(residue_graph):
-        node_idxs = set().union(*node_idxs)
+    residue_graph = partition_graph(system, residue_groups.values())
+    for res_node_idxs in nx.connected_components(residue_graph):
+        node_idxs = set().union(*(residue_graph.nodes[rni]['graph'] for rni in res_node_idxs))
         mol = Molecule(system.subgraph(node_idxs))
         molecules.append(mol)
 
