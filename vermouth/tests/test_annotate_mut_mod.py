@@ -15,12 +15,14 @@
 Contains unittests for vermouth.processors.annotate_mut_mod.
 """
 
+import networkx as nx
 import pytest
 from vermouth.molecule import Molecule
 from vermouth.forcefield import ForceField
 from vermouth.processors.annotate_mut_mod import (
     parse_residue_spec,
     _subdict,
+    _terminal_matches,
     annotate_modifications,
     AnnotateMutMod
 )
@@ -175,6 +177,14 @@ def test_single_residue_mol():
 def test_annotate_modifications_error(example_mol, modifications, mutations):
     with pytest.raises(NameError):
         annotate_modifications(example_mol, modifications, mutations)
+
+
+def test_unknown_terminus_match():
+    resname = 'xter'
+    graph = nx.Graph()
+    graph.add_edge(0, 1)
+    with pytest.raises(KeyError):
+        _terminal_matches(resname, graph, 0)
 
 
 @pytest.mark.parametrize('mutations,expected_mut', [
