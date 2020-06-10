@@ -1,0 +1,35 @@
+INFO       MARTINIZE, script version 2.4
+INFO       If you use this script please cite:
+INFO       de Jong et al., J. Chem. Theory Comput., 2013, DOI:10.1021/ct300646g
+INFO       Chain termini will be charged
+INFO       Chain termini will be charged
+INFO       Residues at chain brakes will not be charged
+INFO       The elnedyn22 forcefield will be used.
+INFO       Local elastic bonds will be used for extended regions.
+INFO       Read input structure from file.
+INFO       Input structure is a PDB file.
+INFO       Found 1 chains:
+INFO          1:   A (Protein), 304 atoms in 20 residues.
+INFO       Total size of the system: 20 residues.
+INFO       Writing coarse grained structure.
+INFO       (Average) Secondary structure has been determined (see head of .itp-file).
+INFO       Created coarsegrained topology
+INFO       Written 1 ITP file
+INFO       Output contains 1 molecules:
+INFO          1->  Protein_A (chain  A)
+INFO       Written topology files
+INFO       The elnedyn forcefield has been implemented with some changes compared to the published parameters:
+INFO       - Backbone-Backbone bonds use high force constant bonds instead of constraints.
+INFO       - Trp has an extra constrain added to the sidechain.
+INFO       - The Backbone sidechain bonds with high force constants are replaced by constraints except for Trp and His.
+INFO       - Cysteine bonds are 0.24 nm constraints, instead of the published 0.39nm/5000kJ/mol.
+WARNING    Elnedyn topologies might not give numerical stable simulations with a 20fs timestep.
+WARNING    This can be solved by setting all S-type bead masses to 72amu.
+WARNING    Martini version 2.2 is in beta release. It has not been extensively tested and problems might occur.
+
+        There you are. One MARTINI. Shaken, not stirred.
+
+
+The three-martini lunch is the epitome of American efficiency. Where else can you get an earful, a bellyful and a snootful at the same time?
+                                                                --Gerald R. Ford
+

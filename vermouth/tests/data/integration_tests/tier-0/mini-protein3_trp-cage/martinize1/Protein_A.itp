@@ -1,0 +1,175 @@
+; MARTINI (elnedyn22) Coarse Grained topology file for "Protein_A"
+; Created by py version 2.4 
+; Using the following options:  -f ../aa.pdb -x cg.pdb -o topol.top -ff elnedyn22 -dssp dssp -eu 0.7 -ef 800.0
+; Sequence:
+; NLYIQWLKDGGPSSGRPPPS
+; Secondary Structure:
+; C1113222TTCCCCTCCCCC
+
+[ moleculetype ]
+; Name         Exclusions
+Protein_A         1
+
+[ atoms ]
+    1    Qd     1   ASN    BB     1  1.0000 ; C
+    2    P5     1   ASN   SC1     2  0.0000 ; C
+    3    Nd     2   LEU    BB     3  0.0000 ; 1
+    4    C1     2   LEU   SC1     4  0.0000 ; 1
+    5    Nd     3   TYR    BB     5  0.0000 ; 1
+    6   SC4     3   TYR   SC1     6  0.0000 ; 1
+    7   SC4     3   TYR   SC2     7  0.0000 ; 1
+    8   SP1     3   TYR   SC3     8  0.0000 ; 1
+    9    Nd     4   ILE    BB     9  0.0000 ; 1
+   10    C1     4   ILE   SC1    10  0.0000 ; 1
+   11   Nda     5   GLN    BB    11  0.0000 ; 3
+   12    P4     5   GLN   SC1    12  0.0000 ; 3
+   13    Na     6   TRP    BB    13  0.0000 ; 2
+   14   SC4     6   TRP   SC1    14  0.0000 ; 2
+   15   SNd     6   TRP   SC2    15  0.0000 ; 2
+   16   SC5     6   TRP   SC3    16  0.0000 ; 2
+   17   SC5     6   TRP   SC4    17  0.0000 ; 2
+   18    Na     7   LEU    BB    18  0.0000 ; 2
+   19    C1     7   LEU   SC1    19  0.0000 ; 2
+   20    Na     8   LYS    BB    20  0.0000 ; 2
+   21    C3     8   LYS   SC1    21  0.0000 ; 2
+   22    Qd     8   LYS   SC2    22  1.0000 ; 2
+   23   Nda     9   ASP    BB    23  0.0000 ; T
+   24    Qa     9   ASP   SC1    24 -1.0000 ; T
+   25   Nda    10   GLY    BB    25  0.0000 ; T
+   26    P5    11   GLY    BB    26  0.0000 ; C
+   27    P4    12   PRO    BB    27  0.0000 ; C
+   28    C3    12   PRO   SC1    28  0.0000 ; C
+   29    P5    13   SER    BB    29  0.0000 ; C
+   30    P1    13   SER   SC1    30  0.0000 ; C
+   31    P5    14   SER    BB    31  0.0000 ; C
+   32    P1    14   SER   SC1    32  0.0000 ; C
+   33   Nda    15   GLY    BB    33  0.0000 ; T
+   34    P5    16   ARG    BB    34  0.0000 ; C
+   35    N0    16   ARG   SC1    35  0.0000 ; C
+   36    Qd    16   ARG   SC2    36  1.0000 ; C
+   37    P4    17   PRO    BB    37  0.0000 ; C
+   38    C3    17   PRO   SC1    38  0.0000 ; C
+   39    P4    18   PRO    BB    39  0.0000 ; C
+   40    C3    18   PRO   SC1    40  0.0000 ; C
+   41    P4    19   PRO    BB    41  0.0000 ; C
+   42    C3    19   PRO   SC1    42  0.0000 ; C
+   43    Qa    20   SER    BB    43 -1.0000 ; C
+   44    P1    20   SER   SC1    44  0.0000 ; C
+
+[ bonds ]
+; Backbone bonds
+    1     3      1   0.38764 150000 ; ASN(C)-LEU(1)
+    3     5      1   0.38605 150000 ; LEU(1)-TYR(1)
+    5     9      1   0.38715 150000 ; TYR(1)-ILE(1)
+    9    11      1   0.38456 150000 ; ILE(1)-GLN(3)
+   11    13      1   0.38666 150000 ; GLN(3)-TRP(2)
+   13    18      1   0.38585 150000 ; TRP(2)-LEU(2)
+   18    20      1   0.38818 150000 ; LEU(2)-LYS(2)
+   20    23      1   0.38610 150000 ; LYS(2)-ASP(T)
+   23    25      1   0.38909 150000 ; ASP(T)-GLY(T)
+   25    26      1   0.38636 150000 ; GLY(T)-GLY(C)
+   26    27      1   0.38863 150000 ; GLY(C)-PRO(C)
+   27    29      1   0.38756 150000 ; PRO(C)-SER(C)
+   29    31      1   0.38747 150000 ; SER(C)-SER(C)
+   31    33      1   0.38655 150000 ; SER(C)-GLY(T)
+   33    34      1   0.38663 150000 ; GLY(T)-ARG(C)
+   34    37      1   0.38777 150000 ; ARG(C)-PRO(C)
+   37    39      1   0.38604 150000 ; PRO(C)-PRO(C)
+   39    41      1   0.38582 150000 ; PRO(C)-PRO(C)
+   41    43      1   0.38642 150000 ; PRO(C)-SER(C)
+#ifndef NO_RUBBER_BANDS
+#ifndef RUBBER_FC
+#define RUBBER_FC 800.000000
+#endif
+    1     9      1   0.50389 RUBBER_FC*1.000000
+    1    11      1   0.63164 RUBBER_FC*1.000000
+    3    11      1   0.52388 RUBBER_FC*1.000000
+    3    13      1   0.64259 RUBBER_FC*1.000000
+    3    41      1   0.69405 RUBBER_FC*1.000000
+    5    13      1   0.49083 RUBBER_FC*1.000000
+    5    18      1   0.61083 RUBBER_FC*1.000000
+    5    41      1   0.63264 RUBBER_FC*1.000000
+    9    18      1   0.50757 RUBBER_FC*1.000000
+    9    20      1   0.61107 RUBBER_FC*1.000000
+   11    20      1   0.53580 RUBBER_FC*1.000000
+   11    23      1   0.67279 RUBBER_FC*1.000000
+   13    23      1   0.55881 RUBBER_FC*1.000000
+   13    26      1   0.55167 RUBBER_FC*1.000000
+   13    39      1   0.67034 RUBBER_FC*1.000000
+   18    25      1   0.52365 RUBBER_FC*1.000000
+   18    26      1   0.43343 RUBBER_FC*1.000000
+   20    26      1   0.69892 RUBBER_FC*1.000000
+   23    31      1   0.60304 RUBBER_FC*1.000000
+   25    29      1   0.51300 RUBBER_FC*1.000000
+   25    31      1   0.52192 RUBBER_FC*1.000000
+   26    31      1   0.58005 RUBBER_FC*1.000000
+   27    33      1   0.65022 RUBBER_FC*1.000000
+   27    34      1   0.64886 RUBBER_FC*1.000000
+   27    37      1   0.66163 RUBBER_FC*1.000000
+#endif
+; Sidechain bonds
+    5     6      1   0.33500  6000 ; TYR
+    5     7      1   0.33500  6000 ; TYR
+    9    10      1   0.22500 13250 ; ILE
+   11    12      1   0.30000  2400 ; GLN
+   13    14      1   0.25500 73000 ; TRP
+   20    21      1   0.25000 12500 ; LYS
+   21    22      1   0.30000  9700 ; LYS
+   34    35      1   0.25000 12500 ; ARG
+   35    36      1   0.35000  6200 ; ARG
+
+[ constraints ]
+    1     2      1   0.25000 ; ASN
+    3     4      1   0.26500 ; LEU
+    6     7      1   0.24000 ; TYR
+    6     8      1   0.31000 ; TYR
+    7     8      1   0.31000 ; TYR
+   14    15      1   0.22000 ; TRP
+   15    17      1   0.25000 ; TRP
+   17    16      1   0.28000 ; TRP
+   16    14      1   0.25500 ; TRP
+   14    17      1   0.35454 ; TRP
+   18    19      1   0.26500 ; LEU
+   23    24      1   0.25500 ; ASP
+   27    28      1   0.19000 ; PRO
+   29    30      1   0.19500 ; SER
+   31    32      1   0.19500 ; SER
+   37    38      1   0.19000 ; PRO
+   39    40      1   0.19000 ; PRO
+   41    42      1   0.19000 ; PRO
+   43    44      1   0.19500 ; SER
+
+[ angles ]
+; Backbone angles
+    1     3     5      2  92.23880    40 ; ASN(C)-LEU(1)-TYR(1)
+    3     5     9      2  90.35696    40 ; LEU(1)-TYR(1)-ILE(1)
+    5     9    11      2  89.08992    40 ; TYR(1)-ILE(1)-GLN(3)
+    9    11    13      2  88.65725    40 ; ILE(1)-GLN(3)-TRP(2)
+   11    13    18      2  93.03190    40 ; GLN(3)-TRP(2)-LEU(2)
+   13    18    20      2  94.82578    40 ; TRP(2)-LEU(2)-LYS(2)
+   18    20    23      2  87.96640    40 ; LEU(2)-LYS(2)-ASP(T)
+   20    23    25      2  89.90763    40 ; LYS(2)-ASP(T)-GLY(T)
+   23    25    26      2  100.18051    40 ; ASP(T)-GLY(T)-GLY(C)
+   25    26    27      2  109.07322    40 ; GLY(T)-GLY(C)-PRO(C)
+   26    27    29      2  89.53735    40 ; GLY(C)-PRO(C)-SER(C)
+   27    29    31      2  91.81507    40 ; PRO(C)-SER(C)-SER(C)
+   29    31    33      2  101.78388    40 ; SER(C)-SER(C)-GLY(T)
+   31    33    34      2  92.20138    40 ; SER(C)-GLY(T)-ARG(C)
+   33    34    37      2  133.22468    40 ; GLY(T)-ARG(C)-PRO(C)
+   34    37    39      2  121.50170    40 ; ARG(C)-PRO(C)-PRO(C)
+   37    39    41      2  117.95014    40 ; PRO(C)-PRO(C)-PRO(C)
+   39    41    43      2  114.20128    40 ; PRO(C)-PRO(C)-SER(C)
+; Backbone-sidechain angles
+; Sidechain angles
+    5     6     7      2     70   100 ; TYR
+    5     6     8      2    130    50 ; TYR
+   13    14    15      2    142    30 ; TRP
+   13    14    17      2    143    20 ; TRP
+   13    14    16      2    104    50 ; TRP
+   20    21    22      2    150    20 ; LYS
+   34    35    36      2    150    15 ; ARG
+
+[ dihedrals ]
+; Backbone dihedrals
+; Sidechain improper dihedrals
+   14    15    16    17      2    180   200 ; TRP

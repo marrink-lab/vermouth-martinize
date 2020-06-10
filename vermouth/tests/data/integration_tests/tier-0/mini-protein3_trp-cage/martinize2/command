@@ -1,0 +1,9 @@
+{martinize2}
+-f {inpath}/../aa.pdb
+-x cg.pdb
+-o topol.top
+-ff elnedyn22
+-elastic
+-dssp dssp
+-eu 0.7
+-ef 800.0
