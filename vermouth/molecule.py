@@ -701,11 +701,21 @@ class Molecule(nx.Graph):
         bool
             True iff other has the same shape as this molecule.
         """
-        # TODO: Test the node attributes, the molecule attributes, and
-        # the interactions.
-        return nx.is_isomorphic(self, other)
+        # Almost identical to __eq__, except that some node attributes don't
+        # contribute, such as position and chain.
+        # Note that isomorphic molecules get separate moltypes now, since the
+        # order of the nodes is coupled to the order of the atoms in the output
+        # PDB
+        ignore_attrs = ('position', 'chain', 'graph', 'mapping_weights')
+        return (
+                self.nrexcl == other.nrexcl and
+                self._force_field == other._force_field and
+                self.same_nodes(other, ignore_attr=ignore_attrs) and
+                self.same_edges(other) and
+                self.same_interactions(other)
+        )
 
-    # TODO: Allow comparison of interactions betweem isomorphic molecules.
+    # TODO: Allow comparison of interactions between isomorphic molecules.
     def same_interactions(self, other):
         """
         Returns `True` if the interactions are the same.
