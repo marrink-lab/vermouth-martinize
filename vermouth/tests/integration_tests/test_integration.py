@@ -16,6 +16,7 @@ from .. import datafiles
 from pathlib import Path
 import pytest
 import subprocess
+import vermouth
 
 MARTINIZE2 = 'martinize2'  # TODO: turn into pytest cli argument
 
@@ -24,9 +25,54 @@ INTEGRATION_DATA = Path(datafiles.TEST_DATA/'integration_tests')
 PATTERN = '{path}/{tier}/{protein}/martinize2/'
 
 
-def compare_file(file1, file2):
-    with open(file1) as f1, open(file2) as f2:
-        assert f1.readlines() == f2.readlines()
+def assert_equal_blocks(block1, block2):
+    """
+    Asserts that two blocks are equal to gain the pytest rich comparisons,
+    which is lost when doing `assert block1 == block2`
+    """
+    assert block1.name == block2.name
+    assert block1.nrexcl == block2.nrexcl
+    # assert block1.force_field == block2.force_field  # Set to be equal
+    # Assert the order to be equal as well...
+    assert list(block1.nodes) == list(block2.nodes)
+    # ... as the attributes
+    assert dict(block1.nodes(data=True)) == dict(block2.nodes(data=True))
+    edges1 = {frozenset(e[:2]): e[2] for e in block1.edges(data=True)}
+    edges2 = {frozenset(e[:2]): e[2] for e in block2.edges(data=True)}
+    assert edges1 == edges2
+    assert block1.interactions == block2.interactions
+
+
+def compare_itp(filename1, filename2):
+    """
+    Asserts that two itps are functionally identical
+    """
+    dummy_ff = vermouth.forcefield.ForceField(name='dummy')
+    with open(filename1) as fn1:
+        vermouth.gmx.read_itp(fn1, dummy_ff)
+    dummy_ff2 = vermouth.forcefield.ForceField(name='dummy')
+    with open(filename2) as fn2:
+        vermouth.gmx.read_itp(fn2, dummy_ff2)
+    for block in dummy_ff2.blocks.values():
+        block._force_field = dummy_ff
+    assert set(dummy_ff.blocks.keys()) == set(dummy_ff2.blocks.keys())
+    for name in dummy_ff.blocks:
+        block1 = dummy_ff.blocks[name]
+        block2 = dummy_ff2.blocks[name]
+        assert_equal_blocks(block1, block2)
+
+
+def compare_pdb(filename1, filename2):
+    """
+    Asserts that two pdbs are functionally identical
+    """
+    pdb1 = vermouth.pdb.read_pdb(filename1)
+    pdb2 = vermouth.pdb.read_pdb(filename2)
+    assert pdb1 == pdb2
+
+
+COMPARERS = {'.itp': compare_itp,
+             '.pdb': compare_pdb}
 
 
 @pytest.mark.parametrize("tier, protein", [
@@ -49,12 +95,14 @@ def test_integration_protein(tmp_path, tier, protein):
     command = command.format(inpath=data_path, martinize2=MARTINIZE2)
     command = command.replace('\n', ' ')
 
-    proc = subprocess.Popen(command, cwd=tmp_path)
-    exit_code = proc.wait(timeout=60)
+    proc = subprocess.run(command, cwd=tmp_path, shell=True, timeout=60)
+    exit_code = proc.returncode
     assert exit_code == 0
 
     for new_file in tmp_path.iterdir():
         filename = new_file.name
         reference_file = data_path/filename
         assert reference_file.is_file()
-        compare_file(reference_file, new_file)
+        ext = new_file.suffix.lower()
+        if ext in COMPARERS:
+            COMPARERS[ext](reference_file, new_file)
