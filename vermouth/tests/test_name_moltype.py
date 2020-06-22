@@ -35,6 +35,7 @@ from vermouth import System
 from vermouth.processors.name_moltype import NameMolType
 from .molecule_strategies import random_molecule
 from .datafiles import PDB_HB
+from .helper_functions import find_in_path
 
 @st.composite
 def molecules_and_moltypes(draw, max_moltypes=4, min_size=0, max_size=None,
@@ -141,18 +142,11 @@ def test_martinize2_moltypes(tmpdir, deduplicate):
     """
     Run martinize2 and make sure the ITP file produced have the expected names.
     """
-    martinize2 = 'martinize2.py'
-
-    for folder in os.getenv('PATH', '').split(';'):
-        martinize2_path = os.path.join(folder, martinize2)
-        if os.path.exists(martinize2_path):
-            break
-    else:
-        pytest.fail('{} not in PATH'.format(martinize2))
+    martinize2 = find_in_path()
 
     command = [
         sys.executable,
-        martinize2_path,
+        martinize2,
         '-f', str(PDB_HB),
         '-o', 'topol.top',
         '-x', 'out.pdb',
@@ -166,9 +160,8 @@ def test_martinize2_moltypes(tmpdir, deduplicate):
         n_outputs = 4
     expected = ['molecule_{}.itp'.format(i) for i in range(n_outputs)]
 
-    proc = subprocess.Popen(command, cwd=str(tmpdir))
-    exit_code = proc.wait(timeout=90)
-    assert exit_code == 0
+    proc = subprocess.run(command, cwd=str(tmpdir), timeout=90, check=False)
+    assert proc.returncode == 0
 
     itp_files = sorted(os.path.basename(fname) for fname in glob(str(tmpdir / '*.itp')))
     assert itp_files == expected

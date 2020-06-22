@@ -200,9 +200,10 @@ def run_dssp(system, executable='dssp', savefile=None):
 
     process = subprocess.run(
         [executable, '-i', tmpfile_name],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         check=False,
-        text=True
+        universal_newlines=True
     )
 
     status = process.returncode
