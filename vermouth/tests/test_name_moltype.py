@@ -27,6 +27,7 @@ import itertools
 from glob import glob
 import os.path
 import subprocess
+import sys
 import pytest
 from hypothesis import given, assume
 from hypothesis import strategies as st
@@ -140,8 +141,18 @@ def test_martinize2_moltypes(tmpdir, deduplicate):
     """
     Run martinize2 and make sure the ITP file produced have the expected names.
     """
+    martinize2 = 'martinize2.py'
+
+    for folder in os.getenv('PATH', '').split(';'):
+        martinize2_path = os.path.join(folder, martinize2)
+        if os.path.exists(martinize2_path):
+            break
+    else:
+        pytest.fail('{} not in PATH'.format(martinize2))
+
     command = [
-        'martinize2',
+        sys.executable,
+        martinize2_path,
         '-f', str(PDB_HB),
         '-o', 'topol.top',
         '-x', 'out.pdb',
