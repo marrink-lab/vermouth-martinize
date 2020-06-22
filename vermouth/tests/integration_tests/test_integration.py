@@ -12,17 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import datafiles
+"""
+Runs more elaborate integration tests
+"""
+
+import os
 from pathlib import Path
-import pytest
 import subprocess
+import sys
+
+import pytest
 import vermouth
 
-MARTINIZE2 = 'martinize2'  # TODO: turn into pytest cli argument
+from .. import datafiles
+
 
 INTEGRATION_DATA = Path(datafiles.TEST_DATA/'integration_tests')
 
 PATTERN = '{path}/{tier}/{protein}/martinize2/'
+
+
+def find_in_path(name='martinize2.py'):
+    """
+    Finds the first location of `name` in PATH.
+
+    Parameters
+    ----------
+    name: str
+        The filename to find
+
+    Returns
+    -------
+    pathlib.Path
+        The full path of the first found matching file
+    """
+    for folder in os.getenv('PATH', '').split(';'):
+        trialpath = Path(folder) / Path(name)
+        if trialpath.exists():
+            return trialpath
+    raise OSError('File not found in {}'.format(sys.path))
+
+MARTINIZE2 = find_in_path('martinize2.py')  # TODO: turn into pytest cli argument
 
 
 def assert_equal_blocks(block1, block2):
@@ -87,6 +117,18 @@ COMPARERS = {'.itp': compare_itp,
     # ['tier-2', 'gpa_dimer'],
 ])
 def test_integration_protein(tmp_path, tier, protein):
+    """
+    Runs integration tests by executing the contents of the file `command` in
+    the folder tier/protein, and tests whether the contents of the produced
+    files are the same as the reference files. The comparison of the files is
+    governed by `COMPARERS`.
+
+    Parameters
+    ----------
+    tmp_path
+    tier: str
+    protein: str
+    """
     data_path = Path(PATTERN.format(path=INTEGRATION_DATA, tier=tier, protein=protein))
 
     with open(data_path / 'command') as cmd_file:
@@ -94,10 +136,14 @@ def test_integration_protein(tmp_path, tier, protein):
     assert command
     command = command.format(inpath=data_path, martinize2=MARTINIZE2)
     command = command.replace('\n', ' ')
+    command = '{python} {cmd}'.format(python=sys.executable, cmd=command)
 
-    proc = subprocess.run(command, cwd=tmp_path, shell=True, timeout=60)
+    print(command)
+
+    proc = subprocess.run(command, cwd=tmp_path, shell=True, timeout=60,
+                          capture_output=True, text=True, check=False)
     exit_code = proc.returncode
-    assert exit_code == 0
+    assert exit_code == 0, (proc.stdout, proc.stderr)
 
     for new_file in tmp_path.iterdir():
         filename = new_file.name
