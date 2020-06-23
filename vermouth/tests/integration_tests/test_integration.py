@@ -16,15 +16,17 @@
 Runs more elaborate integration tests
 """
 
-import os
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 
 import pytest
 import vermouth
+from vermouth.forcefield import ForceField
 
 from .. import datafiles
+from ..helper_functions import find_in_path
 
 
 INTEGRATION_DATA = Path(datafiles.TEST_DATA/'integration_tests')
@@ -32,27 +34,7 @@ INTEGRATION_DATA = Path(datafiles.TEST_DATA/'integration_tests')
 PATTERN = '{path}/{tier}/{protein}/martinize2/'
 
 
-def find_in_path(name='martinize2.py'):
-    """
-    Finds the first location of `name` in PATH.
-
-    Parameters
-    ----------
-    name: str
-        The filename to find
-
-    Returns
-    -------
-    pathlib.Path
-        The full path of the first found matching file
-    """
-    for folder in os.getenv('PATH', '').split(';'):
-        trialpath = Path(folder) / Path(name)
-        if trialpath.exists():
-            return trialpath
-    raise OSError('File not found in {}'.format(sys.path))
-
-MARTINIZE2 = find_in_path('martinize2.py')  # TODO: turn into pytest cli argument
+MARTINIZE2 = find_in_path()
 
 
 def assert_equal_blocks(block1, block2):
@@ -77,10 +59,10 @@ def compare_itp(filename1, filename2):
     """
     Asserts that two itps are functionally identical
     """
-    dummy_ff = vermouth.forcefield.ForceField(name='dummy')
+    dummy_ff = ForceField(name='dummy')
     with open(filename1) as fn1:
         vermouth.gmx.read_itp(fn1, dummy_ff)
-    dummy_ff2 = vermouth.forcefield.ForceField(name='dummy')
+    dummy_ff2 = ForceField(name='dummy')
     with open(filename2) as fn2:
         vermouth.gmx.read_itp(fn2, dummy_ff2)
     for block in dummy_ff2.blocks.values():
@@ -105,6 +87,18 @@ COMPARERS = {'.itp': compare_itp,
              '.pdb': compare_pdb}
 
 
+def _interactions_equal(interaction1, interaction2):
+    """
+    Returns True if interaction1 == interaction2, ignoring rounding errors in
+    interaction parameters.
+    """
+    p1 = list(map(float, interaction1.parameters))
+    p2 = list(map(float, interaction2.parameters))
+    return interaction1.atoms == interaction2.atoms \
+           and interaction1.meta == interaction2.meta \
+           and pytest.approx(p1) == p2
+
+
 @pytest.mark.parametrize("tier, protein", [
     ['tier-0', 'mini-protein1_betasheet'],
     ['tier-0', 'mini-protein2_helix'],
@@ -116,7 +110,7 @@ COMPARERS = {'.itp': compare_itp,
     # ['tier-2', 'dna'],
     # ['tier-2', 'gpa_dimer'],
 ])
-def test_integration_protein(tmp_path, tier, protein):
+def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     """
     Runs integration tests by executing the contents of the file `command` in
     the folder tier/protein, and tests whether the contents of the produced
@@ -133,15 +127,24 @@ def test_integration_protein(tmp_path, tier, protein):
 
     with open(data_path / 'command') as cmd_file:
         command = cmd_file.read().strip()
-    assert command
-    command = command.format(inpath=data_path, martinize2=MARTINIZE2)
-    command = command.replace('\n', ' ')
-    command = '{python} {cmd}'.format(python=sys.executable, cmd=command)
+    assert command  # Defensive
+    command = shlex.split(command)
+    result = [sys.executable]
+    for token in command:
+        if token.startswith('martinize2'):  # Could be martinize2.py
+            result.append(MARTINIZE2)
+        elif token.startswith('..') or token.endswith('pdb'):
+            result.append(data_path / token)
+        else:
+            result.append(token)
+    command = result
 
     print(command)
 
-    proc = subprocess.run(command, cwd=tmp_path, shell=True, timeout=60,
-                          capture_output=True, text=True, check=False)
+    proc = subprocess.run(command, cwd=tmp_path, timeout=60, check=False,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          universal_newlines=True)
     exit_code = proc.returncode
     assert exit_code == 0, (proc.stdout, proc.stderr)
 
@@ -151,4 +154,8 @@ def test_integration_protein(tmp_path, tier, protein):
         assert reference_file.is_file()
         ext = new_file.suffix.lower()
         if ext in COMPARERS:
-            COMPARERS[ext](reference_file, new_file)
+            with monkeypatch.context() as m:
+                # Compare Interactions such that rounding erros in the
+                # parameters are OK.
+                m.setattr(vermouth.molecule.Interaction, '__eq__', _interactions_equal)
+                COMPARERS[ext](reference_file, new_file)

@@ -1,5 +1,5 @@
-{martinize2}
--f {inpath}/../aa.pdb
+martinize2
+-f ../aa.pdb
 -x cg.pdb
 -o topol.top
 -ff elnedyn22
