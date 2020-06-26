@@ -19,7 +19,6 @@ Test graph reparation and related operations.
 import copy
 import logging
 
-import networkx as nx
 import pytest
 import vermouth
 from vermouth.molecule import Link
@@ -268,14 +267,15 @@ def test_renaming(renamed_graph):
 
 
 
-@pytest.mark.parametrize('resid,mutations,modifications,atomnames',[
+@pytest.mark.parametrize('resid,mutations,modifications,atomnames', [
     (1, ['ALA'], [], 'O C CA HA N HN CB HB1 HB2 HB3'),  # The glutamate chain and N-ter are removed
     (1, [], ['N-ter'], 'O C CA HA N H HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # HE1 got removed
     (2, ['ALA'], ['N-ter', 'C-ter'], 'O OXT C CA HA N H HN CB HB1 HB2 HB3'),
     (2, ['GLU'], [], 'O C CA HA N HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # Added glutamate sidechain
     (5, ['GLY'], ['none'], 'N CA C O HN HA1 HA2'),  # Remove O2 from C-ter mod
 ])
-def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, modifications, atomnames):
+def test_repair_graph_with_mutation_modification(system_mod, resid, mutations,
+                                                 modifications, atomnames):
     mol = system_mod.molecules[0]
     # Let's mutate res1 to ALA
     for node_idx in mol:
@@ -296,11 +296,13 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, m
     assert resid1_atomnames == set(atomnames.split())
 
 
-@pytest.mark.parametrize('resid,mutations,modifications',[
+@pytest.mark.parametrize('resid,mutations,modifications', [
     (2, [], ['GLU-H']),  # The glutamate chain and N-ter are removed
     (2, ['ALA', 'LEU'], [])
 ])
-def test_repair_graph_with_mutation_modification_error(system_mod, caplog, resid, mutations, modifications):
+def test_repair_graph_with_mutation_modification_error(system_mod, caplog,
+                                                       resid, mutations,
+                                                       modifications):
     mol = system_mod.molecules[0]
     # Let's mutate res1 to ALA
     for node_idx in mol:
@@ -313,3 +315,54 @@ def test_repair_graph_with_mutation_modification_error(system_mod, caplog, resid
         assert not caplog.records
         mol = vermouth.RepairGraph().run_molecule(mol)
         assert len(caplog.records) == 1
+
+
+@pytest.mark.parametrize('known_mod_names', [
+    [],
+    ['C-ter'],
+    ['C-ter', 'N-ter'],
+    ['GLU-H', 'N-ter'],
+])
+def test_unknown_mods_removed(caplog, repaired_graph, known_mod_names):
+    """
+    Tests that atoms that are part of modifications, but are not recognized, get
+    removed from the graph by CanonicalizeModifications
+    """
+    caplog.set_level(logging.WARNING)
+    ff = copy.copy(repaired_graph.force_field)
+    for mod_name in known_mod_names:
+        assert mod_name in ff.modifications  # Purely defensive
+
+    removed_mods = []
+    for name, mod in dict(ff.modifications).items():
+        if name not in known_mod_names:
+            del ff.modifications[name]
+            removed_mods.append(mod)
+
+    repaired_graph.force_field = ff
+    mol = repaired_graph.molecules[0]
+
+    assert not caplog.records
+    assert len(mol) == 46
+    vermouth.CanonicalizeModifications().run_system(repaired_graph)
+
+    assert caplog.records
+
+    for record in caplog.records:
+        assert record.levelname == 'WARNING'
+
+    assert len(mol) < 46
+    atomnames = dict(mol.nodes(data='atomname')).values()
+    for mod in removed_mods:
+        for node_key in mod.nodes:
+            node = mod.nodes[node_key]
+            if node['PTM_atom']:
+                assert node['atomname'] not in atomnames
+
+    for node_key in mol.nodes:
+        node = mol.nodes[node_key]
+        if node.get('PTM_atom'):
+            contained_by = [mod for mod in ff.modifications.values()
+                            if node.get('expected', node['atomname']) in
+                               dict(mod.nodes(data='atomname')).values()]
+            assert len(contained_by) == 1
