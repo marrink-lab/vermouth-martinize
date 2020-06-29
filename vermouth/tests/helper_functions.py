@@ -16,6 +16,7 @@
 Contains helper functions for tests.
 """
 import operator
+import os
 import networkx.algorithms.isomorphism as iso
 
 
@@ -57,3 +58,24 @@ def equal_graphs(g1, g2,
         edge_equal = iso.categorical_node_match(edge_attrs, [''] * len(edge_attrs))
     matcher = iso.GraphMatcher(g1, g2, node_match=node_equal, edge_match=edge_equal)
     return matcher.is_isomorphic()
+
+
+def find_in_path(names=('martinize2', 'martinize2.py')):
+    """
+    Finds and returns the location of one of `names` in PATH, and returns the
+    first match.
+
+    Parameters
+    ----------
+    names: collections.abc.Sequence
+        Names to look for in PATH.
+
+    Returns
+    -------
+    os.PathLike or None
+    """
+    for folder in os.getenv("PATH", '').split(os.pathsep):
+        for name in names:
+            fullpath = os.path.join(folder, name)
+            if os.path.isfile(fullpath):
+                return fullpath
