@@ -20,6 +20,7 @@ from itertools import chain
 
 import numpy as np
 
+from ..file_writer import open
 from ..molecule import Molecule
 from ..truncating_formatter import TruncFormatter
 from ..utils import first_alpha

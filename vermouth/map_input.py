@@ -22,6 +22,7 @@ import collections
 import itertools
 from pathlib import Path
 
+from .file_writer import open
 from .log_helpers import StyleAdapter, get_logger
 from .map_parser import MappingDirector, Mapping
 

@@ -28,6 +28,7 @@ import sys
 
 import vermouth
 import vermouth.forcefield
+from vermouth.file_writer import open, DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
@@ -662,6 +663,7 @@ def entry():
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
 
+    DeferredFileWriter().write()
     vermouth.Quoter().run_system(system)
 
 

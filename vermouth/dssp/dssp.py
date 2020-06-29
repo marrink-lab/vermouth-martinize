@@ -21,6 +21,7 @@ import os
 import subprocess
 import logging
 
+from ..file_writer import open
 from ..pdb import pdb
 from ..system import System
 from ..processors.processor import Processor
