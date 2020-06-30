@@ -171,7 +171,7 @@ class DeferredFileWriter(metaclass=Singleton):
         Append the contents of tmp_path to final_path and remove tmp_path.
         """
         # FIXME: This breaks with binary files, since tmp_path is opened as text.
-        with open(final_path, mode=mode) as final_file, open(tmp_path) as tmp_file:
+        with _open(final_path, mode=mode) as final_file, _open(tmp_path) as tmp_file:
             final_file.write(tmp_file.read())
         os.remove(tmp_path)
 

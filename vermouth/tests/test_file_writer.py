@@ -80,7 +80,6 @@ def test_mode_errors():
         writer.open('somefile.txt', 'o')
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason='Hangs on Windows')
 def test_append(tmpdir, monkeypatch):
     monkeypatch.chdir(tmpdir)
     path = Path('file.txt')
