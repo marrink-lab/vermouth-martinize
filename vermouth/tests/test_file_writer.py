@@ -49,8 +49,7 @@ def test_backup(tmpdir, monkeypatch, name, existing_files, expected):
         assert file.read() == "new {}".format(name)
 
     for idx, name in enumerate(expected):
-        name = Path(name)
-        assert name.is_file()
+        assert Path(name).is_file()
         with open(name) as file:
             assert file.read() == str(idx)
 
@@ -66,7 +65,7 @@ def test_deferred_writing(tmpdir, monkeypatch):
     assert not file_name.exists()
     os.chdir('..')
     writer.write()
-    os.chdir(tmpdir)
+    os.chdir(str(tmpdir))
     assert file_name.exists()
     with open(file_name) as file:
         assert file.read() == 'hello'
