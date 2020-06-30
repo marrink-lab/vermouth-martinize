@@ -68,8 +68,7 @@ def test_deferred_writing(tmpdir, monkeypatch):
     writer.write()
     os.chdir(str(tmpdir))
     assert file_name.exists()
-    with open(file_name) as file:
-        assert file.read() == 'hello'
+    assert file_name.read_text() == 'hello'
 
 
 def test_mode_errors():
@@ -98,9 +97,10 @@ def test_append(tmpdir, monkeypatch):
 
 def test_closing(tmpdir, monkeypatch):
     monkeypatch.chdir(tmpdir)
-    tmpdir = Path(tmpdir)
+    tmpdir = Path(str(tmpdir))
     writer = DeferredFileWriter()
-    writer._tmpdir = tmpdir
+    monkeypatch.setattr(writer, '_tmpdir', str(tmpdir))
+
     assert not [p.name for p in tmpdir.iterdir()]
 
     with writer.open('file.txt', 'w') as file:
@@ -115,3 +115,4 @@ def test_closing(tmpdir, monkeypatch):
 
     writer.close()
     assert [p.name for p in tmpdir.iterdir()] == ['file.txt']
+
