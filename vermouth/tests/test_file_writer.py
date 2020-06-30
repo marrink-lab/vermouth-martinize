@@ -15,6 +15,7 @@
 from pathlib import Path
 import os
 import pytest
+import sys
 from vermouth.file_writer import DeferredFileWriter
 
 
@@ -69,3 +70,49 @@ def test_deferred_writing(tmpdir, monkeypatch):
     assert file_name.exists()
     with open(file_name) as file:
         assert file.read() == 'hello'
+
+
+def test_mode_errors():
+    writer = DeferredFileWriter()
+    with pytest.raises(NotImplementedError):
+        writer.open('somefile.txt', 'r+')
+    with pytest.raises(KeyError):
+        writer.open('somefile.txt', 'o')
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason='Hangs on Windows')
+def test_append(tmpdir, monkeypatch):
+    monkeypatch.chdir(tmpdir)
+    path = Path('file.txt')
+    path.write_text('123')
+
+    writer = DeferredFileWriter()
+    with writer.open(path, 'a') as file:
+        file.write('abc')
+
+    assert path.read_text() == '123'
+
+    writer.write()
+
+    assert path.read_text() == '123abc'
+
+
+def test_closing(tmpdir, monkeypatch):
+    monkeypatch.chdir(tmpdir)
+    tmpdir = Path(tmpdir)
+    writer = DeferredFileWriter()
+    writer._tmpdir = tmpdir
+    assert not [p.name for p in tmpdir.iterdir()]
+
+    with writer.open('file.txt', 'w') as file:
+        file.write('abc')
+
+    writer.write()
+
+    assert [p.name for p in tmpdir.iterdir()] == ['file.txt']
+
+    with writer.open('file2.txt', 'w') as file:
+        file.write('abc')
+
+    writer.close()
+    assert [p.name for p in tmpdir.iterdir()] == ['file.txt']

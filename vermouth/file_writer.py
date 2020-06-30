@@ -65,6 +65,7 @@ class DeferredFileWriter(metaclass=Singleton):
     """
     def __init__(self):
         self.open_files = collections.deque()
+        self._tmpdir = None
 
     def open(self, filename, mode='r', *args, **kwargs):
         """
@@ -96,21 +97,19 @@ class DeferredFileWriter(metaclass=Singleton):
         if 'r' in mode:  # Read
             # TODO: mode='r+'
             return _open(filename, *args, mode=mode, **kwargs)
-        elif 'a' in mode:  # Append
+        elif 'a' in mode or 'w' in mode:  # Append and write
             return self._open_tmp_file(filename, *args, mode=mode, **kwargs)
-        elif 'w' in mode:  # Write
-            return self._open_tmp_file(filename, *args, mode=mode, **kwargs)
-        raise NotImplementedError('Unknown file mode.')
+        raise KeyError('Unknown file mode.')
 
     def _open_tmp_file(self, filename, mode='w', *args, **kwargs):
         path = pathlib.Path(filename)
         if not path.is_absolute():
             # Make the path absolute, in case the current working directory is
             # changed between now and writing.
-            cwd = os.getcwd()
-            path = pathlib.Path(cwd, path)
+            cwd = pathlib.Path.cwd()
+            path = cwd / path
         suffix = path.suffix
-        handle, tmp_path = tempfile.mkstemp(suffix=suffix)
+        handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
         self.open_files.append([tmp_path, str(path), mode])
         return os.fdopen(handle, *args, mode='w', **kwargs)
 
@@ -155,6 +154,8 @@ class DeferredFileWriter(metaclass=Singleton):
                                      "treated special")
             elif 'a' in mode:  # append
                 self._append_file(tmp_path, final_path, mode)
+            else:
+                raise KeyError('Unknown file mode')
 
     def _write_file(self, tmp_path, final_path):
         free_path = str(self._find_free_path(final_path))
