@@ -18,6 +18,7 @@ protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|
 
 [ variables ]
 elastic_network_bond_type 1
+res_min_dist 1
 
 ;;; GLYCINE
 
