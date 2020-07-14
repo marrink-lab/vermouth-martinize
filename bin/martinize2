@@ -357,6 +357,8 @@ def entry():
                           help='Elastic bond lower cutoff: F = Fc if rij < lo')
     rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
                           help='Elastic bond upper cutoff: F = 0  if rij > up')
+    rb_group.add_argument('-ermd', dest='res_min_dist', type=int,
+                          help='the minimum seperation between to residues to have an RB')
     rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
                           help='Elastic bond decay factor a')
     rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
@@ -653,6 +655,7 @@ def entry():
             minimum_force=args.rb_minimum_force,
             selector=selector,
             domain_criterion=domain_criterion,
+            res_min_dist=args.res_min_dist
         )
         rubber_band_processor.run_system(system)
 
