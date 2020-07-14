@@ -22,8 +22,12 @@ import networkx as nx
 from .processor import Processor
 from .. import selectors
 
+# the bond type of the RB
 DEFAULT_BOND_TYPE = 6
-
+# the minimum distance between the resids
+# of two beads to have an RB
+# RMD = res_min_dist
+DEFAULT_RMD = 3
 
 def self_distance_matrix(coordinates):
     """
@@ -235,7 +239,7 @@ def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
                       base_constant, minimum_force,
-                      bond_type, domain_criterion, res_min_dist=3):
+                      bond_type, domain_criterion, res_min_dist):
     r"""
     Adds a rubber band elastic network to a molecule.
 
@@ -326,7 +330,7 @@ def apply_rubber_band(molecule, selector,
     # order in build_connectivity_matrix and build_pair matrix
     selected_nodes = _apply_selection(molecule, selection=selection)
     print(selected_nodes)
-    connected = build_connectivity_matrix(molecule, res_min_dist - 1,
+    connected = build_connectivity_matrix(molecule, res_min_dist,
                                           selected_nodes=selected_nodes)
     same_domain = build_pair_matrix(molecule, domain_criterion,
                                     selected_nodes=selected_nodes)
@@ -384,9 +388,11 @@ def same_chain(graph, left, right):
 class ApplyRubberBand(Processor):
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
                  base_constant, minimum_force,
+                 res_min_dist=None,
                  bond_type=None,
                  selector=selectors.select_backbone,
                  bond_type_variable='elastic_network_bond_type',
+                 res_min_dist_variable='elastic_network_res_min_dist',
                  domain_criterion=always_true):
         super().__init__()
         self.lower_bound = lower_bound
@@ -399,6 +405,8 @@ class ApplyRubberBand(Processor):
         self.selector = selector
         self.bond_type_variable = bond_type_variable
         self.domain_criterion = domain_criterion
+        self.res_min_dist = res_min_dist
+        self.res_min_dist_variable = res_min_dist_variable
 
     def run_molecule(self, molecule):
         # Choose the bond type. From high to low, the priority order is:
@@ -411,6 +419,13 @@ class ApplyRubberBand(Processor):
             bond_type = molecule.force_field.variables.get(self.bond_type_variable,
                                                            DEFAULT_BOND_TYPE)
 
+        # Same procedure for res_min_dist the minimum distance between
+        # the resids of two beads for them to have a RB
+        res_min_dist = self.res_min_dist
+        if self.res_min_dist is None:
+           res_min_dist = molecule.force_field.variables.get(self.res_min_dist_variable,
+                                                             DEFAULT_RMD)
+
         apply_rubber_band(molecule, self.selector,
                           lower_bound=self.lower_bound,
                           upper_bound=self.upper_bound,
@@ -419,5 +434,6 @@ class ApplyRubberBand(Processor):
                           base_constant=self.base_constant,
                           minimum_force=self.minimum_force,
                           bond_type=bond_type,
-                          domain_criterion=self.domain_criterion)
+                          domain_criterion=self.domain_criterion,
+                          res_min_dist=res_min_dist)
         return molecule
