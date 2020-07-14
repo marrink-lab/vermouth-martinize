@@ -177,7 +177,7 @@ def build_connectivity_matrix(graph, separation, selected_nodes):
     # separation is provided in term of nodes while the path is provided in
     # terms of edges, hence `separation + 1`.
     distance_pairs = nx.all_pairs_shortest_path_length(graph, cutoff=separation + 1)
-    #only gets "positive" entries due to the cutoff argument above
+    # only gets "positive" entries due to the cutoff argument above
     for origin, target_and_distances in distance_pairs:
         for target in target_and_distances:
             connectivity[correspondence[origin], correspondence[target]] = True
@@ -211,29 +211,6 @@ def build_pair_matrix(graph, criterion, selected_nodes):
         share_domain[idx, jdx] = criterion(graph, key_idx, key_jdx)
         share_domain[jdx, idx] = share_domain[idx, jdx]
     return share_domain
-
-
-def _apply_selection(graph, selection=None):
-    """
-    Select nodes from `graph` based on `selection`
-    criterion and return a list of nodes.
-
-    Parameters
-    ----------
-    graph: networkx.Graph
-        The graph/molecule to work on.
-    selection: collections.abc.Collection
-        A list of node keys to work on. If this argument is set, then the
-        matrix is built only for the nodes in the selection. If set to
-        `None` (default), then the matrix is built for all the nodes.
-    """
-    if selection is None:
-        selected_nodes = graph.nodes
-    else:
-        selected_nodes = [node for node in graph.nodes if node in selection]
-
-    return selected_nodes
-
 
 def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
@@ -328,8 +305,7 @@ def apply_rubber_band(molecule, selector,
                                         base_constant, minimum_force)
     # we select the nodes here so the selection list has the same
     # order in build_connectivity_matrix and build_pair matrix
-    selected_nodes = _apply_selection(molecule, selection=selection)
-    print(selected_nodes)
+    selected_nodes = selection
     connected = build_connectivity_matrix(molecule, res_min_dist,
                                           selected_nodes=selected_nodes)
     same_domain = build_pair_matrix(molecule, domain_criterion,
