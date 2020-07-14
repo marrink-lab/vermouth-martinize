@@ -18,6 +18,10 @@ protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|
 prot_default_bb_type P2
 stiff_fc 1000000
 
+[ variables ]
+elastic_network_bond_type 6
+res_min_dist 3
+
 ;;; GLYCINE
 
 [ moleculetype ]
