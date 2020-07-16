@@ -15,10 +15,13 @@
 Test the ApplyRubberBand processor and the related functions.
 """
 import pytest
+import functools
 import numpy as np
 import networkx as nx
+import vermouth
+from vermouth import selectors, molecule
 from vermouth.processors import apply_rubber_band
-
+from vermouth.processors.apply_rubber_band import same_chain, are_connected
 
 @pytest.fixture
 def disconnected_graph():
@@ -122,22 +125,6 @@ def test_build_pair_matrix(disconnected_graph, selection, extra_edges):
         disconnected_graph, have_same_chain, selection)
     assert np.all(domains == expected)
 
-@pytest.mark.parametrize('selection', (
-        None, # Use all nodes
-        list(range(16)),  # Use all the nodes, explicitly
-        list(range(8)),  # Only the first component
-        list(range(8, 16)),  # Only the second component
-        list(range(0, 16, 2)),  # Every other nodes
-))
-def test_apply_section(disconnected_graph, selection):
-    """
-    Test if the selection criterion and the default for
-    None is applied correctly.
-    """
-    selected_nodes = apply_rubber_band._apply_selection(disconnected_graph, selection)
-    if selection == None:
-       selection = disconnected_graph.nodes
-    assert set(selected_nodes) == set(selection)
 
 @pytest.mark.parametrize('nodes, edges, outcome', (
     ([1, 2, 3],
@@ -153,7 +140,7 @@ def test_are_connected(nodes, edges, outcome):
     graph.add_edges_from(edges)
     assert are_connected(graph, 1, 2, 1) == outcome
 
-@pytest.mark.parametrize('nodes, edges, chain, outcome', (
+@pytest.mark.parametrize('nodes, chain, edges, outcome', (
     ([1, 2, 3],
      {1:"A", 2:"A", 3:"C"},
      [(1, 2), (2, 3)],
@@ -168,17 +155,89 @@ def test_same_chain(nodes, edges, chain, outcome):
     graph.add_nodes_from(nodes)
     graph.add_edges_from(edges)
     nx.set_node_attributes(graph, chain, "chain")
-    assert same_chain(graph, 1, 1) == outcome
+    assert same_chain(graph, 1, 2) == outcome
 
-def test_compute_force_constants():
-     compute_force_constants(distance_matrix, lower_bound, upper_bound,
-                             decay_factor, decay_power, base_constant,
-                            minimum_force)
+@pytest.fixture
+def molecule():
+    molecule = vermouth.molecule.Molecule()
+    molecule.meta['test'] = True
+    # The node keys should not be in a sorted order as it would mask any issue
+    # due to the keys being accidentally sorted.
+    molecule.add_node(2, atomname='SC2', position=np.array([0., 1.0, 0.0]), resid=1)
+    molecule.add_node(0, atomname='BB', position=np.array([0., 0., 0.]), resid=1)
+    molecule.add_node(1, atomname='SC1', position=np.array([0., 0.5, 0.0]), resid=1)
 
+    molecule.add_node(3, atomname='BB', position=np.array([0.5, 0.0, 0.0]), resid=2)
+    molecule.add_node(4, atomname='SC1', position=np.array([0.5, 0.5, 0.0]), resid=2)
 
-def test_self_distance_matrix(coordinates):
-     self_distance_matrix(coordinates)
+    molecule.add_node(5, atomname='BB', position=np.array([1.0, 0.0, 0.0]), resid=3)
 
+    molecule.add_node(6, atomname='BB', position=np.array([1.5, 0.0, 0.0]), resid=4)
+    molecule.add_node(7, atomname='SC1', position=np.array([1.5, 0.5, 0.0]), resid=4)
+    molecule.add_node(8, atomname='SC2', position=np.array([1.5, 1.0, 0.0]), resid=4)
 
-def test_compute_decay():
-    compute_decay(distance, shift, rate, power)
+    molecule.add_edge(0, 1)
+    molecule.add_edge(0, 2)
+    molecule.add_edge(0, 3)
+    molecule.add_edge(3, 4)
+    molecule.add_edge(3, 5)
+    molecule.add_edge(5, 6)
+    molecule.add_edge(6, 7)
+    molecule.add_edge(7, 8)
+
+    return molecule
+
+@pytest.mark.parametrize('chain_attribute, atom_names, res_min_dist, outcome',
+                        (({0: 'A', 1: 'A', 2: 'A',
+                          3: 'A', 4: 'A', 5: 'A',
+                          6: 'A', 7: 'A', 8: 'A'},
+                         ['BB'],
+                          2,
+                         [vermouth.molecule.Interaction(atoms=(0, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.5, 1000])]
+                         ),
+                        # different min_res
+                        ({0: 'A', 1: 'A', 2: 'A',
+                          3: 'A', 4: 'A', 5: 'A',
+                          6: 'A', 7: 'A', 8: 'A'},
+                         ['BB'],
+                          1,
+                         [vermouth.molecule.Interaction(atoms=(0, 5), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
+                          vermouth.molecule.Interaction(atoms=(0, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.5, 1000])]
+                         ),
+                        # select more than only BB atoms
+                        ({0: 'A', 1: 'A', 2: 'A',
+                          3: 'A', 4: 'A', 5: 'A',
+                          6: 'A', 7: 'A', 8: 'A'},
+                         ['BB', 'SC1'],
+                          2,
+                         [vermouth.molecule.Interaction(atoms=(0, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
+                          vermouth.molecule.Interaction(atoms=(0, 7), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
+                          vermouth.molecule.Interaction(atoms=(1, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
+                          vermouth.molecule.Interaction(atoms=(1, 7), meta={'group': 'Rubber band'}, parameters=[6, 1.5, 1000])]
+                         ),
+                        # change chain identifier
+                        ({0: 'A', 1: 'A', 2: 'A',
+                          3: 'A', 4: 'A', 5: 'A',
+                          6: 'B', 7: 'B', 8: 'B'},
+                         ['BB', 'SC1'],
+                          2,
+                         []
+                         )))
+
+def test_apply_rubber_bands(molecule, chain_attribute, atom_names, res_min_dist, outcome):
+    selector = functools.partial(
+                selectors.proto_select_attribute_in,
+                attribute='atomname',
+                values=atom_names)
+
+    domain_criterion = vermouth.processors.apply_rubber_band.same_chain
+    nx.set_node_attributes(molecule, chain_attribute, 'chain')
+
+    vermouth.processors.apply_rubber_band.apply_rubber_band(molecule=molecule, selector=selector,
+                                  lower_bound=0.0, upper_bound=10.,
+                                  decay_factor=0, decay_power=0.,
+                                  base_constant=1000, minimum_force=1,
+                                  bond_type=6, domain_criterion=domain_criterion,
+                                  res_min_dist=res_min_dist)
+    print( molecule.interactions['bonds'])
+    assert molecule.interactions['bonds'] == outcome
