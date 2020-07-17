@@ -21,6 +21,7 @@ import networkx as nx
 
 from .processor import Processor
 from .. import selectors
+from ..graph_utils import make_residue_graph
 
 # the bond type of the RB
 DEFAULT_BOND_TYPE = 6
@@ -162,25 +163,21 @@ def build_connectivity_matrix(graph, separation, selected_nodes):
     numpy.ndarray
         A boolean matrix.
     """
-    if separation < 0:
-        raise ValueError('Separation has to be zero or positive.')
-    if separation == 0:
-        # The connectivity matrix with a separation of 0 is the adjacency
-        # matrix. Thankfully, networkx can directly give it to us a a numpy
-        # matrix.
-        return np.asarray(nx.to_numpy_matrix(graph, nodelist=selected_nodes).astype(bool))
+    res_graph = make_residue_graph(graph)
+    distance_pairs = nx.all_pairs_shortest_path_length(res_graph, cutoff=separation)
+    # only gets "positive" entries due to the cutoff argument above
     size = graph.number_of_nodes()
     correspondence = {node: index for index, node in enumerate(graph.nodes)}
     # the matrix will be reduced before returning it but nx.all_pairs_shortest_path_length
     # does not take a subset of nodes
     connectivity = np.zeros((size, size), dtype=bool)
-    # separation is provided in term of nodes while the path is provided in
-    # terms of edges, hence `separation + 1`.
-    distance_pairs = nx.all_pairs_shortest_path_length(graph, cutoff=separation + 1)
-    # only gets "positive" entries due to the cutoff argument above
-    for origin, target_and_distances in distance_pairs:
-        for target in target_and_distances:
-            connectivity[correspondence[origin], correspondence[target]] = True
+    for origin_residue, matchs_distances in distance_pairs:
+        for target_residue in matchs_distances:
+            origin_nodes = res_graph.nodes[origin_residue]['graph'].nodes()
+            target_nodes = res_graph.nodes[target_residue]['graph'].nodes()
+            for origin, target in itertools.product(origin_nodes, target_nodes):
+                connectivity[correspondence[origin], correspondence[target]] = True
+
     np.fill_diagonal(connectivity, False)
     return connectivity[:, selected_nodes][selected_nodes]
 
@@ -310,6 +307,7 @@ def apply_rubber_band(molecule, selector,
                                           selected_nodes=selected_nodes)
     same_domain = build_pair_matrix(molecule, domain_criterion,
                                     selected_nodes=selected_nodes)
+    # invert the connected components and check domain
     can_be_linked = (~connected) & same_domain
     # Multiply the force constant by 0 if the nodes cannot be linked.
     constants *= can_be_linked
