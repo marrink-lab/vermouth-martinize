@@ -27,11 +27,9 @@ from vermouth.processors.apply_rubber_band import same_chain, are_connected
 def disconnected_graph():
     """
     A graph with two connected components.
-
     The node keys are integers from 0 to 15 (included). The name of each node
     is its key as a string. The first component is labelled as chain A while
     the second is labelled as chain B.
-
     0 - 1 - 2 - 3
                 |
     4 - 5 - 6 - 7
@@ -56,45 +54,6 @@ def disconnected_graph():
         else:
             node['chain'] = 'B'
     return graph
-
-
-@pytest.mark.parametrize('separation', (0, 1, 2, 3, 7))
-@pytest.mark.parametrize('selection', (
-    list(range(16)),  # Use all the nodes, explicitly
-    list(range(8)),  # Only the first component
-    list(range(8, 16)),  # Only the second component
-    list(range(0, 16, 2)),  # Every other nodes
-))
-def test_build_connectivity_matrix(disconnected_graph, separation, selection):
-    connectivity = apply_rubber_band.build_connectivity_matrix(
-        disconnected_graph, separation, selection)
-    other_component = [np.inf] * 8
-    distance = np.array([
-        #0  1  2  3  4  5  6  7    8 to 15
-        [0, 0, 1, 2, 6, 5, 4, 3] + other_component,  # 0
-        [0, 0, 0, 1, 5, 4, 3, 2] + other_component,  # 1
-        [1, 0, 0, 0, 4, 3, 2, 1] + other_component,  # 2
-        [2, 1, 0, 0, 3, 2, 1, 0] + other_component,  # 3
-        [6, 5, 4, 3, 0, 0, 1, 2] + other_component,  # 4
-        [5, 4, 3, 2, 0, 0, 0, 1] + other_component,  # 5
-        [4, 3, 2, 1, 1, 0, 0, 0] + other_component,  # 6
-        [3, 2, 1, 0, 2, 1, 0, 0] + other_component,  # 7
-        # 0 to 7           8  9 10 11 12 13 14 15
-        other_component + [0, 0, 1, 2, 0, 1, 2, 3],  # 8
-        other_component + [0, 0, 0, 1, 1, 2, 1, 2],  # 9
-        other_component + [1, 0, 0, 0, 2, 1, 0, 1],  # 10
-        other_component + [2, 1, 0, 0, 3, 2, 1, 0],  # 11
-        other_component + [0, 1, 2, 3, 0, 0, 1, 2],  # 12
-        other_component + [1, 2, 1, 2, 0, 0, 0, 1],  # 13
-        other_component + [2, 1, 0, 1, 1, 0, 0, 0],  # 14
-        other_component + [3, 2, 1, 0, 2, 1, 0, 0],  # 15
-    ])
-    np.fill_diagonal(distance, np.inf)
-    expected_connectivity = (distance <= separation)
-    if selection is not None:
-        expected_connectivity = expected_connectivity[:, selection][selection]
-    assert np.all(connectivity == expected_connectivity)
-
 
 @pytest.mark.parametrize('selection', (
         list(range(16)),  # Use all the nodes, explicitly
@@ -159,6 +118,17 @@ def test_same_chain(nodes, edges, chain, outcome):
 
 @pytest.fixture
 def molecule():
+    """
+    Molecule with the following connectivity and atom-naming:
+
+    SC2:   2           8
+           |           |
+    SC1:   1   4       7
+           |   |       |
+    BB:    0 - 3 - 5 - 6
+           -------------
+    resid: 1   2   3   4  column wise
+    """
     molecule = vermouth.molecule.Molecule()
     molecule.meta['test'] = True
     # The node keys should not be in a sorted order as it would mask any issue
@@ -202,7 +172,8 @@ def molecule():
                          ['BB'],
                           1,
                          [vermouth.molecule.Interaction(atoms=(0, 5), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
-                          vermouth.molecule.Interaction(atoms=(0, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.5, 1000])]
+                          vermouth.molecule.Interaction(atoms=(0, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.5, 1000]),
+                          vermouth.molecule.Interaction(atoms=(3, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000])]
                          ),
                         # select more than only BB atoms
                         ({0: 'A', 1: 'A', 2: 'A',
@@ -210,21 +181,26 @@ def molecule():
                           6: 'A', 7: 'A', 8: 'A'},
                          ['BB', 'SC1'],
                           2,
-                         [vermouth.molecule.Interaction(atoms=(0, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
-                          vermouth.molecule.Interaction(atoms=(0, 7), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
-                          vermouth.molecule.Interaction(atoms=(1, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000]),
+                         [vermouth.molecule.Interaction(atoms=(0, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.5, 1000]),
+                          vermouth.molecule.Interaction(atoms=(0, 7), meta={'group': 'Rubber band'}, parameters=[6, 1.58114, 1000]),
+                          vermouth.molecule.Interaction(atoms=(1, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.58114, 1000]),
                           vermouth.molecule.Interaction(atoms=(1, 7), meta={'group': 'Rubber band'}, parameters=[6, 1.5, 1000])]
                          ),
                         # change chain identifier
                         ({0: 'A', 1: 'A', 2: 'A',
-                          3: 'A', 4: 'A', 5: 'A',
+                          3: 'B', 4: 'B', 5: 'B',
                           6: 'B', 7: 'B', 8: 'B'},
-                         ['BB', 'SC1'],
-                          2,
-                         []
+                         ['BB'],
+                          1,
+                         [vermouth.molecule.Interaction(atoms=(3, 6), meta={'group': 'Rubber band'}, parameters=[6, 1.0, 1000])]
                          )))
 
 def test_apply_rubber_bands(molecule, chain_attribute, atom_names, res_min_dist, outcome):
+    """
+    Takes molecule and sets the chain attributes. Based on chain, minimum distance
+    between residues, and atom names elagible it is tested if rubber bands are applied
+    for the correct atoms in molecule.
+    """
     selector = functools.partial(
                 selectors.proto_select_attribute_in,
                 attribute='atomname',
@@ -239,5 +215,4 @@ def test_apply_rubber_bands(molecule, chain_attribute, atom_names, res_min_dist,
                                   base_constant=1000, minimum_force=1,
                                   bond_type=6, domain_criterion=domain_criterion,
                                   res_min_dist=res_min_dist)
-    print( molecule.interactions['bonds'])
     assert molecule.interactions['bonds'] == outcome
