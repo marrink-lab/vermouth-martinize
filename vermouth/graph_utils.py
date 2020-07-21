@@ -129,16 +129,19 @@ def rate_match(residue, bead, match):
                for rdx, bdx in match.items())
 
 
-def _items_with_common_values(graph, nodes=None):
+def _items_with_common_values(graph, nodes=None, excluded_keys=[]):
     """
     Finds all node attributes of nodes in graph that all have the same values.
-    Returns a dict of node attribute/common value pairs
+    Returns a dict of node attribute/common value pairs. One can exclude specifc
+    keys using the exclude variable.
 
     Parameters
     ----------
     graph: networkx.Graph
     nodes: collections.abc.Iterable or None
         If None, consider all nodes. All nodes must be in graph.
+    exclude:  collections.abc.Iterable
+        keys to exclude from the common value list
 
     Returns
     -------
@@ -150,7 +153,8 @@ def _items_with_common_values(graph, nodes=None):
     common_attrs = defaultdict(list)
     for idx in nodes:
         for key, val in graph.nodes[idx].items():
-            common_attrs[key].append(val)
+            if key not in excluded_keys:
+                common_attrs[key].append(val)
     common_attrs = {key: vals[0] for key, vals in common_attrs.items()
                     if len(vals) == len(nodes) and are_all_equal(vals)}
     return common_attrs
@@ -260,7 +264,7 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
     # res_graph = nx.quotient_graph(graph, node_equiv, relabel=True)
     for res_idx in res_graph:
         res_node = res_graph.nodes[res_idx]
-        res_node.update(_items_with_common_values(res_node['graph']))
+        res_node.update(_items_with_common_values(res_node['graph'], excluded_keys=['graph']))
     return res_graph
 
 
