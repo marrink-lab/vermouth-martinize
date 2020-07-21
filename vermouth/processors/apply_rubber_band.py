@@ -28,7 +28,7 @@ DEFAULT_BOND_TYPE = 6
 # the minimum distance between the resids
 # of two beads to have an RB
 # RMD = res_min_dist
-DEFAULT_RMD = 3
+DEFAULT_RMD = 2
 
 def self_distance_matrix(coordinates):
     """
@@ -128,7 +128,7 @@ def are_connected(graph, left, right, separation):
     return nodes_are_connected
 
 
-def build_connectivity_matrix(graph, separation, selected_nodes):
+def build_connectivity_matrix(graph, separation, node_to_idx, selected_nodes):
     """
     Build a connectivity matrix based on the separation between nodes in a graph.
 
@@ -167,7 +167,6 @@ def build_connectivity_matrix(graph, separation, selected_nodes):
     distance_pairs = nx.all_pairs_shortest_path_length(res_graph, cutoff=separation)
     # only gets "positive" entries due to the cutoff argument above
     size = graph.number_of_nodes()
-    correspondence = {node: index for index, node in enumerate(graph.nodes)}
     # the matrix will be reduced before returning it but nx.all_pairs_shortest_path_length
     # does not take a subset of nodes
     connectivity = np.zeros((size, size), dtype=bool)
@@ -176,13 +175,12 @@ def build_connectivity_matrix(graph, separation, selected_nodes):
             origin_nodes = res_graph.nodes[origin_residue]['graph'].nodes()
             target_nodes = res_graph.nodes[target_residue]['graph'].nodes()
             for origin, target in itertools.product(origin_nodes, target_nodes):
-                connectivity[correspondence[origin], correspondence[target]] = True
-
+                connectivity[node_to_idx[origin], node_to_idx[target]] = True
     np.fill_diagonal(connectivity, False)
     return connectivity[:, selected_nodes][selected_nodes]
 
 
-def build_pair_matrix(graph, criterion, selected_nodes):
+def build_pair_matrix(graph, criterion, idx_to_node, selected_nodes):
     """
     Build a boolean matrix telling if a pair of nodes fulfil a criterion.
 
@@ -201,13 +199,15 @@ def build_pair_matrix(graph, criterion, selected_nodes):
     numpy.ndarray
         A boolean matrix.
     """
-    size = len(selected_nodes)
+    size = len(graph.nodes)
     share_domain = np.zeros((size, size), dtype=bool)
-    node_combinations = itertools.combinations(enumerate(selected_nodes), 2)
-    for (idx, key_idx), (jdx, key_jdx) in node_combinations:
-        share_domain[idx, jdx] = criterion(graph, key_idx, key_jdx)
-        share_domain[jdx, idx] = share_domain[idx, jdx]
-    return share_domain
+    node_combinations = itertools.combinations(selected_nodes, 2)
+    for kdx, jdx in node_combinations:
+        key_kdx = idx_to_node[kdx]
+        key_jdx = idx_to_node[jdx]
+        share_domain[kdx, jdx] = criterion(graph, key_kdx, key_jdx)
+        share_domain[jdx, kdx] = share_domain[kdx, jdx]
+    return share_domain[:, selected_nodes][selected_nodes]
 
 def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
@@ -285,12 +285,18 @@ def apply_rubber_band(molecule, selector,
     selection = []
     coordinates = []
     missing = []
+    node_to_idx = {}
+    idx_to_node = {}
+    node_count = 0
     for node_key, attributes in molecule.nodes.items():
+        node_to_idx[node_key] = node_count
+        idx_to_node[node_count] = node_key
         if selector(attributes):
-            selection.append(node_key)
+            selection.append(node_count)
             coordinates.append(attributes.get('position'))
             if coordinates[-1] is None:
                 missing.append(node_key)
+        node_count += 1
     if missing:
         raise ValueError('All atoms from the selection must have coordinates. '
                          'The following atoms do not have some: {}.'
@@ -300,21 +306,22 @@ def apply_rubber_band(molecule, selector,
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,
                                         base_constant, minimum_force)
-    # we select the nodes here so the selection list has the same
-    # order in build_connectivity_matrix and build_pair matrix
-    selected_nodes = selection
-    connected = build_connectivity_matrix(molecule, res_min_dist,
-                                          selected_nodes=selected_nodes)
-    same_domain = build_pair_matrix(molecule, domain_criterion,
-                                    selected_nodes=selected_nodes)
-    # invert the connected components and check domain
+
+    connected = build_connectivity_matrix(molecule, res_min_dist, node_to_idx,
+                                          selected_nodes=selection)
+
+    same_domain = build_pair_matrix(molecule, domain_criterion, idx_to_node,
+                                    selected_nodes=selection)
+
     can_be_linked = (~connected) & same_domain
     # Multiply the force constant by 0 if the nodes cannot be linked.
     constants *= can_be_linked
     distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
     for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
-        from_key = selection[from_idx]
-        to_key = selection[to_idx]
+        # note the indices in the matrix are not anymore the idx of
+        # the full molecule but the subset of nodes in selection
+        from_key = idx_to_node[selection[from_idx]]
+        to_key = idx_to_node[selection[to_idx]]
         force_constant = constants[from_idx, to_idx]
         length = distance_matrix[from_idx, to_idx]
         if force_constant > minimum_force:
