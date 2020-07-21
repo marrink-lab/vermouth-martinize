@@ -21,7 +21,7 @@ import networkx as nx
 import vermouth
 from vermouth import selectors, molecule
 from vermouth.processors import apply_rubber_band
-from vermouth.processors.apply_rubber_band import same_chain, are_connected
+from vermouth.processors.apply_rubber_band import same_chain, are_connected, build_connectivity_matrix
 
 @pytest.fixture
 def disconnected_graph():
@@ -85,6 +85,34 @@ def test_build_pair_matrix(disconnected_graph, selection, extra_edges):
         disconnected_graph, have_same_chain, idx_to_node, selection)
     assert np.all(domains == expected)
 
+@pytest.mark.parametrize('separation, outcome',(
+         (1, [[0, 2], [2, 6], [4, 6], [8, 12], [8, 10],
+             [10, 14], [12, 14]]),
+         (2, [[0, 2], [2, 6], [4, 6], [0, 6], [2, 4],
+              [8, 12], [8, 10], [10, 14], [12, 14],
+              [8, 14], [10, 12]])
+         ))
+# this only tests connectivity matrix in terms of connection
+# and separation in residue space. selection is tested at the
+# end with a more integral test
+def test_build_connectivity_matrix(disconnected_graph, separation, outcome):
+    idx_to_node = {idx: node for idx, node in enumerate(disconnected_graph.nodes)}
+    selection = list(range(0, 16, 2))
+    resid_attr = {0: 1, 1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4,
+                  8: 5, 9: 5, 10: 6, 11: 6, 12: 7, 13: 7, 14: 8, 15: 8}
+    nx.set_node_attributes(disconnected_graph, resid_attr, 'resid')
+    connected = build_connectivity_matrix(disconnected_graph, separation, idx_to_node, selection)
+    pairs=[]
+    for from_idx, to_idx in zip(*np.triu_indices_from(connected)):
+        if connected[from_idx, to_idx]:
+           idxs = [selection[from_idx], selection[to_idx]]
+           idxs.sort()
+           pairs.append(idxs)
+
+    for pair in outcome:
+        assert pair in pairs
+
+    assert len(pairs) == len(outcome)
 
 @pytest.mark.parametrize('nodes, edges, outcome', (
     ([1, 2, 3],
