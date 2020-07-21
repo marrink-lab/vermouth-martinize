@@ -19,6 +19,7 @@ import functools
 import numpy as np
 import networkx as nx
 import vermouth
+import vermouth.forcefield
 from vermouth import selectors, molecule
 from vermouth.processors import apply_rubber_band
 from vermouth.processors.apply_rubber_band import same_chain, are_connected, build_connectivity_matrix
@@ -158,7 +159,9 @@ def molecule():
            -------------
     resid: 1   2   3   4  column wise
     """
-    molecule = vermouth.molecule.Molecule()
+
+    force_field = vermouth.forcefield.ForceField("test")
+    molecule = vermouth.molecule.Molecule(force_field=force_field)
     molecule.meta['test'] = True
     # The node keys should not be in a sorted order as it would mask any issue
     # due to the keys being accidentally sorted.
@@ -238,10 +241,15 @@ def test_apply_rubber_bands(molecule, chain_attribute, atom_names, res_min_dist,
     domain_criterion = vermouth.processors.apply_rubber_band.same_chain
     nx.set_node_attributes(molecule, chain_attribute, 'chain')
 
-    vermouth.processors.apply_rubber_band.apply_rubber_band(molecule=molecule, selector=selector,
-                                  lower_bound=0.0, upper_bound=10.,
-                                  decay_factor=0, decay_power=0.,
-                                  base_constant=1000, minimum_force=1,
-                                  bond_type=6, domain_criterion=domain_criterion,
-                                  res_min_dist=res_min_dist)
+    process = vermouth.processors.apply_rubber_band.ApplyRubberBand(selector=selector,
+                                                                    lower_bound=0.0,
+                                                                    upper_bound=10.,
+                                                                    decay_factor=0,
+                                                                    decay_power=0.,
+                                                                    base_constant=1000,
+                                                                    minimum_force=1,
+                                                                    bond_type=6,
+                                                                    domain_criterion=domain_criterion,
+                                                                    res_min_dist=res_min_dist)
+    process.run_molecule(molecule)
     assert molecule.interactions['bonds'] == outcome
