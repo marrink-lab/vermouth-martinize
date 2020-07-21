@@ -80,8 +80,9 @@ def test_build_pair_matrix(disconnected_graph, selection, extra_edges):
     expected = expected[:, selection][selection]
 
     disconnected_graph.add_edges_from(extra_edges)
+    idx_to_node = {idx: node for idx, node in enumerate(disconnected_graph.nodes) }
     domains = apply_rubber_band.build_pair_matrix(
-        disconnected_graph, have_same_chain, selection)
+        disconnected_graph, have_same_chain, idx_to_node, selection)
     assert np.all(domains == expected)
 
 
