@@ -358,7 +358,7 @@ def entry():
     rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
                           help='Elastic bond upper cutoff: F = 0  if rij > up')
     rb_group.add_argument('-ermd', dest='res_min_dist', type=int,
-                          help=('the minimum separation between two residues to have an RB'
+                          help=('The minimum separation between two residues to have an RB '
                                 'the default value is set by the force-field.'),
                           default=None)
     rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
