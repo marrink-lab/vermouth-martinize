@@ -358,7 +358,9 @@ def entry():
     rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
                           help='Elastic bond upper cutoff: F = 0  if rij > up')
     rb_group.add_argument('-ermd', dest='res_min_dist', type=int,
-                          help='the minimum seperation between to residues to have an RB')
+                          help=('the minimum separation between two residues to have an RB'
+                                'the default value is set by the force-field.'),
+                          default=None)
     rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
                           help='Elastic bond decay factor a')
     rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
@@ -372,7 +374,7 @@ def entry():
                           choices=['chain', 'molecule', 'all'],
                           help=('Establish what is the structural unit for the '
                                 'elastic network. Bonds are only created within'
-                                'a unit.'))
+                                ' a unit.'))
 
     go_group = parser.add_argument_group('Virtual site based GoMartini')
     go_group.add_argument('-govs-includes', action='store_true', default=False,

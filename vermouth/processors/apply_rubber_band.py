@@ -27,7 +27,6 @@ from ..graph_utils import make_residue_graph
 DEFAULT_BOND_TYPE = 6
 # the minimum distance between the resids
 # of two beads to have an RB
-# RMD = res_min_dist
 DEFAULT_RMD = 2
 
 def self_distance_matrix(coordinates):
@@ -169,6 +168,7 @@ def build_connectivity_matrix(graph, separation, node_to_idx, selected_nodes):
     size = graph.number_of_nodes()
     # the matrix will be reduced before returning it but nx.all_pairs_shortest_path_length
     # does not take a subset of nodes
+    # TODO optimize me,  try to create a sparse matrix in case scipy is available.
     connectivity = np.zeros((size, size), dtype=bool)
     for origin_residue, matchs_distances in distance_pairs:
         for target_residue in matchs_distances:
@@ -200,6 +200,7 @@ def build_pair_matrix(graph, criterion, idx_to_node, selected_nodes):
         A boolean matrix.
     """
     size = len(graph.nodes)
+    #TODO generate spare matrix with scipy
     share_domain = np.zeros((size, size), dtype=bool)
     node_combinations = itertools.combinations(selected_nodes, 2)
     for kdx, jdx in node_combinations:
@@ -287,16 +288,15 @@ def apply_rubber_band(molecule, selector,
     missing = []
     node_to_idx = {}
     idx_to_node = {}
-    node_count = 0
-    for node_key, attributes in molecule.nodes.items():
-        node_to_idx[node_key] = node_count
-        idx_to_node[node_count] = node_key
+    for node_idx, (node_key, attributes) in enumerate(molecule.nodes.items()):
+        node_to_idx[node_key] = node_idx
+        idx_to_node[node_idx] = node_key
         if selector(attributes):
-            selection.append(node_count)
+            selection.append(node_idx)
             coordinates.append(attributes.get('position'))
             if coordinates[-1] is None:
                 missing.append(node_key)
-        node_count += 1
+        node_idx += 1
     if missing:
         raise ValueError('All atoms from the selection must have coordinates. '
                          'The following atoms do not have some: {}.'
