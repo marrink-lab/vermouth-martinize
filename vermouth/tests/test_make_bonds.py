@@ -60,9 +60,17 @@ from vermouth.processors import MakeBonds
         [{(0, 1): {'distance': 0.12}}, ],
     ],
     [
-        # Two molecule with one node each that should be connected
+        # Two molecule with one node each that should be connected, except that
+        # one of the atoms is a H.
         [[{'element': 'C', 'position': [0, 0, 0]}, ],
          [{'element': 'H', 'position': [0, 0, 0.12]}], ],
+        [[], []],
+        [{}, {}],
+    ],
+    [
+        # Two molecule with one node each that should be connected
+        [[{'element': 'C', 'position': [0, 0, 0]}, ],
+         [{'element': 'C', 'position': [0, 0, 0.12]}], ],
         [[], []],
         [{(0, 1): {'distance': 0.12}}],
     ],
