@@ -19,12 +19,12 @@ Test graph reparation and related operations.
 import copy
 import logging
 
-import networkx as nx
 import pytest
 import vermouth
 from vermouth.molecule import Link
 import vermouth.forcefield
 
+# pylint: disable=redefined-outer-name
 
 def build_forcefield_with_mods():
     """
@@ -268,7 +268,7 @@ def test_renaming(renamed_graph):
 
 
 
-@pytest.mark.parametrize('resid,mutations,modifications,atomnames',[
+@pytest.mark.parametrize('resid,mutations,modifications,atomnames', [
     (1, ['ALA'], [], 'O C CA HA N HN CB HB1 HB2 HB3'),  # The glutamate chain and N-ter are removed
     (1, [], ['N-ter'], 'O C CA HA N H HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # HE1 got removed
     (2, ['ALA'], ['N-ter', 'C-ter'], 'O OXT C CA HA N H HN CB HB1 HB2 HB3'),
@@ -296,7 +296,7 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations, m
     assert resid1_atomnames == set(atomnames.split())
 
 
-@pytest.mark.parametrize('resid,mutations,modifications',[
+@pytest.mark.parametrize('resid,mutations,modifications', [
     (2, [], ['GLU-H']),  # The glutamate chain and N-ter are removed
     (2, ['ALA', 'LEU'], [])
 ])

@@ -24,8 +24,7 @@ def package_files(directory):
 
 setup(
     package_data={'': package_files('vermouth/data')
-                  + package_files('vermouth/tests/data'),},
+                      + package_files('vermouth/tests/data'),},
     scripts=['bin/martinize2', ],
     pbr=True,
 )
-

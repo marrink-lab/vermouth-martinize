@@ -86,14 +86,10 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
     # that could make a bond. `idx_to_nodenum` make the link between the
     # indices in the `positions` array, and the node keys in the `system`
     # graph.
-    idx_to_nodenum = {
-        idx: n
-        for idx, n in enumerate(
-            subn
-            for subn in graph
-            if subn in nodes and graph.nodes[subn].get('element') in VDW_RADII
-        )
-    }
+    idx_to_nodenum = dict(enumerate(
+        subn for subn in graph
+        if subn in nodes and graph.nodes[subn].get('element') in VDW_RADII
+    ))
     # Guard against the case where there are no atoms with known elements, which
     # max does *not* like.
     if idx_to_nodenum:

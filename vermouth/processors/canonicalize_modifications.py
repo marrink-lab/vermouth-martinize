@@ -271,7 +271,8 @@ def fix_ptm(molecule):
         residue = molecule.subgraph(n_idxs)
         options = allowed_ptms(residue, res_ptms, known_ptms)
         options = sorted(options,
-                         key=lambda opt: len([n for n in opt[0] if opt[0].nodes[n].get('PTM_atom', False)]),
+                         key=lambda opt: len([n for n in opt[0]
+                                              if opt[0].nodes[n].get('PTM_atom', False)]),
                          reverse=True)
         try:
             identified = identify_ptms(residue, res_ptms, options)

@@ -40,6 +40,8 @@ from vermouth.utils import are_different
 from vermouth.molecule import Molecule
 from vermouth.gmx import gro
 
+# pylint: disable=redefined-outer-name
+
 
 # The data comes from residues 3 to 5 of 1BTA.pdb. The atoms from ILE 5 are
 # changed in solvent.

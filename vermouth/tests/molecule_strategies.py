@@ -19,6 +19,8 @@ import vermouth.molecule
 from vermouth.molecule import Interaction, Molecule, Block, Link, DeleteInteraction
 
 
+# pylint: disable=no-value-for-parameter
+
 @st.composite
 def attribute_dict(draw, min_size=0, max_size=None, max_depth=1):
     """

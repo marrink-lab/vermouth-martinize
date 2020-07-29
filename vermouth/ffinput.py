@@ -95,9 +95,9 @@ class FFDirector(SectionLineParser):
 
     def parse_header(self, line, lineno=0):
         """
-        Parses a section header with line number `lineno`. Sets :attr:`vermouth.parser_utils.SectionLineParser.section`
-        when applicable. Does not check whether `line` is a valid section
-        header.
+        Parses a section header with line number `lineno`. Sets
+        :attr:`vermouth.parser_utils.SectionLineParser.section` when applicable.
+        Does not check whether `line` is a valid section header.
 
         Parameters
         ----------
@@ -143,8 +143,7 @@ class FFDirector(SectionLineParser):
         return result
 
 
-    def finalize_section(self, pervious_section, ended_section):
-
+    def finalize_section(self, previous_section, ended_section):
         """
         Called once a section is finished. It appends the current_links list
         to the links and update the block dictionary with current_block. Thereby it

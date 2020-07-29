@@ -106,7 +106,8 @@ def read_backmapping_file(lines, force_fields):
                 name_to_index[from_ff][name] = _block_names_to_idxs(from_block)
             if name not in name_to_index[to_ff]:
                 name_to_index[to_ff][name] = _block_names_to_idxs(to_block)
-            map_obj = make_mapping_object(from_block, to_block, mapping, weights, extra, name_to_index)
+            map_obj = make_mapping_object(from_block, to_block, mapping,
+                                          weights, extra, name_to_index)
             if map_obj is not None:
                 mappings[from_ff][to_ff][name] = map_obj
 

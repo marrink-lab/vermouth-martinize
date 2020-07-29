@@ -30,6 +30,7 @@ from vermouth.tests.datafiles import (
     FF_UNIVERSAL_TEST,
 )
 
+# pylint: disable=redefined-outer-name
 
 @pytest.fixture
 def example_mol():

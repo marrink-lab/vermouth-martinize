@@ -14,7 +14,13 @@
 
 from vermouth.parser_utils import SectionParser
 
+# pylint: disable=missing-function-docstring, missing-class-docstring, no-member, invalid-name
+
 def test_metaclass_inheritance():
+    """
+    Test that the (populated) METH_DICT from the SectionParser metaclass is
+    correctly inherited or reset by subclasses
+    """
     class A(metaclass=SectionParser):
         def method_a(self):
             pass

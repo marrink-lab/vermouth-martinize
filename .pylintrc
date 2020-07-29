@@ -129,6 +129,8 @@ disable=print-statement,
         dict-keys-not-iterating,
         dict-values-not-iterating,
         no-else-return,
+        no-else-raise,
+        no-else-continue,
         logging-format-interpolation
 
 # Enable the message, report, category or checker with the given id(s). You can
@@ -191,7 +193,7 @@ ignore-comments=yes
 ignore-docstrings=yes
 
 # Ignore imports when computing similarities.
-ignore-imports=no
+ignore-imports=yes
 
 # Minimum lines number of a similarity.
 min-similarity-lines=4
@@ -285,7 +287,8 @@ function-naming-style=snake_case
 # Good variable names which should always be accepted, separated by a comma
 good-names=_,
            aa,
-           cg
+           cg,
+           ff
 
 # Include a hint for the correct naming format with invalid-name
 include-naming-hint=no
