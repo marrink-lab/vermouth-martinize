@@ -37,15 +37,31 @@ from vermouth.processors import MakeBonds
         [{}, ],
     ],
     [
-        # Single molecule with two nodes that should be connected
+        # Single molecule with two nodes that should be connected, except
+        # they're both hydrogens
         [[{'element': 'H', 'position': [0, 0, 0]},
+          {'element': 'H', 'position': [0, 0, 0.12]}], ],
+        [[], ],
+        [{}],
+    ],
+    [
+        # Two molecule with one node each that should be connected, except
+        # they're both hydrogens
+        [[{'element': 'H', 'position': [0, 0, 0]}, ],
+         [{'element': 'H', 'position': [0, 0, 0.12]}], ],
+        [[], []],
+        [{}, {}],
+    ],
+[
+        # Single molecule with two nodes that should be connected
+        [[{'element': 'C', 'position': [0, 0, 0]},
           {'element': 'H', 'position': [0, 0, 0.12]}], ],
         [[], ],
         [{(0, 1): {'distance': 0.12}}, ],
     ],
     [
         # Two molecule with one node each that should be connected
-        [[{'element': 'H', 'position': [0, 0, 0]}, ],
+        [[{'element': 'C', 'position': [0, 0, 0]}, ],
          [{'element': 'H', 'position': [0, 0, 0.12]}], ],
         [[], []],
         [{(0, 1): {'distance': 0.12}}],

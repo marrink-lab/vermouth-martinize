@@ -307,7 +307,7 @@ def entry():
                             "If 'none', only bonds from the input file (CONECT)"
                             " will be used.")
     file_group.add_argument('-bonds-fudge', dest='bonds_fudge', type=float,
-                            default=1.0, help='Factor with which Van der Waals'
+                            default=1.2, help='Factor with which Van der Waals'
                             ' radii should be scaled when determining bonds '
                             'based on distances.')
 

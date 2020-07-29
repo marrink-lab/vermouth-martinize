@@ -64,9 +64,10 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
     """Add edges to `graph` between `nodes` based on distance.
 
     Adds edges to `graph` between nodes in `nodes`, but will never add an edge
-    that is in `non_edges`. Edges are added based on a simple distance
-    criterion. The criterion can be adjusted using `fudge`. Nodes need to have
-    an element attribute that is in VDW_RADII in order to be eligible.
+    that is in `non_edges`, nor between H atoms. Edges are added based on a
+    simple distance criterion. The criterion can be adjusted using `fudge`.
+    Nodes need to have an element attribute that is in VDW_RADII in order to be
+    eligible.
 
     Parameters
     ----------
@@ -128,6 +129,8 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
         atom2 = nodes[node_idx2]
         element1 = atom1['element']
         element2 = atom2['element']
+        if element1 == 'H' and element2 == 'H':
+            continue
 
         bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
         if dist <= bond_distance * fudge and not graph.has_edge(node_idx1, node_idx2):
