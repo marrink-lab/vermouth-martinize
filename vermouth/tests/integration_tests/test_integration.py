@@ -16,6 +16,7 @@
 Runs more elaborate integration tests
 """
 
+from collections import OrderedDict
 from pathlib import Path
 import shlex
 import subprocess
@@ -46,9 +47,9 @@ def assert_equal_blocks(block1, block2):
     assert block1.nrexcl == block2.nrexcl
     # assert block1.force_field == block2.force_field  # Set to be equal
     # Assert the order to be equal as well...
-    assert list(block1.nodes) == list(block2.nodes)
+    # assert list(block1.nodes) == list(block2.nodes)
     # ... as the attributes
-    assert dict(block1.nodes(data=True)) == dict(block2.nodes(data=True))
+    assert OrderedDict(block1.nodes(data=True)) == OrderedDict(block2.nodes(data=True))
     edges1 = {frozenset(e[:2]): e[2] for e in block1.edges(data=True)}
     edges2 = {frozenset(e[:2]): e[2] for e in block2.edges(data=True)}
     assert edges1 == edges2
@@ -105,9 +106,9 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-0', 'mini-protein1_betasheet'],
     ['tier-0', 'mini-protein2_helix'],
     ['tier-0', 'mini-protein3_trp-cage'],
-    # ['tier-1', 'bpti'],
-    # ['tier-1', 'lysozyme'],
-    # ['tier-1', 'villin'],
+    ['tier-1', 'bpti'],
+    ['tier-1', 'lysozyme'],
+    ['tier-1', 'villin'],
     # ['tier-2', 'barnase_barstar'],
     # ['tier-2', 'dna'],
     # ['tier-2', 'gpa_dimer'],
@@ -160,7 +161,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
         ext = new_file.suffix.lower()
         if ext in COMPARERS:
             with monkeypatch.context() as m:
-                # Compare Interactions such that rounding erros in the
+                # Compare Interactions such that rounding errors in the
                 # parameters are OK.
                 m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
                 COMPARERS[ext](reference_file, new_file)
