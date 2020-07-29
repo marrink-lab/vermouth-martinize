@@ -165,6 +165,7 @@ from vermouth.processors import MakeBonds
         ], ],
         [[(0, 1, {}), (2, 3, {})], ],
         [{(0, 1): {},
+          (1, 2): {'distance': 0.17},
           (2, 3): {}}],
     ],
     [
@@ -178,6 +179,7 @@ from vermouth.processors import MakeBonds
         ], ],
         [[(0, 1, {}), (2, 3, {})], ],
         [{(0, 1): {},
+          (1, 2): {'distance': 0.17},
           (2, 3): {}}],
     ],
 ))

@@ -60,7 +60,7 @@ VDW_RADII = {  # in nm
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
 
 
-def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
+def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.2):
     """Add edges to `graph` between `nodes` based on distance.
 
     Adds edges to `graph` between nodes in `nodes`, but will never add an edge
@@ -206,7 +206,7 @@ def _bonds_from_names(graph, resname, nodes, force_field):
     return non_edges
 
 
-def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
+def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
     """Creates bonds within molecules in the system.
 
     First, edges will be created based on residue and atom names. Second, edges
@@ -285,7 +285,7 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
 
 
 class MakeBonds(Processor):
-    def __init__(self, allow_name=True, allow_dist=True, fudge=1):
+    def __init__(self, allow_name=True, allow_dist=True, fudge=1.2):
         self.allow_name = allow_name
         self.allow_dist = allow_dist
         self.fudge = fudge
