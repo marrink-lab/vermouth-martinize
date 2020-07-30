@@ -447,6 +447,12 @@ def entry():
                      'compatible. The -elastic and -govs-include flags cannot '
                      'be used together.')
 
+    if args.to_ff.startswith('elnedyn'):
+        # FIXME: This type of thing should be added to the FF itself.
+        LOGGER.info('The forcefield {} must always be used with an elastic '
+                    'network. Enabling it now.', args.to_ff)
+        args.elastic = True
+
     file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ['GRO'] and args.modelidx is not None:
         parser.error("GRO files don't know the concept of models.")
