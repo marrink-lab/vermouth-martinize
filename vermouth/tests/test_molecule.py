@@ -1226,7 +1226,7 @@ def test_interaction_sort(interactions, expected):
     """
     Test the order produced by Molecule._sort_interactions.
     """
-    assert vermouth.molecule.Molecule._sort_interactions(interactions) == expected
+    assert vermouth.molecule.Molecule.sort_interactions(interactions) == expected
 
 
 @hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())

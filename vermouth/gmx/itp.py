@@ -184,10 +184,9 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
 
     # Write the interactions
     conditional_keys = {True: '#ifdef', False: '#ifndef'}
-    for name, interactions in molecule.interactions.items():
-        # Do not write an empty section.
-        if not interactions:
-            continue
+    for name in molecule.sort_interactions(molecule.interactions):
+        interactions = molecule.interactions[name]
+
         # Improper dihedral angles have their own section in the Molecule
         # object to distinguish them from the proper dihedrals. Yet, they
         # should be written under the [ dihedrals ] section of the ITP file.

@@ -350,7 +350,7 @@ class Molecule(nx.Graph):
         )
 
     @staticmethod
-    def _sort_interactions(all_interactions):
+    def sort_interactions(all_interactions):
         """
         Returns keys in interactions sorted by (number_of_atoms, name). Keys
         with no interactions are skipped.
@@ -371,7 +371,7 @@ class Molecule(nx.Graph):
         if len(self.interactions.get('bonds', [])) != len(self.edges):
             interaction_count['edges'] = len(self.edges)
 
-        for itype in self._sort_interactions(self.interactions):
+        for itype in self.sort_interactions(self.interactions):
             interaction_count[itype] = len(self.interactions[itype])
 
         # interaction_count will always contain at least 'atoms'.
