@@ -207,6 +207,7 @@ def write_ref_gro(outfile, velocities=False, box='10.0 10.0 10.0'):
         outfile.write(('{}{:8.3f}{:8.3f}{:8.3f}' + velocity_fmt + '\n')
                       .format(atom, *itertools.chain(coords, vels)))
     outfile.write(box)
+    outfile.write('\n')
 
 
 def build_ref_molecule(velocities=False):

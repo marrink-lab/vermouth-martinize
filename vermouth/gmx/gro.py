@@ -160,3 +160,5 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
                 out.write(line + '\n')
         # Box
         out.write(' '.join(str(value) for value in box))
+        # to appease VMD which cannot read the file otherwise.
+        out.write('\n')

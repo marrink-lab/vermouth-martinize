@@ -18,6 +18,7 @@ protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|
 
 [ variables ]
 elastic_network_bond_type 1
+res_min_dist 2
 
 ;;; GLYCINE
 
@@ -528,7 +529,8 @@ TRP                1
 #meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
    1     2    3       2   142.000   30.0 
-   1     2    5       2   143.000   30.0  
+   1     2    5       2   143.000   20.0
+   1     2    4       2   104.000   50.0
 
 [dihedrals]
 ;  i     j    k    l   funct   angle  force.c.
@@ -602,25 +604,3 @@ resname "CYS"
 SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
-
-;; Protein terminii. These links should be applied last.
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qd", "charge": 1}}
-[ non-edges ]
-BB -BB
-
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qa", "charge": -1}}
-[ non-edges ]
-BB +BB
-
