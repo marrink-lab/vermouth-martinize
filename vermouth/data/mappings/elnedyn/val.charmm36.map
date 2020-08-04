@@ -12,6 +12,9 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+VAL
+
 [from]
 universal
 
@@ -19,9 +22,6 @@ universal
 elnedyn
 elnedyn22
 elnedyn22p
-
-[ molecule ]
-VAL
 
 [ martini ]
 BB SC1
@@ -38,17 +38,3 @@ charmm27 charmm36
    12   CG2   SC1
    16    C    !BB
    17    O    !BB
-
-[ chiral ]
-  CB     CA    N    C
-  HB     CA    N    C
-
-[ chiral ]
-  HA     CA    N    CB    C ; L-Val
-; HA     CA    N    C    CB ; D-Val
-
-[ out ]
-  CG2  CB CG1 CA
-  HG21 CB CG1 CA
-  HG22 CB CG1 CA
-  HG23 CB CG1 CA
