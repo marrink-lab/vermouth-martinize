@@ -60,19 +60,28 @@ VDW_RADII = {  # in nm
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
 
 
-def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
+def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.2):
     """Add edges to `graph` between `nodes` based on distance.
 
     Adds edges to `graph` between nodes in `nodes`, but will never add an edge
-    that is in `non_edges`. Edges are added based on a simple distance
-    criterion. The criterion can be adjusted using `fudge`. Nodes need to have
-    an element attribute that is in VDW_RADII in order to be eligible.
+    that is in `non_edges`, nor between H atoms. It will also not create edges
+    where H atoms bridge separate residues. Residues are defined by the
+    '_res_serial' attribute of nodes.
+    Edges are added based on a simple distance criterion. The criterion can be
+    adjusted using `fudge`. Nodes need to have an element attribute that is in
+    VDW_RADII in order to be eligible.
 
     Parameters
     ----------
     graph: networkx.Graph
+        Nodes in the graph must have the attributes 'element', 'position', and
+        '_res_serial'.
     nodes: collections.abc.Collection[collections.abc.Hashable]
+        The nodes that should be considered for making edges. Must be in
+        `graph`.
     non_edges: collections.abc.Container[frozenset[collections.abc.Hashable, collections.abc.Hashable]]
+        A container of pairs of node keys between which no edge should be added,
+        even when they are close enough.
     fudge: float
     """
     if not nodes:
@@ -128,6 +137,14 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
         atom2 = nodes[node_idx2]
         element1 = atom1['element']
         element2 = atom2['element']
+        resserial1 = atom1['_res_serial']
+        resserial2 = atom2['_res_serial']
+
+        # Forbid H-H bonds, and in addition, prevent hydrogens from making bonds
+        # to different residues.
+        if element1 == 'H' and element2 == 'H' or \
+                (resserial1 != resserial2 and (element1 == 'H' or element2 == 'H')):
+            continue
 
         bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
         if dist <= bond_distance * fudge and not graph.has_edge(node_idx1, node_idx2):
@@ -203,7 +220,7 @@ def _bonds_from_names(graph, resname, nodes, force_field):
     return non_edges
 
 
-def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
+def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
     """Creates bonds within molecules in the system.
 
     First, edges will be created based on residue and atom names. Second, edges
@@ -248,9 +265,12 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     non_edges = set()
 
     residue_groups = collect_residues(system, ('mol_idx chain resid resname insertion_code'.split()))
-    for ((mol_idx, chain, resid, resname, insertion_code), idxs) in residue_groups.items():
+    for res_serial, (keys, idxs) in enumerate(residue_groups.items()):
+        mol_idx, chain, resid, resname, insertion_code = keys
+        for idx in idxs:
+            system.nodes[idx]['_res_serial'] = res_serial
         if not allow_name:
-            break
+            continue
         try:
             # Try adding bonds within the residue based on atom names
             non_edges.update(_bonds_from_names(system, resname, idxs, force_field))
@@ -282,7 +302,7 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
 
 
 class MakeBonds(Processor):
-    def __init__(self, allow_name=True, allow_dist=True, fudge=1):
+    def __init__(self, allow_name=True, allow_dist=True, fudge=1.2):
         self.allow_name = allow_name
         self.allow_dist = allow_dist
         self.fudge = fudge
