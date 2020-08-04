@@ -109,7 +109,8 @@ class DeferredFileWriter(metaclass=Singleton):
             cwd = pathlib.Path.cwd()
             path = cwd / path
         suffix = path.suffix
-        handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
+        with lock:
+            handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
         self.open_files.append([tmp_path, str(path), mode])
         return os.fdopen(handle, *args, mode='w', **kwargs)
 
@@ -158,10 +159,13 @@ class DeferredFileWriter(metaclass=Singleton):
                 raise KeyError('Unknown file mode')
 
     def _write_file(self, tmp_path, final_path):
-        free_path = str(self._find_free_path(final_path))
-        if free_path != final_path:
-            LOGGER.info('Backing up {} to {}.', final_path, free_path, type='general')
-            shutil.move(final_path, free_path)
+        # There is no way to move a file and make it error if the destination
+        # already exists, so use a lock instead.
+        with lock:
+            free_path = str(self._find_free_path(final_path))
+            if free_path != final_path:
+                LOGGER.info('Backing up {} to {}.', final_path, free_path, type='general')
+                shutil.move(final_path, free_path)
         LOGGER.debug('Writing output to {}.', final_path, type='general')
         shutil.move(tmp_path, final_path)
 
