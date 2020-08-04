@@ -48,6 +48,12 @@ def is_protein(molecule):
         for n_idx in molecule
     )
 
+def is_water(molecule):
+    # TODO: different water models.
+    return all(
+        molecule.nodes[n_idx].get('resname') == 'HOH'
+        for n_idx in molecule
+    )
 
 def select_all(_):
     """
