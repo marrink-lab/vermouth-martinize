@@ -530,6 +530,9 @@ def entry():
     if args.neutral_termini:
         args.modifications.append(['cter', 'COOH-ter'])
         args.modifications.append(['nter', 'NH2-ter'])
+    elif not args.modifications:
+        args.modifications.append(['cter', 'C-ter'])
+        args.modifications.append(['nter', 'N-ter'])
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
