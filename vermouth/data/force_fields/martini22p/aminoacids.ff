@@ -884,29 +884,6 @@ SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
 
-;; Protein terminii. These links should be applied last.
-[ link ]
-resname $protein_resnames
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qd", "charge": 1}}
-[ non-edges ]
-BB -BB
-
-[ link ]
-resname $protein_resnames
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qa", "charge": -1}}
-[ non-edges ]
-BB +BB
-
 ; Exclusions between the charged terminii and the charge dummies
 [ link ]
 resname $protein_resnames
