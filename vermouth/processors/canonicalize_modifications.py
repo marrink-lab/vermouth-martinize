@@ -277,14 +277,18 @@ def fix_ptm(molecule):
         try:
             identified = identify_ptms(residue, res_ptms, options)
         except KeyError:
-            LOGGER.exception('Could not identify the modifications for'
-                             ' residues {}, involving atoms {}',
-                             ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
-                              for resid in sorted(set(resids))],
-                             ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
-                              for idxs in res_ptms for idx in idxs[0]],
-                             type='unknown-input')
-            raise
+            LOGGER.warning('Could not identify the modifications for'
+                           ' residues {}, involving atoms {}',
+                           ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
+                            for resid in sorted(set(resids))],
+                           ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
+                            for idxs in res_ptms for idx in idxs[0]],
+                           type='unknown-input')
+            for idxs in res_ptms:
+                for idx in idxs[0]:
+                    molecule.remove_node(idx)
+            continue
+
         # Why this mess? There can be multiple PTMs for a single (set of)
         # residue(s); and a single PTM can span multiple residues.
         LOGGER.info("Identified the modifications {} on residues {}",
