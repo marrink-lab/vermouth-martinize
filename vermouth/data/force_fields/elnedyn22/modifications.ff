@@ -22,3 +22,8 @@ BB {"replace": {"atype": "P5", "charge": 0}}
 NH2-ter
 [ atoms ]
 BB {"replace": {"atype": "P5", "charge": 0}}
+
+[ modification ]
+ASP0
+[ atoms ]
+SC1 {"resname": "ASP", "replace": {"atype": "P3", "charge": 0}}
