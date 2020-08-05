@@ -52,7 +52,9 @@ def assert_equal_blocks(block1, block2):
     edges1 = {frozenset(e[:2]): e[2] for e in block1.edges(data=True)}
     edges2 = {frozenset(e[:2]): e[2] for e in block2.edges(data=True)}
     assert edges1 == edges2
-    assert block1.interactions == block2.interactions
+    for inter_type, interactions in block1.interactions.items():
+        block2_interactions = block2.interactions.get(inter_type, [])
+        assert sorted(interactions, key=lambda i: i.atoms) == sorted(block2_interactions, key=lambda i: i.atoms)
 
 
 def compare_itp(filename1, filename2):
@@ -87,7 +89,7 @@ COMPARERS = {'.itp': compare_itp,
              '.pdb': compare_pdb}
 
 
-def _interactions_equal(interaction1, interaction2):
+def _interaction_equal(interaction1, interaction2):
     """
     Returns True if interaction1 == interaction2, ignoring rounding errors in
     interaction parameters.
@@ -146,7 +148,10 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
                           stderr=subprocess.PIPE,
                           universal_newlines=True)
     exit_code = proc.returncode
-    assert exit_code == 0, (proc.stdout, proc.stderr)
+    if exit_code:
+        print(proc.stdout)
+        print(proc.stderr)
+        assert not exit_code
 
     for new_file in tmp_path.iterdir():
         filename = new_file.name
@@ -157,5 +162,5 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
             with monkeypatch.context() as m:
                 # Compare Interactions such that rounding erros in the
                 # parameters are OK.
-                m.setattr(vermouth.molecule.Interaction, '__eq__', _interactions_equal)
+                m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
                 COMPARERS[ext](reference_file, new_file)
