@@ -19,9 +19,6 @@ Unittests for the PDB reader.
 
 import pytest
 
-from hypothesis import strategies as st
-from hypothesis import given, settings
-
 from vermouth.pdb.pdb import PDBParser
 from vermouth.tests.datafiles import PDB_MULTIMODEL
 

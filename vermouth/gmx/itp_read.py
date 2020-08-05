@@ -185,7 +185,7 @@ class ITPDirector(SectionLineParser):
 
         return result
 
-    def finalize_section(self, pervious_section, ended_section):
+    def finalize_section(self, previous_section, ended_section):
         """
         Called once a section is finished. It appends the current_links list
         to the links and update the block dictionary with current_block. Thereby it
@@ -310,7 +310,6 @@ class ITPDirector(SectionLineParser):
             del tokens[index]
 
         return atoms, tokens
-
 
     def _treat_block_interaction_atoms(self, atoms, context, section):
         """

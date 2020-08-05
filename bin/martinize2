@@ -416,7 +416,7 @@ def entry():
                             'connected to 1 other residue, and has the lowest '
                             'resid.')
     # Unfortunately there's no action=extend_const. append_const *almost* does
-    # what we need, but it makes the resulting list too deep: 
+    # what we need, but it makes the resulting list too deep:
     # [[['cter', 'COOH-ter'], ['nter', 'NH2-ter']], ['ASP3', 'ASP0']]
     prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,

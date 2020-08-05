@@ -26,6 +26,9 @@ from vermouth.processors.apply_rubber_band import (same_chain,
                                                    are_connected,
                                                    build_connectivity_matrix)
 
+# pylint: disable=redefined-outer-name
+
+
 
 @pytest.fixture
 def disconnected_graph():
@@ -85,8 +88,7 @@ def test_build_pair_matrix(disconnected_graph, selection, extra_edges):
     expected = expected[:, selection][selection]
 
     disconnected_graph.add_edges_from(extra_edges)
-    idx_to_node = {idx: node for idx,
-                   node in enumerate(disconnected_graph.nodes)}
+    idx_to_node = dict(enumerate(disconnected_graph.nodes))
     domains = apply_rubber_band.build_pair_matrix(
         disconnected_graph, have_same_chain, idx_to_node, selection)
     assert np.all(domains == expected)
@@ -103,8 +105,7 @@ def test_build_pair_matrix(disconnected_graph, selection, extra_edges):
 # and separation in residue space. selection is tested at the
 # end with a more integral test
 def test_build_connectivity_matrix(disconnected_graph, separation, outcome):
-    idx_to_node = {idx: node for idx,
-                   node in enumerate(disconnected_graph.nodes)}
+    idx_to_node = dict(enumerate(disconnected_graph.nodes))
     selection = list(range(0, 16, 2))
     resid_attr = {0: 1, 1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4,
                   8: 5, 9: 5, 10: 6, 11: 6, 12: 7, 13: 7, 14: 8, 15: 8}

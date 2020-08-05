@@ -26,6 +26,9 @@ from vermouth.molecule import Interaction, Molecule
 
 from .molecule_strategies import random_molecule, random_block, random_link
 
+# pylint: disable=redefined-outer-name, no-value-for-parameter
+
+
 # In some cases, drawing from hypothesis.strategies.text is extremely slow and
 # triggers the heath check warnings. It appears to be due to some internal
 # combinations of timers and cache. This is a workwround that forces the
