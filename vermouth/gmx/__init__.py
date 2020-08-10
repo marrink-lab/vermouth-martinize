@@ -19,4 +19,5 @@ Provides functionality to read and write Gromacs specific files.
 
 from .gro import read_gro, write_gro
 from .itp import write_molecule_itp
+from .itp_read import read_itp
 from .rtp import read_rtp
