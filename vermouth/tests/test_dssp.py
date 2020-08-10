@@ -17,6 +17,7 @@ Test the functions required to use DSSP.
 """
 
 import os
+import glob
 import itertools
 
 import numpy as np
@@ -25,10 +26,12 @@ import pytest
 import vermouth
 from vermouth.forcefield import get_native_force_field
 from vermouth.dssp import dssp
+from vermouth.dssp.dssp import DSSPError
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
     PDB_PROTEIN,
     DSSP_OUTPUT,
+    PDB_ALA5_CG,
 )
 
 DSSP_EXECUTABLE = os.environ.get('VERMOUTH_TEST_DSSP', 'dssp')
@@ -319,7 +322,7 @@ def test_run_dssp(savefile, tmpdir):
     generate a save file only if requested.
     """
     # The test runs twice, once with the savefile set to True so we test with
-    # savinf the DSSP output to file, and once with savefile set t False so we
+    # saving the DSSP output to file, and once with savefile set t False so we
     # do not generate the file. The "savefile" argument is set by
     # pytest.mark.parametrize.
     # The "tmpdir" argument is set by pytest and is the path to a temporary
@@ -359,6 +362,37 @@ def test_run_dssp(savefile, tmpdir):
     else:
         # Is the directory empty?
         assert not os.listdir(str(tmpdir))
+
+
+@pytest.mark.parametrize('pdb, loglevel,expected', [
+    (PDB_PROTEIN, 10, True),  # DEBUG
+    (PDB_PROTEIN, 30, False),  # WARNING
+    # Using a CG pdb will cause a DSSP error, which should preserve the input
+    (PDB_ALA5_CG, 10, True),  # DEBUG
+    (PDB_ALA5_CG, 30, True),  # WARNING
+])
+def test_run_dssp_input_file(tmpdir, caplog, pdb, loglevel, expected):
+    """
+    Test that the DSSP input file is preserved (only) in the right conditions
+    """
+    caplog.set_level(loglevel)
+    system = vermouth.System()
+    for molecule in read_pdb(str(pdb)):
+        system.add_molecule(molecule)
+    with tmpdir.as_cwd():
+        try:
+            dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
+        except DSSPError:
+            pass
+        if expected:
+            target = 1
+        else:
+            target = 0
+        matches = glob.glob('dssp_in*.pdb')
+        assert len(matches) == target, matches
+        if matches:
+            # Make sure it's a valid PDB file. Mostly anyway.
+            list(read_pdb(matches[0]))
 
 
 def test_cterm_atomnames():

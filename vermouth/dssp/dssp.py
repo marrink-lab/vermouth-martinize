@@ -17,15 +17,19 @@ Assign protein secondary structures using DSSP.
 """
 
 import collections
+import logging
 import os
 import subprocess
-import logging
+import tempfile
 
 from ..pdb import pdb
 from ..system import System
 from ..processors.processor import Processor
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 from .. import utils
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 class DSSPError(Exception):
@@ -184,23 +188,36 @@ def run_dssp(system, executable='dssp', savefile=None):
     read_dssp2
         Parse a DSSP output.
     """
-    process = subprocess.Popen(
-        [executable, "-i", "/dev/stdin"],
-        stderr=subprocess.PIPE,
+    tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
+                                                    dir='.', prefix='dssp_in_')
+    tmpfile_handle = os.fdopen(tmpfile_handle, mode='w')
+    tmpfile_handle.write(pdb.write_pdb_string(system, conect=False))
+    tmpfile_handle.close()
+
+    process = subprocess.run(
+        [executable, '-i', tmpfile_name],
         stdout=subprocess.PIPE,
-        stdin=subprocess.PIPE
+        stderr=subprocess.PIPE,
+        check=False,
+        universal_newlines=True
     )
-    out, err = process.communicate(
-        pdb.write_pdb_string(system, conect=False).encode('utf8')
-    )
-    out = out.decode('utf8')
-    status = process.wait()
+
+    status = process.returncode
+    # If an error is encountered, or the loglevel is low enough, preserve the
+    # DSSP input file, and print a nice message.
+    if not status and LOGGER.getEffectiveLevel() > logging.DEBUG:
+        os.remove(tmpfile_name)
     if status:
-        raise DSSPError(err.decode('utf8'))
+        message = 'DSSP encountered an error. The message was {err}. The input' \
+                  ' file provided to DSSP can be found at {file}.'
+        raise DSSPError(message.format(err=process.stderr, file=tmpfile_name))
+    else:
+        LOGGER.debug('DSSP input file written to {}', tmpfile_name)
+
     if savefile is not None:
         with open(str(savefile), 'w') as outfile:
-            outfile.write(out)
-    return read_dssp2(out.split('\n'))
+            outfile.write(process.stdout)
+    return read_dssp2(process.stdout.split('\n'))
 
 
 def _savefile_path(molecule, savedir=None):
@@ -420,7 +437,7 @@ def convert_dssp_annotation_to_martini(
         # as it *could* be due to the DSSP assignation having been skipped
         # for some reason.
         msg = 'No DSSP assignation to convert to Martini secondary structure intermediates.'
-        logging.debug(msg)
+        LOGGER.debug(msg)
     else:
         # This is more of a problem. For now, we do not know what to do with
         # incomplete DSSP assignation. This may come later as a problem if
