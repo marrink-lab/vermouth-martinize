@@ -36,7 +36,6 @@ class DSSPError(Exception):
     """
     Exception raised if DSSP fails.
     """
-    pass
 
 
 def read_dssp2(lines):
@@ -122,11 +121,8 @@ def read_dssp2(lines):
 
     # Now, every line should be a secondary structure assignation.
     for line_num, line in numbered_lines:
-        if '!' in line:
-            # This is a TER record, we ignore it.
-            continue
-        elif not line:
-            # We ignore the empty lines.
+        if '!' in line or not line:
+            # This is a TER record or an empty line, we ignore it.
             continue
         elif len(line) >= 17:
             secondary_structure = line[16]

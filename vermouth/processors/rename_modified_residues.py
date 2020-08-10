@@ -57,7 +57,6 @@ def rename_modified_residues(mol):
             # node.
             continue
         node['resname'] = new_name
-    return None
 
 
 class RenameModifiedResidues(Processor):

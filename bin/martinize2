@@ -307,7 +307,7 @@ def entry():
                             "If 'none', only bonds from the input file (CONECT)"
                             " will be used.")
     file_group.add_argument('-bonds-fudge', dest='bonds_fudge', type=float,
-                            default=1.0, help='Factor with which Van der Waals'
+                            default=1.2, help='Factor with which Van der Waals'
                             ' radii should be scaled when determining bonds '
                             'based on distances.')
 
@@ -357,6 +357,10 @@ def entry():
                           help='Elastic bond lower cutoff: F = Fc if rij < lo')
     rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
                           help='Elastic bond upper cutoff: F = 0  if rij > up')
+    rb_group.add_argument('-ermd', dest='res_min_dist', type=int,
+                          help=('The minimum separation between two residues to have an RB '
+                                'the default value is set by the force-field.'),
+                          default=None)
     rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
                           help='Elastic bond decay factor a')
     rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
@@ -366,6 +370,11 @@ def entry():
     rb_group.add_argument('-eb', dest='rb_selection',
                           type=lambda x: x.split(','), default=None,
                           help='Comma separated list of bead names for elastic bonds')
+    rb_group.add_argument('-eunit', dest='rb_unit', default='molecule',
+                          choices=['chain', 'molecule', 'all'],
+                          help=('Establish what is the structural unit for the '
+                                'elastic network. Bonds are only created within'
+                                ' a unit.'))
 
     go_group = parser.add_argument_group('Virtual site based GoMartini')
     go_group.add_argument('-govs-includes', action='store_true', default=False,
@@ -407,7 +416,7 @@ def entry():
                             'connected to 1 other residue, and has the lowest '
                             'resid.')
     # Unfortunately there's no action=extend_const. append_const *almost* does
-    # what we need, but it makes the resulting list too deep: 
+    # what we need, but it makes the resulting list too deep:
     # [[['cter', 'COOH-ter'], ['nter', 'NH2-ter']], ['ASP3', 'ASP0']]
     prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,
@@ -427,7 +436,7 @@ def entry():
                                    'CanonicalizeModifications step. The '
                                    'resulting file may contain "nan" '
                                    'coordinates making it unreadable by most '
-                                   'softwares.'))
+                                   'software.'))
     debug_group.add_argument('-v', dest='verbosity', action='count',
                              help='Enable debug logging output. Can be given '
                                   'multiple times.', default=0)
@@ -437,6 +446,12 @@ def entry():
         parser.error('A rubber band elastic network and GoMartini are not '
                      'compatible. The -elastic and -govs-include flags cannot '
                      'be used together.')
+
+    if args.to_ff.startswith('elnedyn'):
+        # FIXME: This type of thing should be added to the FF itself.
+        LOGGER.info('The forcefield {} must always be used with an elastic '
+                    'network. Enabling it now.', args.to_ff)
+        args.elastic = True
 
     file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ['GRO'] and args.modelidx is not None:
@@ -515,6 +530,15 @@ def entry():
     if args.neutral_termini:
         args.modifications.append(['cter', 'COOH-ter'])
         args.modifications.append(['nter', 'NH2-ter'])
+    else:
+        if args.modifications:
+            resspecs, mods = zip(*args.modifications)
+        else:
+            resspecs, mods = [], []
+        if not any('cter' in resspec for resspec in resspecs):
+            args.modifications.append(['cter', 'C-ter'])
+        if not any('nter' in resspec for resspec in resspecs):
+            args.modifications.append(['nter', 'N-ter'])
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
@@ -585,28 +609,6 @@ def entry():
         delete_unknown=True,
     )
 
-    # Apply a rubber band elastic network is required.
-    if args.elastic:
-        LOGGER.info('Setting the rubber bands.', type='step')
-        if args.rb_selection is not None:
-            selector = functools.partial(
-                selectors.proto_select_attribute_in,
-                attribute='atomname',
-                values=args.rb_selection,
-            )
-        else:
-            selector = selectors.select_backbone
-        rubber_band_processor = vermouth.ApplyRubberBand(
-            lower_bound=args.rb_lower_bound,
-            upper_bound=args.rb_upper_bound,
-            decay_factor=args.rb_decay_factor,
-            decay_power=args.rb_decay_power,
-            base_constant=args.rb_force_constant,
-            minimum_force=args.rb_minimum_force,
-            selector=selector,
-        )
-        rubber_band_processor.run_system(system)
-
     # Apply position restraints if required.
     if args.posres != 'none':
         LOGGER.info('Applying position restraints.', type='step')
@@ -638,6 +640,41 @@ def entry():
                 vermouth.MergeChains(chain_set).run_system(system)
         vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
         defines = ()
+
+    # Apply a rubber band elastic network is required.
+    if args.elastic:
+        LOGGER.info('Setting the rubber bands.', type='step')
+        if args.rb_unit == 'molecule':
+            domain_criterion = vermouth.processors.apply_rubber_band.always_true
+        elif args.rb_unit == 'all':
+            vermouth.MergeAllMolecules().run_system(system)
+            domain_criterion = vermouth.processors.apply_rubber_band.always_true
+        elif args.rb_unit == 'chain':
+            domain_criterion = vermouth.processors.apply_rubber_band.same_chain
+        else:
+            message = 'Unknown value for -eunit: "{}".'.format(args.rb_unit)
+            LOGGER.critical(message)
+            raise ValueError(message)
+        if args.rb_selection is not None:
+            selector = functools.partial(
+                selectors.proto_select_attribute_in,
+                attribute='atomname',
+                values=args.rb_selection,
+            )
+        else:
+            selector = selectors.select_backbone
+        rubber_band_processor = vermouth.ApplyRubberBand(
+            lower_bound=args.rb_lower_bound,
+            upper_bound=args.rb_upper_bound,
+            decay_factor=args.rb_decay_factor,
+            decay_power=args.rb_decay_power,
+            base_constant=args.rb_force_constant,
+            minimum_force=args.rb_minimum_force,
+            selector=selector,
+            domain_criterion=domain_criterion,
+            res_min_dist=args.res_min_dist
+        )
+        rubber_band_processor.run_system(system)
 
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:

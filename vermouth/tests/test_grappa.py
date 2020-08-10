@@ -18,6 +18,9 @@ import networkx as nx
 
 import vermouth.graphing.grappa as grappa
 
+# pylint: disable=redefined-outer-name
+
+
 
 RefEntry = collections.namedtuple(
     'RefEntry', 'string nodes edges attributes'

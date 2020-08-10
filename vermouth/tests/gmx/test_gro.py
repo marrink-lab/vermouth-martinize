@@ -40,6 +40,8 @@ from vermouth.utils import are_different
 from vermouth.molecule import Molecule
 from vermouth.gmx import gro
 
+# pylint: disable=redefined-outer-name
+
 
 # The data comes from residues 3 to 5 of 1BTA.pdb. The atoms from ILE 5 are
 # changed in solvent.
@@ -206,6 +208,7 @@ def write_ref_gro(outfile, velocities=False, box='10.0 10.0 10.0'):
         outfile.write(('{}{:8.3f}{:8.3f}{:8.3f}' + velocity_fmt + '\n')
                       .format(atom, *itertools.chain(coords, vels)))
     outfile.write(box)
+    outfile.write('\n')
 
 
 def build_ref_molecule(velocities=False):

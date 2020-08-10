@@ -20,7 +20,7 @@ import networkx as nx
 
 from ..molecule import Block
 from .processor import Processor
-from ..graph_utils import *  # FIXME
+from ..graph_utils import *  # FIXME  # pylint: disable=unused-wildcard-import
 from ..ismags import ISMAGS
 from ..log_helpers import StyleAdapter, get_logger
 from ..utils import format_atom_string, are_all_equal
@@ -114,7 +114,7 @@ def _get_reference_residue(residue, force_field):
             LOGGER.error(message, residue['chain'], residue['resname'],
                          residue['resid'], len(mutation))
             raise ValueError(message.format(residue['chain'], residue['resname'],
-                             residue['resid'], len(mutation)))
+                                            residue['resid'], len(mutation)))
         mutation = mutation[0]
         LOGGER.info('Mutating residue {}-{}{} to {}',
                     residue['chain'], residue['resname'], residue['resid'],
@@ -194,7 +194,7 @@ def make_reference(mol):
         reference = _get_reference_residue(residues.nodes[residx], mol.force_field)
         if 'mutation' in residues.nodes[residx]:
             # We need to do this, since we need to propagate all common
-            # attributes in the input residue to any reconstructed atoms. 
+            # attributes in the input residue to any reconstructed atoms.
             # make_residue_graph already picks up on all the common attributes
             # and sets those as residue/node attributes, but any mutation needs
             # to be propagated as well, otherwise the newly constructed atoms
@@ -233,11 +233,11 @@ def make_reference(mol):
         #       distance
         new_residue_names = {old: new for new, old in enumerate(sorted(
             residue,
-            key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])
+            key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])  # pylint: disable=cell-var-from-loop
         ))}
         new_reference_names = {old: new for new, old in enumerate(sorted(
             reference,
-            key=lambda jdx: (ref_names[jdx] not in res_names.values(), ref_names[jdx])
+            key=lambda jdx: (ref_names[jdx] not in res_names.values(), ref_names[jdx])  # pylint: disable=cell-var-from-loop
         ))}
 
         old_res_names = {v: k for k, v in new_residue_names.items()}
@@ -248,7 +248,7 @@ def make_reference(mol):
         res_copy = nx.relabel_nodes(residue, new_residue_names, copy=True)
         ref_copy = nx.relabel_nodes(reference, new_reference_names, copy=True)
 
-        LOGGER.debug('Matching residue {}{} to its reference', resname, resid, type='step')
+        LOGGER.debug('Matching residue {}-{}{} to its reference', chain, resname, resid, type='step')
 
         # If we assume residue > reference the tests run *way* faster, but the
         # actual program becomes *much* *much* slower.
@@ -268,8 +268,8 @@ def make_reference(mol):
             # that match should have most matching atomnames.
             match = next(match_iter)
         except StopIteration:
-            LOGGER.error("Can't find isomorphism between {}{} and its "
-                         "reference.", resname, resid, type='inconsistent-data')
+            LOGGER.error("Can't find isomorphism between {}-{}{} and its "
+                         "reference.", chain, resname, resid, type='inconsistent-data')
             continue
         # TODO: Since we only have one isomorphism we don't know whether the
         # assigment we're making is ambiguous. So iff the residue is small
@@ -283,9 +283,9 @@ def make_reference(mol):
 
         # The residue graph has attributes which are common to all atoms in the
         # input residue, so propagate those to new atoms. These attributes are
-        # things like residue name (see above in case of mutations), resid, 
+        # things like residue name (see above in case of mutations), resid,
         # insertion code, etc.
-        reference_graph.add_node(residx, reference=reference, found=residue, 
+        reference_graph.add_node(residx, reference=reference, found=residue,
                                  match=match, **residues.nodes[residx])
     reference_graph.add_edges_from(residues.edges())
     return reference_graph

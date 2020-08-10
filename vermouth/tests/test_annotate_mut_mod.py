@@ -15,12 +15,14 @@
 Contains unittests for vermouth.processors.annotate_mut_mod.
 """
 
+import networkx as nx
 import pytest
 from vermouth.molecule import Molecule
 from vermouth.forcefield import ForceField
 from vermouth.processors.annotate_mut_mod import (
     parse_residue_spec,
     _subdict,
+    _terminal_matches,
     annotate_modifications,
     AnnotateMutMod
 )
@@ -28,6 +30,7 @@ from vermouth.tests.datafiles import (
     FF_UNIVERSAL_TEST,
 )
 
+# pylint: disable=redefined-outer-name
 
 @pytest.fixture
 def example_mol():
@@ -41,9 +44,10 @@ def example_mol():
         {'chain': 'B', 'resname': 'A', 'resid': 2},  # 5, R5
         {'chain': 'B', 'resname': 'A', 'resid': 2},  # 6, R5
         {'chain': 'B', 'resname': 'B', 'resid': 2},  # 7, R6
+        {'chain': 'A', 'resname': 'C', 'resid': 3},  # 8, R7
     ]
     mol.add_nodes_from(enumerate(nodes))
-    mol.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (4, 7)])
+    mol.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (4, 7), (3, 8)])
     return mol
 
 
@@ -106,7 +110,8 @@ def test_subdict(dict1, dict2, expected):
         [({'resname': 'cter'}, 'ALA')],
         {5: {'mutation': ['ALA']},
          6: {'mutation': ['ALA']},
-         7: {'mutation': ['ALA']},},
+         7: {'mutation': ['ALA']},
+         8: {'mutation': ['ALA']}},
     ),
     (
         [({'resid': 2, 'chain': 'B'}, 'none')],  # none is not an existing modification...
@@ -134,6 +139,13 @@ def test_subdict(dict1, dict2, expected):
         [({'resname': 'nter'}, 'C-ter')],
         {0: {'modification': ['C-ter']},},
     ),
+    (
+        [({'resname': 'cter', 'chain': 'B'}, 'C-ter'), ({'resname': 'C'}, 'HSD')],
+        {7: {'modification': ['C-ter']},
+         5: {'modification': ['C-ter']},
+         6: {'modification': ['C-ter']},
+         8: {'modification': ['HSD']}}  # Not a C-ter mod
+    )
 ])
 def test_annotate_modifications(example_mol, modifications, mutations, expected_mod, expected_mut):
     annotate_modifications(example_mol, modifications, mutations)
@@ -142,6 +154,23 @@ def test_annotate_modifications(example_mol, modifications, mutations, expected_
     for node_idx, mods in expected_mut.items():
         assert _subdict(mods, example_mol.nodes[node_idx])
 
+
+def test_single_residue_mol():
+    mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
+    nodes = [
+        {'chain': 'A', 'resname': 'A', 'resid': 2},
+        {'chain': 'A', 'resname': 'A', 'resid': 2},
+    ]
+    mol.add_nodes_from(enumerate(nodes))
+    mol.add_edges_from([(0, 1)])
+
+    modification = [({'resname': 'A', 'resid': 2}, 'C-ter'),]
+    annotate_modifications(mol, modification, [])
+
+    assert mol.nodes[0] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
+    assert mol.nodes[1] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
+
+
 @pytest.mark.parametrize('modifications,mutations', [
     ([({'chain': 'A'}, 'M')], []),  # unknown residue name
     ([], [({'resid': 1}, 'M')]),  # unknown modification name
@@ -149,6 +178,14 @@ def test_annotate_modifications(example_mol, modifications, mutations, expected_
 def test_annotate_modifications_error(example_mol, modifications, mutations):
     with pytest.raises(NameError):
         annotate_modifications(example_mol, modifications, mutations)
+
+
+def test_unknown_terminus_match():
+    resname = 'xter'
+    graph = nx.Graph()
+    graph.add_edge(0, 1)
+    with pytest.raises(KeyError):
+        _terminal_matches(resname, graph, 0)
 
 
 @pytest.mark.parametrize('mutations,expected_mut', [

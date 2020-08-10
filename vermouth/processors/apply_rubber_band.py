@@ -21,9 +21,13 @@ import networkx as nx
 
 from .processor import Processor
 from .. import selectors
+from ..graph_utils import make_residue_graph
 
+# the bond type of the RB
 DEFAULT_BOND_TYPE = 6
-
+# the minimum distance between the resids
+# of two beads to have an RB
+DEFAULT_RMD = 2
 
 def self_distance_matrix(coordinates):
     """
@@ -70,7 +74,7 @@ def compute_decay(distance, shift, rate, power):
     array, then the returned value is an array of decay factors with the same
     shape as the input.
     """
-    return np.exp(-rate * ((distance - shift) **  power))
+    return np.exp(-rate * ((distance - shift) ** power))
 
 
 def compute_force_constants(distance_matrix, lower_bound, upper_bound,
@@ -90,11 +94,44 @@ def compute_force_constants(distance_matrix, lower_bound, upper_bound,
     return constants
 
 
-def build_connectivity_matrix(graph, separation, selection=None):
+def are_connected(graph, left, right, separation):
+    """
+    ``True`` if the nodes are at most 'separation' nodes away.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph/molecule to work on.
+    left:
+        One node key from the graph.
+    right:
+        One node key from the graph.
+    separation: int
+        The maximum number of nodes in the shortest path between two nodes of
+        interest for these two nodes to be considered connected. Must be >= 0.
+
+    Returns
+    -------
+    bool
+    """
+    nodes_are_connected = False
+    try:
+        shortest_path = len(nx.shortest_path(graph, left, right))
+    except nx.NetworkXNoPath:
+        # There is no path between left and right so they are not
+        # connected; which is the default.
+        pass
+    else:
+        # The source and the target are counted in the shortest path
+        nodes_are_connected = shortest_path <= separation + 2
+    return nodes_are_connected
+
+
+def build_connectivity_matrix(graph, separation, node_to_idx, selected_nodes):
     """
     Build a connectivity matrix based on the separation between nodes in a graph.
 
-    The connectivity matrix is a symetric boolean matrix where cells contain
+    The connectivity matrix is a symmetric boolean matrix where cells contain
     ``True`` if the corresponding atoms are connected in the graph and
     separated by less or as much nodes as the given 'separation' argument.
 
@@ -117,47 +154,71 @@ def build_connectivity_matrix(graph, separation, selection=None):
     separation: int
         The maximum number of nodes in the shortest path between two nodes of
         interest for these two nodes to be considered connected. Must be >= 0.
-    selection: collections.abc.Iterable
-        A list of node keys to work on. If this argument is set, then the
-        matrix corresponds to the subgraph containing these keys.
+    selected_nodes: collections.abc.Collection
+        A list of nodes to work on.
 
     Returns
     -------
     numpy.ndarray
         A boolean matrix.
     """
-    if separation < 0:
-        raise ValueError('Separation has to be null or positive.')
-    if separation == 0:
-        # The connectivity matrix with a separation of 1 is the adjacency
-        # matrix. Thanksfully, networkx can directly give it to us a a numpy
-        # array.
-        return nx.to_numpy_matrix(graph, nodelist=selection).astype(bool)
-    subgraph = graph.subgraph(selection)
-    connectivity = np.zeros((len(subgraph), len(subgraph)), dtype=bool)
-    for (idx, key_idx), (jdx, key_jdx) in itertools.combinations(enumerate(subgraph.nodes), 2):
-        try:
-            shortest_path = len(nx.shortest_path(subgraph, key_idx, key_jdx))
-        except nx.NetworkXNoPath:
-            # There is no path between key_i and key_j so they are not
-            # connected; which is the default.
-            pass
-        else:
-            # The source and the target are counted in the shortest path
-            connectivity[idx, jdx] = shortest_path <= separation + 2
-            connectivity[jdx, idx] = connectivity[idx, jdx]
-    return connectivity
+    res_graph = make_residue_graph(graph)
+    distance_pairs = nx.all_pairs_shortest_path_length(res_graph, cutoff=separation)
+    # only gets "positive" entries due to the cutoff argument above
+    size = graph.number_of_nodes()
+    # the matrix will be reduced before returning it but nx.all_pairs_shortest_path_length
+    # does not take a subset of nodes
+    # TODO optimize me,  try to create a sparse matrix in case scipy is available.
+    connectivity = np.zeros((size, size), dtype=bool)
+    for origin_residue, matchs_distances in distance_pairs:
+        for target_residue in matchs_distances:
+            origin_nodes = res_graph.nodes[origin_residue]['graph'].nodes()
+            target_nodes = res_graph.nodes[target_residue]['graph'].nodes()
+            for origin, target in itertools.product(origin_nodes, target_nodes):
+                connectivity[node_to_idx[origin], node_to_idx[target]] = True
+    np.fill_diagonal(connectivity, False)
+    return connectivity[:, selected_nodes][selected_nodes]
 
+
+def build_pair_matrix(graph, criterion, idx_to_node, selected_nodes):
+    """
+    Build a boolean matrix telling if a pair of nodes fulfil a criterion.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph/molecule to work on.
+    criterion: collections.abc.Callable
+        A function that determines if a pair of nodes fulfill the criterion.
+        It takes a graph and two node keys as arguments and returns a boolean.
+    selected_nodes: collections.abc.Collection
+        A list of nodes to work on.
+
+    Returns
+    -------
+    numpy.ndarray
+        A boolean matrix.
+    """
+    size = len(graph.nodes)
+    #TODO generate spare matrix with scipy
+    share_domain = np.zeros((size, size), dtype=bool)
+    node_combinations = itertools.combinations(selected_nodes, 2)
+    for kdx, jdx in node_combinations:
+        key_kdx = idx_to_node[kdx]
+        key_jdx = idx_to_node[jdx]
+        share_domain[kdx, jdx] = criterion(graph, key_kdx, key_jdx)
+        share_domain[jdx, kdx] = share_domain[kdx, jdx]
+    return share_domain[:, selected_nodes][selected_nodes]
 
 def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
                       base_constant, minimum_force,
-                      bond_type, res_min_dist=3):
+                      bond_type, domain_criterion, res_min_dist):
     r"""
     Adds a rubber band elastic network to a molecule.
 
-    The eleastic network is applied as bounds between the atoms selected by the
+    The elastic network is applied as bounds between the atoms selected by the
     function declared with the 'selector' argument. The equilibrium length for
     the bonds is measured from the coordinates in the molecule, the force
     constant is computed from the base force constant and an optional decay
@@ -178,9 +239,15 @@ def apply_rubber_band(molecule, selector,
     The 'selector' argument takes a callback that accepts a atom dictionary and
     returns ``True`` if the atom match the conditions to be kept.
 
+    Only nodes that are in the same domain can be connected by the elastic
+    network. The 'domain_criterion' argument accepts a callback that determines
+    if two nodes are in the same domain. That callback accepts a graph and two
+    node keys as argument and returns whether or not the nodes are in the same
+    domain as a boolean.
+
     Parameters
     ----------
-    molecule: Molecule
+    molecule: vermouth.molecule.Molecule
         The molecule to which apply the elastic network. The molecule is
         modified in-place.
     selector: collections.abc.Callable
@@ -200,10 +267,17 @@ def apply_rubber_band(molecule, selector,
         If 'decay_factor' or 'decay_power' is set to 0, then it will be the
         used force constant.
     minimum_force: float
-        Minimum force constat in :math:`kJ.mol^{-1}.nm^{-2}` under which bonds
+        Minimum force constant in :math:`kJ.mol^{-1}.nm^{-2}` under which bonds
         are not kept.
     bond_type: int
         Gromacs bond function type to apply to the elastic network bonds.
+    domain_criterion: collections.abc.Callable
+        Function to establish if two atoms are part of the same domain. Elastic
+        bonds are only added within a domain. By default, all the atoms in
+        the molecule are considered part of the same domain. The function
+        expects a graph (e.g. a :class:`~vermouth.molecule.Molecule`) and two atom node keys as
+        argument and returns ``True`` if the two atoms are part of the same
+        domain; returns ``False`` otherwise.
     res_min_dist: int
         Minimum separation between two atoms for a bond to be kept.
         Bonds are kept is the separation is greater or equal to the value
@@ -212,12 +286,17 @@ def apply_rubber_band(molecule, selector,
     selection = []
     coordinates = []
     missing = []
-    for node_key, attributes in molecule.nodes.items():
+    node_to_idx = {}
+    idx_to_node = {}
+    for node_idx, (node_key, attributes) in enumerate(molecule.nodes.items()):
+        node_to_idx[node_key] = node_idx
+        idx_to_node[node_idx] = node_key
         if selector(attributes):
-            selection.append(node_key)
+            selection.append(node_idx)
             coordinates.append(attributes.get('position'))
             if coordinates[-1] is None:
                 missing.append(node_key)
+        node_idx += 1
     if missing:
         raise ValueError('All atoms from the selection must have coordinates. '
                          'The following atoms do not have some: {}.'
@@ -227,17 +306,22 @@ def apply_rubber_band(molecule, selector,
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,
                                         base_constant, minimum_force)
-    connectivity = build_connectivity_matrix(molecule, res_min_dist - 1,
-                                             selection=selection)
-    # Set the force constant to 0 for pairs that are connected. `connectivity`
-    # is a matrix of booleans that is True when a pair is connected. Because
-    # booleans acts as 0 or 1 in operation, we multiply the force constant
-    # matrix by the oposite (OR) of the connectivity matrix.
-    constants *= ~connectivity
+
+    connected = build_connectivity_matrix(molecule, res_min_dist, node_to_idx,
+                                          selected_nodes=selection)
+
+    same_domain = build_pair_matrix(molecule, domain_criterion, idx_to_node,
+                                    selected_nodes=selection)
+
+    can_be_linked = (~connected) & same_domain
+    # Multiply the force constant by 0 if the nodes cannot be linked.
+    constants *= can_be_linked
     distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
     for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
-        from_key = selection[from_idx]
-        to_key = selection[to_idx]
+        # note the indices in the matrix are not anymore the idx of
+        # the full molecule but the subset of nodes in selection
+        from_key = idx_to_node[selection[from_idx]]
+        to_key = idx_to_node[selection[to_idx]]
         force_constant = constants[from_idx, to_idx]
         length = distance_matrix[from_idx, to_idx]
         if force_constant > minimum_force:
@@ -249,12 +333,48 @@ def apply_rubber_band(molecule, selector,
             )
 
 
+def always_true(*args, **kwargs):  # pylint: disable=unused-argument
+    """
+    Returns ``True`` whatever the arguments are.
+    """
+    return True
+
+
+def same_chain(graph, left, right):
+    """
+    Returns ``True`` is the nodes are part of the same chain.
+
+    Nodes are considered part of the same chain if they both have the same value
+    under the "chain" attribute, or if neither of the 2 nodes have that attribute.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        A graph the nodes are part of.
+    left:
+        A node key in 'graph'.
+    right:
+        A node key in 'graph'.
+
+    Returns
+    -------
+    bool
+        ``True`` if the nodes are part of the same chain.
+    """
+    node_left = graph.nodes[left]
+    node_right = graph.nodes[right]
+    return node_left.get('chain') == node_right.get('chain')
+
+
 class ApplyRubberBand(Processor):
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
                  base_constant, minimum_force,
+                 res_min_dist=None,
                  bond_type=None,
                  selector=selectors.select_backbone,
-                 bond_type_variable='elastic_network_bond_type'):
+                 bond_type_variable='elastic_network_bond_type',
+                 res_min_dist_variable='elastic_network_res_min_dist',
+                 domain_criterion=always_true):
         super().__init__()
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
@@ -265,6 +385,9 @@ class ApplyRubberBand(Processor):
         self.bond_type = bond_type
         self.selector = selector
         self.bond_type_variable = bond_type_variable
+        self.domain_criterion = domain_criterion
+        self.res_min_dist = res_min_dist
+        self.res_min_dist_variable = res_min_dist_variable
 
     def run_molecule(self, molecule):
         # Choose the bond type. From high to low, the priority order is:
@@ -277,6 +400,13 @@ class ApplyRubberBand(Processor):
             bond_type = molecule.force_field.variables.get(self.bond_type_variable,
                                                            DEFAULT_BOND_TYPE)
 
+        # Same procedure for res_min_dist the minimum distance between
+        # the resids of two beads for them to have a RB
+        res_min_dist = self.res_min_dist
+        if self.res_min_dist is None:
+            res_min_dist = molecule.force_field.variables.get(self.res_min_dist_variable,
+                                                              DEFAULT_RMD)
+
         apply_rubber_band(molecule, self.selector,
                           lower_bound=self.lower_bound,
                           upper_bound=self.upper_bound,
@@ -284,5 +414,7 @@ class ApplyRubberBand(Processor):
                           decay_power=self.decay_power,
                           base_constant=self.base_constant,
                           minimum_force=self.minimum_force,
-                          bond_type=bond_type)
+                          bond_type=bond_type,
+                          domain_criterion=self.domain_criterion,
+                          res_min_dist=res_min_dist)
         return molecule

@@ -108,15 +108,52 @@ def residue_matches(resspec, residue_graph, res_idx):
     # FIXME: Once residue_graph is a digraph we can do something much much
     #        more clever, addressing arbitrarily branched polymers and
     #        termini
+    if residue_graph.degree[res_idx] == 1 and resspec.get('resname') in ['nter', 'cter']:
+        if not _terminal_matches(resspec.get('resname'), residue_graph, res_idx):
+            return False
+        # Remove resname and resid from the resspec, since they have special meaning
+        # in this case.
+        resspec = resspec.copy()
+        resspec.pop('resname', '')
+        resspec.pop('resid', 0)
+    return _subdict(resspec, residue)
+
+
+def _terminal_matches(resname, residue_graph, res_idx):
+    """
+    Tests whether the node res_idx in graph residue_graph is a cter or nter, as
+    determined by resname. Resname must be one of nter or cter.
+    It is assumed that the degree of the specified node is 1.
+
+    Parameters
+    ----------
+    resname: str
+        Must be either nter or cter
+    residue_graph: networkx.Graph
+    res_idx: collections.abc.Hashable
+        Key in residue_graph
+
+    Returns
+    -------
+    bool
+        If resname is nter, returns True iff the resid of the specified node is
+        lower than that of its neighbour. If resname is cter, returns True iff
+        the resid of the specified node is larger than that of its neighbour.
+
+    Raises
+    ------
+    KeyError
+        If resname is neither cter nor nter
+    """
     neighbour = list(residue_graph[res_idx])[0]  # Only one neighbour by definition.
     resid = residue_graph.nodes[res_idx].get('resid', 0)
     neighbour_resid = residue_graph.nodes[neighbour].get('resid', 0)
-    resname = resspec.get('resname')
-    if resname == 'nter' and residue_graph.degree[res_idx] == 1:
+    if resname == 'nter':
         return resid < neighbour_resid
-    elif resname == 'cter' and residue_graph.degree[res_idx] == 1:
+    elif resname == 'cter':
         return resid > neighbour_resid
-    return _subdict(resspec, residue)
+    raise KeyError('Unknown residue name in provided resspec. Found {}, only '
+                   'cter and nter are known'.format(resname))
 
 
 def _format_resname(res):

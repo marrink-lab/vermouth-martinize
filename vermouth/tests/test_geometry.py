@@ -106,7 +106,7 @@ def _generate_test_dihedrals(n_angles):
     'points, angle',
     itertools.chain(
         _generate_test_angles(10),
-        ((np.array([[0,  3, 0], [0, 0, 0], [0, 6, 0]]), 0), ),
+        ((np.array([[0,  3, 0], [0, 0, 0], [0, 6, 0]]), 0), ),  # pylint: disable=bad-whitespace
         ((np.array([[0, -9, 0], [0, 0, 0], [0, 2, 0]]), np.pi), ),
     )
 )
@@ -120,7 +120,7 @@ def test_angle(points, angle):
     'points, angle',
     itertools.chain(
         _generate_test_dihedrals(10),
-        ((np.array([[0,  3, 0], [0, 0, 0], [4, 0, 0], [7, 6, 0]]), 0), ),
+        ((np.array([[0,  3, 0], [0, 0, 0], [4, 0, 0], [7, 6, 0]]), 0), ),  # pylint: disable=bad-whitespace
         ((np.array([[0, -9, 0], [0, 0, 0], [4, 0, 0], [5, 6, 0]]), np.pi), ),
     )
 )
@@ -138,7 +138,7 @@ def test_dihedral(points, angle):
     'points, angle',
     itertools.chain(
         _generate_test_dihedrals(10),
-        ((np.array([[0,  3, 0], [0, 0, 0], [4, 0, 0], [7, 6, 0]]), 0), ),
+        ((np.array([[0,  3, 0], [0, 0, 0], [4, 0, 0], [7, 6, 0]]), 0), ),  # pylint: disable=bad-whitespace
         ((np.array([[0, -9, 0], [0, 0, 0], [4, 0, 0], [5, 6, 0]]), np.pi), ),
     )
 )

@@ -2,6 +2,10 @@
 protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASP0|GLU|GLU0|THR|SER|LYS|LYS0|ARG|ARG0|HIS|HISH|PHE|TYR|TRP"
 protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|THR|SER|LYS|LYS0|ARG|ARG0|HIS|HISH|PHE|TYR|TRP"
 
+[ variables ]
+elastic_network_bond_type 6
+res_min_dist 3
+
 ;;; GLYCINE
 
 [ moleculetype ]
@@ -879,29 +883,6 @@ resname "CYS"
 SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
-
-;; Protein terminii. These links should be applied last.
-[ link ]
-resname $protein_resnames
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qd", "charge": 1}}
-[ non-edges ]
-BB -BB
-
-[ link ]
-resname $protein_resnames
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qa", "charge": -1}}
-[ non-edges ]
-BB +BB
 
 ; Exclusions between the charged terminii and the charge dummies
 [ link ]

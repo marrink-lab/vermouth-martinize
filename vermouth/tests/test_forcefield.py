@@ -23,6 +23,7 @@ import pytest
 import vermouth.forcefield
 import vermouth.molecule
 
+# pylint: disable=redefined-outer-name
 
 @pytest.fixture
 def empty_force_field():

@@ -12,6 +12,9 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+[ molecule ]
+THR
+
 [ martini ]
 BB SC1
 
@@ -21,9 +24,6 @@ universal
 [to]
 elnedyn
 elnedyn22
-
-[ molecule ]
-THR
 
 [ mapping ]
 charmm27 charmm36
