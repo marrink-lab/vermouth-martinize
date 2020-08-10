@@ -187,11 +187,11 @@ autodoc_default_options = {'members': None,
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-                       'python': ('https://docs.python.org', None),
-                       'networkx': ('https://networkx.github.io/documentation/latest', None),
-                       'numpy': ('http://docs.scipy.org/doc/numpy', None),
-                       'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
-                      }
+    'python': ('https://docs.python.org', None),
+    'networkx': ('https://networkx.github.io/documentation/latest', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy', None),
+    'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
+}
 
 
 # Borrowed from https://github.com/sphinx-doc/sphinx/issues/5603
@@ -199,11 +199,11 @@ intersphinx_mapping = {
 # to the VF2 isomorphism module instead.
 # See https://github.com/networkx/networkx/issues/3239
 intersphinx_aliases = {
-        ('py:class', 'networkx.classes.graph.Graph'): ('py:class', 'networkx.Graph'),
-        #('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:class', 'networkx.isomorphism.GraphMatcher'),
-        ('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2'),
-        ('py:class', 'networkx.isomorphism.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2')
-        }
+    ('py:class', 'networkx.classes.graph.Graph'): ('py:class', 'networkx.Graph'),
+    #('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:class', 'networkx.isomorphism.GraphMatcher'),
+    ('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2'),
+    ('py:class', 'networkx.isomorphism.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2')
+}
 
 def add_intersphinx_aliases_to_inv(app):
     from sphinx.ext.intersphinx import InventoryAdapter

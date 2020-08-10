@@ -24,6 +24,7 @@ import vermouth
 from vermouth.molecule import Link
 import vermouth.forcefield
 
+# pylint: disable=redefined-outer-name
 
 def build_forcefield_with_mods():
     """

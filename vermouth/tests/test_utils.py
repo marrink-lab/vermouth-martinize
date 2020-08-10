@@ -24,6 +24,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 from vermouth import utils
 
+# pylint: disable=no-value-for-parameter
+
 DIFFERENCE_USE_CASE = (
     '', [], 'a', 2, 3, True, False, None, float('nan'), float('inf'),
     [True], [False], [True, False], [False, False], [None], [None, None],

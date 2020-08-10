@@ -95,7 +95,7 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
             else:
                 self.logger.log(level, msg, *args, **kwargs)
 
-    def addHandler(self, *args, **kwargs):
+    def addHandler(self, *args, **kwargs):  # pylint: disable=invalid-name
         self.logger.addHandler(*args, **kwargs)
 
 

@@ -53,6 +53,6 @@ except ImportError:
 
 del LOGGER
 
-from .molecule import Molecule
-from .processors import *
-from .system import System
+from .molecule import Molecule  # pylint: disable=wrong-import-position
+from .processors import *  # pylint: disable=wrong-import-position
+from .system import System  # pylint: disable=wrong-import-position

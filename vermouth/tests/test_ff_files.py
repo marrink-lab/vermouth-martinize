@@ -536,7 +536,7 @@ class TestBlock:
             """,
             {'dihedrals': [vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC3'.split(),
                                                          parameters='1 1 2 3 4'.split(),
-                                                         meta={}), 
+                                                         meta={}),
                            vermouth.molecule.Interaction(atoms='BB SC1 SC2 SC4'.split(),
                                                          parameters=['1'],
                                                          meta={})],
@@ -856,7 +856,7 @@ class TestLink:
         that the expected links are in but also how many
         there are.
         """
-        lines="""
+        lines = """
         [ moleculetype ]
         GLY 1
         [ atoms ]
@@ -1367,5 +1367,3 @@ def test_misformed_lines(lines):
     ff = vermouth.forcefield.ForceField(name='test_ff')
     with pytest.raises(IOError):
         vermouth.ffinput.read_ff(lines, ff)
-
-

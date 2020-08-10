@@ -21,6 +21,7 @@ import numpy as np
 
 from vermouth.processors import average_beads
 
+# pylint: disable=redefined-outer-name
 
 @pytest.fixture
 def mol_with_subgraph():
@@ -92,7 +93,7 @@ def mol_with_variable(request, mol_with_subgraph):
     """
     weight = request.param
 
-    class MockForceField(object):
+    class MockForceField:
         pass
 
     ff = MockForceField()

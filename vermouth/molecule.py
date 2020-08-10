@@ -708,11 +708,11 @@ class Molecule(nx.Graph):
         # PDB
         ignore_attrs = ('position', 'chain', 'graph', 'mapping_weights')
         return (
-                self.nrexcl == other.nrexcl and
-                self._force_field == other._force_field and
-                self.same_nodes(other, ignore_attr=ignore_attrs) and
-                self.same_edges(other) and
-                self.same_interactions(other)
+            self.nrexcl == other.nrexcl and
+            self._force_field == other._force_field and
+            self.same_nodes(other, ignore_attr=ignore_attrs) and
+            self.same_edges(other) and
+            self.same_interactions(other)
         )
 
     # TODO: Allow comparison of interactions between isomorphic molecules.
@@ -789,7 +789,7 @@ class Molecule(nx.Graph):
             # The order does not matter here.
             self_keys = set(key for key in self_node if key not in ignore_attr)
             other_keys = set(key for key in other_node if key not in ignore_attr)
-            if self_node.keys() != other_node.keys():
+            if self_keys != other_keys:
                 return False
             # We can loop over the keys because we tested above that they were
             # matching between the two dicts.

@@ -257,7 +257,7 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
     # Creates an equivalent graph, but the node indices are numbered
     # differently. At the very least it would require a change in the tests.
     # Note2: This would probably break e.g. the DSSP processor, because the
-    # ordering of residues in the molecule comes from here, and is used by 
+    # ordering of residues in the molecule comes from here, and is used by
     # molecule.iter_residues.
     # def node_equiv(idx, jdx):
     #     return get_attrs(graph.nodes[idx], attrs) == get_attrs(graph.nodes[jdx], attrs)

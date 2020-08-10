@@ -333,7 +333,7 @@ def apply_rubber_band(molecule, selector,
             )
 
 
-def always_true(*args, **kwargs):
+def always_true(*args, **kwargs):  # pylint: disable=unused-argument
     """
     Returns ``True`` whatever the arguments are.
     """
@@ -404,8 +404,8 @@ class ApplyRubberBand(Processor):
         # the resids of two beads for them to have a RB
         res_min_dist = self.res_min_dist
         if self.res_min_dist is None:
-           res_min_dist = molecule.force_field.variables.get(self.res_min_dist_variable,
-                                                             DEFAULT_RMD)
+            res_min_dist = molecule.force_field.variables.get(self.res_min_dist_variable,
+                                                              DEFAULT_RMD)
 
         apply_rubber_band(molecule, self.selector,
                           lower_bound=self.lower_bound,

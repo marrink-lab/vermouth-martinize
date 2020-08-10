@@ -417,7 +417,7 @@ def entry():
                             'connected to 1 other residue, and has the lowest '
                             'resid.')
     # Unfortunately there's no action=extend_const. append_const *almost* does
-    # what we need, but it makes the resulting list too deep: 
+    # what we need, but it makes the resulting list too deep:
     # [[['cter', 'COOH-ter'], ['nter', 'NH2-ter']], ['ASP3', 'ASP0']]
     prot_group.add_argument('-nt', dest='neutral_termini',
                             action='store_true', default=False,
@@ -535,6 +535,15 @@ def entry():
     if args.neutral_termini:
         args.modifications.append(['cter', 'COOH-ter'])
         args.modifications.append(['nter', 'NH2-ter'])
+    else:
+        if args.modifications:
+            resspecs, mods = zip(*args.modifications)
+        else:
+            resspecs, mods = [], []
+        if not any('cter' in resspec for resspec in resspecs):
+            args.modifications.append(['cter', 'C-ter'])
+        if not any('nter' in resspec for resspec in resspecs):
+            args.modifications.append(['nter', 'N-ter'])
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
