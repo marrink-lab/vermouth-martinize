@@ -128,23 +128,23 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     """
     data_path = Path(PATTERN.format(path=INTEGRATION_DATA, tier=tier, protein=protein))
 
-    with open(data_path / 'command') as cmd_file:
+    with open(str(data_path / 'command')) as cmd_file:
         command = cmd_file.read().strip()
     assert command  # Defensive
     command = shlex.split(command)
     result = [sys.executable]
     for token in command:
         if token.startswith('martinize2'):  # Could be martinize2.py
-            result.append(MARTINIZE2)
+            result.append(str(MARTINIZE2))
         elif token.startswith('..') or token.endswith('pdb'):
-            result.append(data_path / token)
+            result.append(str(data_path / token))
         else:
             result.append(token)
     command = result
 
     print(command)
 
-    proc = subprocess.run(command, cwd=tmp_path, timeout=60, check=False,
+    proc = subprocess.run(command, cwd=str(tmp_path), timeout=60, check=False,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE,
                           universal_newlines=True)
@@ -164,4 +164,4 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
                 # Compare Interactions such that rounding errors in the
                 # parameters are OK.
                 m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
-                COMPARERS[ext](reference_file, new_file)
+                COMPARERS[ext](str(reference_file), str(new_file))
