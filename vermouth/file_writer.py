@@ -49,7 +49,7 @@ class DeferredFileWriter(metaclass=Singleton):
     A singleton class/object that is intended to prevent writing output to files
     that is invalid, due to e.g. warnings further down the pipeline.
 
-    If this class is used to open a file for writing a temporary file is created
+    If this class is used to open a file for writing, a temporary file is created
     and returned instead. Once it's clear the output produced is valid the
     :meth:`~vermouth.file_writer.DeferredFileWriter.write` method can be used to
     finalize the written changes by moving them to their intended destination.
@@ -107,7 +107,7 @@ class DeferredFileWriter(metaclass=Singleton):
             # Make the path absolute, in case the current working directory is
             # changed between now and writing.
             cwd = pathlib.Path.cwd()
-            path = cwd / path
+            path = path.resolve()
         suffix = path.suffix
         with lock:
             handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
