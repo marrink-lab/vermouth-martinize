@@ -58,8 +58,6 @@ class DeferredFileWriter(metaclass=Singleton):
 
     Notes
     -----
-    Using this class to open a binary file for appending (`mode='ba'`) does not
-    work.
     Using to class to open a file for both reading and writing (`mode='r+'` or
     `mode='w+'`) does not work.
     """
