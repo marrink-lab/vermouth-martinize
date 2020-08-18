@@ -55,11 +55,6 @@ class DeferredFileWriter(metaclass=Singleton):
     finalize the written changes by moving them to their intended destination.
     If a file with that name already exists it is backed up according to the
     Gromacs scheme.
-
-    Notes
-    -----
-    Using to class to open a file for both reading and writing (`mode='r+'` or
-    `mode='w+'`) does not work.
     """
     def __init__(self):
         self.open_files = collections.deque()
@@ -90,13 +85,10 @@ class DeferredFileWriter(metaclass=Singleton):
         io.IOBase
             An opened file
         """
-        if '+' in mode:
-            raise NotImplementedError
-        if 'r' in mode:  # Read
-            # TODO: mode='r+'
-            return _open(filename, *args, mode=mode, **kwargs)
-        elif 'a' in mode or 'w' in mode:  # Append and write
+        if '+' in mode or 'a' in mode or 'w' in mode:  # Append and write
             return self._open_tmp_file(filename, *args, mode=mode, **kwargs)
+        elif 'r' in mode:  # Read
+            return _open(filename, *args, mode=mode, **kwargs)
         raise KeyError('Unknown file mode.')
 
     def _open_tmp_file(self, filename, mode='w', *args, **kwargs):
@@ -108,11 +100,9 @@ class DeferredFileWriter(metaclass=Singleton):
         with lock:
             handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
         self.open_files.append([tmp_path, str(path), mode])
-        if 'b' in mode:
-            tmp_mode = 'wb'
-        else:
-            tmp_mode = 'w'
-        return os.fdopen(handle, *args, mode=tmp_mode, **kwargs)
+        if '+' in mode:
+            shutil.copy2(filename, tmp_path)
+        return os.fdopen(handle, *args, mode=mode, **kwargs)
 
     @staticmethod
     def _find_free_path(file_path):
@@ -148,7 +138,7 @@ class DeferredFileWriter(metaclass=Singleton):
         """
         while self.open_files:
             tmp_path, final_path, mode = self.open_files.popleft()
-            if 'w' in mode:  # write
+            if 'w' in mode or '+' in mode:  # write
                 self._write_file(tmp_path, final_path)
             elif 'r' in mode:  # read = error
                 raise AssertionError("Files opened with mode 'r' should not be "
@@ -166,8 +156,8 @@ class DeferredFileWriter(metaclass=Singleton):
             if free_path != final_path:
                 LOGGER.info('Backing up {} to {}.', final_path, free_path, type='general')
                 shutil.move(final_path, free_path)
-        LOGGER.debug('Writing output to {}.', final_path, type='general')
-        shutil.move(tmp_path, final_path)
+            LOGGER.debug('Writing output to {}.', final_path, type='general')
+            shutil.move(tmp_path, final_path)
 
     @staticmethod
     def _append_file(tmp_path, final_path, mode='a'):

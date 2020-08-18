@@ -93,8 +93,23 @@ def test_binary_writing(tmpdir, monkeypatch):
     assert file_name.read_text() == 'Hello world!'
 
 
+def test_rw_plus(tmpdir, monkeypatch):
+    monkeypatch.chdir(tmpdir)
+    path = Path('file.txt')
+    path.write_text('123')
+    writer = DeferredFileWriter()
+
+    with writer.open(path, 'r+') as file:
+        assert file.read() == '123'
+        file.write('456')
+        file.seek(0)
+        assert file.read() == '123456'
+    assert path.read_text() == '123'
+    writer.write()
+
+    assert path.read_text() == '123456'
+
 @pytest.mark.parametrize('mode, exception', (
-    ['r+', NotImplementedError],
     ['o', KeyError],
 ))
 def test_mode_errors(mode, exception):
