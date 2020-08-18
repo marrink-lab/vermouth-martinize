@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+Contains tests for the DeferredFileWriter
+"""
 from pathlib import Path
 import os
 import pytest
@@ -19,6 +21,7 @@ from vermouth.file_writer import DeferredFileWriter
 
 
 def test_is_singleton():
+    """Ensure the DeferredFileWriter is a singleton"""
     writer1 = DeferredFileWriter()
     writer2 = DeferredFileWriter()
 
@@ -34,6 +37,10 @@ def test_is_singleton():
     ('a.txt', ['a.txt', '#a.txt.2#'], ['#a.txt.1#', '#a.txt.2#']),
 ])
 def test_backup(tmpdir, monkeypatch, name, existing_files, expected):
+    """
+    Ensure the DeferredFileWriter backs up existing files correctly, and at the
+    correct moment
+    """
     monkeypatch.chdir(tmpdir)
     for idx, file in enumerate(existing_files):
         with open(file, 'w') as handle:
@@ -55,6 +62,9 @@ def test_backup(tmpdir, monkeypatch, name, existing_files, expected):
 
 
 def test_deferred_writing(tmpdir, monkeypatch):
+    """
+    Ensure the DeferredFileWriter writes changes to files at the correct moment
+    """
     monkeypatch.chdir(tmpdir)
 
     file_name = Path('my_file.txt')
@@ -71,6 +81,7 @@ def test_deferred_writing(tmpdir, monkeypatch):
 
 
 def test_binary_writing(tmpdir, monkeypatch):
+    """Ensure the DeferredFileWriter can write and append to binary files"""
     monkeypatch.chdir(tmpdir)
     file_name = Path('my_file.txt')
     writer = DeferredFileWriter()
@@ -94,6 +105,7 @@ def test_binary_writing(tmpdir, monkeypatch):
 
 
 def test_rw_plus(tmpdir, monkeypatch):
+    """Ensure the DeferredFileWriter can deal with mode r+"""
     monkeypatch.chdir(tmpdir)
     path = Path('file.txt')
     path.write_text('123')
@@ -113,12 +125,17 @@ def test_rw_plus(tmpdir, monkeypatch):
     ['o', KeyError],
 ))
 def test_mode_errors(mode, exception):
+    """
+    Ensure the DeferredFileWriter raises an appropriate error for unknown file
+    modes
+    """
     writer = DeferredFileWriter()
     with pytest.raises(exception):
         writer.open('somefile.txt', mode)
 
 
 def test_append(tmpdir, monkeypatch):
+    """Ensure the DeferredFileWriter can append"""
     monkeypatch.chdir(tmpdir)
     path = Path('file.txt')
     path.write_text('123')
@@ -135,6 +152,10 @@ def test_append(tmpdir, monkeypatch):
 
 
 def test_closing(tmpdir, monkeypatch):
+    """
+    Ensure the DeferredFileWriter's close method doesn't prompt writing and
+    removes any temporary files.
+    """
     monkeypatch.chdir(tmpdir)
     tmpdir = Path(str(tmpdir))
     writer = DeferredFileWriter()
