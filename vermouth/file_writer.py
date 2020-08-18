@@ -103,16 +103,18 @@ class DeferredFileWriter(metaclass=Singleton):
 
     def _open_tmp_file(self, filename, mode='w', *args, **kwargs):
         path = pathlib.Path(filename)
-        if not path.is_absolute():
-            # Make the path absolute, in case the current working directory is
-            # changed between now and writing.
-            cwd = pathlib.Path.cwd()
-            path = path.resolve()
+        # Make the path absolute, in case the current working directory is
+        # changed between now and writing.
+        path = path.parent.resolve() / path.name
         suffix = path.suffix
         with lock:
             handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
         self.open_files.append([tmp_path, str(path), mode])
-        return os.fdopen(handle, *args, mode='w', **kwargs)
+        if 'b' in mode:
+            tmp_mode = 'wb'
+        else:
+            tmp_mode = 'w'
+        return os.fdopen(handle, *args, mode=tmp_mode, **kwargs)
 
     @staticmethod
     def _find_free_path(file_path):
@@ -174,8 +176,11 @@ class DeferredFileWriter(metaclass=Singleton):
         """
         Append the contents of tmp_path to final_path and remove tmp_path.
         """
-        # FIXME: This breaks with binary files, since tmp_path is opened as text.
-        with _open(final_path, mode=mode) as final_file, _open(tmp_path) as tmp_file:
+        if 'b' in mode:
+            tmp_mode = 'rb'
+        else:
+            tmp_mode = 'r'
+        with _open(final_path, mode=mode) as final_file, _open(tmp_path, mode=tmp_mode) as tmp_file:
             final_file.write(tmp_file.read())
         os.remove(tmp_path)
 

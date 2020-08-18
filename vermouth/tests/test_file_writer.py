@@ -15,7 +15,6 @@
 from pathlib import Path
 import os
 import pytest
-import sys
 from vermouth.file_writer import DeferredFileWriter
 
 
@@ -71,12 +70,37 @@ def test_deferred_writing(tmpdir, monkeypatch):
     assert file_name.read_text() == 'hello'
 
 
-def test_mode_errors():
+def test_binary_writing(tmpdir, monkeypatch):
+    monkeypatch.chdir(tmpdir)
+    file_name = Path('my_file.txt')
     writer = DeferredFileWriter()
-    with pytest.raises(NotImplementedError):
-        writer.open('somefile.txt', 'r+')
-    with pytest.raises(KeyError):
-        writer.open('somefile.txt', 'o')
+    assert not file_name.exists()
+
+    with writer.open(file_name, 'wb') as file:
+        file.write(b'Hello')
+    assert not file_name.exists()
+    os.chdir('..')
+    writer.write()
+    os.chdir(str(tmpdir))
+    assert file_name.exists()
+    assert file_name.read_text() == 'Hello'
+
+    with writer.open(file_name, 'ab') as file:
+        file.write(b' world!')
+    assert file_name.exists()
+    assert file_name.read_text() == 'Hello'
+    writer.write()
+    assert file_name.read_text() == 'Hello world!'
+
+
+@pytest.mark.parametrize('mode, exception', (
+    ['r+', NotImplementedError],
+    ['o', KeyError],
+))
+def test_mode_errors(mode, exception):
+    writer = DeferredFileWriter()
+    with pytest.raises(exception):
+        writer.open('somefile.txt', mode)
 
 
 def test_append(tmpdir, monkeypatch):
@@ -115,4 +139,3 @@ def test_closing(tmpdir, monkeypatch):
 
     writer.close()
     assert [p.name for p in tmpdir.iterdir()] == ['file.txt']
-
