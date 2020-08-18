@@ -101,7 +101,7 @@ class DeferredFileWriter(metaclass=Singleton):
             handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
         self.open_files.append([tmp_path, str(path), mode])
         if '+' in mode:
-            shutil.copy2(filename, tmp_path)
+            shutil.copy2(str(filename), tmp_path)
         return os.fdopen(handle, *args, mode=mode, **kwargs)
 
     @staticmethod
