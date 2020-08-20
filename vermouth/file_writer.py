@@ -169,7 +169,7 @@ class DeferredFileWriter(metaclass=Singleton):
             free_path = self._find_free_path(final_path)
             if free_path != final_path:
                 LOGGER.info('Backing up {} to {}.', final_path, free_path, type='general')
-                shutil.move(final_path, str(free_path))
+                shutil.move(str(final_path), str(free_path))
             LOGGER.debug('Writing output to {}.', final_path, type='general')
             shutil.move(tmp_path, str(final_path))
 
