@@ -90,24 +90,33 @@ class DeferredFileWriter(metaclass=Singleton):
         io.IOBase
             An opened file
         """
+        path = pathlib.Path(filename)
+        # Make the path absolute, in case the current working directory is
+        # changed between now and writing. Can't do path.resolve() due to py35
+        # requiring the file to exist.
+        path = path.parent.resolve() / path.name
+        # Let's see if we already opened this file. If so, get the corresponding
+        # temporary file.
+        for tmp_path, open_path, _ in self.open_files:
+            # Can't use Path.samefile, since the files don't have to exist yet
+            if open_path == path:
+                return _open(tmp_path, mode, *args, **kwargs)
+
         if '+' in mode or 'a' in mode or 'w' in mode:  # Append and write
-            return self._open_tmp_file(filename, *args, mode=mode, **kwargs)
-        elif 'r' in mode:  # Read
-            return _open(filename, *args, mode=mode, **kwargs)
+            return self._open_tmp_file(path, *args, mode=mode, **kwargs)
+        elif 'r' in mode:  # Read, do nothing special
+            return _open(filename, mode, *args, **kwargs)
         raise KeyError('Unknown file mode.')
 
     def _open_tmp_file(self, filename, mode='w', *args, **kwargs):
-        path = pathlib.Path(filename)
-        # Make the path absolute, in case the current working directory is
-        # changed between now and writing.
-        path = path.parent.resolve() / path.name
-        suffix = path.suffix
+        suffix = filename.suffix
         with lock:
             handle, tmp_path = tempfile.mkstemp(suffix=suffix, dir=self._tmpdir)
-        self.open_files.append([tmp_path, str(path), mode])
-        if '+' in mode:
+        self.open_files.append([tmp_path, filename, mode])
+        if '+' in mode and 'r' in mode:
+            # If r+, preserve original file contents. Otherwise, truncate.
             shutil.copy2(str(filename), tmp_path)
-        return os.fdopen(handle, *args, mode=mode, **kwargs)
+        return os.fdopen(handle, mode, *args, **kwargs)
 
     @staticmethod
     def _find_free_path(file_path):
@@ -157,12 +166,12 @@ class DeferredFileWriter(metaclass=Singleton):
         # There is no way to move a file and make it error if the destination
         # already exists, so use a lock instead.
         with lock:
-            free_path = str(self._find_free_path(final_path))
+            free_path = self._find_free_path(final_path)
             if free_path != final_path:
                 LOGGER.info('Backing up {} to {}.', final_path, free_path, type='general')
-                shutil.move(final_path, free_path)
+                shutil.move(final_path, str(free_path))
             LOGGER.debug('Writing output to {}.', final_path, type='general')
-            shutil.move(tmp_path, final_path)
+            shutil.move(tmp_path, str(final_path))
 
     @staticmethod
     def _append_file(tmp_path, final_path, mode='a'):
@@ -173,7 +182,7 @@ class DeferredFileWriter(metaclass=Singleton):
             tmp_mode = 'rb'
         else:
             tmp_mode = 'r'
-        with _open(final_path, mode=mode) as final_file, _open(tmp_path, mode=tmp_mode) as tmp_file:
+        with _open(str(final_path), mode=mode) as final_file, _open(tmp_path, mode=tmp_mode) as tmp_file:
             final_file.write(tmp_file.read())
         os.remove(tmp_path)
 

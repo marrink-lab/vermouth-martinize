@@ -175,3 +175,15 @@ def test_closing(tmpdir, monkeypatch):
 
     writer.close()
     assert [p.name for p in tmpdir.iterdir()] == ['file.txt']
+
+
+def test_reopen(tmpdir, monkeypatch):
+    monkeypatch.chdir(tmpdir)
+    path = Path('file.txt')
+    writer = DeferredFileWriter()
+
+    with writer.open(path, 'w') as file:
+        file.write('Hello!')
+    # Close file
+    with writer.open(path, 'r') as file:
+        assert file.read() == 'Hello!'
