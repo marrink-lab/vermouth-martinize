@@ -24,6 +24,7 @@ import numpy as np
 import pytest
 
 import vermouth
+from vermouth.file_writer import DeferredFileWriter
 from vermouth.forcefield import get_native_force_field
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import DSSPError
@@ -347,6 +348,7 @@ def test_run_dssp(savefile, tmpdir):
     # If we test without savefile, then we need to make sure the file is not
     # created.
     if savefile:
+        DeferredFileWriter().write()
         assert path.exists()
         with open(str(path)) as genfile, open(str(DSSP_OUTPUT)) as reffile:
             # DSSP 3 is outputs mostly the same thing as DSSP2, though there

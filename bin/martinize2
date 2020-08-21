@@ -28,6 +28,7 @@ import sys
 
 import vermouth
 import vermouth.forcefield
+from vermouth.file_writer import open, DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
@@ -440,6 +441,10 @@ def entry():
     debug_group.add_argument('-v', dest='verbosity', action='count',
                              help='Enable debug logging output. Can be given '
                                   'multiple times.', default=0)
+    debug_group.add_argument('-maxwarn', dest='maxwarn', type=int, default=0,
+                             help='The maximum number of allowed warnings. If '
+                             'more warnings are encountered no output files are'
+                             ' written.')
 
     args = parser.parse_args()
     if args.elastic and args.govs_includes:
@@ -699,7 +704,15 @@ def entry():
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
 
-    vermouth.Quoter().run_system(system)
+    # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
+    #       inconsistent-data warnings)
+    if args.maxwarn < sum(COUNTER.counts.values()):
+        LOGGER.error('{} warnings were encountered. No output files will be '
+                     'written. Consider fixing the warnings, or if you are sure'
+                     ' they are harmless, use the -maxwarn flag.')
+    else:
+        DeferredFileWriter().write()
+        vermouth.Quoter().run_system(system)
 
 
 if __name__ == '__main__':
