@@ -126,6 +126,8 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     tier: str
     protein: str
     """
+    monkeypatch.chdir(tmp_path)
+
     data_path = Path(PATTERN.format(path=INTEGRATION_DATA, tier=tier, protein=protein))
 
     with open(str(data_path / 'command')) as cmd_file:
@@ -142,9 +144,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
             result.append(token)
     command = result
 
-    print(command)
-
-    proc = subprocess.run(command, cwd=str(tmp_path), timeout=60, check=False,
+    proc = subprocess.run(command, cwd='.', timeout=60, check=False,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE,
                           universal_newlines=True)
@@ -153,6 +153,12 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
         print(proc.stdout)
         print(proc.stderr)
         assert not exit_code
+
+    files = list(tmp_path.iterdir())
+
+    assert files
+    assert list(tmp_path.glob('*.itp')), files
+    assert list(tmp_path.glob('*.pdb')), files
 
     for new_file in tmp_path.iterdir():
         filename = new_file.name
