@@ -1,1 +1,0 @@
-martinize.py -f ../aa.pdb -x cg.pdb -o topol.top -ff elnedyn -ss CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCCC -nt -ct

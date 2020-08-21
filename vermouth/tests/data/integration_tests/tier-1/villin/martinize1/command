@@ -1,2 +1,0 @@
-martinize.py -f  ../aa.pdb -x cg.pdb -o topol.top -ff martini22p 
-
