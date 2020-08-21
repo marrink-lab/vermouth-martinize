@@ -706,10 +706,14 @@ def entry():
 
     # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
     #       inconsistent-data warnings)
-    if args.maxwarn < sum(COUNTER.counts.values()):
+    number_of_warnings = 0
+    for level_counts in COUNTER.counts.values():
+        number_of_warnings += sum(level_counts.values())
+    if args.maxwarn < number_of_warnings:
         LOGGER.error('{} warnings were encountered. No output files will be '
                      'written. Consider fixing the warnings, or if you are sure'
-                     ' they are harmless, use the -maxwarn flag.')
+                     ' they are harmless, use the -maxwarn flag.', number_of_warnings)
+        sys.exit(2)
     else:
         DeferredFileWriter().write()
         vermouth.Quoter().run_system(system)
