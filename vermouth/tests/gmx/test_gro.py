@@ -36,6 +36,7 @@ import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 
 import vermouth
+from vermouth.file_writer import DeferredFileWriter
 from vermouth.utils import are_different
 from vermouth.molecule import Molecule
 from vermouth.gmx import gro
@@ -564,5 +565,6 @@ def test_write_gro(gro_reference, tmpdir):
         box=(10.0, 11.1, 12.2),
         title='Just a title',
     )
+    DeferredFileWriter().write()
     with open(str(filename)) as ref, open(str(outname)) as out:
         assert out.read() == ref.read()

@@ -19,6 +19,7 @@ Provides functions for reading and writing PDB files.
 import numpy as np
 import networkx as nx
 
+from ..file_writer import open
 from ..molecule import Molecule
 from ..utils import first_alpha, distance, format_atom_string
 from ..parser_utils import LineParser
