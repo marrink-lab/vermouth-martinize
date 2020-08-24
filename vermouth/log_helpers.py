@@ -198,6 +198,18 @@ class CountingHandler(logging.NullHandler):
         record_type = getattr(record, self.type_attr, self.default_type)
         self.counts[record_level][record_type] += 1
 
+    def number_of_counts_by(self, level=None, type=None):
+        out = 0
+        for lvl, type_counts in self.counts.items():
+            if level is not None and level != lvl:
+                continue
+            for type_, count in type_counts.items():
+                if type is not None and type != type_:
+                    continue
+                out += count
+        return out
+
+
 
 def get_logger(name):
     """
