@@ -45,7 +45,7 @@ ATOM     44 SC1  SER A  20       2.635  10.743   1.678  1.00  0.00
 TER      45      SER A  20 
 CONECT    1    2    3
 CONECT    3    4    5
-CONECT    5    6    7    9
+CONECT    5    7    6    9
 CONECT    6    7    8
 CONECT    7    8
 CONECT    9   10   11
