@@ -138,7 +138,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     for token in command:
         if token.startswith('martinize2'):  # Could be martinize2.py
             result.append(str(MARTINIZE2))
-        elif token.startswith('..') or token.endswith('pdb'):
+        elif token.startswith('.'):
             result.append(str(data_path / token))
         else:
             result.append(token)
