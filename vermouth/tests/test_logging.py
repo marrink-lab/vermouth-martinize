@@ -298,14 +298,14 @@ def test_bipolar_formatter_logger():
     assert expected_logger is logger
 
 
-@pytest.mark.parametrize('level, type, expected', (
+@pytest.mark.parametrize('level, type_, expected', (
     [None, None, 7],
     [logging.DEBUG, None, 2],
     [None, 'a', 2],
     [logging.INFO, 'general', 2],
     [None, 'd', 0]
 ))
-def test_counter(level, type, expected):
+def test_counter(level, type_, expected):
     """Make sure the CountingHandler has learned how to count"""
     logger = logging.getLogger('test_counter')
     handler = CountingHandler(default_type='0')
@@ -326,5 +326,5 @@ def test_counter(level, type, expected):
                       logging.ERROR: {'a': 1}}
     assert handler.counts == expected_total
 
-    assert handler.number_of_counts_by(level=level, type=type) == expected
+    assert handler.number_of_counts_by(level=level, type=type_) == expected
 
