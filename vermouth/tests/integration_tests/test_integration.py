@@ -21,6 +21,7 @@ from pathlib import Path
 import shlex
 import subprocess
 import sys
+import numpy as np
 
 import pytest
 import vermouth
@@ -45,13 +46,23 @@ def assert_equal_blocks(block1, block2):
     """
     assert block1.name == block2.name
     assert block1.nrexcl == block2.nrexcl
-    # assert block1.force_field == block2.force_field  # Set to be equal
+    assert block1.force_field == block2.force_field  # Set to be equal
     # Assert the order to be equal as well...
     # assert list(block1.nodes) == list(block2.nodes)
     # ... as the attributes
-    assert OrderedDict(block1.nodes(data=True)) == OrderedDict(block2.nodes(data=True))
+    nodes2 = OrderedDict(block2.nodes(data=True))
+    for n_idx, attrs in nodes2.items():
+        for k, v in attrs.items():
+            if isinstance(v, np.ndarray):
+                nodes2[n_idx][k] = pytest.approx(v)
+    assert OrderedDict(block1.nodes(data=True)) == nodes2
     edges1 = {frozenset(e[:2]): e[2] for e in block1.edges(data=True)}
     edges2 = {frozenset(e[:2]): e[2] for e in block2.edges(data=True)}
+    for e, attrs in edges2.items():
+        for k, v in attrs.items():
+            if isinstance(v, float):
+                attrs[k] = pytest.approx(v, abs=1e-3) # PDB precision is 1e-3
+
     assert edges1 == edges2
     for inter_type, interactions in block1.interactions.items():
         block2_interactions = block2.interactions.get(inter_type, [])
@@ -83,7 +94,18 @@ def compare_pdb(filename1, filename2):
     """
     pdb1 = vermouth.pdb.read_pdb(filename1)
     pdb2 = vermouth.pdb.read_pdb(filename2)
-    assert pdb1 == pdb2
+    assert len(pdb1) == len(pdb2)
+    for mol1, mol2 in zip(pdb1, pdb2):
+        for mol in (mol1, mol2):
+            for n_idx in mol:
+                node = mol.nodes[n_idx]
+                if 'position' in node and node['atomname'] in ('SCN', 'SCP'):
+                    # Charge dummies get placed randomly, which complicated
+                    # comparisons to no end.
+                    # These will be caught by the distances in the edges instead.
+                    del node['position']
+
+        assert_equal_blocks(mol1, mol2)
 
 
 COMPARERS = {'.itp': compare_itp,
