@@ -54,7 +54,7 @@ def assert_equal_blocks(block1, block2):
     for n_idx, attrs in nodes2.items():
         for k, v in attrs.items():
             if isinstance(v, np.ndarray):
-                nodes2[n_idx][k] = pytest.approx(v)
+                nodes2[n_idx][k] = pytest.approx(v, abs=1e-3)
     assert OrderedDict(block1.nodes(data=True)) == nodes2
     edges1 = {frozenset(e[:2]): e[2] for e in block1.edges(data=True)}
     edges2 = {frozenset(e[:2]): e[2] for e in block2.edges(data=True)}
