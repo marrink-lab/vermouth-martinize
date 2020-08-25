@@ -706,9 +706,8 @@ def entry():
 
     # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
     #       inconsistent-data warnings)
-    number_of_warnings = 0
-    for level_counts in COUNTER.counts.values():
-        number_of_warnings += sum(level_counts.values())
+
+    number_of_warnings = COUNTER.number_of_counts_by(level=logging.WARNING)
     if args.maxwarn < number_of_warnings:
         LOGGER.error('{} warnings were encountered. No output files will be '
                      'written. Consider fixing the warnings, or if you are sure'
