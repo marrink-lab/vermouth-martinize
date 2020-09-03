@@ -817,43 +817,6 @@ BB ++BB 1 0.640 2500
 +BB +++BB 1 0.640 2500
 BB +++BB 1 0.970 2500
 
-;; Protein terminii. These links should be applied last.
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Q1", "charge": 1}}
-[ non-edges ]
-BB -BB
-
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ atoms ]
-BB {"replace": {"atype": "Q1", "charge": -1}}
-[ non-edges ]
-BB +BB
-
-[ link ]
-[ molmeta ]
-neutral_termini true
-[ atoms ]
-BB {"replace": {"atype": "P4"}}
-[ non-edges ]
-BB -BB
-
-[ link ]
-[ molmeta ]
-neutral_termini true
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "P5"}}
-[ non-edges ]
-BB +BB
-
 ;; Cystein bridge
 [ link ]
 resname "CYS"

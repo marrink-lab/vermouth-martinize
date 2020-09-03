@@ -1,0 +1,10 @@
+[ modification ]
+C-ter
+[ atoms ]
+BB {"replace": {"atype": "Qn", "charge": -1}}
+
+[ modification ]
+N-ter
+[ atoms ]
+BB {"replace": {"atype": "Qp", "charge": 1}}
+

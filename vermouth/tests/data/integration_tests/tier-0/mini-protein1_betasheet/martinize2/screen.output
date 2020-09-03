@@ -1,0 +1,17 @@
+    INFO - general - Read 1 molecules from PDB file ../aa.pdb
+    INFO - step - Guessing the bonds.
+    INFO - general - 1 molecules after guessing bonds
+    INFO - step - Repairing the graph.
+    INFO - step - Dealing with modifications.
+    INFO - general - Identified the modifications ['N-ter'] on residues ['SER1']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['GLU29']
+    INFO - step - Read input.
+    INFO - step - Creating the graph at the target resolution.
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - step - Averaging the coordinates.
+    INFO - step - Applying the links.
+    INFO - step - Placing the charge dummies.
+    INFO - step - Writing output.
+    INFO - general - If you drink, don’t drive. Don’t even putt. -- Dean Martin
+

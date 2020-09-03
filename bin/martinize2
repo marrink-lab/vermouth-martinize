@@ -354,7 +354,7 @@ def entry():
                           help='Write elastic bonds')
     rb_group.add_argument('-ef', dest='rb_force_constant', type=float, default=500,
                           help='Elastic bond force constant Fc in kJ/mol/nm^2')
-    rb_group.add_argument('-el', dest='rb_lower_bound', type=float, default=0.5,
+    rb_group.add_argument('-el', dest='rb_lower_bound', type=float, default=0,
                           help='Elastic bond lower cutoff: F = Fc if rij < lo')
     rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
                           help='Elastic bond upper cutoff: F = 0  if rij > up')
@@ -364,7 +364,7 @@ def entry():
                           default=None)
     rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
                           help='Elastic bond decay factor a')
-    rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=0,
+    rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=1,
                           help='Elastic bond decay power p')
     rb_group.add_argument('-em', dest='rb_minimum_force', type=float, default=0,
                           help='Remove elastic bonds with force constant lower than this')
@@ -706,6 +706,7 @@ def entry():
 
     # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
     #       inconsistent-data warnings)
+
     number_of_warnings = COUNTER.number_of_counts_by(level=logging.WARNING)
     if args.maxwarn < number_of_warnings:
         LOGGER.error('{} warnings were encountered. No output files will be '

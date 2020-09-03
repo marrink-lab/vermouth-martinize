@@ -58,9 +58,8 @@ def colinear_pair():
     """
     vector = np.random.rand(3)
     vector /= np.linalg.norm(vector)
-    vector *= 2
     points = np.stack([np.zeros((3, )), vector])
-    points -= points / 2
+    points -= vector/2
     return points
 
 
@@ -192,7 +191,6 @@ def locate_all_dummies(molecule, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):
     for anchor_key, dummy_pairs in grouped_by_anchor:
         dummy_keys = [pair[1] for pair in dummy_pairs]
         locate_dummy(molecule, anchor_key, dummy_keys, attribute_tag)
-
 
 class LocateChargeDummies(Processor):
     def __init__(self, attribute_tag=DEFAULT_DUMMY_ATTRIBUTE):

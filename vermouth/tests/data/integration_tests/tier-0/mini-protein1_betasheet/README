@@ -1,0 +1,12 @@
+### DETAILS: 
+
+# Original PDB CODE: 1ICO 
+# Structure from NMR experiment: select the first model to martinize
+# Replace the residue name DPR (d-proline, residue 8) and DAL (d-alanine, residue 23) for PRO and ALA
+# Maybe could be used to test d- amino acids
+
+### TEST: 
+
+# -ff martini22
+# -cys auto
+# -dssp

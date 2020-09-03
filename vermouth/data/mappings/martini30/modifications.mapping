@@ -2,7 +2,7 @@
 [ from ]
 universal
 [ to ]
-elnedyn22
+martini30b32
 
 [ from blocks ]
 C-ter
@@ -19,16 +19,16 @@ N CA
 
 [ mapping ]
 CA BB
-C  BB 0
-O  BB 0
-OXT BB 0
+C  BB
+O  BB
+OXT BB
 
 
 [modification]
 [ from ]
 universal
 [ to ]
-elnedyn22
+martini30b32
 [ from blocks ]
 N-ter
 [ to blocks ]
@@ -43,90 +43,108 @@ C O
 CA C
 
 [ mapping ]
-HN1 BB 0
-HN2 BB 0
-HN3 BB 0
-N   BB 0
+HN1 BB
+HN2 BB
+HN3 BB
+N   BB
 CA  BB
-C   BB 0
-O   BB 0
+C   BB
+O   BB
+
+;#################
+;# Martini 30dev #
+;#################
 
 [ modification ]
 [ from ]
 universal
 [ to ]
-elnedyn22
-
+martini30dev
 [ from blocks ]
-COOH-ter
+C-ter
 [ to blocks ]
-COOH-ter
-
+C-ter
 [ from nodes ]
 N
 HN
-
 [ from edges ]
 HN N
 N CA
-
 [ mapping ]
-HN BB 0
-N BB 0
 CA BB
-C  BB 0
-O  BB 0
-HO BB 0
-OXT BB 0
+C  BB
+O  BB
+OXT BB
 
 
 [modification]
 [ from ]
 universal
 [ to ]
-elnedyn22
+martini30dev
 [ from blocks ]
-NH2-ter
+N-ter
 [ to blocks ]
-NH2-ter
-
+N-ter
 [ from nodes ]
 C
 O
-
 [ from edges ]
 C O
 CA C
-
 [ mapping ]
-HN1 BB 0
-HN2 BB 0
-N   BB 0
+HN1 BB
+HN2 BB
+HN3 BB
+N   BB
 CA  BB
-C   BB 0
-O   BB 0
+C   BB
+O   BB
+
+[ modification ]
+[ from ]
+universal
+[ to ]
+martini30dev
+[ from blocks ]
+COOH-ter
+[ to blocks ]
+COOH-ter
+[ from nodes ]
+N
+HN
+[ from edges ]
+HN N
+N CA
+[ mapping ]
+HN BB
+N BB
+CA BB
+C  BB
+O  BB
+HO BB
+OXT BB
 
 
 [modification]
 [ from ]
 universal
 [ to ]
-elnedyn22
+martini30dev
 [ from blocks ]
-ASP0
+NH2-ter
 [ to blocks ]
-ASP0
+NH2-ter
 [ from nodes ]
-CB
-CG
-OD1
+C
+O
 [ from edges ]
-CB CG
-CG OD1
-CG OD2
+C O
+CA C
 [ mapping ]
-CB SC1
-CG SC1
-OD1 SC1
-OD2 SC1
-HD2 SC1
+HN1 BB
+HN2 BB
+N   BB
+CA  BB
+C   BB
+O   BB

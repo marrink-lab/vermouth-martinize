@@ -522,8 +522,8 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
         format_string = 'CONECT '
         for mol_idx, molecule in enumerate(system.molecules):
             for node_idx in molecule:
-                todo = [nodeidx2atomid[(mol_idx, n_idx)]
-                        for n_idx in molecule[node_idx] if n_idx > node_idx]
+                todo = sorted(nodeidx2atomid[(mol_idx, n_idx)]
+                              for n_idx in molecule[node_idx] if n_idx > node_idx)
                 while todo:
                     current, todo = todo[:4], todo[4:]
                     fmt = ['CONECT'] + [number_fmt]*(len(current) + 1)

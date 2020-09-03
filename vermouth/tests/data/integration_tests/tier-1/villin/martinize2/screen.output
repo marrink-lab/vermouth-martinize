@@ -1,0 +1,16 @@
+    INFO - general - Read 1 molecules from PDB file ../aa.pdb
+    INFO - step - Guessing the bonds.
+    INFO - general - 1 molecules after guessing bonds
+    INFO - step - Repairing the graph.
+    INFO - general - Mutating residue A-MET53 to VAL
+    INFO - missing-atom - Missing atom VAL53:CG2
+    INFO - step - Dealing with modifications.
+    INFO - general - Identified the modifications ['C-ter'] on residues ['PHE76']
+    INFO - step - Read input.
+    INFO - step - Creating the graph at the target resolution.
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - step - Averaging the coordinates.
+    INFO - step - Applying the links.
+    INFO - step - Placing the charge dummies.
+    INFO - step - Writing output.
+    INFO - general - The perfect dry martini recipe: drink gin while looking at a picture of the inventor of vermouth. -- (M*A*S*H)
