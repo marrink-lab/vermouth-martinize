@@ -27,7 +27,7 @@ import networkx as nx
 
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
-from ..utils import format_atom_string
+from ..utils import format_atom_string, are_all_equal
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -74,7 +74,8 @@ def find_ptm_atoms(molecule):
     # Atomnames have already been fixed, and missing atoms have been added.
     # In addition, unrecognized atoms have been labeled with the PTM attribute.
     extra_atoms = set(n_idx for n_idx in molecule
-                      if molecule.nodes[n_idx].get('PTM_atom', False))
+                      if (molecule.nodes[n_idx].get('PTM_atom', False)
+                          or molecule.nodes[n_idx].get('modifications')))
     ptms = []
     while extra_atoms:
         # First PTM atom we'll look at
@@ -152,10 +153,27 @@ def identify_ptms(residue, residue_ptms, known_ptms):
         Not all PTM atoms in ``residue`` can be covered with ``known_PTMs``.
     """
     to_cover = set()
+    cover = []
     for res_ptm in residue_ptms:
-        to_cover.update(res_ptm[0])
-        to_cover.update(res_ptm[1])
-    return _cover_graph(residue, to_cover, known_ptms)
+        ptm_atoms, anchors = res_ptm
+        mods = [residue.nodes[idx].get('modifications', []) for idx in ptm_atoms]
+        if any(mods) and are_all_equal(mods):
+            # We already know what modifications we need.
+            mods = mods[0]
+            for mod in mods:
+                gm = nx.isomorphism.GraphMatcher(residue.subgraph(ptm_atoms), mod,
+                                                 node_match=nx.isomorphism.categorical_node_match('atomname', ''))
+                match = list(gm.subgraph_isomorphisms_iter())
+                assert len(match) == 1
+                match = match[0]
+                cover.append((mod, match))
+                ptm_atoms -= set(match)
+            assert not ptm_atoms
+        else:
+            to_cover.update(ptm_atoms)
+            to_cover.update(anchors)
+    cover += _cover_graph(residue, to_cover, known_ptms)
+    return cover
 
 
 def _cover_graph(graph, to_cover, fragments):
@@ -325,8 +343,13 @@ def fix_ptm(molecule):
                                          type='change-atom')
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
-                molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])
-                molecule.nodes[n_idx]['modifications'].append(ptm)
+                node = molecule.nodes[n_idx]
+                if not ('modification' in node and ptm in node.get('modifications', [])):
+                    # These nodes already had the modification annotated.
+                    # Also note that 'modification' != 'modifications'. Yes,
+                    # this is an issue. No, I'm not fixing that.
+                    node['modifications'] = node.get('modifications', [])
+                    node['modifications'].append(ptm)
 
 
 class CanonicalizeModifications(Processor):
