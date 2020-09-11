@@ -269,13 +269,7 @@ def modification_matches(molecule, mappings):
     # define most modifications at the same time get processed first
     for mod_name in sorted(needed_mod_mappings, key=len, reverse=True):
         mod_mapping = known_mod_mappings[mod_name]
-        # TODO: include modifications in matching criterion (just add it to the
-        #       modification from-block).
-        # For now, just make sure the intersection with the modified_nodes is
-        # not empty.
         for mol_to_mod, modification, references in mod_mapping.map(molecule, node_match=ptm_resname_match):
-            if not modified_nodes & set(mol_to_mod):
-                continue
             matches.append((mol_to_mod, modification, references))
             if not set(mol_to_mod) <= modified_nodes:
                 # TODO: better message
@@ -437,7 +431,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             # Undefined loop variable is guarded against by the else-raise above
             mod_to_out[mod_idx] = out_idx  # pylint: disable=undefined-loop-variable
             graph_out.nodes[out_idx].update(modification.nodes[mod_idx].get('replace', {})) # pylint: disable=undefined-loop-variable
-        graph_out.nodes[out_idx]['modification'] = modification
+        graph_out.nodes[out_idx]['modifications'] = modification
 
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():
@@ -641,10 +635,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
                 LOGGER.warning('The attributes {} for atom {} are going to'
                                ' be garbage.', attrs_not_sane, format_atom_string(graph_out.nodes[out_idx]),
                                type='inconsistent-data')
-
-        if graph_out[out_idx].get('atomname', '') is None:
+        if graph_out.nodes[out_idx].get('atomname', '') is None:
             to_remove.add(out_idx)
-
 
     # We need to add edges between residues. Within residues comes from the
     # blocks.
