@@ -326,40 +326,40 @@ def modifications():
     """
     mods = {}
     mod_a = Link(force_field=FF_UNIVERSAL, name='mA')
-    mod_a.add_node('mA', atomname='mA', PTM_atom=True)
+    mod_a.add_node('mA', atomname='mA', PTM_atom=True, modifications=[mod_a])
     mods['mA'] = mod_a
 
     mod_c = Link(force_field=FF_UNIVERSAL, name='mC')
-    mod_c.add_node('mC', atomname='mC', PTM_atom=True)
+    mod_c.add_node('mC', atomname='mC', PTM_atom=True, modifications=[mod_c])
     mods['mC'] = mod_c
 
     mod_d = Link(force_field=FF_UNIVERSAL, name='mD')
-    mod_d.add_node('mD', atomname='mD', PTM_atom=True)
+    mod_d.add_node('mD', atomname='mD', PTM_atom=True, modifications=[mod_d])
     mods['mD'] = mod_d
 
     mod_fg = Link(force_field=FF_UNIVERSAL, name='mFG')
-    mod_fg.add_node('mF', atomname='mF', PTM_atom=True)
-    mod_fg.add_node('mG', atomname='mG', PTM_atom=True)
+    mod_fg.add_node('mF', atomname='mF', PTM_atom=True, modifications=[mod_fg])
+    mod_fg.add_node('mG', atomname='mG', PTM_atom=True, modifications=[mod_fg])
     mod_fg.add_edge('mF', 'mG')
     mod_fg.add_interaction('bond', ['mF', 'mG'], (3, 4))
     mods['mFG'] = mod_fg
 
     mod_i = Link(force_field=FF_UNIVERSAL, name='mI')
-    mod_i.add_node('mI', atomname='mI', PTM_atom=True)
+    mod_i.add_node('mI', atomname='mI', PTM_atom=True, modifications=[mod_i])
     mods['mI'] = mod_i
     mod_i2 = Link(force_field=FF_UNIVERSAL, name='mI2')
-    mod_i2.add_node('mI2', atomname='mI2', PTM_atom=True)
+    mod_i2.add_node('mI2', atomname='mI2', PTM_atom=True, modifications=[mod_i2])
     mods['mI2'] = mod_i2
 
     mod_j = Link(force_field=FF_UNIVERSAL, name='mJ')
-    mod_j.add_node('mJ', atomname='mJ', PTM_atom=True)
+    mod_j.add_node('mJ', atomname='mJ', PTM_atom=True, modifications=[mod_j])
     mods['mJ'] = mod_j
     mod_j2 = Link(force_field=FF_UNIVERSAL, name='mJ2')
-    mod_j2.add_node('mJ2', atomname='mJ2', PTM_atom=True)
+    mod_j2.add_node('mJ2', atomname='mJ2', PTM_atom=True, modifications=[mod_j2])
     mods['mJ2'] = mod_j2
     mod = Link(name=('mJ', 'mJ2'), force_field=FF_UNIVERSAL)
-    mod.add_nodes_from((['mJ', {'atomname': 'mJ', 'PTM_atom': True}],
-                        ['mJ2', {'atomname': 'mJ2', 'PTM_atom': True}],
+    mod.add_nodes_from((['mJ', {'atomname': 'mJ', 'PTM_atom': True, 'modifications': [mods['mJ']]}],
+                        ['mJ2', {'atomname': 'mJ2', 'PTM_atom': True, 'modifications': [mods['mJ2']]}],
                         ['J', {'atomname': 'J', 'PTM_atom': False}]))
     mod.add_edges_from([('J', 'mJ'), ('J', 'mJ2')])
     mods[('mJ', 'mJ2')] = mod

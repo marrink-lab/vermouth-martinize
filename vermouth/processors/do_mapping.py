@@ -230,8 +230,8 @@ def modification_matches(molecule, mappings):
             Dict describing the correspondence of node keys in `molecule` to
                 node keys in the modification.
             The modification.
-                Dict with all reference atoms, mapping modification nodes to
-                    nodes in `molecule`.
+            Dict with all reference atoms, mapping modification nodes to
+                nodes in `molecule`.
     """
     modified_nodes = set()  # This will contain whole residues.
     for idx, node in molecule.nodes.items():
@@ -239,13 +239,15 @@ def modification_matches(molecule, mappings):
             modified_nodes.add(idx)
     ptm_subgraph = molecule.subgraph(modified_nodes)
     grouped = nx.connected_components(ptm_subgraph)
-    found_ptm_groups = set()
+    found_ptm_groups = []
+    # For every modification group we would like a set with the names of the
+    # involved modifications, so we can use that to figure out which mod
+    # mappings should be used.
     for group in grouped:
         modifications = {
-            tuple(mod.name for mod in molecule.nodes[mol_idx].get('modifications', []))
-            for mol_idx in group
+            mod.name for mol_idx in group for mod in molecule.nodes[mol_idx].get('modifications', [])
         }
-        found_ptm_groups.update(modifications)
+        found_ptm_groups.append(modifications)
     needed_mod_mappings = set()
     known_mod_mappings = get_mod_mappings(mappings)
     for group in found_ptm_groups:
@@ -431,7 +433,9 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             # Undefined loop variable is guarded against by the else-raise above
             mod_to_out[mod_idx] = out_idx  # pylint: disable=undefined-loop-variable
             graph_out.nodes[out_idx].update(modification.nodes[mod_idx].get('replace', {})) # pylint: disable=undefined-loop-variable
-        graph_out.nodes[out_idx]['modifications'] = modification
+        graph_out.nodes[out_idx]['modifications'] = graph_out.nodes[out_idx].get('modifications', [])
+        if modification not in graph_out.nodes[out_idx]['modifications']:
+            graph_out.nodes[out_idx]['modifications'].append(modification)
 
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():
