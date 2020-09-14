@@ -229,7 +229,9 @@ def modification_matches(molecule, mappings):
         A list with the following items:
             Dict describing the correspondence of node keys in `molecule` to
                 node keys in the modification.
+
             The modification.
+
             Dict with all reference atoms, mapping modification nodes to
                 nodes in `molecule`.
     """
