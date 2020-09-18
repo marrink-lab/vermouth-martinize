@@ -89,10 +89,14 @@ def _patch_modification(block, modification):
     # Mark the modified atoms with the specified modification, so canonicalize
     # modifications has an easier job
     for idx in anchor_block_to_mod:
-        result.nodes[idx]['modifications'] = [modification]
+        node_mods = result.nodes[idx].get('modifications', [])
+        if modification not in node_mods:
+            result.nodes[idx]['modifications'] = node_mods + [modification]
     for mod_idx in non_anchor_idxs:
         idx = '{}-{}'.format(modification.name, mod_idx)
-        result.nodes[idx]['modifications'] = [modification]
+        node_mods = result.nodes[idx].get('modifications', [])
+        if modification not in node_mods:
+            result.nodes[idx]['modifications'] = node_mods + [modification]
     for mod_idx, mod_jdx in modification.edges_between(anchor_idxs, non_anchor_idxs):
         if mod_idx in non_anchor_idxs:
             mod_idx, mod_jdx = mod_jdx, mod_idx

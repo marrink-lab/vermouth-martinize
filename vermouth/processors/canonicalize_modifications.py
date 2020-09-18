@@ -156,18 +156,31 @@ def identify_ptms(residue, residue_ptms, known_ptms):
     cover = []
     for res_ptm in residue_ptms:
         ptm_atoms, anchors = res_ptm
-        mods = [residue.nodes[idx].get('modifications', []) for idx in ptm_atoms]
-        if any(mods) and are_all_equal(mods):
-            # We already know what modifications we need.
-            mods = mods[0]
-            for mod in mods:
+        # For every node in this residue, get all modifications already known.
+        residue_mods = [residue.nodes[idx].get('modifications', []) for idx in ptm_atoms]
+        # Deduplicate the modifications so we only check e.g. C-ter once for
+        # this residue
+        used_mods = []
+        for node_mods in residue_mods:
+            for mod in node_mods:
+                if mod not in used_mods:
+                    used_mods.append(mod)
+        if used_mods:
+            # Store all atoms matched with already known mods (in used_mods) in
+            # known_matched, so we can subtract them from ptm_atoms afterwards.
+            # This may cause issues with overlapping modifications. It may be
+            # better to subtract match from ptm_atoms in the loop.
+            known_matched = set()
+            for mod in used_mods:
                 gm = nx.isomorphism.GraphMatcher(residue.subgraph(ptm_atoms), mod,
                                                  node_match=nx.isomorphism.categorical_node_match('atomname', ''))
                 match = list(gm.subgraph_isomorphisms_iter())
                 assert len(match) == 1
                 match = match[0]
                 cover.append((mod, match))
-                ptm_atoms -= set(match)
+                # (That would be here)
+                known_matched.update(match)
+            ptm_atoms -= known_matched
             assert not ptm_atoms
         else:
             to_cover.update(ptm_atoms)

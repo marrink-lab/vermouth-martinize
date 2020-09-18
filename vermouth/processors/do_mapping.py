@@ -139,18 +139,25 @@ def node_should_exist(modification, node_idx):
     return not modification.nodes[node_idx].get('PTM_atom', False)
 
 
-def ptm_resname_match(node1, node2):
+def ptm_resname_match(mol_node, map_node):
     """
     As :func:`node_matcher`, except that empty resname and false PTM_atom
     attributes from `node2` are removed.
     """
-    if 'resname' in node2 and not node2['resname']:
-        node2 = node2.copy()
-        del node2['resname']
-    if 'PTM_atom' in node2 and not node2['PTM_atom']:
-        del node2['PTM_atom']
-    is_equal = node_matcher(node1, node2)
-    return is_equal
+    if 'resname' in map_node and not map_node['resname']:
+        map_node = map_node.copy()
+        del map_node['resname']
+    if 'PTM_atom' in map_node and not map_node['PTM_atom']:
+        map_node = map_node.copy()
+        del map_node['PTM_atom']
+    if 'modifications' in mol_node:
+        map_node = map_node.copy()
+        matching_mod = all(map_mod in mol_node.get('modifications', [])
+                           for map_mod in map_node.pop('modifications', []))
+    else:
+        matching_mod = True
+    is_equal = node_matcher(mol_node, map_node)
+    return is_equal and matching_mod
 
 
 def cover(to_cover, options):
