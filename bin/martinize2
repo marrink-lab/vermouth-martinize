@@ -412,8 +412,8 @@ def entry():
                             'resid.')
     prot_group.add_argument('-cter', dest='modifications', action='append',
                             type=lambda s: ['cter', s], default=[],
-                            help='Shorthand for patching N-termini. An '
-                            'N-terminus is defined as a residue which is '
+                            help='Shorthand for patching C-termini. A '
+                            'C-terminus is defined as a residue which is '
                             'connected to 1 other residue, and has the lowest '
                             'resid.')
     # Unfortunately there's no action=extend_const. append_const *almost* does
