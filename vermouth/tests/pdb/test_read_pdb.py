@@ -226,6 +226,7 @@ def test_atom_attributes():
     ]
     for mol, n_attrs in zip(mols, nodes):
         for n_idx in mol.nodes:
+            assert set(n_attrs[n_idx].keys()) == set(mol.nodes[n_idx].keys())
             for attr in mol.nodes[n_idx]:
                 assert attr in n_attrs[n_idx]
                 if attr == 'position':
