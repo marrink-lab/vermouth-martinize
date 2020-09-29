@@ -17,6 +17,7 @@
 Unittests for the PDB reader.
 """
 
+import numpy as np
 import pytest
 
 from vermouth.pdb.pdb import PDBParser
@@ -101,8 +102,8 @@ CONECT   24   10
 
 def multi_mol(with_conect):
     pdb = '''
-ATOM      1  C01 UNK     1       3.939  -2.095  -4.491  0.00  0.00           C   
-ATOM      2  C02 UNK     1       4.825  -2.409  -5.534  0.00  0.00           C   
+ATOM      1  C01 UNK     1       3.939  -2.095  -4.491  0.00  0.00           C2+   
+ATOM      2  C02 UNK     1       4.825  -2.409  -5.534  0.00  0.00              
 TER       3      UNK     1
 ATOM      4  C03 UNK     1       5.466  -3.658  -5.560  0.00  0.00           C   
 ATOM      5  C04 UNK     1       5.207  -4.601  -4.552  0.00  0.00           C   
@@ -182,3 +183,53 @@ ATOM   1301  CA BHIS A 194     -13.910 -22.208  70.255  0.44 53.81
     mol = mols[0]
     assert len(mol.nodes) == 1
     assert any(rec.levelname == 'WARNING' for rec in caplog.records)
+
+
+def test_atom_attributes():
+    """
+    Test that atom attributes are parsed and set correctly
+    """
+    pdb = multi_mol(False)
+    parser = PDBParser()
+    mols = list(parser.parse(pdb.splitlines()))
+    assert len(mols) == 2
+    nodes = [
+        {
+            0: {'atomname': 'C01', 'atomid': 1, 'resid': 1,
+                'resname': 'UNK', 'chain':'', 'altloc': '',
+                'insertion_code': '', 'occupancy': 0.0, 'temp_factor': 0.0,
+                'position': np.array([0.3939,  -0.2095,  -0.4491]),
+                'charge': 2.0, 'element': 'C'},
+            1: {'atomname': 'C02', 'atomid': 2, 'resid': 1,
+                'resname': 'UNK', 'chain':'', 'altloc': '',
+                'insertion_code': '', 'occupancy': 0.0, 'temp_factor': 0.0,
+                'position': np.array([0.4825,  -0.2409,  -0.5534]),
+                'charge': 0, 'element': 'C'}
+        },
+        {
+            0: {'atomname': 'C03', 'atomid': 4, 'resid': 1,
+                'resname': 'UNK', 'chain': '', 'altloc': '',
+                'insertion_code': '', 'occupancy': 0.0, 'temp_factor': 0.0,
+                'position': np.array([0.5466,  -0.3658,  -0.5560]),
+                'charge': 0, 'element': 'C'},
+            1: {'atomname': 'C04', 'atomid': 5, 'resid': 1,
+                'resname': 'UNK', 'chain': '', 'altloc': '',
+                'insertion_code': '', 'occupancy': 0.0, 'temp_factor': 0.0,
+                'position': np.array([0.5207,  -0.4601,  -0.4552]),
+                'charge': 0, 'element': 'C'},
+            2: {'atomname': 'C05', 'atomid': 6, 'resid': 1,
+                'resname': 'UNK', 'chain': '', 'altloc': '',
+                'insertion_code': '', 'occupancy': 0.0, 'temp_factor': 0.0,
+                'position': np.array([0.5207, -0.4601, -0.4552]),
+                'charge': 0, 'element': 'C'}
+        }
+    ]
+    for mol, n_attrs in zip(mols, nodes):
+        for n_idx in mol.nodes:
+            assert set(n_attrs[n_idx].keys()) == set(mol.nodes[n_idx].keys())
+            for attr in mol.nodes[n_idx]:
+                assert attr in n_attrs[n_idx]
+                if attr == 'position':
+                    assert np.allclose(n_attrs[n_idx][attr], mol.nodes[n_idx][attr])
+                else:
+                    assert n_attrs[n_idx][attr] == mol.nodes[n_idx][attr]
