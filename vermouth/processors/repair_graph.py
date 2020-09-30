@@ -86,6 +86,17 @@ def _patch_modification(block, modification):
     anchor_mod_to_block = {val: key for key, val in anchor_block_to_mod.items()}
 
     result = Block(nx.union(block, non_anchor, rename=(None, modification.name+'-')))
+    # Mark the modified atoms with the specified modification, so canonicalize
+    # modifications has an easier job
+    for idx in anchor_block_to_mod:
+        node_mods = result.nodes[idx].get('modifications', [])
+        if modification not in node_mods:
+            result.nodes[idx]['modifications'] = node_mods + [modification]
+    for mod_idx in non_anchor_idxs:
+        idx = '{}-{}'.format(modification.name, mod_idx)
+        node_mods = result.nodes[idx].get('modifications', [])
+        if modification not in node_mods:
+            result.nodes[idx]['modifications'] = node_mods + [modification]
     for mod_idx, mod_jdx in modification.edges_between(anchor_idxs, non_anchor_idxs):
         if mod_idx in non_anchor_idxs:
             mod_idx, mod_jdx = mod_jdx, mod_idx

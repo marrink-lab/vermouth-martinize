@@ -722,6 +722,21 @@ class MappingDirector(SectionLineParser):
                 fetch = False
             if fetch and attrs.get('resname') is not None:
                 block = getattr(self.force_fields[self.ff[direction]], map_type+'s')[attrs['resname']]
+                if map_type == 'modification':
+                    # Add the modifications to the mapping block_from, so they
+                    # participate in the matching criterion.
+
+                    # Caveat emptor
+                    ###############
+                    # Copying the modification here before modifying it would be
+                    # a *good* idea, but that doesn't work (probably because
+                    # Links don't have a sane copy method). Better than this
+                    # would be to add the modifications attribute at the ff
+                    # parser level. This hack-around (and adding it to the ff
+                    # parser) probably have unintended side effects.
+                    # block = block.copy()
+                    for idx in block.nodes:
+                        block.nodes[idx]['modifications'] = [block]
                 builder_methods[direction](block)
             if direction == 'from':
                 if 'resname' in attrs and isinstance(attrs['resname'], str):
