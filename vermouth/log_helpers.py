@@ -228,7 +228,6 @@ class CountingHandler(logging.NullHandler):
         return out
 
 
-
 def get_logger(name):
     """
     Convenience method that wraps a :class:`TypeAdapter` around
@@ -241,3 +240,40 @@ def get_logger(name):
         Should probably be ``__name__``.
     """
     return TypeAdapter(logging.getLogger(name))
+
+
+def ignore_warnings_and_count(counter, specifications, level=logging.WARNING):
+    """
+    Count the warnings after deducting the ones to ignore.
+
+    Warnings to ignore are specified as tuple ``(<warning-type>, <count>)``.
+    The count is ``None`` if all warnings of that type should be ignored,
+    and the warning type is ``None`` to indicate that the count is about
+    all not specified types.
+
+    In case the same type is specified more than once, only the higher
+    count is used.
+    """
+    number_of_warnings = counter.number_of_counts_by(level=level)
+    specs = {}
+    print(specifications)
+    deduct_all = set()
+    for spec_parts in specifications:
+        for warning_type, count in spec_parts:
+            if count is None:
+                deduct_all.add(warning_type)
+            else:
+                specs[warning_type] = max(specs.get(warning_type, 0), count)
+    blanket_ignore = specs.get(None, 0)
+    warning_count = counter.counts[level]
+    total = number_of_warnings
+    for warning_type, count in warning_count.items():
+        type_count = warning_count[warning_type]
+        if warning_type in specs:
+            total -= max(0, min(count, specs[warning_type]))
+        elif warning_type in deduct_all:
+            total -= count
+        else:
+            total -= min(type_count, blanket_ignore)
+            blanket_ignore = max(0, blanket_ignore - type_count)
+    return total

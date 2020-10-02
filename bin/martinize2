@@ -37,7 +37,8 @@ from vermouth.dssp.dssp import (
     AnnotateResidues,
 )
 from vermouth.log_helpers import (StyleAdapter, BipolarFormatter,
-                                  CountingHandler, TypeAdapter)
+                                  CountingHandler, TypeAdapter,
+                                  ignore_warnings_and_count,)
 from vermouth import selectors
 from vermouth.map_input import (
     read_mapping_directory,
@@ -269,6 +270,31 @@ def _cys_argument(value):
         return result
 
 
+def maxwarn(value):
+    msg = ("Values for the -maxwarn option must be the name of a "
+           "warning type, a number, or following the format "
+           "'<warning-type>:<count>' where <warning-type> if the name "
+           "of the warning type to ignore, and <count> is the number of "
+           "warning of that type to ignore. "
+           "'{value}' is not a valid value.".format(value=value))
+    splitted = value.split(':')
+    if len(splitted) == 1:
+        try:
+            count = int(value)
+        except ValueError:
+            return (value, None)
+        else:
+            return (None, count)
+    elif len(splitted) == 2:
+        try:
+            count = int(splitted[1])
+        except ValueError:
+            pass  # The exception will be raised at the end of the function
+        else:
+            return (splitted[0], count)
+    raise argparse.ArgumentTypeError(msg)
+
+
 def entry():
     """
     Parses commandline arguments and performs the logic.
@@ -441,7 +467,8 @@ def entry():
     debug_group.add_argument('-v', dest='verbosity', action='count',
                              help='Enable debug logging output. Can be given '
                                   'multiple times.', default=0)
-    debug_group.add_argument('-maxwarn', dest='maxwarn', type=int, default=0,
+    debug_group.add_argument('-maxwarn', dest='maxwarn', type=maxwarn,
+                             action='append', nargs='+', default=[],
                              help='The maximum number of allowed warnings. If '
                              'more warnings are encountered no output files are'
                              ' written.')
@@ -707,11 +734,12 @@ def entry():
     # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
     #       inconsistent-data warnings)
 
-    number_of_warnings = COUNTER.number_of_counts_by(level=logging.WARNING)
-    if args.maxwarn < number_of_warnings:
-        LOGGER.error('{} warnings were encountered. No output files will be '
+    leftover_warnings = ignore_warnings_and_count(COUNTER, args.maxwarn)
+    if leftover_warnings:
+        LOGGER.error('{} warnings were encountered after accounting for the '
+                     '-maxwarn flag. No output files will be '
                      'written. Consider fixing the warnings, or if you are sure'
-                     ' they are harmless, use the -maxwarn flag.', number_of_warnings)
+                     ' they are harmless, use the -maxwarn flag.', leftover_warnings)
         sys.exit(2)
     else:
         DeferredFileWriter().write()

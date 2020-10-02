@@ -25,7 +25,8 @@ import pytest
 
 from vermouth.log_helpers import (get_logger, TypeAdapter, StyleAdapter,
                                   PassingLoggerAdapter, Message,
-                                  BipolarFormatter, CountingHandler)
+                                  BipolarFormatter, CountingHandler,
+                                  ignore_warnings_and_count,)
 
 # Pylint does *not* like pytest fixtures... Also, sometimes you just need more
 # data
@@ -327,4 +328,51 @@ def test_counter(level, type_, expected):
     assert handler.counts == expected_total
 
     assert handler.number_of_counts_by(level=level, type=type_) == expected
+
+
+@pytest.fixture
+def mock_counter():
+    class MockCountingHandler:
+        def __init__(self):
+            self.counts = {
+                logging.WARNING: {
+                    'default': 4,
+                    'something': 8,
+                    'other thing': 2,
+                    'empty': 0,
+                },
+                logging.INFO: {
+                    'something': 5,
+                },
+            }
+
+        def number_of_counts_by(self, level=None, type=None):
+            assert type is None, 'The mock does not discriminate by type'
+            results = {
+                logging.WARNING: 14,
+                logging.INFO: 5,
+            }
+            return results.get(level, 0)
+
+    return MockCountingHandler()
+
+
+@pytest.mark.parametrize('specification, level, expected', (
+    # -maxwarn 4
+    ([[(None, 4)]], logging.WARNING, 10),
+    # -maxwarn something
+    ([[('something', None)]], logging.WARNING, 6),
+    # -maxwarn something:5
+    ([[('something', 5)]], logging.WARNING, 9),
+    # -maxwarn something:5 2
+    ([[('something', 5), (None, 2)]], logging.WARNING, 7),
+    # -maxprint something:5 -maxprint 2
+    ([[('something', 5)], [(None, 2)]], logging.WARNING, 7),
+    # Not accessible from the command line
+    ([[('something', 3)]], logging.INFO, 2),
+))
+def test_ignore_warnings_and_count(mock_counter, specification, level, expected):
+    remaining = ignore_warnings_and_count(mock_counter, specification, level)
+    assert remaining == expected
+
 
