@@ -256,7 +256,6 @@ def ignore_warnings_and_count(counter, specifications, level=logging.WARNING):
     """
     number_of_warnings = counter.number_of_counts_by(level=level)
     specs = {}
-    print(specifications)
     deduct_all = set()
     for spec_parts in specifications:
         for warning_type, count in spec_parts:
