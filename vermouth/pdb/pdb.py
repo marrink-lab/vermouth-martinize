@@ -223,7 +223,23 @@ class PDBParser(LineParser):
 
         properties = {}
         for name, type_, slice_ in field_slices:
-            properties[name] = type_(line[slice_].strip())
+            value = line[slice_].strip()
+            if value:
+                properties[name] = type_(value)
+            else:
+                properties[name] = type_()
+
+        # Charge is special, since it's "2-" or "1+", rather than -2 etc. And
+        # let's turn it into a number
+        charge = properties['charge']
+        if charge:
+            try:
+                charge = float(charge)
+            except ValueError:
+                charge = float(charge[::-1])
+        else:
+            charge = 0
+        properties['charge'] = charge
 
         pos = (properties.pop('x'), properties.pop('y'), properties.pop('z'))
         # Coordinates are read in Angstrom, but we want them in nm
@@ -488,8 +504,8 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
             atomname = get_not_none(node, 'atomname', '')
             altloc = get_not_none(node, 'altloc', '')
             resname = get_not_none(node, 'resname', '')
-            chain = node['chain']
-            resid = node['resid']
+            chain = get_not_none(node, 'chain', '')
+            resid = get_not_none(node, 'resid', 1)
             insertion_code = get_not_none(node, 'insertioncode', '')
             try:
                 # converting from nm to A

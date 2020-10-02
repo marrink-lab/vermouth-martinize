@@ -713,9 +713,17 @@ def entry():
         LOGGER.debug("Writing molecule {}.", molecule, type='step')
 
     # Write the topology if requested
+    # grompp has a limit in the number of character it can read per line
+    # (due to the size limit of a buffer somewhere in its implementation).
+    # The command line can be longer than this limit and therefore
+    # prevent grompp from reading the topology.
+    gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
+    command = ' '.join(sys.argv)
+    if len(command) > gromacs_char_limit:
+        command = command[:gromacs_char_limit] + ' ...'
     header = [
         'This file was generated using the following command:',
-        ' '.join(sys.argv),
+        command,
         VERSION,
     ]
     if None not in ss_sequence:
