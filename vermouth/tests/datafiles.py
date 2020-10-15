@@ -35,6 +35,7 @@ PDB_ALA5_CG = TEST_DATA / 'ala5_cg.pdb'
 PDB_CYS = TEST_DATA / '2QWO.pdb'  # Contains cystein bridges
 PDB_HB = TEST_DATA / '2dn2.pdb'  # Hemoglobin with heme and 2*2 protein chains
 PDB_MULTIMODEL = TEST_DATA / '6E8W.pdb'  # HIV-1, 15 models
+PDB_1AQP = TEST_DATA / '1J4N.pdb'  # 1AQP aquaporin tetramer with pore waters
 
 # DNA
 SHORT_DNA = TEST_DATA / 'dna-short.pdb'

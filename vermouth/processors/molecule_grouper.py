@@ -117,7 +117,6 @@ def constrained_kmeans(data, num_clusters,
     else:
         clusters = np.broadcast_to(init_clusters, (num_clusters, data.shape[-1]))
 
-
     # Time to build the DiGraph on which the minimal flow problem is solved.
     # Note that supply/demand are inverted relative to the paper.
     # The graph basically looks like:
@@ -140,8 +139,9 @@ def constrained_kmeans(data, num_clusters,
         # The capacity means the cluster can donate (or receive) a limited
         # number of supply from the artificial node, and this number exactly is
         # the deviation from the desired number of items per cluster.
-        # The weight is mostly meaningless, but it causes the deviation from the
-        # desired number of items per cluster to be included in the final cost.
+        # The weight affects how often/easy it is to deviate from the required
+        # number of items per cluster, even when a perfect/equal partitioning is
+        # possible.
         flow_graph.add_edge(clust_n_idx, artificial_node,
                             weight=round(precision*100),
                             capacity=tolerances[clust_n_idx-len(data_nodes)])
@@ -172,8 +172,7 @@ def constrained_kmeans(data, num_clusters,
         for (data_idx, clust_idx), dist in np.ndenumerate(dists):
             # Network simplex (and capacity scaling) does not work with float
             # weights according to nx documentation. So round the distances to
-            # an appropriate int. Magic. Setting the capacity between data and
-            # clusters to 1 also seems to help. Still better safe than sorry.
+            # an appropriate int. Magic.
             flow_graph.edges[data_idx, clust_idx + len(data)]['weight'] = round(precision*dist)
 
         prev_weights = flow_dict
@@ -186,7 +185,7 @@ def constrained_kmeans(data, num_clusters,
         memberships = np.zeros((len(data), num_clusters))
         for data_idx in data_nodes:
             flow = flow_dict[data_idx]
-            memberships[data_idx] += [flow[clust_n_idx] for clust_n_idx in clust_nodes]
+            memberships[data_idx] = [flow[clust_n_idx] for clust_n_idx in clust_nodes]
         # TODO: PBC
 
         weights = memberships / memberships.sum(axis=0, keepdims=True)
@@ -202,39 +201,32 @@ def group_molecules(system, selector):
     mol_idxs, water_mols = zip(*water_mols)
     positions = []
     for mol in water_mols:
-        # TODO: Select CoM vs CoG (current) from FF settings/metavars
+        # TODO: Select CoM vs CoG (current) from FF settings/metavars?
         # TODO: What happens if no atom has a position?
         position = np.average([mol.nodes[n_idx]['position']
                                for n_idx in mol
                                if selector_has_position(mol.nodes[n_idx])])
         positions.append(position)
+    positions = np.array(positions)
     clust_size = 4  # TODO: Fetch from mapping or FF
-    num_clusters = np.ceil(len(water_mols)/clust_size)
+    num_clusters = int(np.ceil(len(water_mols)/clust_size))
     cost, clusters, memberships, niter = constrained_kmeans(
         data=positions,
         num_clusters=num_clusters,
         clust_sizes=[clust_size]*num_clusters,
         tolerances=1,
-        init_clusters='random'
+        init_clusters='fixed'
     )
     for mol_idx in sorted(mol_idxs, reverse=True):
         del system.molecules[mol_idx]
 
     for clust_idx in range(memberships.shape[1]):
         members = memberships[:, clust_idx]
-        mols = [mol for (mol, val) in  zip(water_mols, members) if val]
-        union = Molecule(nx.disjoint_union_all(mols), meta=mols[0].meta,
-                         force_field=mols[0].force_field, nrexcl=mols[0].nrexcl)
-        composition = {}
-        u_idx = 0
-        for m_idx, mol in enumerate(mols):
-            for a_idx in mol:
-                composition[(m_idx, a_idx)] = u_idx
-                u_idx += 1
-            for itype, interactions in mol.interactions.items():
-                for interaction in interactions:
-                    union.add_interaction(itype, [composition[idx] for idx in interaction.atoms],
-                                          parameters=interaction.parameters, meta=interaction.meta)
+        mols = [mol for (mol, val) in zip(water_mols, members) if val]
+        union = Molecule(meta=mols[0].meta, force_field=mols[0].force_field,
+                         nrexcl=mols[0].nrexcl)
+        for mol in mols:
+            union.merge_molecule(mol)
         system.add_molecule(union)
 
 
