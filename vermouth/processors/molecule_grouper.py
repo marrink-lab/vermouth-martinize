@@ -13,17 +13,33 @@
 # limitations under the License.
 
 
-from ..selectors import is_water, selector_has_position
-from .processor import Processor
-from ..molecule import Molecule
-
 import collections
 import itertools
 import networkx as nx
 import numpy as np
 
+from ..selectors import is_water, selector_has_position
+from .processor import Processor
+from ..molecule import Molecule
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
+
 
 def expand_to_list(num_or_list, length):
+    """
+    If `num_or_list` is a single item, turns it into a list of length `length`.
+    Otherwise, returns `num_or_list`.
+
+    Parameters
+    ----------
+    num_or_list
+    lenght: int
+
+    Returns
+    -------
+    list
+    """
     try:
         len(num_or_list)
     except TypeError:
@@ -32,14 +48,15 @@ def expand_to_list(num_or_list, length):
 
 
 def constrained_kmeans(data, num_clusters,
-                       clust_sizes=4, tolerances=0, init_clusters='fixed',
-                       precision=1e5, max_iter=100):
+                       clust_sizes=4, tolerances=0, violation_cost=0.5,
+                       init_clusters='fixed', precision=1e5, max_iter=100,
+                       simplex_method=nx.network_simplex):
     """
     Clusters data in `num_clusters` clusters, where all clusters will contain
     `clust_sizes` \u00b1 `tolerances` items. If this is not possible, an exception
     is raised. If `tolerances` is not 0 clusters can "borrow" or "donate" up to
-    `tolerances` items to a virtual data point that is at a distance of 10 units
-    in order to fulfill the constraints.
+    `tolerances` items to a virtual data point that is at a distance of
+    `violation_cost` units in order to fulfill the constraints.
 
     Initial cluster placement is controlled by `init_clusters`. If this is
     "fixed" initial clusters will be placed at the origin. If "random", random
@@ -63,6 +80,8 @@ def constrained_kmeans(data, num_clusters,
     tolerances: int or collections.abc.Sequence[int]
         The allowed deviation of the number of items for a cluster, possibly per
         cluster.
+    violation_cost: float
+        The cost (in nm) of having an item too many or few in a cluster.
     init_clusters: numpy.ndarray or str
         The initial cluster positions. If "fixed", all clusters will start at
         the origin. If "random", random data points will be taken as initial
@@ -72,11 +91,9 @@ def constrained_kmeans(data, num_clusters,
         The precision with which to round distances to integers.
     max_iter: int
         The maximum number of iterations.
-
-    Raises
-    ------
-    networkx.NetworkXUnfeasible
-        If there is no way to fulfill the constraints.
+    simplex_method: collections.abc.Callable
+        The method to use to solve the minimum cost flow problem. Should have a
+        signature identical to :func:`networkx.algorithms.flow.network_simplex`
 
     Notes
     -----
@@ -143,10 +160,10 @@ def constrained_kmeans(data, num_clusters,
         # number of items per cluster, even when a perfect/equal partitioning is
         # possible.
         flow_graph.add_edge(clust_n_idx, artificial_node,
-                            weight=round(precision*100),
+                            weight=round(precision*violation_cost**2),
                             capacity=tolerances[clust_n_idx-len(data_nodes)])
         flow_graph.add_edge(artificial_node, clust_n_idx,
-                            weight=round(precision*100),
+                            weight=round(precision*violation_cost**2),
                             capacity=tolerances[clust_n_idx-len(data_nodes)])
         # Demand for cluster nodes
         flow_graph.nodes[clust_n_idx]['demand'] = clust_sizes[clust_n_idx - len(data)]
@@ -168,7 +185,7 @@ def constrained_kmeans(data, num_clusters,
         dists = np.sum((data[:, np.newaxis] - clusters[np.newaxis, :])**2, axis=-1)
         # When clusters are empty their clustroids become nan, which we can't
         # round to an int.
-        dists[np.isnan(dists)] = 100
+        dists[np.isnan(dists)] = 10**2
         for (data_idx, clust_idx), dist in np.ndenumerate(dists):
             # Network simplex (and capacity scaling) does not work with float
             # weights according to nx documentation. So round the distances to
@@ -176,8 +193,7 @@ def constrained_kmeans(data, num_clusters,
             flow_graph.edges[data_idx, clust_idx + len(data)]['weight'] = round(precision*dist)
 
         prev_weights = flow_dict
-        cost, flow_dict = nx.network_simplex(flow_graph)
-        # cost, flow_dict = nx.capacity_scaling(flow_graph)
+        cost, flow_dict = simplex_method(flow_graph)
 
         if prev_weights == flow_dict:
             break
@@ -186,8 +202,8 @@ def constrained_kmeans(data, num_clusters,
         for data_idx in data_nodes:
             flow = flow_dict[data_idx]
             memberships[data_idx] = [flow[clust_n_idx] for clust_n_idx in clust_nodes]
-        # TODO: PBC
 
+        # TODO: PBC
         weights = memberships / memberships.sum(axis=0, keepdims=True)
         clusters = weights.T.dot(data)
 
