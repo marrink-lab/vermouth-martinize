@@ -212,7 +212,25 @@ def constrained_kmeans(data, num_clusters,
     return cost/precision, clusters, memberships, iter
 
 
-def group_molecules(system, selector):
+def group_molecules(system, selector, size_tries=10, **kwargs):
+    """
+    Clusters molecules in `system` into groups of 4 \u00b1 1. Only molecules
+    selected with `selector` will be taken.
+
+    Parameters
+    ----------
+    system
+    selector
+    size_tries: int
+        The number of clusters to try.
+    **kwargs
+        Passed on to :func:`constrained_kmeans`.
+
+    Returns
+    -------
+    None
+        `system` is modified in place.
+    """
     water_mols = [(mol_idx, mol) for (mol_idx, mol) in enumerate(system.molecules) if selector(mol)]
     mol_idxs, water_mols = zip(*water_mols)
     positions = []
@@ -224,15 +242,28 @@ def group_molecules(system, selector):
                                if selector_has_position(mol.nodes[n_idx])], axis=0)
         positions.append(position)
     positions = np.array(positions)
-    clust_size = 4  # TODO: Fetch from mapping or FF
+    clust_size = 3  # TODO: Fetch from mapping or FF
     num_clusters = int(np.ceil(len(water_mols)/clust_size))
-    cost, clusters, memberships, niter = constrained_kmeans(
-        data=positions,
-        num_clusters=num_clusters,
-        clust_sizes=[clust_size]*num_clusters,
-        tolerances=1,
-        init_clusters='fixed'
-    )
+    min_clusters = max(num_clusters - size_tries//2, 0)
+    max_clusters = min(num_clusters + size_tries//2, len(positions))
+    init = kwargs.pop('init_clusters', 'fixed')
+    results = []
+    for num_clusters in range(min_clusters, max_clusters):
+        cost, clusters, memberships, niter = constrained_kmeans(
+            data=positions,
+            num_clusters=num_clusters,
+            clust_sizes=[clust_size]*num_clusters,
+            tolerances=1,
+            init_clusters=init,
+            **kwargs
+        )
+        init = np.append(clusters, [[0, 0, 0]], axis=0)
+        results.append([cost, clusters, memberships, niter])
+
+    cost, clusters, memberships, niter = min(results, key=lambda i: i[0])
+    LOGGER.info('Clustered {} water molecules into {} clusters.', len(water_mols), num_clusters)
+    counts = np.count_nonzero(memberships, axis=0)
+    LOGGER.info('Minimum/maximum number of molecules per cluster: {}/{}', counts.min(), counts.max())
     for mol_idx in sorted(mol_idxs, reverse=True):
         del system.molecules[mol_idx]
 
@@ -241,14 +272,24 @@ def group_molecules(system, selector):
         mols = [mol for (mol, val) in zip(water_mols, members) if val]
         union = Molecule(meta=mols[0].meta, force_field=mols[0].force_field,
                          nrexcl=mols[0].nrexcl)
-        for mol in mols:
-            union.merge_molecule(mol)
+        previous = []
+        for mol_idx, mol in enumerate(mols):
+            added = union.merge_molecule(mol)
+            for n_idx in added.values():
+                union.nodes[n_idx]['mol_idx'] = mol_idx
+            previous.append(added.values())
+        # Create a "cycle" of the mapped molecules, so the mapping for 3 waters
+        # doesn't match 4 waters, etc.
+        for idxs, jdxs in zip(previous[:-1], previous[1:]):
+            union.add_edges_from(itertools.product(idxs, jdxs))
+        union.add_edges_from(itertools.product(previous[0], previous[-1]))
         system.add_molecule(union)
 
 
 class MoleculeGrouper(Processor):
-    def __init__(self):
-        self.selector = is_water
+    def __init__(self, selector=is_water, **cluster_kwargs):
+        self.selector = selector
+        self.cluster_kwargs = cluster_kwargs
 
     def run_system(self, system):
-        group_molecules(system, self.selector)
+        group_molecules(system, self.selector, **self.cluster_kwargs)
