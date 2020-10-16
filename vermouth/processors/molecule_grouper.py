@@ -205,7 +205,7 @@ def group_molecules(system, selector):
         # TODO: What happens if no atom has a position?
         position = np.average([mol.nodes[n_idx]['position']
                                for n_idx in mol
-                               if selector_has_position(mol.nodes[n_idx])])
+                               if selector_has_position(mol.nodes[n_idx])], axis=0)
         positions.append(position)
     positions = np.array(positions)
     clust_size = 4  # TODO: Fetch from mapping or FF
