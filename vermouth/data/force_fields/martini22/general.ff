@@ -14,3 +14,5 @@
 
 [ variables ]
 center_weight "mass"
+water_group_size 3
+water_group_tolerances 1

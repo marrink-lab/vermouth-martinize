@@ -139,8 +139,12 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     """
     Convert a system from one force field to an other at lower resolution.
     """
-    LOGGER.info('Clustering water.', type='step')
-    vermouth.MoleculeGrouper().run_system(system)
+    clust_sizes = to_ff.variables.get('water_group_size', 3)
+    clust_tolerances = to_ff.variables.get('water_group_tolerance', 1)
+    LOGGER.info('Clustering water into clusters of size {}\u00b1{}.',
+                clust_sizes, clust_tolerances, type='step')
+    vermouth.MoleculeGrouper(clust_sizes=clust_sizes,
+                             tolerances=clust_tolerances).run_system(system)
     LOGGER.info('Creating the graph at the target resolution.', type='step')
     vermouth.DoMapping(mappings=mappings,
                        to_ff=to_ff,

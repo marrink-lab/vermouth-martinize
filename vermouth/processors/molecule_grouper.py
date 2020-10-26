@@ -252,8 +252,6 @@ def group_molecules(system, selector, size_tries=10, **kwargs):
         cost, clusters, memberships, niter = constrained_kmeans(
             data=positions,
             num_clusters=num_clusters,
-            clust_sizes=[clust_size]*num_clusters,
-            tolerances=1,
             init_clusters=init,
             **kwargs
         )
