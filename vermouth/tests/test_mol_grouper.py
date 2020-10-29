@@ -47,12 +47,12 @@ def finite_real_arrays(shape):
                                           allow_nan=False, allow_infinity=False),
                        shape=shape)
 
-@settings(deadline=None)
+@settings(deadline=None, max_examples=50)
 @given(st.data())
 def test_constrained_kmeans(data):
 
     dims = st.integers(min_value=1, max_value=3)
-    num_points = st.integers(min_value=1, max_value=50)
+    num_points = st.integers(min_value=1, max_value=15)
     point_shape = data.draw(st.tuples(num_points, dims), label='point_shape')
     points = finite_real_arrays(point_shape)
     n_points = point_shape[0]
@@ -99,8 +99,8 @@ def test_mol_grouper_processor():
     system = System(force_field=ff)
     system.molecules.extend(molecules)
     MakeBonds(allow_dist=False).run_system(system)
-
-    MoleculeGrouper(init_clusters='fixed', size_tries=3).run_system(system)
+    print(len(system.molecules))
+    MoleculeGrouper(init_clusters='fixed', size_tries=3, clust_sizes=3, tolerances=1).run_system(system)
     orig_atom_ids = set()
     for orig_mol in molecules:
         ids = set(nx.get_node_attributes(orig_mol, 'atomid').values())

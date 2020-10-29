@@ -212,7 +212,7 @@ def constrained_kmeans(data, num_clusters,
     return cost/precision, clusters, memberships, iter
 
 
-def group_molecules(system, selector, size_tries=10, **kwargs):
+def group_molecules(system, selector, size_tries=10, clust_sizes=3, **kwargs):
     """
     Clusters molecules in `system` into groups of 4 \u00b1 1. Only molecules
     selected with `selector` will be taken.
@@ -242,8 +242,7 @@ def group_molecules(system, selector, size_tries=10, **kwargs):
                                if selector_has_position(mol.nodes[n_idx])], axis=0)
         positions.append(position)
     positions = np.array(positions)
-    clust_size = 3  # TODO: Fetch from mapping or FF
-    num_clusters = int(np.ceil(len(water_mols)/clust_size))
+    num_clusters = int(np.ceil(len(water_mols)/clust_sizes))
     min_clusters = max(num_clusters - size_tries//2, 0)
     max_clusters = min(num_clusters + size_tries//2, len(positions))
     init = kwargs.pop('init_clusters', 'random')
@@ -254,6 +253,7 @@ def group_molecules(system, selector, size_tries=10, **kwargs):
             data=positions,
             num_clusters=num_clusters,
             init_clusters=init,
+            clust_sizes=clust_sizes,
             **kwargs
         )
         init = np.append(clusters, [[0, 0, 0]], axis=0)
