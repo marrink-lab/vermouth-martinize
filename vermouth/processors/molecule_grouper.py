@@ -232,6 +232,8 @@ def group_molecules(system, selector, size_tries=10, clust_sizes=3, **kwargs):
         `system` is modified in place.
     """
     water_mols = [(mol_idx, mol) for (mol_idx, mol) in enumerate(system.molecules) if selector(mol)]
+    if not water_mols:
+        return
     mol_idxs, water_mols = zip(*water_mols)
     positions = []
     for mol in water_mols:
