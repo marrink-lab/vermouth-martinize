@@ -3,10 +3,8 @@
 universal
 [ to ]
 martini22
-
 [ from blocks ]
 !HOH#1 !HOH#2 !HOH#3
-
 [ from nodes ]
 HOH#1:OW {"mol_idx": 0}
 HOH#2:OW {"mol_idx": 1}
@@ -15,26 +13,22 @@ HOH#3:OW {"mol_idx": 2}
 HOH#1:OW HOH#2:OW
 HOH#2:OW HOH#3:OW
 HOH#3:OW HOH#1:OW
-
-
 [ to blocks ]
 W
-
 [ mapping ]
 HOH#1:OW W
 HOH#2:OW W
 HOH#3:OW W
-
+[ reference atoms ]
+W HOH#1:OW
 
 [ block ]
 [ from ]
 universal
 [ to ]
 martini22
-
 [ from blocks ]
 !HOH#1 !HOH#2 !HOH#3 !HOH#4
-
 [ from nodes ]
 HOH#1:OW {"mol_idx": 0}
 HOH#2:OW {"mol_idx": 1}
@@ -45,25 +39,23 @@ HOH#1:OW HOH#2:OW
 HOH#2:OW HOH#3:OW
 HOH#3:OW HOH#4:OW
 HOH#4:OW HOH#1:OW
-
 [ to blocks ]
 W
-
 [ mapping ]
 HOH#1:OW W
 HOH#2:OW W
 HOH#3:OW W
 HOH#4:OW W
+[ reference atoms ]
+W HOH#1:OW
 
 [ block ]
 [ from ]
 universal
 [ to ]
 martini22
-
 [ from blocks ]
 !HOH#1 !HOH#2 !HOH#3 !HOH#4 !HOH#5
-
 [ from nodes ]
 HOH#1:OW {"mol_idx": 0}
 HOH#2:OW {"mol_idx": 1}
@@ -76,14 +68,13 @@ HOH#2:OW HOH#3:OW
 HOH#3:OW HOH#4:OW
 HOH#4:OW HOH#5:OW
 HOH#5:OW HOH#1:OW
-
 [ to blocks ]
 W
-
 [ mapping ]
 HOH#1:OW W
 HOH#2:OW W
 HOH#3:OW W
 HOH#4:OW W
 HOH#5:OW W
-
+[ reference atoms ]
+W HOH#1:OW
