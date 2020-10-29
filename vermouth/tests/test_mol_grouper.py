@@ -51,7 +51,7 @@ def finite_real_arrays(shape):
 @given(st.data())
 def test_constrained_kmeans(data):
 
-    dims = st.integers(min_value=1, max_value=3)
+    dims = st.integers(min_value=3, max_value=3)
     num_points = st.integers(min_value=1, max_value=15)
     point_shape = data.draw(st.tuples(num_points, dims), label='point_shape')
     points = finite_real_arrays(point_shape)
@@ -133,7 +133,7 @@ def test_mol_grouper_processor():
     print(np.mean(anisotropies), np.median(anisotropies))
     print(np.min(anisotropies), np.max(anisotropies))
     assert atom_ids == orig_atom_ids  # Assert all atoms still exist
-    assert sorted(anisotropies) == [
+    assert np.allclose(sorted(anisotropies), [
         0.10651194938585429, 0.15115950311614146, 0.16819992894453728,
         0.1951616957409924, 0.19855980389681138, 0.22321389514533896,
         0.25737841997945143, 0.2634401201510208, 0.27199936926291157,
@@ -184,4 +184,4 @@ def test_mol_grouper_processor():
         0.9896729148454506, 0.9917544341504739, 0.9925751774216135,
         0.9931452287323225, 0.993792857314373, 0.995159253214102,
         0.9951761548589004, 0.9956363913601163, 0.9958575474555383,
-        0.9962350875318009, 0.9975063971984528]
+        0.9962350875318009, 0.9975063971984528])
