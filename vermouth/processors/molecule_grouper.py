@@ -246,9 +246,10 @@ def group_molecules(system, selector, size_tries=10, **kwargs):
     num_clusters = int(np.ceil(len(water_mols)/clust_size))
     min_clusters = max(num_clusters - size_tries//2, 0)
     max_clusters = min(num_clusters + size_tries//2, len(positions))
-    init = kwargs.pop('init_clusters', 'fixed')
+    init = kwargs.pop('init_clusters', 'random')
     results = []
     for num_clusters in range(min_clusters, max_clusters):
+        LOGGER.debug('Trying to cluster {} molecules into {} clusters', len(water_mols), num_clusters)
         cost, clusters, memberships, niter = constrained_kmeans(
             data=positions,
             num_clusters=num_clusters,
