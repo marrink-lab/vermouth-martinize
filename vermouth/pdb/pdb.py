@@ -254,7 +254,7 @@ class PDBParser(LineParser):
             LOGGER.warning("There is an alternative conformation for atom {}. "
                            "We use conformation A exclusively",
                            format_atom_string(properties),
-                           type='inconsistent-data')
+                           type='pdb-alternate')
             return
         if (properties['resname'] in self.exclude or
                 (self.ignh and properties['element'] == 'H')):
