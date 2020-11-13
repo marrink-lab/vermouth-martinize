@@ -34,21 +34,20 @@ addons:
 jobs:
   fast_finish: true
   allow_failures:
-    #- python: "2.7"
-    - python: "3.5-dev"
     - python: "3.6-dev"
     - python: "3.7-dev"
     - python: "3.8-dev"
+    - python: "3.9-dev"
   include:
-      #- python: "2.7"
-    - python: "3.5"
     - python: "3.6"
     - python: "3.7"
     - python: "3.8"
-    - python: "3.5-dev"
+    - python: "3.9"
     - python: "3.6-dev"
     - python: "3.7-dev"
     - python: "3.8-dev"
+      env: WITH_SCIPY=false WITH_CODECOV=false
+    - python: "3.9-dev"
       env: WITH_SCIPY=false WITH_CODECOV=false
 
     - stage: docs
