@@ -269,6 +269,8 @@ def ignore_warnings_and_count(counter, specifications, level=logging.WARNING):
     for warning_type, count in warning_count.items():
         type_count = warning_count[warning_type]
         if warning_type in specs:
+            # Subtract at least 0, and at most the number of warnings counted so
+            # the resulting total is guaranteed to be between 0 and `count`.
             total -= max(0, min(count, specs[warning_type]))
         elif warning_type in deduct_all:
             total -= count

@@ -271,9 +271,35 @@ def _cys_argument(value):
 
 
 def maxwarn(value):
+    """
+    Given a maxwarn specification, split it in a warning type, and the number
+    to ignore.
+
+    >>> maxwarn('3')
+    (None, 3)
+    >>> maxwarn('general:15')
+    ('general', 15)
+    >>> maxwarn('inconsistent-data')
+    ('inconsistent-data, None)
+
+    Parameters
+    ----------
+    value: str
+        A warning type and a count, separated by a colon.
+
+    Returns
+    -------
+    tuple[str, int]
+        A warning type and the associated count to ignore. Either element can be
+        None if not specified.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+    """
     msg = ("Values for the -maxwarn option must be the name of a "
            "warning type, a number, or following the format "
-           "'<warning-type>:<count>' where <warning-type> if the name "
+           "'<warning-type>:<count>' where <warning-type> is the name "
            "of the warning type to ignore, and <count> is the number of "
            "warning of that type to ignore. "
            "'{value}' is not a valid value.".format(value=value))
@@ -282,6 +308,8 @@ def maxwarn(value):
         try:
             count = int(value)
         except ValueError:
+            # The value is not an int, so a warning type to ignore an
+            # an unspecified number of
             return (value, None)
         else:
             return (None, count)
