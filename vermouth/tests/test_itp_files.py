@@ -289,7 +289,51 @@ class TestITP:
             vermouth.gmx.itp_read.read_itp(lines, ff)
 
     @staticmethod
-    def test_virtual_sitesn():
+    @pytest.mark.parametrize('interaction_lines, _type, expected', (
+        # virtual_sitesn
+        ("""
+        [ virtual_sitesn ]
+        ; ref func construct atoms
+        6  2  1  2  3  4
+        """,
+        "virtual_sitesn",
+        vermouth.molecule.Interaction(atoms=[5, 0, 1, 2, 3],
+                                      parameters=['2'],
+                                      meta={})
+        ),
+        # virtual_sites2
+        ("""
+        [ virtual_sites2 ]
+        ; site  from      funct    a
+        4   3  2  1  0.5
+        """,
+        "virtual_sites2",
+        vermouth.molecule.Interaction(atoms=[3, 2, 1],
+                                      parameters=['1', '0.5'],
+                                      meta={})
+        ),
+        # virtual_sites3
+        ("""
+        [ virtual_sites3 ]
+        4  1  2  3  1  0.810 0.810
+        """,
+        "virtual_sites3",
+        vermouth.molecule.Interaction(atoms=[3, 0, 1, 2],
+                                      parameters=['1', '0.810', '0.810'],
+                                      meta={})
+        ),
+        # virtual_sites4
+        ("""
+        [ virtual_sites4 ]
+        4   1  2  3  5  1  0.810 0.810 0.2
+        """,
+        "virtual_sites4",
+        vermouth.molecule.Interaction(atoms=[3, 0, 1, 2, 4],
+                                      parameters=['1', '0.810', '0.810', '0.2'],
+                                      meta={})
+        )
+    ))
+    def test_virtual_sites(interaction_lines, _type, expected):
         """
         test if index and atoms are curretly distinguished for
         this type of interaction
@@ -305,26 +349,16 @@ class TestITP:
         4 P4 1 ALA SC3 1
         5 P4 1 ALA SC4 1
         6 VS 1 ALA SC5 1
-
-        [ virtual_sitesn ]
-        6  2  1 2 3 4
-        6  10  1 2 3 4
         """
         lines = textwrap.dedent(lines)
         lines = lines.splitlines()
+        lines += textwrap.dedent(interaction_lines).splitlines()
 
         ff = vermouth.forcefield.ForceField(name='test_ff')
         vermouth.gmx.itp_read.read_itp(lines, ff)
-        VS1 = vermouth.molecule.Interaction(
-            atoms=[5, 0, 1, 2, 3], parameters=['2'], meta={},
-        )
 
-        VS2 = vermouth.molecule.Interaction(
-            atoms=[5, 0, 1, 2, 3], parameters=['10'], meta={},
-        )
+        assert ff.blocks['GLY'].interactions[_type][0] == expected
 
-        assert ff.blocks['GLY'].interactions['virtual_sitesn'][0] == VS1
-        assert ff.blocks['GLY'].interactions['virtual_sitesn'][1] == VS2
 
     @staticmethod
     @pytest.mark.parametrize('def_statements, bonds', (
