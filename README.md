@@ -24,7 +24,7 @@ using them; read the messages displayed by the program.
 
 ## Installation
 
-Martinize2 and vermouth require python 3.5 or greater. They are distributed via [PyPi][pypi_vermouth], and can be
+Martinize2 and vermouth require python 3.6 or greater. They are distributed via [PyPi][pypi_vermouth], and can be
 installed using the `pip` command:
     
     pip install vermouth
