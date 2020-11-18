@@ -365,7 +365,7 @@ def test_rate_match(nodes1, nodes2, match, expected):
         {(0, 1): {}},
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
-        {(0, 1): {'weight': 1}}
+        {(0, 1): {}}
     ),
     (
         [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
@@ -374,7 +374,7 @@ def test_rate_match(nodes1, nodes2, match, expected):
         {(2, 1): {}},
         [{'chain': 0, 'resid': 2, 'resname': 1},
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
-        {(0, 1): {'weight': 1}}
+        {(0, 1): {}}
     ),
 ])
 def test_make_residue_graph(nodes1, edges1, nodes2, edges2):

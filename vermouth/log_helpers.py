@@ -95,7 +95,7 @@ class PassingLoggerAdapter(logging.LoggerAdapter):
             else:
                 self.logger.log(level, msg, *args, **kwargs)
 
-    def addHandler(self, *args, **kwargs):
+    def addHandler(self, *args, **kwargs):  # pylint: disable=invalid-name
         self.logger.addHandler(*args, **kwargs)
 
 
@@ -194,9 +194,39 @@ class CountingHandler(logging.NullHandler):
         self.type_attr = type_attribute
 
     def handle(self, record):
+        """
+        Handle a log record by counting it.
+        """
         record_level = record.levelno
         record_type = getattr(record, self.type_attr, self.default_type)
         self.counts[record_level][record_type] += 1
+
+    def number_of_counts_by(self, level=None, type=None):
+        """
+        Return the number of logging calls counted, filtered by level and type.
+
+        Parameters
+        ----------
+        level
+            Only count log events of this level.
+        type
+            Only count log events of this type.
+
+        Returns
+        -------
+        int
+            The number of events counted.
+        """
+        out = 0
+        for lvl, type_counts in self.counts.items():
+            if level is not None and level != lvl:
+                continue
+            for type_, count in type_counts.items():
+                if type is not None and type != type_:
+                    continue
+                out += count
+        return out
+
 
 
 def get_logger(name):

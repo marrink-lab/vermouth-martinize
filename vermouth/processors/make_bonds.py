@@ -25,7 +25,7 @@ from .. import KDTree
 from ..molecule import Molecule
 from .processor import Processor
 from ..utils import format_atom_string
-from ..graph_utils import collect_residues
+from ..graph_utils import collect_residues, partition_graph
 
 from ..log_helpers import StyleAdapter, get_logger
 
@@ -60,19 +60,28 @@ VDW_RADII = {  # in nm
 #VALENCES = {'H': 1, 'C': 4, 'N': 3, 'O': 2, 'S': 6}
 
 
-def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
+def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.2):
     """Add edges to `graph` between `nodes` based on distance.
 
     Adds edges to `graph` between nodes in `nodes`, but will never add an edge
-    that is in `non_edges`. Edges are added based on a simple distance
-    criterion. The criterion can be adjusted using `fudge`. Nodes need to have
-    an element attribute that is in VDW_RADII in order to be eligible.
+    that is in `non_edges`, nor between H atoms. It will also not create edges
+    where H atoms bridge separate residues. Residues are defined by the
+    '_res_serial' attribute of nodes.
+    Edges are added based on a simple distance criterion. The criterion can be
+    adjusted using `fudge`. Nodes need to have an element attribute that is in
+    VDW_RADII in order to be eligible.
 
     Parameters
     ----------
     graph: networkx.Graph
+        Nodes in the graph must have the attributes 'element', 'position', and
+        '_res_serial'.
     nodes: collections.abc.Collection[collections.abc.Hashable]
+        The nodes that should be considered for making edges. Must be in
+        `graph`.
     non_edges: collections.abc.Container[frozenset[collections.abc.Hashable, collections.abc.Hashable]]
+        A container of pairs of node keys between which no edge should be added,
+        even when they are close enough.
     fudge: float
     """
     if not nodes:
@@ -86,15 +95,17 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
     # that could make a bond. `idx_to_nodenum` make the link between the
     # indices in the `positions` array, and the node keys in the `system`
     # graph.
-    idx_to_nodenum = {
-        idx: n
-        for idx, n in enumerate(
-            subn
-            for subn in graph
-            if subn in nodes and graph.nodes[subn].get('element') in VDW_RADII
-        )
-    }
-    max_dist = max(VDW_RADII.values()) * fudge
+    idx_to_nodenum = dict(enumerate(
+        subn for subn in graph
+        if subn in nodes and graph.nodes[subn].get('element') in VDW_RADII
+    ))
+    # Guard against the case where there are no atoms with known elements, which
+    # max does *not* like.
+    if idx_to_nodenum:
+        max_dist = max(VDW_RADII[graph.nodes[idx]['element']] for idx in idx_to_nodenum.values())
+    else:
+        max_dist = 0
+    max_dist *= fudge
 
     positions = np.array([
         graph.nodes[node]['position']
@@ -109,17 +120,26 @@ def _bonds_from_distance(graph, nodes=None, non_edges=None, fudge=1.0):
     else:
         pairs = {}
 
+    nodes = graph.nodes
     for (idx1, idx2), dist in pairs.items():
         if idx1 >= idx2:
             continue
         node_idx1 = idx_to_nodenum[idx1]
         node_idx2 = idx_to_nodenum[idx2]
-        atom1 = graph.nodes[node_idx1]
-        atom2 = graph.nodes[node_idx2]
-        element1 = atom1['element']
-        element2 = atom2['element']
 
         if frozenset((node_idx1, node_idx2)) in non_edges:
+            continue
+        atom1 = nodes[node_idx1]
+        atom2 = nodes[node_idx2]
+        element1 = atom1['element']
+        element2 = atom2['element']
+        resserial1 = atom1['_res_serial']
+        resserial2 = atom2['_res_serial']
+
+        # Forbid H-H bonds, and in addition, prevent hydrogens from making bonds
+        # to different residues.
+        if element1 == 'H' and element2 == 'H' or \
+                (resserial1 != resserial2 and (element1 == 'H' or element2 == 'H')):
             continue
 
         bond_distance = 0.5 * (VDW_RADII[element1] + VDW_RADII[element2])
@@ -196,7 +216,7 @@ def _bonds_from_names(graph, resname, nodes, force_field):
     return non_edges
 
 
-def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
+def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
     """Creates bonds within molecules in the system.
 
     First, edges will be created based on residue and atom names. Second, edges
@@ -241,10 +261,12 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     non_edges = set()
 
     residue_groups = collect_residues(system, ('mol_idx chain resid resname insertion_code'.split()))
-
-    for ((mol_idx, chain, resid, resname, insertion_code), idxs) in residue_groups.items():
+    for res_serial, (keys, idxs) in enumerate(residue_groups.items()):
+        mol_idx, chain, resid, resname, insertion_code = keys
+        for idx in idxs:
+            system.nodes[idx]['_res_serial'] = res_serial
         if not allow_name:
-            break
+            continue
         try:
             # Try adding bonds within the residue based on atom names
             non_edges.update(_bonds_from_names(system, resname, idxs, force_field))
@@ -262,14 +284,13 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
     # termini, ...)
     if allow_dist:
         _bonds_from_distance(system, non_edges=non_edges, fudge=fudge)
-
     # Split the system into connected components. We do want to keep residues
     # together, so make a residue graph (1 node per residue) first, and use that
     # to find the connected components.
-    residue_graph = nx.quotient_graph(system, residue_groups.values())
     molecules = []
-    for node_idxs in nx.connected_components(residue_graph):
-        node_idxs = set().union(*node_idxs)
+    residue_graph = partition_graph(system, residue_groups.values())
+    for res_node_idxs in nx.connected_components(residue_graph):
+        node_idxs = set().union(*(residue_graph.nodes[rni]['graph'] for rni in res_node_idxs))
         mol = Molecule(system.subgraph(node_idxs))
         molecules.append(mol)
 
@@ -277,7 +298,7 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.0):
 
 
 class MakeBonds(Processor):
-    def __init__(self, allow_name=True, allow_dist=True, fudge=1):
+    def __init__(self, allow_name=True, allow_dist=True, fudge=1.2):
         self.allow_name = allow_name
         self.allow_dist = allow_dist
         self.fudge = fudge

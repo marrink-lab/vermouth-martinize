@@ -68,7 +68,7 @@ jobs:
         - pip install --upgrade -r requirements-tests.txt
         - pip install pylint
       script:
-        - python run_pylint.py --disable=fixme --fail-under=8.5 vermouth 
+        - python run_pylint.py --disable=fixme --fail-under=9 vermouth
         - python run_pylint.py --disable=fixme --fail-under=9.5 bin/martinize2
       after_success: skip
 

@@ -1,0 +1,10 @@
+### DETAILS: 
+
+# Original PDB CODE:  1VII 
+# Structure from NMR experiment.
+# Selected one of the structures and removed the hydrogens
+
+### TEST: 
+
+# -ff martini22p
+# -mutation in residue 53: from MET to VAL

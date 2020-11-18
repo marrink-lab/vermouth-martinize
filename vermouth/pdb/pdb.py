@@ -19,6 +19,7 @@ Provides functions for reading and writing PDB files.
 import numpy as np
 import networkx as nx
 
+from ..file_writer import open
 from ..molecule import Molecule
 from ..utils import first_alpha, distance, format_atom_string
 from ..parser_utils import LineParser
@@ -222,7 +223,23 @@ class PDBParser(LineParser):
 
         properties = {}
         for name, type_, slice_ in field_slices:
-            properties[name] = type_(line[slice_].strip())
+            value = line[slice_].strip()
+            if value:
+                properties[name] = type_(value)
+            else:
+                properties[name] = type_()
+
+        # Charge is special, since it's "2-" or "1+", rather than -2 etc. And
+        # let's turn it into a number
+        charge = properties['charge']
+        if charge:
+            try:
+                charge = float(charge)
+            except ValueError:
+                charge = float(charge[::-1])
+        else:
+            charge = 0
+        properties['charge'] = charge
 
         pos = (properties.pop('x'), properties.pop('y'), properties.pop('z'))
         # Coordinates are read in Angstrom, but we want them in nm
@@ -487,8 +504,8 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
             atomname = get_not_none(node, 'atomname', '')
             altloc = get_not_none(node, 'altloc', '')
             resname = get_not_none(node, 'resname', '')
-            chain = node['chain']
-            resid = node['resid']
+            chain = get_not_none(node, 'chain', '')
+            resid = get_not_none(node, 'resid', 1)
             insertion_code = get_not_none(node, 'insertioncode', '')
             try:
                 # converting from nm to A
@@ -521,8 +538,8 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
         format_string = 'CONECT '
         for mol_idx, molecule in enumerate(system.molecules):
             for node_idx in molecule:
-                todo = [nodeidx2atomid[(mol_idx, n_idx)]
-                        for n_idx in molecule[node_idx] if n_idx > node_idx]
+                todo = sorted(nodeidx2atomid[(mol_idx, n_idx)]
+                              for n_idx in molecule[node_idx] if n_idx > node_idx)
                 while todo:
                     current, todo = todo[:4], todo[4:]
                     fmt = ['CONECT'] + [number_fmt]*(len(current) + 1)
@@ -549,7 +566,7 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
         Whether charges should be omitted. This is usually a good idea since
         the PDB format can only deal with integer charges.
     nan_missing_pos: bool
-        Wether the writing should fail if an atom does not have a position.
+        Whether the writing should fail if an atom does not have a position.
         When set to `True`, atoms without coordinates will be written
         with 'nan' as coordinates; this will cause the output file to be
         *invalid* for most uses.

@@ -1,0 +1,7 @@
+martinize2
+-f ../aa.pdb
+-x cg.pdb
+-o topol.top
+-ff martini22
+-dssp
+-cys auto

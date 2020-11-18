@@ -27,7 +27,7 @@ import networkx as nx
 
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
-from ..utils import format_atom_string
+from ..utils import format_atom_string, are_all_equal
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -74,7 +74,8 @@ def find_ptm_atoms(molecule):
     # Atomnames have already been fixed, and missing atoms have been added.
     # In addition, unrecognized atoms have been labeled with the PTM attribute.
     extra_atoms = set(n_idx for n_idx in molecule
-                      if molecule.nodes[n_idx].get('PTM_atom', False))
+                      if (molecule.nodes[n_idx].get('PTM_atom', False)
+                          or molecule.nodes[n_idx].get('modifications')))
     ptms = []
     while extra_atoms:
         # First PTM atom we'll look at
@@ -152,10 +153,40 @@ def identify_ptms(residue, residue_ptms, known_ptms):
         Not all PTM atoms in ``residue`` can be covered with ``known_PTMs``.
     """
     to_cover = set()
+    cover = []
     for res_ptm in residue_ptms:
-        to_cover.update(res_ptm[0])
-        to_cover.update(res_ptm[1])
-    return _cover_graph(residue, to_cover, known_ptms)
+        ptm_atoms, anchors = res_ptm
+        # For every node in this residue, get all modifications already known.
+        residue_mods = [residue.nodes[idx].get('modifications', []) for idx in ptm_atoms]
+        # Deduplicate the modifications so we only check e.g. C-ter once for
+        # this residue
+        used_mods = []
+        for node_mods in residue_mods:
+            for mod in node_mods:
+                if mod not in used_mods:
+                    used_mods.append(mod)
+        if used_mods:
+            # Store all atoms matched with already known mods (in used_mods) in
+            # known_matched, so we can subtract them from ptm_atoms afterwards.
+            # This may cause issues with overlapping modifications. It may be
+            # better to subtract match from ptm_atoms in the loop.
+            known_matched = set()
+            for mod in used_mods:
+                gm = nx.isomorphism.GraphMatcher(residue.subgraph(ptm_atoms), mod,
+                                                 node_match=nx.isomorphism.categorical_node_match('atomname', ''))
+                match = list(gm.subgraph_isomorphisms_iter())
+                assert len(match) == 1
+                match = match[0]
+                cover.append((mod, match))
+                # (That would be here)
+                known_matched.update(match)
+            ptm_atoms -= known_matched
+            assert not ptm_atoms
+        else:
+            to_cover.update(ptm_atoms)
+            to_cover.update(anchors)
+    cover += _cover_graph(residue, to_cover, known_ptms)
+    return cover
 
 
 def _cover_graph(graph, to_cover, fragments):
@@ -271,19 +302,24 @@ def fix_ptm(molecule):
         residue = molecule.subgraph(n_idxs)
         options = allowed_ptms(residue, res_ptms, known_ptms)
         options = sorted(options,
-                         key=lambda opt: len([n for n in opt[0] if opt[0].nodes[n].get('PTM_atom', False)]),
+                         key=lambda opt: len([n for n in opt[0]
+                                              if opt[0].nodes[n].get('PTM_atom', False)]),
                          reverse=True)
         try:
             identified = identify_ptms(residue, res_ptms, options)
         except KeyError:
-            LOGGER.exception('Could not identify the modifications for'
-                             ' residues {}, involving atoms {}',
-                             ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
-                              for resid in sorted(set(resids))],
-                             ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
-                              for idxs in res_ptms for idx in idxs[0]],
-                             type='unknown-input')
-            raise
+            LOGGER.warning('Could not identify the modifications for'
+                           ' residues {}, involving atoms {}',
+                           ['{resname}{resid}'.format(**molecule.nodes[resid_to_idxs[resid][0]])
+                            for resid in sorted(set(resids))],
+                           ['{atomid}-{atomname}'.format(**molecule.nodes[idx])
+                            for idxs in res_ptms for idx in idxs[0]],
+                           type='unknown-input')
+            for idxs in res_ptms:
+                for idx in idxs[0]:
+                    molecule.remove_node(idx)
+            continue
+
         # Why this mess? There can be multiple PTMs for a single (set of)
         # residue(s); and a single PTM can span multiple residues.
         LOGGER.info("Identified the modifications {} on residues {}",
@@ -320,8 +356,13 @@ def fix_ptm(molecule):
                                          type='change-atom')
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
-                molecule.nodes[n_idx]['modifications'] = molecule.nodes[n_idx].get('modifications', [])
-                molecule.nodes[n_idx]['modifications'].append(ptm)
+                node = molecule.nodes[n_idx]
+                if not ('modification' in node and ptm in node.get('modifications', [])):
+                    # These nodes already had the modification annotated.
+                    # Also note that 'modification' != 'modifications'. Yes,
+                    # this is an issue. No, I'm not fixing that.
+                    node['modifications'] = node.get('modifications', [])
+                    node['modifications'].append(ptm)
 
 
 class CanonicalizeModifications(Processor):

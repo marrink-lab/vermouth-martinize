@@ -139,18 +139,25 @@ def node_should_exist(modification, node_idx):
     return not modification.nodes[node_idx].get('PTM_atom', False)
 
 
-def ptm_resname_match(node1, node2):
+def ptm_resname_match(mol_node, map_node):
     """
     As :func:`node_matcher`, except that empty resname and false PTM_atom
     attributes from `node2` are removed.
     """
-    if 'resname' in node2 and not node2['resname']:
-        node2 = node2.copy()
-        del node2['resname']
-    if 'PTM_atom' in node2 and not node2['PTM_atom']:
-        del node2['PTM_atom']
-    is_equal = node_matcher(node1, node2)
-    return is_equal
+    if 'resname' in map_node and not map_node['resname']:
+        map_node = map_node.copy()
+        del map_node['resname']
+    if 'PTM_atom' in map_node and not map_node['PTM_atom']:
+        map_node = map_node.copy()
+        del map_node['PTM_atom']
+    if 'modifications' in mol_node:
+        map_node = map_node.copy()
+        matching_mod = all(map_mod in mol_node.get('modifications', [])
+                           for map_mod in map_node.pop('modifications', []))
+    else:
+        matching_mod = True
+    is_equal = node_matcher(mol_node, map_node)
+    return is_equal and matching_mod
 
 
 def cover(to_cover, options):
@@ -229,9 +236,11 @@ def modification_matches(molecule, mappings):
         A list with the following items:
             Dict describing the correspondence of node keys in `molecule` to
                 node keys in the modification.
+
             The modification.
-                Dict with all reference atoms, mapping modification nodes to
-                    nodes in `molecule`.
+
+            Dict with all reference atoms, mapping modification nodes to
+                nodes in `molecule`.
     """
     modified_nodes = set()  # This will contain whole residues.
     for idx, node in molecule.nodes.items():
@@ -239,13 +248,15 @@ def modification_matches(molecule, mappings):
             modified_nodes.add(idx)
     ptm_subgraph = molecule.subgraph(modified_nodes)
     grouped = nx.connected_components(ptm_subgraph)
-    found_ptm_groups = set()
+    found_ptm_groups = []
+    # For every modification group we would like a set with the names of the
+    # involved modifications, so we can use that to figure out which mod
+    # mappings should be used.
     for group in grouped:
         modifications = {
-            tuple(mod.name for mod in molecule.nodes[mol_idx].get('modifications', []))
-            for mol_idx in group
+            mod.name for mol_idx in group for mod in molecule.nodes[mol_idx].get('modifications', [])
         }
-        found_ptm_groups.update(modifications)
+        found_ptm_groups.append(modifications)
     needed_mod_mappings = set()
     known_mod_mappings = get_mod_mappings(mappings)
     for group in found_ptm_groups:
@@ -261,7 +272,7 @@ def modification_matches(molecule, mappings):
             LOGGER.warning("Can't find modification mappings for the "
                            "modifications {}. The following modification "
                            "mappings are known: {}",
-                           [ptm for ptm in group], known_mod_mappings)
+                           list(group), known_mod_mappings)
             continue
         needed_mod_mappings.update(covered_by)
     matches = []
@@ -269,13 +280,7 @@ def modification_matches(molecule, mappings):
     # define most modifications at the same time get processed first
     for mod_name in sorted(needed_mod_mappings, key=len, reverse=True):
         mod_mapping = known_mod_mappings[mod_name]
-        # TODO: include modifications in matching criterion (just add it to the
-        #       modification from-block).
-        # For now, just make sure the intersection with the modified_nodes is
-        # not empty.
         for mol_to_mod, modification, references in mod_mapping.map(molecule, node_match=ptm_resname_match):
-            if not modified_nodes & set(mol_to_mod):
-                continue
             matches.append((mol_to_mod, modification, references))
             if not set(mol_to_mod) <= modified_nodes:
                 # TODO: better message
@@ -437,7 +442,9 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             # Undefined loop variable is guarded against by the else-raise above
             mod_to_out[mod_idx] = out_idx  # pylint: disable=undefined-loop-variable
             graph_out.nodes[out_idx].update(modification.nodes[mod_idx].get('replace', {})) # pylint: disable=undefined-loop-variable
-        graph_out.nodes[out_idx]['modification'] = modification
+        graph_out.nodes[out_idx]['modifications'] = graph_out.nodes[out_idx].get('modifications', [])
+        if modification not in graph_out.nodes[out_idx]['modifications']:
+            graph_out.nodes[out_idx]['modifications'].append(modification)
 
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():
@@ -641,10 +648,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
                 LOGGER.warning('The attributes {} for atom {} are going to'
                                ' be garbage.', attrs_not_sane, format_atom_string(graph_out.nodes[out_idx]),
                                type='inconsistent-data')
-
-        if graph_out[out_idx].get('atomname', '') is None:
+        if graph_out.nodes[out_idx].get('atomname', '') is None:
             to_remove.add(out_idx)
-
 
     # We need to add edges between residues. Within residues comes from the
     # blocks.

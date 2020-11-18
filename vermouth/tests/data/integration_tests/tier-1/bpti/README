@@ -1,0 +1,9 @@
+### DETAILS: 
+
+# Original PDB CODE:  4PTI 
+# Structure from X-ray crystallography experiment.
+
+### TEST: 
+
+# -ff elnedy22
+# -force constant dependent of the distance

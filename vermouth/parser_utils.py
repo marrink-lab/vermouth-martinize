@@ -108,7 +108,7 @@ class LineParser:
             if not line:
                 continue
             result = self.dispatch(line)(line, lineno)
-                         
+
             if result is not None:
                 yield result
 
@@ -179,7 +179,7 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         -------
         collections.abc.Callable
             The method that should be used to parse `line`.
-        """                   
+        """
         if self.is_section_header(line):
             return self.parse_header
         else:
@@ -295,7 +295,7 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         IOError
             The line starts like a section header but looks misformatted.
         """
-        if line.startswith('[') :
+        if line.startswith('['):
             if line.endswith(']'):
                 return True
             else:

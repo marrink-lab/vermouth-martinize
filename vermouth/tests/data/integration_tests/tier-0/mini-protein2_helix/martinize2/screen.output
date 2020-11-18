@@ -1,0 +1,22 @@
+    INFO - general - Read 1 molecules from PDB file ../aa.pdb
+    INFO - step - Guessing the bonds.
+    INFO - general - 1 molecules after guessing bonds
+    INFO - step - Repairing the graph.
+    INFO - general - Applying modification NH2-ter to residue A-ARG1
+    INFO - general - Applying modification COOH-ter to residue A-LEU43
+    INFO - missing-atom - Missing atom LEU43:OXT
+    INFO - step - Dealing with modifications.
+    INFO - general - Identified the modifications ['NH2-ter'] on residues ['ARG1']
+    INFO - general - Identified the modifications ['COOH-ter'] on residues ['LEU43']
+    INFO - step - Read input.
+    INFO - step - Creating the graph at the target resolution.
+ WARNING - general - Can't find modification mappings for the modifications ['COOH-ter']. The following modification mappings are known: {}
+ WARNING - general - Can't find modification mappings for the modifications ['NH2-ter']. The following modification mappings are known: {}
+ WARNING - unmapped-atom - These atoms are not covered by a mapping. Either your mappings don't describe all atoms (bad idea), or, there's no mapping available for all residues. ['729A-LEU43:OXT']
+    INFO - step - Averaging the coordinates.
+    INFO - step - Applying the links.
+    INFO - step - Placing the charge dummies.
+    INFO - step - Setting the rubber bands.
+    INFO - step - Writing output.
+    INFO - general - Happiness is a dry martini and a good woman... or a bad woman. -- George Burns
+

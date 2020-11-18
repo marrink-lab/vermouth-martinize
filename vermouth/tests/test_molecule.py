@@ -26,6 +26,9 @@ from vermouth.molecule import Interaction, Molecule
 
 from .molecule_strategies import random_molecule, random_block, random_link
 
+# pylint: disable=redefined-outer-name, no-value-for-parameter
+
+
 # In some cases, drawing from hypothesis.strategies.text is extremely slow and
 # triggers the heath check warnings. It appears to be due to some internal
 # combinations of timers and cache. This is a workwround that forces the
@@ -1223,7 +1226,7 @@ def test_interaction_sort(interactions, expected):
     """
     Test the order produced by Molecule._sort_interactions.
     """
-    assert vermouth.molecule.Molecule._sort_interactions(interactions) == expected
+    assert vermouth.molecule.Molecule.sort_interactions(interactions) == expected
 
 
 @hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())

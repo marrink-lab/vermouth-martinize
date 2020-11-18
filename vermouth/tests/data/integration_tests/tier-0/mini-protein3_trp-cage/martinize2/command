@@ -1,0 +1,8 @@
+martinize2
+-f ../aa.pdb
+-x cg.pdb
+-o topol.top
+-ff elnedyn22
+-dssp dssp
+-eu 0.7
+-ef 800.0

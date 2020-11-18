@@ -17,6 +17,10 @@ protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASP0|GLU|GLU0|
 protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|THR|SER|LYS|LYS0|ARG|ARG0|HIS|HISH|PHE|TYR|TRP"
 prot_default_bb_type P2
 
+[ variables ]
+elastic_network_bond_type 6
+res_min_dist 3
+
 ;;; GLYCINE
 
 [ moleculetype ]
@@ -733,27 +737,6 @@ BB +BB
 BB ++BB 1 0.640 2500
 +BB +++BB 1 0.640 2500
 BB +++BB 1 0.970 2500
-
-;; Protein terminii. These links should be applied last.
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qp", "charge": 1}}
-[ non-edges ]
-BB -BB
-
-[ link ]
-[ molmeta ]
-neutral_termini not(true)
-[ features ]
-neutral_termini
-[ atoms ]
-BB {"replace": {"atype": "Qn", "charge": -1}}
-[ non-edges ]
-BB +BB
 
 ;; Cystein bridge
 [ link ]
