@@ -35,7 +35,7 @@ class ITPDirector(SectionLineParser):
                  'pairs': [0, 1],
                  'exclusions': [slice(None, None)],
                  'virtual_sitesn': [0, slice(2, None)],
-                 'virtual_sites2': [0, 1, 2, 3],
+                 'virtual_sites2': [0, 1, 2],
                  'virtual_sites3': [0, 1, 2, 3],
                  'pairs_nb': [0, 1],
                  'SETTLE': [0],
