@@ -915,6 +915,45 @@ class Molecule(nx.Graph):
         for node in nodes:
             self._remove_interactions_with_node(node)
 
+    def make_edges_from_interaction_type(self, type_):
+        """
+        Create edges from the interactions of a given type.
+
+        The interactions must be described so that two consecutive atoms in an
+        interaction should be linked by an edge. This is the case for bonds,
+        angles, proper dihedral angles, and cmap torsions. It is not always
+        true for improper torsions.
+
+        Cmap are described as two consecutive proper dihedral angles. The
+        atoms for the interaction are the 4 atoms of the first dihedral angle
+        followed by the next atom forming the second dihedral angle with the
+        3 previous ones. Each pair of consecutive atoms generate an edge.
+
+        .. warning::
+
+            If there is no interaction of the required type, it will be
+            silently ignored.
+
+        Parameters
+        ----------
+        type_: str
+            The name of the interaction type the edges should be built from.
+        """
+        for interaction in self.interactions.get(type_, []):
+            if interaction.meta.get('edge', True):
+                atoms = interaction.atoms
+                self.add_edges_from(zip(atoms[:-1], atoms[1:]))
+
+    def make_edges_from_interactions(self):
+        """
+        Create edges from the interactions we know how to convert to edges.
+
+        The known interactions are bonds, angles, proper dihedral angles,
+        cmap torsions and constraints.
+        """
+        known_types = ('bonds', 'angles', 'dihedrals', 'cmap', 'constraints')
+        for type_ in known_types:
+            self.make_edges_from_interaction_type(type_)
 
 class Block(Molecule):
     """
@@ -1016,46 +1055,6 @@ class Block(Molecule):
             # not appear as particles.
             if node_attr:
                 yield node_attr
-
-    def make_edges_from_interaction_type(self, type_):
-        """
-        Create edges from the interactions of a given type.
-
-        The interactions must be described so that two consecutive atoms in an
-        interaction should be linked by an edge. This is the case for bonds,
-        angles, proper dihedral angles, and cmap torsions. It is not always
-        true for improper torsions.
-
-        Cmap are described as two consecutive proper dihedral angles. The
-        atoms for the interaction are the 4 atoms of the first dihedral angle
-        followed by the next atom forming the second dihedral angle with the
-        3 previous ones. Each pair of consecutive atoms generate an edge.
-
-        .. warning::
-
-            If there is no interaction of the required type, it will be
-            silently ignored.
-
-        Parameters
-        ----------
-        type_: str
-            The name of the interaction type the edges should be built from.
-        """
-        for interaction in self.interactions.get(type_, []):
-            if interaction.meta.get('edge', True):
-                atoms = interaction.atoms
-                self.add_edges_from(zip(atoms[:-1], atoms[1:]))
-
-    def make_edges_from_interactions(self):
-        """
-        Create edges from the interactions we know how to convert to edges.
-
-        The known interactions are bonds, angles, proper dihedral angles, and
-        cmap torsions.
-        """
-        known_types = ('bonds', 'angles', 'dihedrals', 'cmap', 'constraints')
-        for type_ in known_types:
-            self.make_edges_from_interaction_type(type_)
 
     def guess_angles(self):
         """
