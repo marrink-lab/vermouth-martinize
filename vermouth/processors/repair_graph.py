@@ -138,13 +138,17 @@ def _get_reference_residue(residue, force_field):
     if 'modification' in residue:
         modifications = residue['modification']
         for mod_name in modifications:
-            LOGGER.info('Applying modification {} to residue {}-{}{}',
-                        mod_name, residue['chain'], resname, residue['resid'])
-            if mod_name != 'none':
+            if mod_name != 'none' and mod_name != 'pdb':
+                LOGGER.info('Applying modification {} to residue {}-{}{}',
+                            mod_name, residue['chain'], resname, residue['resid'])
                 mod = force_field.modifications[mod_name]
                 reference_block = _patch_modification(reference_block, mod)
         for node_idx in reference_block:
-            reference_block.nodes[node_idx]['modification'] = modifications
+            if mod_name != 'pdb':
+                # Don't attach a modification attribute, so
+                # CanonicalizeModifications tries to find the correct
+                # modification based on the atoms present.
+                reference_block.nodes[node_idx]['modification'] = modifications
     if 'mutation' in residue:
         for node_idx in reference_block:
             reference_block.nodes[node_idx]['mutation'] = mutation

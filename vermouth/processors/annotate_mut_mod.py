@@ -211,7 +211,7 @@ def annotate_modifications(molecule, modifications, mutations):
         for mutmod, key, library in associations:
             for resspec, mod in mutmod:
                 if residue_matches(resspec, residue_graph, res_idx):
-                    if mod != 'none' and mod not in library:
+                    if mod != 'none' and mod != 'pdb' and mod not in library:
                         raise NameError('{} is not known as a {} for '
                                         'force field {}'
                                         ''.format(mod, key, molecule.force_field.name))
