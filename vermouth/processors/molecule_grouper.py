@@ -18,6 +18,12 @@ import itertools
 import networkx as nx
 import numpy as np
 
+from scipy.optimize import linprog
+from scipy.cluster.vq import kmeans2
+from scipy.sparse import csc_matrix, dok_matrix
+
+from .. import KDTree
+
 from ..selectors import is_water, selector_has_position
 from .processor import Processor
 from ..molecule import Molecule
@@ -212,6 +218,133 @@ def constrained_kmeans(data, num_clusters,
     return cost/precision, clusters, memberships, iter
 
 
+def _assign_members(data, clusters, clust_sizes, tolerances, cutoff=10):
+    num_clusters = clusters.shape[0]
+    dispersions = data.sparse_distance_matrix(KDTree(clusters), cutoff)
+    # Dispersions is: {(at_idx, clust_idx): distance}
+    # Let's condense the dispersions to a 1D array. We also want the indices
+    # associated with the values. We can't use dispersions.nonzero, since that
+    # excludes explicit zeros. And I'd rather not use dispersions.data, since
+    # then I have no guarantees over the order of the values.
+    disp_idxs = tuple(zip(*dispersions.keys()))
+    dispersions = dispersions[disp_idxs].toarray().squeeze()
+    disp_idxs = np.array(disp_idxs)
+    # We need to make the constraint matrices. Fortunately linprog (or at least
+    # the interior point method) can deal with sparse matrices. Saves us a few
+    # 10's GB of memory.
+    # This one is for the inequality constraints, so that the clusters are
+    # between the specified sizes. We need 2*num_clusters, since we need both
+    # the upper and lower bound. Indices 0..num_clusters are the upper bounds,
+    # indices num_clusters..2*num_clusters lower bounds.
+    A_ub = dok_matrix((2*num_clusters, disp_idxs.shape[-1]), dtype=np.int8)
+    b_ub = np.empty(2*num_clusters, dtype=np.int8)
+    # TODO: Add lower bound so that 90% of all data contributes, and remove the
+    #       equality constraint that makes every data point contribute once.
+    for jdx in range(num_clusters):
+        at_idxs_in_disp = disp_idxs[1] == jdx
+
+        A_ub[jdx, at_idxs_in_disp] = 1
+        A_ub[jdx+num_clusters, at_idxs_in_disp] = -1
+
+        b_ub[jdx] = clust_sizes[jdx] + tolerances[jdx]
+        num_candidates = np.count_nonzero(at_idxs_in_disp)
+        if num_candidates == 0:
+            b_ub[jdx + num_clusters] = 0
+        elif num_candidates < (clust_sizes[jdx] - tolerances[jdx]):
+            # If there are not enough candidate members for a given cluster (due
+            # to the distance cutoff in determining the dispersions) the problem
+            # can become infeasible. So in those cases, set the lower bound to
+            # 1.
+            b_ub[jdx + num_clusters] = -1
+        else:
+            b_ub[jdx+num_clusters] = -(clust_sizes[jdx] - tolerances[jdx])
+
+    # We need to do something similar for all datapoints, to ensure they
+    # contribute exactly once.
+    A_eq = dok_matrix((data.data.shape[0], disp_idxs.shape[-1]), dtype=np.int8)
+    b_eq = np.ones(data.data.shape[0], dtype=np.int8)
+    for idx in range(data.data.shape[0]):
+        clust_jdxs_in_disp = disp_idxs[0] == idx
+
+        A_eq[idx, clust_jdxs_in_disp] = 1
+        if not np.any(clust_jdxs_in_disp):
+            # If no candidate clusters the datapoint doesn't have to contribute.
+            b_eq[idx] = 0
+
+    # Time so solve the system. Hopefully.
+    A_ub = csc_matrix(A_ub)
+    A_eq = csc_matrix(A_eq)
+    LOGGER.debug('Solving linear problem with {} variables. This may take a '
+                 'while...', disp_idxs.shape[1])
+    answer = linprog(dispersions, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=(0, 1),
+                     options=dict(sparse=True, tol=0.1))
+    members = answer.x
+    print(answer)
+    # With a bit of luck this is ~0.5, so all memberships are either 0 or 1.
+    hardness = np.abs(members - 0.5)
+    print(np.min(hardness), np.mean(hardness), np.median(hardness), np.max(hardness))
+
+    memberships = np.zeros((data.data.shape[0], num_clusters))
+    print(disp_idxs)
+    print(disp_idxs.shape)
+    print(dispersions.shape)
+    print(members.shape)
+    print(data.size)
+    print(num_clusters)
+    for d_idx in range(disp_idxs.shape[1]):
+        idx, jdx = disp_idxs[:, d_idx]
+        val = members[d_idx]
+        memberships[idx, jdx] = val
+
+    return answer.fun, memberships
+
+
+def do_cluster(data, num_clusters, clust_sizes=4, tolerances=0,
+               init_clusters='random', max_iter=100):
+    if data.ndim == 1:
+        # np.atleast_2d adds the new dimension in the wrong place.
+        data = data[:, np.newaxis]
+    clust_sizes = expand_to_list(clust_sizes, num_clusters)
+    tolerances = expand_to_list(tolerances, num_clusters)
+    if len(clust_sizes) != num_clusters:
+        raise IndexError('len(max_clust_sizes) must be num_clusters ({}), but '
+                         'is {}'.format(num_clusters, len(clust_sizes)))
+    if len(tolerances) != num_clusters:
+        raise IndexError('len(tolerances) must be num_clusters ({}), but '
+                         'is {}'.format(num_clusters, len(tolerances)))
+    if isinstance(init_clusters, str) and init_clusters == 'fixed':
+        clusters = np.zeros((num_clusters, data.shape[-1]))
+    elif isinstance(init_clusters, str) and init_clusters == 'random':
+        rng = np.random.default_rng()
+        clusters = rng.choice(data, num_clusters, replace=False, axis=0)
+    else:
+        clusters = np.broadcast_to(init_clusters, (num_clusters, data.shape[-1]))
+
+    data = KDTree(data)
+
+    dists, members = data.query(clusters, max(s - t for s, t in zip(clust_sizes, tolerances)), eps=0.1)
+    clusters = data.data[members].mean(axis=1)
+    # dists, members = data.query(clusters, 3, eps=0.1)
+    current_iter = 0
+    best_fun_val = float('inf')
+
+    while current_iter <= max_iter:
+        # We can probably progressively tighten the cutoff?
+        funval, memberships = _assign_members(data, clusters, clust_sizes, tolerances, 1)
+
+        if funval >= best_fun_val:
+            break
+        else:
+            best_fun_val = funval
+
+        weights = (0.5 - memberships)**2 / np.sum((0.5 - memberships)**2, axis=0, keepdims=True)
+        weights[:, np.all(weights == 0, axis=0)] = np.random.random()
+        clusters = weights.T.dot(data.data)
+        current_iter += 1
+    memberships = memberships.round()
+    return best_fun_val, clusters, memberships, current_iter
+
+
 def group_molecules(system, selector, size_tries=10, clust_sizes=3, **kwargs):
     """
     Clusters molecules in `system` into groups of 4 \u00b1 1. Only molecules
@@ -247,16 +380,29 @@ def group_molecules(system, selector, size_tries=10, clust_sizes=3, **kwargs):
     num_clusters = int(np.ceil(len(water_mols)/clust_sizes))
     min_clusters = max(num_clusters - size_tries//2, 0)
     max_clusters = min(num_clusters + size_tries//2, len(positions))
-    init = kwargs.pop('init_clusters', 'random')
+    centroids, labels = kmeans2(positions, k=min_clusters, minit='++')
+    members = np.zeros((positions.shape[0], min_clusters))
+    for idx in range(min_clusters):
+        members[labels==idx, idx] = 1
+    weights = members / members.sum(axis=0, keepdims=True)
+    init = weights.T.dot(positions)
+    # init = kwargs.pop('init_clusters', 'random')
     results = []
-    for num_clusters in range(min_clusters, max_clusters):
+    for num_clusters in range(min_clusters, max_clusters+1):
         LOGGER.debug('Trying to cluster {} molecules into {} clusters', len(water_mols), num_clusters)
-        cost, clusters, memberships, niter = constrained_kmeans(
+        # cost, clusters, memberships, niter = constrained_kmeans(
+        #     data=positions,
+        #     num_clusters=num_clusters,
+        #     init_clusters=init,
+        #     clust_sizes=clust_sizes,
+        #     **kwargs
+        # )
+        cost, clusters, memberships, niter = do_cluster(
             data=positions,
             num_clusters=num_clusters,
             init_clusters=init,
             clust_sizes=clust_sizes,
-            **kwargs
+            max_iter=3
         )
         init = np.append(clusters, [[0, 0, 0]], axis=0)
         results.append([cost, clusters, memberships, niter])
