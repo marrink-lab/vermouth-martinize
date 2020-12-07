@@ -64,9 +64,9 @@ charmm27 charmm36 slipids amber
    33   C22   C1A C1A GL1 
    34   H2R   C1A C1A GL1
    35   H2S   C1A C1A GL1
-   36    C3   GL2 GL2 GL2 PO4
-   37    HX   GL2 GL2 GL2 PO4
-   38    HY   GL2 GL2 GL2 PO4
+   36    C3   GL2 GL2 GL2
+   37    HX   GL2 GL2 GL2
+   38    HY   GL2 GL2 GL2
    39   O31   GL2
    40   C31   GL2 GL1 C1B
    41   O32   GL2

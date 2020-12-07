@@ -100,7 +100,7 @@ def node_matcher(node1, node2):
     """
     return attributes_match(node1, node2,
                             ignore_keys=('atype', 'charge', 'charge_group',
-                                         'resid', 'replace', '_old_atomname'))
+                                         'resid', 'replace', '_old_atomname', 'mass'))
 
 
 def _old_atomname_match(node1, node2):
