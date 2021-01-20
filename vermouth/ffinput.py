@@ -413,6 +413,13 @@ class FFDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         _parse_features(tokens, context, context_type)
 
+    @SectionLineParser.section_parser('moleculetype', 'citation', context_type='block')
+    @SectionLineParser.section_parser('link', 'citation', context_type='link')
+    @SectionLineParser.section_parser('modification', 'citation', context_type='modification')
+    def _parse_citation(self, line, lineno=0, context_type=""):
+        cite_keys = line.split()
+        print(cite_keys)
+        self.get_context(context_type).citations.update(cite_keys)
 
 def _some_atoms_left(tokens, atoms, natoms):
     """

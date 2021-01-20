@@ -30,6 +30,9 @@ GLY                1
 ;id type resnr residu atom cgnr   charge
  1   P5   1     GLY    BB     1      0      
 
+[ citation ]
+M2ProteinModel
+Martini2
 
 ;;; ALANINE
 
@@ -558,7 +561,9 @@ TRP                1
 resname $protein_resnames
 [ bonds ]
 BB +BB 1 0.350 1250 {"group": "Backbone bonds"}
-
+;[ citation ]
+;M2ProteinModel
+;Martini2
 
 [ link ]
 resname $protein_resnames

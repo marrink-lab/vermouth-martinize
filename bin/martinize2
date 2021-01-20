@@ -188,6 +188,11 @@ def write_gmx_topology(system, top_path, defines=(), header=()):
             # molecules, without being uninterupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
             with open('{}.itp'.format(moltype), 'w') as outfile:
+                # here we format and merge all citations
+                for citation in molecule.citations:
+                    cite_dict = molecule.force_field.citations[citation]
+                    cite_string = " ".join([field for field in cite_dict.values()])
+                    header.append(cite_string + "\n")
                 vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
             this_moltype_len = len(molecule.meta['moltype'])
             if this_moltype_len > max_name_length:
