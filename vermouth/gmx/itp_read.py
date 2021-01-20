@@ -38,7 +38,7 @@ class ITPDirector(SectionLineParser):
                  'virtual_sites2': [0, 1, 2],
                  'virtual_sites3': [0, 1, 2, 3],
                  'pairs_nb': [0, 1],
-                 'SETTLE': [0],
+                 'settles': [0],
                  'virtual_sites4': [slice(0, 5)],
                  'distance_restraints':  [0, 1],
                  'dihedral_restraints':  [slice(0, 4)],
