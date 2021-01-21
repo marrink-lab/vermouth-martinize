@@ -173,3 +173,34 @@ class BibTexDirector():
 def read_bib(lines, force_field):
     director = BibTexDirector(force_field=force_field)
     return director.parse(iter(lines))
+
+def citation_formatter(citation):
+    """
+    Very basic and minimal formatter for citations. It
+    is adopet from basic ACS style formatting. Fields within
+    || are optionl.
+
+    <authors> |<titel>|. |<journal>| <year>; <doi>
+    """
+    # first we split the author-list
+    citation_string = ""
+    for match in re.findall("(.*?) and", citation["author"]):
+        last_name, first_names = match.split(",", 1)
+        citation_string += last_name.strip().split()[0] + ","
+        for name in first_names.strip().split(' '):
+            citation_string += " " + name.strip()[0]
+
+        citation_string += "; "
+
+    if "titel" in citation:
+        citation_string += " " + citation["titel"] +  "."
+
+    if "journal" in citation:
+        citation_string += " " + citation["journal"]
+
+    citation_string += " " + citation["year"]
+
+    if "doi" in citation:
+        citation_string += "; " + citation["doi"]
+
+    return citation_string
