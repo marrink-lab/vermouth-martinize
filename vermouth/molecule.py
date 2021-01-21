@@ -424,6 +424,7 @@ class Molecule(nx.Graph):
         """
         new = self.subgraph(self.nodes)
         new.name = self.name
+        new.citations = self.citations
         return new
 
     def subgraph(self, nodes):
@@ -442,6 +443,8 @@ class Molecule(nx.Graph):
         subgraph.nrexcl = self.nrexcl
         subgraph.name = self.name
 
+        # copy citations
+        subgraph.citations = self.citations
         node_copies = [(node, copy.copy(self.nodes[node])) for node in nodes]
         subgraph.add_nodes_from(node_copies)
 

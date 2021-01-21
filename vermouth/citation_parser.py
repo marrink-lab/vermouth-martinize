@@ -18,13 +18,13 @@ class BibTexDirector():
     Lightweight parser for BibTex files. BibTex files
     in general have an assorment of entries that
     describe the corresponding sort of publication
-    to refere to and then a number required and optional
+    to refer to and then a number required and optional
     fields for the different types of entries. A field
     for example would be Title giving the title of a
     publication. The syntax in general looks as follows:
 
     @<entry>{<some custom ID>, field = {<content>},
-                               field = {<cintent>}}
+                               field = {<content>}}
 
     Alternatively the {} can be replaced by quotation
     marks.
@@ -32,7 +32,7 @@ class BibTexDirector():
     This parser only parses the version with {} as
     used by google scholar. In addition we do not
     check for missing fields or invalid fields. All
-    fields are accapted and no fields are required.
+    fields are accepted and no fields are required.
     """
     def __init__(self, force_field):
         self.force_field = force_field
@@ -55,7 +55,7 @@ class BibTexDirector():
     @staticmethod
     def prepare_file(lines):
         """
-        Bibtex is not sensetive to line spacing so we join
+        Bibtex is not sensitive to line spacing so we join
         the line as one string. Comment characters are not
         allowed.
         """
@@ -64,8 +64,8 @@ class BibTexDirector():
     @staticmethod
     def find_entries(citation_string):
         """
-        Look in a string where `@` indicate the
-        begnning of a new entry and return the indices.
+        Look in a string where `@` indicates the
+        beginning of a new entry and return the indices.
 
         Parameters:
         -----------
@@ -93,15 +93,16 @@ class BibTexDirector():
 
         Returns:
         ---------
-        str, str
-            the entry type and the shortened string
+        str
+            The entry type
+        str
+            The shortened string
         """
-        for entry_type in self.known_entries:
-            if entry_string.find(entry_type) == 1:
-                # remove @<entry_type>{
-                entry_string = entry_string[len(entry_type)+1:]
-                return entry_type, entry_string
-        return None
+        assert entry_string[0] == "@"
+        entry_type = entry_string[1:entry_string.find('{')]
+        assert entry_type in self.known_entries
+        entry_string = entry_string[len(entry_type)+1:]
+        return entry_type, entry_string
 
     @staticmethod
     def pop_key(entry_string):
@@ -150,7 +151,6 @@ class BibTexDirector():
         """
         entry_type, entry_string = self.pop_entry_type(entry_string)
         cite_key, entry_string = self.pop_key(entry_string)
-        print(list(self.extract_fields(entry_string)))
         field_dict = dict(self.extract_fields(entry_string))
         field_dict["type"] = entry_type
         self.force_field.citations[cite_key] = field_dict

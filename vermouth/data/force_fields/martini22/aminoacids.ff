@@ -20,6 +20,10 @@ protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|
 elastic_network_bond_type 6
 res_min_dist 3
 
+[ citations ]
+M2ProteinModel
+Martini2
+
 ;;; GLYCINE
 
 [ moleculetype ]
@@ -29,10 +33,6 @@ GLY                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   P5   1     GLY    BB     1      0      
-
-[ citation ]
-M2ProteinModel
-Martini2
 
 ;;; ALANINE
 
