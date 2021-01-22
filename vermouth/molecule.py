@@ -424,7 +424,6 @@ class Molecule(nx.Graph):
         """
         new = self.subgraph(self.nodes)
         new.name = self.name
-        new.citations = self.citations
         return new
 
     def subgraph(self, nodes):

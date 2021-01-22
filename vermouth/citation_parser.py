@@ -177,7 +177,7 @@ def read_bib(lines, force_field):
 def citation_formatter(citation):
     """
     Very basic and minimal formatter for citations. It
-    is adopet from basic ACS style formatting. Fields within
+    is adopted from basic ACS style formatting. Fields within
     || are optionl.
 
     <authors> |<titel>|. |<journal>| <year>; <doi>
@@ -186,14 +186,14 @@ def citation_formatter(citation):
     citation_string = ""
     for match in re.findall("(.*?) and", citation["author"]):
         last_name, first_names = match.split(",", 1)
-        citation_string += last_name.strip().split()[0] + ","
+        citation_string += last_name.strip() + ","
         for name in first_names.strip().split(' '):
             citation_string += " " + name.strip()[0]
 
         citation_string += "; "
 
-    if "titel" in citation:
-        citation_string += " " + citation["titel"] +  "."
+    if "title" in citation:
+        citation_string += " " + citation["title"] +  "."
 
     if "journal" in citation:
         citation_string += " " + citation["journal"]
