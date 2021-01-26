@@ -56,7 +56,7 @@ jobs:
         python-version: ${{ matrix.py_version }}
     - name: Install dependencies
       run: |
-        apt get install dssp
+        apt-get install dssp
         pip install --upgrade setuptools pip
         if: ${{ matrix.WITH_SCIPY }}
           pip install scipy
