@@ -21,19 +21,20 @@ import numpy as np
 import networkx as nx
 
 from .processor import Processor
+from .. import selectors
 
 
 def mindist(A, B):
     return ((A[:, None] - B[None])**2).sum(axis=2).min(axis=1)
 
 
-def get_missing_atoms(molecule):
+def get_atoms_missing_coords(molecule):
     '''
     Determine particles without coordinates in molecule.
     '''
     return [
         ix for ix in molecule
-        if molecule.nodes[ix].get('position') is None
+        if not selectors.selector_has_position(molecule.nodes[ix])
     ]
 
 
@@ -44,7 +45,7 @@ def get_anchors(molecule, indices):
     '''
     return {
         a for ix in indices for a in molecule[ix].keys()
-        if molecule.nodes[a].get('position') is not None
+        if not selectors.selector_has_position(molecule.nodes[a]) is not None
     }
 
 
@@ -95,7 +96,7 @@ def triple_cone(n=24, distance=0.125, angle=109.4):
     return P, S, T
 
 
-def _out(molecule, anchor, target=None, control=None, distance=0.125):
+def _out(molecule, anchor, base, target=None, distance=0.125):
     '''
     Generate coordinates for atom bonded to anchor
     using resultant vector of known substituents.
@@ -110,6 +111,10 @@ def _out(molecule, anchor, target=None, control=None, distance=0.125):
        /
      b3
 
+    X := position to determine
+    a := position of anchoring particle
+    B = [b1, b2, ...] := positions of base particles
+
     Parameters
     ----------
 
@@ -118,14 +123,7 @@ def _out(molecule, anchor, target=None, control=None, distance=0.125):
         None
     '''
     a = molecule.nodes[anchor]['position']
-    if control == None:
-        B = [
-            molecule.nodes[ix]['position']
-            for ix, v in molecule[anchor].items()
-            if v != {}
-        ]
-    else:
-        B = [ molecule.nodes[ix]['position'] for ix in control ]
+    B = [ molecule.nodes[ix]['position'] for ix in base ]
     B = B - a
     u = -B.sum(axis=0)
     u *= distance / ((u ** 2).sum() ** 0.5)
@@ -136,7 +134,7 @@ def _out(molecule, anchor, target=None, control=None, distance=0.125):
     return pos
 
 
-def _chiral(molecule, anchor, up=None, down=None, control=None, distance=0.125):
+def _chiral(molecule, anchor, base, up=None, down=None, distance=0.125):
     '''
     Generate coordinates for atoms bonded to chiral center
     based on two known substituents.
@@ -164,14 +162,7 @@ def _chiral(molecule, anchor, up=None, down=None, control=None, distance=0.125):
         None
     '''
     a = molecule.nodes[anchor]['position']
-    if control is None:
-        B = [
-            molecule.nodes[ix]['position']
-            for ix, v in molecule[anchor].items()
-            if v != {}
-        ]
-    else:
-        B = [ molecule.nodes[ix]['position'] for ix in control ]
+    B = [ molecule.nodes[ix]['position'] for ix in base ]
     B = B - a
     u = -0.5 * (B[0] + B[1])
     v = np.cross(B[0], B[1])
@@ -214,7 +205,7 @@ class Segment:
 
             if valence > 2 and len(b) == valence - 1:
                 # Trivial chiral/flat/bipyramidal/octahedral/...
-                pos = _out(mol, a, target[0], control=b)
+                pos = _out(mol, anchor=a, base=b, target=target[0])
                 for k in self.limbs:
                     k.discard(target[0])
                 # Simply update this segment and return it
@@ -226,7 +217,7 @@ class Segment:
                 # Trivial chiral - except for the actual chirality
                 # a simple 'up' or 'down' flag would be helpful
                 # amino acid side chain is 'up'
-                up, down = _chiral(mol, a, target[0], target[1], control=b)
+                up, down = _chiral(mol, anchor=a, base=b, up=target[0], down=target[1])
                 # Simply update this segment and return it
                 for k in self.limbs:
                     k.discard(target[0])
@@ -326,7 +317,7 @@ class GenerateCoordinates(Processor):
         """
 
         # Missing atoms - those without 'positions'
-        missing = get_missing_atoms(molecule)
+        missing = get_atoms_missing_coords(molecule)
 
         prev = len(molecule)
         while prev - len(missing) > 0:
@@ -385,13 +376,3 @@ def main(args):
     vermouth.pdb.write_pdb(system, args[2], nan_missing_pos=True)
 
     return 0
-
-
-if __name__ == '__main__':
-    import sys
-    import vermouth
-    import vermouth.forcefield
-    import vermouth.map_input
-
-    exco = main(sys.argv)
-    sys.exit(exco)
