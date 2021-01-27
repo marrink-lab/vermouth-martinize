@@ -96,7 +96,7 @@ def triple_cone(n=24, distance=0.125, angle=109.4):
     return P, S, T
 
 
-def _out(molecule, anchor, base, target=None, distance=0.125):
+def _out(molecule, anchor, base, distance=0.125):
     '''
     Generate coordinates for atom bonded to anchor
     using resultant vector of known substituents.
@@ -108,7 +108,7 @@ def _out(molecule, anchor, base, target=None, distance=0.125):
      b1
        \
     b2--a-->X
-       /
+       /  u
      b3
 
     X := position to determine
@@ -127,14 +127,10 @@ def _out(molecule, anchor, base, target=None, distance=0.125):
     B = B - a
     u = -B.sum(axis=0)
     u *= distance / ((u ** 2).sum() ** 0.5)
-    pos = a + u
-    if target is not None:
-        molecule.nodes[target]['position'] = pos
-
-    return pos
+    return a + u
 
 
-def _chiral(molecule, anchor, base, up=None, down=None, distance=0.125):
+def _chiral(molecule, anchor, base, distance=(0.125, 0.125)):
     '''
     Generate coordinates for atoms bonded to chiral center
     based on two known substituents.
@@ -170,17 +166,11 @@ def _chiral(molecule, anchor, base, up=None, down=None, distance=0.125):
     v = 0.5 * ((B[0] - B[1])**2).sum()**0.5 * v / (v ** 2).sum()**0.5
     # Normalization of vector sum
     n = 1 / ((u + v)**2).sum()**0.5
-    # Duck type way to see if we got one or two distances
-    try:
-        rup, rdown = distance
-    except TypeError:
-        rup = rdown = distance
+
+    rup, rdown = distance
+
     pup = a + rup * n * (u + v)
     pdown = a + rdown * n * (u - v)
-    if up is not None:
-        molecule.nodes[up]['position'] = pup
-    if down is not None:
-        molecule.nodes[down]['position'] = pdown
 
     return pup, pdown
 
@@ -205,7 +195,7 @@ class Segment:
 
             if valence > 2 and len(b) == valence - 1:
                 # Trivial chiral/flat/bipyramidal/octahedral/...
-                pos = _out(mol, anchor=a, base=b, target=target[0])
+                mol.nodes[target[0]]['position'] = _out(mol, anchor=a, base=b)
                 for k in self.limbs:
                     k.discard(target[0])
                 # Simply update this segment and return it
@@ -218,6 +208,8 @@ class Segment:
                 # a simple 'up' or 'down' flag would be helpful
                 # amino acid side chain is 'up'
                 up, down = _chiral(mol, anchor=a, base=b, up=target[0], down=target[1])
+                mol.nodes[target[0]]['position'] = up
+                mol.nodes[target[1]]['position'] = down
                 # Simply update this segment and return it
                 for k in self.limbs:
                     k.discard(target[0])
