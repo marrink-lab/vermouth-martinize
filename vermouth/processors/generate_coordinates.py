@@ -352,27 +352,3 @@ class GenerateCoordinates(Processor):
 
         return molecule
 
-
-def main(args):
-    '''
-    Main function for running processor with a PDB file as input (testing).
-    '''
-    pdb = args[1]
-
-    system = vermouth.System()
-    vermouth.PDBInput(pdb).run_system(system)
-    system.force_field = vermouth.forcefield.get_native_force_field('universal')
-
-    flow = [
-        vermouth.MakeBonds(allow_name=True, allow_dist=True, fudge=1),
-        vermouth.RepairGraph(delete_unknown=True, include_graph=True),
-        vermouth.SortMoleculeAtoms(),
-        GenerateCoordinates()
-    ]
-
-    for process in flow:
-        process.run_system(system)
-
-    vermouth.pdb.write_pdb(system, args[2], nan_missing_pos=True)
-
-    return 0
