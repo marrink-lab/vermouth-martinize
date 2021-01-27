@@ -533,7 +533,9 @@ class Molecule(nx.Graph):
                 break
         else:  # no break
             self.add_interaction(type_, atoms, parameters, meta)
-        self.citations.update(citations)
+
+        if citations:
+            self.citations.update(citations)
 
     def get_interaction(self, type_):
         """

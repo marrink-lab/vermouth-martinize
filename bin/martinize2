@@ -194,6 +194,7 @@ def write_gmx_topology(system, top_path, defines=(), header=()):
                 header.append("Pleas cite the following papers:")
                 for citation in molecule.citations:
                     cite_string =  citation_formatter(molecule.force_field.citations[citation])
+                    LOGGER.info("Please cite: " + cite_string)
                     header.append(cite_string)
                 vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
             this_moltype_len = len(molecule.meta['moltype'])

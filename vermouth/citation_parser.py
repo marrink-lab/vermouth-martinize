@@ -174,7 +174,7 @@ def read_bib(lines, force_field):
     director = BibTexDirector(force_field=force_field)
     return director.parse(iter(lines))
 
-def citation_formatter(citation):
+def citation_formatter(citation, title=False):
     """
     Very basic and minimal formatter for citations. It
     is adopted from basic ACS style formatting. Fields within
@@ -192,7 +192,7 @@ def citation_formatter(citation):
 
         citation_string += "; "
 
-    if "title" in citation:
+    if title and "title" in citation:
         citation_string += " " + citation["title"] +  "."
 
     if "journal" in citation:
