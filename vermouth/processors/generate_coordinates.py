@@ -339,7 +339,7 @@ class GenerateCoordinates(Processor):
                     segments.extend(r)
 
             prev = len(missing)
-            missing = get_missing_atoms(molecule)
+            missing = get_atoms_missing_coords(molecule)
             #print(len(missing))
 
         return molecule
