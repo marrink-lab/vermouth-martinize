@@ -9,6 +9,11 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  VERMOUTH_TEST_DSSP: mkdssp
+  SKIP_GENERATE_AUTHORS: 1
+  SKIP_WRITE_GIT_CHANGELOG: 1
+
 jobs:
   build:
 
