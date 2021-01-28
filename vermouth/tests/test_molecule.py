@@ -1229,7 +1229,13 @@ def test_interaction_sort(interactions, expected):
     assert vermouth.molecule.Molecule.sort_interactions(interactions) == expected
 
 
-@hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())
+@hypothesis.given(
+    moltype=st.one_of(
+        st.none(),
+        st.text(st.characters(blacklist_categories=('C', 'Z')), min_size=1)
+    ),
+    mol=random_molecule()
+)
 def test_str_method(mol, moltype):
     """
     Test Molecule.__str__

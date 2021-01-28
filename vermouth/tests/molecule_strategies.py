@@ -148,7 +148,7 @@ def interaction_collection(draw, graph,
     ninteraction_types = draw(st.integers(min_value=0, max_value=2))
     for _ in range(ninteraction_types):
         ninteractions = draw(st.integers(min_value=0, max_value=2))
-        type_name = draw(st.text())
+        type_name = draw(st.text(st.characters(blacklist_categories=('C', 'Z')), min_size=1))
         if type_name not in result:
             result[type_name] = []
         for _ in range(ninteractions):
