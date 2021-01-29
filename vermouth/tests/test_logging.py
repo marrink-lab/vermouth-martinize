@@ -70,14 +70,6 @@ class LogHandler(logging.NullHandler):
         self.test(record)
 
 
-@pytest.fixture
-def logger(request):
-    """Sets up a logger at loglevel 1 and attaches a LogHandler."""
-    logger_ = logging.getLogger(request.function.__name__)
-    logger_.setLevel(1)
-    return logger_
-
-
 @pytest.fixture(scope='module')
 def handler():
     """Sets up a LogHandler"""
@@ -105,7 +97,7 @@ def test_get_logger(name):
         st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5)
     )
 )
-def test_type_adapter(logger, handler, args, type_, default_type, extra):
+def test_type_adapter(handler, args, type_, default_type, extra):
     """Make sure the TypeAdapter sets the correct type attr"""
     def test(record):
         """Make sure the type attribute is as expected"""
@@ -121,6 +113,8 @@ def test_type_adapter(logger, handler, args, type_, default_type, extra):
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
+    logger = logging.getLogger('test_type_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = TypeAdapter(logger, default_type=default_type, extra=extra)
     handler.set_test(test)
@@ -148,7 +142,7 @@ def test_type_adapter(logger, handler, args, type_, default_type, extra):
         st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5)
     )
 )
-def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, extra):
+def test_style_type_adapter(handler, args, kwargs, type_, default_type, extra):
     """Make sure that if you have both a TypeAdapter and a StyleAdapter the
     type you provide ends up in the right place, and that it doesn't interfere
     with keyword formatting."""
@@ -165,6 +159,8 @@ def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, 
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
+    logger = logging.getLogger('test_style_type_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = TypeAdapter(logger, default_type=default_type)
     logger = StyleAdapter(logger, extra=extra)
@@ -189,7 +185,7 @@ def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, 
     extra=st.one_of(st.none(),
                     st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
 )
-def test_style_adapter(logger, handler, args, kwargs, extra):
+def test_style_adapter(handler, args, kwargs, extra):
     """Make sure the StyleAdapter can do keyword formatting"""
     def test(record):
         """Make sure the formatting worked"""
@@ -198,6 +194,8 @@ def test_style_adapter(logger, handler, args, kwargs, extra):
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
+    logger = logging.getLogger('test_style_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
@@ -213,12 +211,14 @@ def test_style_adapter(logger, handler, args, kwargs, extra):
     args=st.lists(st.text(), min_size=0, max_size=5),
     kwargs=st.dictionaries(KWARG_ST, st.text(), min_size=1, max_size=5),
 )
-def test_passing_adapter(logger, handler, args, kwargs):
+def test_passing_adapter(handler, args, kwargs):
     """Make sure the PassingLoggerAdapter does not allow keywords to be set for
     formatting."""
     def test(_):
         assert False
     handler.set_test(test)
+    logger = logging.getLogger('test_passing_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = PassingLoggerAdapter(logger)
     fmt = ['%s']*len(args) + ['%(' + name + ')s' for name in kwargs]
