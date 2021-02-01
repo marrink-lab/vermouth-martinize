@@ -935,14 +935,12 @@ def _parse_edges(tokens, context, context_type, negate):
         raise IOError('The "non-edges" section is only valid in links.')
     atoms = _get_atoms(tokens, natoms=2)
     prefixed_atoms = []
-    for atom in atoms:
+
+    for idx, atom in enumerate(atoms):
         prefixed_reference, attributes = _treat_atom_prefix(*atom)
-        try:
-            apply_to_all_nodes = context._apply_to_all_nodes
-        except AttributeError:
-            apply_to_all_nodes = {}
-        full_attributes = dict(collections.ChainMap(attributes, apply_to_all_nodes))
+        full_attributes = dict(collections.ChainMap(attributes, {}))
         prefixed_atoms.append([prefixed_reference, full_attributes])
+
     if negate:
         context.non_edges.append([prefixed_atoms[0][0], prefixed_atoms[1][1]])
     else:
@@ -952,7 +950,8 @@ def _parse_edges(tokens, context, context_type, negate):
             if atomname not in context and context_type == 'modification':
                 raise KeyError(error_message.format(atomname, context_type,
                                                     context.name))
-        context.add_edge(prefixed_atoms[0][0], prefixed_atoms[1][0])
+        edge_attributes = {key: value for key, value in prefixed_atoms[1][1].items() if key not in ["order", "resname", "atomname"]}
+        context.add_edge(prefixed_atoms[0][0], prefixed_atoms[1][0], **edge_attributes)
 
 
 def _parse_patterns(tokens, context, context_type):

@@ -216,7 +216,13 @@ def partition_graph(graph, partitions):
     for idx, jdx in graph.edges:
         if mapping[idx] != mapping[jdx]:
             new_idx, new_jdx = mapping[idx], mapping[jdx]
-            new_graph.add_edge(new_idx, new_jdx)
+            edge_attrs = graph.edges[(idx, jdx)]
+            if (idx, jdx) in new_graph.edges:
+                old_attrs = new_graph.edges[(idx, jdx)]
+                new_attrs = {key: old_attrs[key] for key in old_attrs.keys() & edge_attrs.keys()}
+                new_graph.add_edge(new_idx, new_jdx, **new_attrs)
+            else:
+                new_graph.add_edge(new_idx, new_jdx, **edge_attrs)
     return new_graph
 
 
