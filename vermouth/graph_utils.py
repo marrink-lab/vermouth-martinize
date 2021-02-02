@@ -219,7 +219,8 @@ def partition_graph(graph, partitions):
             edge_attrs = graph.edges[(idx, jdx)]
             if new_graph.has_edge(new_idx, new_jdx):
                 old_attrs = new_graph.edges[(new_idx, new_jdx)]
-                new_attrs = {key: old_attrs[key] for key in old_attrs.keys() & edge_attrs.keys()}
+                new_attrs = {key: old_attrs[key] for key in old_attrs.keys() & edge_attrs.keys()\
+                                                         if old_attrs[key] == edge_attrs[key]}
                 old_attrs.clear()
                 new_graph.add_edge(new_idx, new_jdx, **new_attrs)
             else:
