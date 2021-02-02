@@ -295,9 +295,6 @@ class TestBlock:
             assert block.has_edge(edge[0], edge[1]) or block.has_edge(edge[1], edge[0])
             assert attr == block.edges[edge]
 
-       # assert (set(frozenset(edge) for edge in block.edges)
-       #         == set(frozenset(edge) for edge in edges))
-        
 
     # test_interaction_fail_reference
     @staticmethod
