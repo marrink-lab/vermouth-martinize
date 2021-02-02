@@ -1,0 +1,112 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: test package
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  VERMOUTH_TEST_DSSP: mkdssp
+  SKIP_GENERATE_AUTHORS: 1
+  SKIP_WRITE_GIT_CHANGELOG: 1
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+       py_version: ["3.6", "3.7", "3.8", "3.9", "3.6-dev", "3.7-dev", "3.8-dev", "3.9-dev"] 
+       include:
+         - py_version: "3.6"
+           WITH_CODECOV: true
+           WITH_SCIPY: true
+         - py_version: "3.7"
+           WITH_CODECOV: true
+           WITH_SCIPY: true
+         - py_version: "3.8"
+           WITH_CODECOV: true
+           WITH_SCIPY: true
+         - py_version: "3.9"
+           WITH_CODECOV: true
+           WITH_SCIPY: false
+         - py_version: "3.8-dev"
+           WITH_CODECOV: true
+           WITH_SCIPY: true
+         - py_version: "3.9-dev"
+           WITH_CODECOV: true
+           WITH_SCIPY: true
+           
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.py_version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.py_version }}
+    - name: Install dependencies part I
+      run: |
+        sudo apt-get install dssp
+        pip install --upgrade setuptools pip
+    - if: ${{ matrix.WITH_SCIPY }}
+      name: Install scipy
+      run: |
+        pip install scipy
+    - name: Install package and requirements
+      run: |
+        pip install --upgrade .
+        pip install -r requirements-tests.txt
+        
+    - name: Run pytest with codecoverage
+      run: |
+        coverage run --source=vermouth $(which pytest) -vv vermouth --hypothesis-show-statistics
+        coverage report --omit='*/bin/pytest'
+        
+    - if: ${{ matrix.WITH_CODECOV }}
+      name: Report code coverage 
+      run: |
+        codecov
+        
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        pip install --upgrade setuptools pip
+        pip install --upgrade .
+        pip install -r requirements-tests.txt
+    - name: Run pylint 
+      run: |
+         python run_pylint.py --disable=fixme --fail-under=8.0 vermouth
+         python run_pylint.py --disable=fixme --fail-under=9.5 bin/martinize2 
+         
+   
+  docs:
+      runs-on: ubuntu-latest
+      
+      steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+           python-version: 3.9
+      - name: Install dependencies
+        run: |
+          pip install --upgrade setuptools pip
+          pip install --upgrade .
+          pip install -r requirements-docs.txt
+          
+      - name: Run docs
+        run: | 
+          mkdir -p doc/source/_static
+          sphinx-build -EnW -b html doc/source/ doc/build/html
