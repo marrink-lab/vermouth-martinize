@@ -178,9 +178,9 @@ def citation_formatter(citation, title=False):
     """
     Very basic and minimal formatter for citations. It
     is adopted from basic ACS style formatting. Fields within
-    {} are optionl.
+    [] are optional.
 
-    <authors> {journal} <year>; <doi>
+    <authors> [journal] <year>; [doi]
 
     Note that the formatter cannot fromat latex
     like syntax (e.g. a{\"} for ae)
