@@ -166,6 +166,12 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
             result.append(token)
     command = result
 
+    # read the citations that are expected
+    citations = []
+    with open(str(data_path/'citation')) as cite_file:
+        for line in cite_file.readlines():
+            citations.append(line.strip())
+
     proc = subprocess.run(command, cwd='.', timeout=60, check=False,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE,
@@ -175,6 +181,10 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
         print(proc.stdout)
         print(proc.stderr)
         assert not exit_code
+
+    # check if strdout has citations in string
+    for citation in citations:
+        assert citation in proc.stderr
 
     files = list(tmp_path.iterdir())
 

@@ -181,10 +181,14 @@ def citation_formatter(citation, title=False):
     || are optionl.
 
     <authors> |<titel>|. |<journal>| <year>; <doi>
+
+    Note that the formatter cannot fromat latex
+    like syntax (e.g. a{\"} for ae)
     """
     # first we split the author-list
     citation_string = ""
-    for match in re.findall("(.*?) and", citation["author"]):
+    # the spaces around the and are required!
+    for match in citation["author"].split(" and "):
         last_name, first_names = match.split(",", 1)
         citation_string += last_name.strip() + ","
         for name in first_names.strip().split(' '):

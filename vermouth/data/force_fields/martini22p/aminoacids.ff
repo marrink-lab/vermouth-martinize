@@ -10,7 +10,7 @@ res_min_dist 3
 Martini2
 M2ProteinModel
 M22ProteinModel
-M2Polarizable
+M2polarizable
 
 ;;; GLYCINE
 
