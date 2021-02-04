@@ -169,7 +169,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     # read the citations that are expected
     citations = []
     with open(str(data_path/'citation')) as cite_file:
-        for line in cite_file.readlines():
+        for line in cite_file:
             citations.append(line.strip())
 
     proc = subprocess.run(command, cwd='.', timeout=60, check=False,
