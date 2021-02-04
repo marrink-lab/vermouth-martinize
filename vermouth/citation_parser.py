@@ -67,11 +67,11 @@ class BibTexDirector():
         Look in a string where `@` indicates the
         beginning of a new entry and return the indices.
 
-        Parameters:
+        Parameters
         -----------
         citation_string: str
 
-        Yields:
+        Yields
         --------
         idx
             position of '@' in citation_string
@@ -87,11 +87,11 @@ class BibTexDirector():
         and return it. Note the string MUST
         contain the @.
 
-        Parameters:
+        Parameters
         ------------
             entry_string: str
 
-        Returns:
+        Returns
         ---------
         str
             The entry type
@@ -112,11 +112,11 @@ class BibTexDirector():
         get the custom ID, strip it and return the entry_string
         without that ID.
 
-        Parameters:
+        Parameters
         -----------
         entry_string: str
 
-        Returns:
+        Returns
         --------
         str, str
             the key and the string without key
@@ -131,11 +131,11 @@ class BibTexDirector():
         (i.e. ,<field_type> = {<content>}, etc.) split all the
         contents and field-types using a regular expression.
 
-        Parameters:
+        Parameters
         -----------
         entry_string: str
 
-        Yields:
+        Yields
         -------
         str, str
             the field type, the field content
@@ -178,9 +178,9 @@ def citation_formatter(citation, title=False):
     """
     Very basic and minimal formatter for citations. It
     is adopted from basic ACS style formatting. Fields within
-    || are optionl.
+    {} are optionl.
 
-    <authors> |<titel>|. |<journal>| <year>; <doi>
+    <authors> {journal} <year>; <doi>
 
     Note that the formatter cannot fromat latex
     like syntax (e.g. a{\"} for ae)
@@ -195,9 +195,6 @@ def citation_formatter(citation, title=False):
             citation_string += " " + name.strip()[0]
 
         citation_string += "; "
-
-    if title and "title" in citation:
-        citation_string += " " + citation["title"] +  "."
 
     if "journal" in citation:
         citation_string += " " + citation["journal"]
