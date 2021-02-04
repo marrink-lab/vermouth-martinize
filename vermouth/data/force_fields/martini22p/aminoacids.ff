@@ -6,6 +6,12 @@ protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|
 elastic_network_bond_type 6
 res_min_dist 3
 
+[ citations ]
+Martini2
+M2ProteinModel
+M22ProteinModel
+M2Polarizable
+
 ;;; GLYCINE
 
 [ moleculetype ]

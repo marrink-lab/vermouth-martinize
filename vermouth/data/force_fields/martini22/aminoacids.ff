@@ -21,8 +21,9 @@ elastic_network_bond_type 6
 res_min_dist 3
 
 [ citations ]
-M2ProteinModel
 Martini2
+M2ProteinModel
+M22ProteinModel
 
 ;;; GLYCINE
 
