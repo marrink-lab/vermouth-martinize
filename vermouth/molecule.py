@@ -339,6 +339,7 @@ class Molecule(nx.Graph):
         self.nrexcl = kwargs.pop('nrexcl', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
+        self.citations = set()
 
     def __eq__(self, other):
         return (
@@ -441,6 +442,8 @@ class Molecule(nx.Graph):
         subgraph.nrexcl = self.nrexcl
         subgraph.name = self.name
 
+        # copy citations
+        subgraph.citations = self.citations
         node_copies = [(node, copy.copy(self.nodes[node])) for node in nodes]
         subgraph.add_nodes_from(node_copies)
 
@@ -492,7 +495,7 @@ class Molecule(nx.Graph):
             Interaction(atoms=tuple(atoms), parameters=parameters, meta=meta)
         )
 
-    def add_or_replace_interaction(self, type_, atoms, parameters, meta=None):
+    def add_or_replace_interaction(self, type_, atoms, parameters, meta=None, citations=None):
         """
         Adds a new interaction if it doesn't exists yet, and replaces it
         otherwise. Interactions are deemed the same if they're the same type,
@@ -511,6 +514,8 @@ class Molecule(nx.Graph):
         meta: collections.abc.Mapping
             Metadata for this interaction, such as comments to be written to
             the output.
+        citations: set
+            set of citations that apply when this link is addded to molecule
 
         See Also
         --------
@@ -528,6 +533,9 @@ class Molecule(nx.Graph):
                 break
         else:  # no break
             self.add_interaction(type_, atoms, parameters, meta)
+
+        if citations:
+            self.citations.update(citations)
 
     def get_interaction(self, type_):
         """
@@ -686,6 +694,9 @@ class Molecule(nx.Graph):
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:
                 self.add_edge(correspondence[node1], correspondence[node2])
+        # merge the citation sets
+        self.citations.update(molecule.citations)
+
         return correspondence
 
     def share_moltype_with(self, other):
@@ -1159,6 +1170,8 @@ class Block(Molecule):
             default_attributes = {'resname': self.name}
         name_to_idx = {}
         mol = Molecule(force_field=force_field)
+        mol.citations = self.citations
+
         for idx, node in enumerate(self.nodes, start=atom_offset):
             name_to_idx[node] = idx
             atom = self.nodes[node]

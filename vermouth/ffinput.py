@@ -86,7 +86,7 @@ class FFDirector(SectionLineParser):
         self.blocks = collections.OrderedDict()
         self.links = []
         self.modifications = []
-
+        self.citations = set()
         self.header_actions = {
             ('moleculetype', ): self._new_block,
             ('link', ): self._new_link,
@@ -115,7 +115,6 @@ class FFDirector(SectionLineParser):
         KeyError
             If the section header is unknown.
         """
-        
         prev_section = None
 
         ended = []
@@ -158,14 +157,20 @@ class FFDirector(SectionLineParser):
         """
 
         if self.current_block is not None:
+            # add FF wide citations
+            self.current_block.citations.update(self.citations)
             self.current_block.make_edges_from_interactions()
             self.force_field.blocks[self.current_block.name] = self.current_block
 
         if self.current_link is not None:
+            # add FF wide citations
+            self.current_link.citations.update(self.citations)
             self.current_link.make_edges_from_interactions()
             self.force_field.links.append(self.current_link)
 
         if self.current_modification is not None:
+            # add FF wide citations
+            self.current_modification.update(self.citations)
             self.force_field.modifications[self.current_modification.name] = self.current_modification
 
     def get_context(self, context_type):
@@ -413,6 +418,18 @@ class FFDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         _parse_features(tokens, context, context_type)
 
+    @SectionLineParser.section_parser('moleculetype', 'citation', context_type='block')
+    @SectionLineParser.section_parser('link', 'citation', context_type='link')
+    @SectionLineParser.section_parser('modification', 'citation', context_type='modification')
+    def _parse_citation(self, line, lineno=0, context_type=""):
+        cite_keys = line.split()
+        self.get_context(context_type).citations.update(cite_keys)
+
+    @SectionLineParser.section_parser('citations')
+    def _pase_ff_citations(self, line, lineno=0):
+        # parses force-field wide citations
+        cite_keys = line.split()
+        self.citations.update(cite_keys)
 
 def _some_atoms_left(tokens, atoms, natoms):
     """

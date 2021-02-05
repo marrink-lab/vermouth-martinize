@@ -286,7 +286,7 @@ class DoLinks(Processor):
                 for inter_type, interactions in link.interactions.items():
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
-                        molecule.add_or_replace_interaction(inter_type, *interaction)
+                        molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
 
             molecule.remove_nodes_from(_nodes_to_remove)
         return molecule
