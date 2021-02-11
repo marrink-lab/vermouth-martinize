@@ -82,6 +82,16 @@ def basic_molecule(node_data, edge_data=None):
         [],
         nx.petersen_graph().edges,
     ),
+    (
+        # Gnarly edgecase from Fabian. Coupling node 4 to 8 mean that 5 and 9
+        # are no longer equivalent, pushing them in their own partitions.
+        # However, {5, 9} was considered equivalent to {13, 17}, which is *not*
+        # taken into account in the second refinement, tripping a (former)
+        # assertion failure. Note that this is actually the minimal failing
+        # example.
+        [],
+        [(0, 3), (0, 4), (4, 5), (0, 8), (8, 9), (3, 12), (12, 13), (3, 16), (16, 17),]
+    )
 ])
 def graphs(request):
     """
