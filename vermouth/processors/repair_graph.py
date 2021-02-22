@@ -65,9 +65,12 @@ def _patch_modification(block, modification):
     for mod_idx in modification:
         if not modification.nodes[mod_idx]['PTM_atom']:
             anchor_idxs.add(mod_idx)
+
     anchor = nx.subgraph(modification, anchor_idxs)
     non_anchor_idxs = set(modification) - anchor_idxs
     non_anchor = nx.subgraph(modification, non_anchor_idxs)
+
+    block = nx.convert_node_labels_to_integers(block)
 
     ismags = ISMAGS(block, anchor, node_match=_node_equal)
     anchor_block_to_mod = list(ismags.subgraph_isomorphisms_iter())
@@ -82,29 +85,28 @@ def _patch_modification(block, modification):
                      modification.name, block.name, len(anchor_block_to_mod))  # pragma: nocover
         raise ValueError("Cannot apply modification to block")  # pragma: nocover
 
-    anchor_block_to_mod = anchor_block_to_mod[0]
-    anchor_mod_to_block = {val: key for key, val in anchor_block_to_mod.items()}
+    block_to_mod = anchor_block_to_mod[0]
+    mod_to_block = {val: key for key, val in block_to_mod.items()}
+    # Add the extra modification atoms to the mapping/match. It's important to
+    # note that this is under the assumption that when nx.disjoint_union
+    # relabels nodes in non_anchor to ints it keeps the same order.
+    # The alternative to this assumption is to reimplement disjoint_union where
+    # the mapping is also returned
+    mod_to_block.update(dict(zip(non_anchor_idxs, range(len(block), len(block)+len(non_anchor_idxs)))))
+    result = Block(nx.disjoint_union(block, non_anchor))
 
-    result = Block(nx.union(block, non_anchor, rename=(None, modification.name+'-')))
     # Mark the modified atoms with the specified modification, so canonicalize
     # modifications has an easier job
-    for idx in anchor_block_to_mod:
+    for mod_idx in modification:
+        idx = mod_to_block[mod_idx]
         node_mods = result.nodes[idx].get('modifications', [])
         if modification not in node_mods:
             result.nodes[idx]['modifications'] = node_mods + [modification]
-    for mod_idx in non_anchor_idxs:
-        idx = '{}-{}'.format(modification.name, mod_idx)
-        node_mods = result.nodes[idx].get('modifications', [])
-        if modification not in node_mods:
-            result.nodes[idx]['modifications'] = node_mods + [modification]
+
     for mod_idx, mod_jdx in modification.edges_between(anchor_idxs, non_anchor_idxs):
-        if mod_idx in non_anchor_idxs:
-            mod_idx, mod_jdx = mod_jdx, mod_idx
-        # mod_idx is always in anchor, and thus in block.
-        block_idx = anchor_mod_to_block[mod_idx]
-        # Because of how nx.union renamed nodes in non_anchor
-        mod_jdx = '{}-{}'.format(modification.name, mod_jdx)
-        result.add_edge(block_idx, mod_jdx)
+        idx = mod_to_block[mod_idx]
+        jdx = mod_to_block[mod_jdx]
+        result.add_edge(idx, jdx)
     return result
 
 

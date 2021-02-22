@@ -18,11 +18,12 @@ Test graph reparation and related operations.
 """
 import copy
 import logging
-
+import numpy as np
 import pytest
 import vermouth
 from vermouth.molecule import Link
 import vermouth.forcefield
+from .datafiles import PDB_TRI_ALANINE
 
 # pylint: disable=redefined-outer-name
 
@@ -367,3 +368,25 @@ def test_unknown_mods_removed(caplog, repaired_graph, known_mod_names):
                             if node.get('expected', node['atomname']) in
                                dict(mod.nodes(data='atomname')).values()]
             assert len(contained_by) == 1
+
+
+def test_tri_alanine_termini():
+    """Test that repair_graph preferentially picks non-modification nodes
+    This is a good thing, since not all proteins come with their C-term atoms,
+    and you *must* pick O/OXT such that O gets the coordinates from the PDB file
+    since DSSP can't recognize OXT.
+    Prevents recurrence of #317.
+    """
+    ff = vermouth.forcefield.get_native_force_field('universal')
+    mol = vermouth.pdb.read_pdb(PDB_TRI_ALANINE)[0]
+    system = vermouth.system.System(force_field=None)
+    system.add_molecule(mol)
+    system.force_field = ff
+    vermouth.processors.AnnotateMutMod(modifications=[('cter', 'C-ter')]).run_system(system)
+    vermouth.processors.RepairGraph().run_system(system)
+
+    mol = system.molecules[0]
+    idx_O = next(mol.find_atoms(atomname='O'))
+    idx_OXT = next(mol.find_atoms(atomname='OXT'))
+    assert not np.any(np.isnan(mol.nodes[idx_O]['position']))
+    assert np.all(np.isnan(mol.nodes[idx_OXT].get('position', [np.nan]*3)))

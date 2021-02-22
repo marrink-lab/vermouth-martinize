@@ -418,7 +418,7 @@ class ISMAGS:
         #candidates = candidates.copy()
         sgn_candidates = intersect(candidates[sgn])
         candidates[sgn] = frozenset([sgn_candidates])
-        for gn in sgn_candidates:
+        for gn in sorted(sgn_candidates):
             # We're going to try to map sgn to gn.
             if gn in mapping.values() or sgn not in to_be_mapped:
                 # gn is already mapped to something
