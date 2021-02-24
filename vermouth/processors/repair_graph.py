@@ -324,10 +324,17 @@ def repair_residue(molecule, ref_residue, include_graph):
             node = molecule.nodes[res_idx]
             if include_graph:
                 node['graph'] = molecule.subgraph([res_idx])
-            node.update(reference.nodes[ref_idx])
+            # We're only really interested in correcting the atomname. Obscure
+            # usecases may utilize e.g. charge, mass, atype. Either way, we need
+            # to remove the resid. Resname shouldn't matter since that should
+            # already be correct.
+            ref_node = reference.nodes[ref_idx].copy()
+            if 'resid' in ref_node:
+                del ref_node['resid']
+            node.update(ref_node)
             # Update found as well to keep found and molecule in line. It would
             # be better to try and figure why found is not a reference, but meh
-            found.nodes[res_idx].update(reference.nodes[ref_idx])
+            found.nodes[res_idx].update(ref_node)
         else:
             message = 'Missing atom {}{}:{}'
             args = (resname, resid, reference.nodes[ref_idx]['atomname'])
