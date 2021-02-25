@@ -403,6 +403,15 @@ def test_rate_match(nodes1, nodes2, match, expected):
          {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
         {(0, 1): {}}
     ),
+    (
+        [{'chain': 0, 'resid': 2, 'resname': 1, 'attr': 5},
+         {'chain': 0, 'resid': 2, 'resname': 1, 'attr': 6},
+         {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
+        {(2, 1): {"attr": 1, "other": 2}, (0, 2): {"attr": 1, "other": 2}},
+        [{'chain': 0, 'resid': 2, 'resname': 1},
+         {'chain': 0, 'resid': 2, 'resname': 2, 'attr': 7}],
+        {(0, 1): {"attr": 1, "other": 2}}
+    ),
 ])
 def test_make_residue_graph(nodes1, edges1, nodes2, edges2):
     """
