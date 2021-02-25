@@ -18,6 +18,7 @@ Test graph reparation and related operations.
 """
 import copy
 import logging
+import networkx as nx
 import numpy as np
 import pytest
 import vermouth
@@ -268,7 +269,6 @@ def test_renaming(renamed_graph):
             assert node['resname'] == 'GLY'
 
 
-
 @pytest.mark.parametrize('resid,mutations,modifications,atomnames', [
     (1, ['ALA'], [], 'O C CA HA N HN CB HB1 HB2 HB3'),  # The glutamate chain and N-ter are removed
     (1, [], ['N-ter'], 'O C CA HA N H HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # HE1 got removed
@@ -390,3 +390,16 @@ def test_tri_alanine_termini():
     idx_OXT = next(mol.find_atoms(atomname='OXT'))
     assert not np.any(np.isnan(mol.nodes[idx_O]['position']))
     assert np.all(np.isnan(mol.nodes[idx_OXT].get('position', [np.nan]*3)))
+
+
+def test_reference_with_resid(system_mod):
+    system = system_mod
+    ff = copy.deepcopy(system.force_field)
+    gly = ff.blocks['GLY']
+    for n_idx in gly:
+        gly.nodes[n_idx]['resid'] = 42
+    ff.blocks['GLY'] = gly
+    system.force_field = ff
+
+    vermouth.processors.RepairGraph().run_system(system)
+    assert set(nx.get_node_attributes(system.molecules[0], 'resid').values()) == set(range(1, 6))
