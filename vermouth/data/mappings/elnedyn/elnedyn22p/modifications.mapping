@@ -43,7 +43,7 @@ C O
 CA C
 
 [ mapping ]
-HN1 BB 0
+;HN1 BB 0
 HN2 BB 0
 HN3 BB 0
 N   BB 0
@@ -99,7 +99,7 @@ C O
 CA C
 
 [ mapping ]
-HN1 BB 0
+;HN1 BB 0
 HN2 BB 0
 N   BB 0
 CA  BB
