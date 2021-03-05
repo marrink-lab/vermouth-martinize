@@ -21,6 +21,7 @@ modifications.
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
 from ..graph_utils import make_residue_graph
+from ..selectors import is_protein
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
@@ -148,6 +149,8 @@ def _terminal_matches(resname, residue_graph, res_idx):
     neighbour = list(residue_graph[res_idx])[0]  # Only one neighbour by definition.
     resid = residue_graph.nodes[res_idx].get('resid', 0)
     neighbour_resid = residue_graph.nodes[neighbour].get('resid', 0)
+    if not is_protein(residue_graph.nodes[res_idx]['graph']):
+        return False
     if resname == 'nter':
         return resid < neighbour_resid
     elif resname == 'cter':
