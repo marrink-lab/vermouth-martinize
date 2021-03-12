@@ -748,6 +748,9 @@ def entry():
         rubber_band_processor.run_system(system)
 
     LOGGER.info('Writing output.', type='step')
+    if not system.molecules:
+        LOGGER.error("No molecule to write.")
+        sys.exit(3)
     for molecule in system.molecules:
         LOGGER.debug("Writing molecule {}.", molecule, type='step')
 
