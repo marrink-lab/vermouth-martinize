@@ -260,6 +260,11 @@ class PDBParser(LineParser):
                            format_atom_string(properties),
                            type='pdb-alternate')
             return
+        if properties['insertion_code'] != '':
+            LOGGER.warning("A residue exist with a non-empty insertion code "
+                           "and will be ignored.",
+                           type='pdb-insertion')
+            return
         if (properties['resname'] in self.exclude or
                 (self.ignh and properties['element'] == 'H')):
             return
