@@ -146,6 +146,8 @@ class PDBParser(LineParser):
     ssbond = _skip
     link   = _skip
     cispep = _skip
+    sltbrg = _skip
+    hydbnd = _skip
 
     # MISCELLANEOUS FEATURES SECTION
     site   = _skip
@@ -161,6 +163,7 @@ class PDBParser(LineParser):
     mtrix1 = _skip
     mtrix2 = _skip
     mtrix3 = _skip
+    tvect  = _skip
 
     # COORDINATE SECTION
     # model  = _skip  # Used
@@ -169,6 +172,7 @@ class PDBParser(LineParser):
     # ter    = _skip  # Used
     # hetatm = _skip  # Used
     # endmdl = _skip  # Used
+    siguij = _skip
 
     # CONNECTIVITY SECTION
     # conect = _skip  # Used
