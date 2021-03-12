@@ -42,7 +42,7 @@ charmm27 charmm36
    11   CG1   SC1
 ;   12  HG11   SC1
 ;   13  HG12   SC1
-   14    CD   SC1
+   14    CD1   SC1
 ;   15   HD1   SC1
 ;   16   HD2   SC1
 ;   17   HD3   SC1
