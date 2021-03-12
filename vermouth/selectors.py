@@ -24,7 +24,8 @@ from .molecule import attributes_match
 PROTEIN_RESIDUES = set(('ALA', 'ARG', 'ASP', 'ASN', 'CYS',
                         'GLU', 'GLN', 'GLY', 'HIS', 'ILE',
                         'LEU', 'LYS', 'MET', 'PHE', 'PRO',
-                        'SER', 'THR', 'TRP', 'TYR', 'VAL'))
+                        'SER', 'THR', 'TRP', 'TYR', 'VAL',
+                        'HSE', 'HSD', 'ASP0'))
 
 
 def is_protein(molecule):
