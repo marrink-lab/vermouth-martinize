@@ -466,6 +466,13 @@ def get_not_none(node, attr, default):
     return value
 
 
+def _format_name(name, element):
+    if not element or len(element) >= 4 or not name.startswith(element):
+        return name
+    rest = name[len(element):]
+    return f"{element:>2}{rest:<2}"
+
+
 def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=False):
     """
     Describes `system` as a PDB formatted string. Will create CONECT records
@@ -527,6 +534,9 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
                 charge = '{:+2d}'.format(int(charge))[::-1]
             else:
                 charge = ''
+
+            atomname = _format_name(atomname, element)
+
             line = formatter.format(format_string, atomid, atomname, altloc,
                                     resname, chain, resid, insertion_code, x,
                                     y, z, occupancy, temp_factor, element,
