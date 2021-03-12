@@ -35,6 +35,7 @@ from vermouth.dssp.dssp import (
     AnnotateDSSP,
     AnnotateMartiniSecondaryStructures,
     AnnotateResidues,
+    DSSPError,
 )
 from vermouth.log_helpers import (StyleAdapter, BipolarFormatter,
                                   CountingHandler, TypeAdapter,
@@ -637,7 +638,14 @@ def entry():
 
     target_ff = known_force_fields[args.to_ff]
     if args.dssp is not None:
-        AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
+        try:
+            AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
+        except DSSPError as err:
+            hint = ''
+            if "empty protein, or no valid complete residues" in str(err):
+                hint = "Missing residues can cause this error."
+            LOGGER.error(f"{str(err)} {hint}")
+            sys.exit(4)
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
         AnnotateResidues(attribute='secstruct', sequence=args.ss,
