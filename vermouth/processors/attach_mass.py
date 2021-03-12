@@ -20,7 +20,10 @@ molecule based on it's element.
 from .processor import Processor
 
 # TODO: make the masses part of the forcefield
-ATOM_MASSES = {'H': 1, 'C': 12, 'N': 14, 'O': 16, 'S': 32, 'P': 31, 'M': 0}
+ATOM_MASSES = {
+    'H': 1, 'C': 12, 'N': 14, 'O': 16, 'S': 32, 'P': 31, 'M': 0,
+    'MG': 24, 'CO': 59,
+}
 
 
 def attach_mass(molecule, attribute='mass'):
