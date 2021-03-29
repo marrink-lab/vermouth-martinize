@@ -276,6 +276,9 @@ def fix_ptm(molecule):
         resid_to_idxs[residx].append(n_idx)
     resid_to_idxs = dict(resid_to_idxs)
 
+    # Keep track of all nodes that get removed due to unknown PTMs
+    removed = set()
+
     known_ptms = molecule.force_field.modifications
 
     for resids, res_ptms in itertools.groupby(ptm_atoms, key_func):
@@ -299,7 +302,7 @@ def fix_ptm(molecule):
             n_idxs.update(resid_to_idxs[resid])
         # TODO: Maybe use graph_utils.make_residue_graph? Or rewrite that
         #       function?
-        residue = molecule.subgraph(n_idxs)
+        residue = molecule.subgraph(n_idxs - removed)
         options = allowed_ptms(residue, res_ptms, known_ptms)
         options = sorted(options,
                          key=lambda opt: len([n for n in opt[0]
@@ -318,6 +321,7 @@ def fix_ptm(molecule):
             for idxs in res_ptms:
                 for idx in idxs[0]:
                     molecule.remove_node(idx)
+                    removed.add(idx)
             continue
 
         # Why this mess? There can be multiple PTMs for a single (set of)

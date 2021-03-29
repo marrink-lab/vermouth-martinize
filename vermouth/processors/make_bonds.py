@@ -36,8 +36,11 @@ LOGGER = StyleAdapter(get_logger(__name__))
 # https://doi.org/10.1021/j100785a001
 # For hydrogen, we use R.S. Rowland & R. Taylor, J.Phys.Chem., 100, 7384-7391, 1996.
 # https://doi.org/10.1021/jp953141
+# For Deuterium we use the same as hydrogen, which is probably wrong/slightly
+# too large.
 VDW_RADII = {  # in nm
     'H': 0.120,
+    'D': 0.120,
     'He': 0.140,
     'C': 0.170,
     'N': 0.155,
