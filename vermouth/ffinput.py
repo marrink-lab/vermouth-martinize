@@ -170,7 +170,7 @@ class FFDirector(SectionLineParser):
 
         if self.current_modification is not None:
             # add FF wide citations
-            self.current_modification.update(self.citations)
+            self.current_modification.citations.update(self.citations)
             self.force_field.modifications[self.current_modification.name] = self.current_modification
 
     def get_context(self, context_type):
