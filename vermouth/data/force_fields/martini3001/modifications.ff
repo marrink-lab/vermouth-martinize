@@ -1,0 +1,27 @@
+[ citations ]
+Martini3
+
+[ modification ]
+C-ter
+[ atoms ]
+BB {"replace": {"atype": "Q5", "charge": -1}}
+
+[ modification ]
+N-ter
+[ atoms ]
+BB {"replace": {"atype": "Q5", "charge": 1}}
+
+;[ modification ]
+;zwitter
+;[ atoms ]
+;BB {"replace": {"atype": "Qda"}}
+
+[ modification ]
+COOH-ter
+[ atoms ]
+BB {"replace": {"atype": "P6", "charge": 0}}
+
+[ modification ]
+NH2-ter
+[ atoms ]
+BB {"replace": {"atype": "P6", "charge": 0}}
