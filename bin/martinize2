@@ -378,7 +378,7 @@ def entry():
                             'based on distances.')
 
     ff_group = parser.add_argument_group('Force field selection')
-    ff_group.add_argument('-ff', dest='to_ff', default='martini22',
+    ff_group.add_argument('-ff', dest='to_ff', default='martini3001',
                           help='Which forcefield to use')
     ff_group.add_argument('-from', dest='from_ff', default='universal',
                           help='Force field of the original structure.')
