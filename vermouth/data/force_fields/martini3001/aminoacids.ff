@@ -51,6 +51,12 @@ ALA                1
 ;  i     j   funct   length  
   BB   SC1    1       0.270
 
+[ bonds ]
+#meta {"group": "Side chain bonds", "ifdef": "FLEXIBLE"}
+;  i     j   funct   length  
+  BB   SC1    1       0.270  $stiff_fc
+
+
 ;;; CYSTEINE
 
 [ moleculetype ]
