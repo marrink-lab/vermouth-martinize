@@ -1299,6 +1299,10 @@ class Link(Block):
                     return False
         return True
 
+class Modification(Link):
+    """
+    A modification which describes deviations from a :class:`Block`.
+    """
 
 def attributes_match(attributes, template_attributes, ignore_keys=()):
     """
