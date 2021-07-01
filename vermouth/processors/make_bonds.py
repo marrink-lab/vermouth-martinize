@@ -301,6 +301,40 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
 
 
 class MakeBonds(Processor):
+    """
+    Processor to add edges to a system and separate it into separate connected
+    molecules.
+
+    Two separate criteria are used to decide where to add edges. The system's
+    molecules are separated into residues. Then intra-residue edges are added.
+
+    If :attr:`allow_names` is True, the corresponding
+    :class:`~vermouth.molecule.Block` is looked up in the system's force field.
+    Based on the edges in that block, edges will be added. In addition,
+    *non-edges* in the reference block are also stored.
+
+    Secondly, is :attr:`allow_dist` is True, edges will be added between any
+    atoms that are close enough together. The threshold for "close enough" is
+    determined based on the elements of the atoms in question and their van der
+    Waals radii, multiplied by :attr:`fudge`. This way edges will *not* be added
+    between atoms that were marked as 'non-edge' in the previous step, nor
+    between residues if one of the atoms is a hydrogen.
+
+    Attributes
+    ----------
+    allow_names: bool
+        Whether edges should be added based on atom names.
+    allow_dist: bool
+        Whether edges should be added based on distance.
+    fudge: :class:`~numbers.Number`
+        A fudge factor used to increase the reference van der Waals radii to
+        allow for conformations that are slightly out of equilibrium.
+
+    See Also
+    --------
+    :func:`make_bonds`
+
+    """
     def __init__(self, allow_name=True, allow_dist=True, fudge=1.2):
         self.allow_name = allow_name
         self.allow_dist = allow_dist
