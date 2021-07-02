@@ -503,7 +503,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     Creates a new :class:`~vermouth.molecule.Molecule` in force field `to_ff`
     from `molecule`, based on `mappings`. It does this by doing a subgraph
     isomorphism of all blocks in `mappings` and `molecule`. Will issue warnings
-    if there's atoms not contibuting to the new molecule, or if there's
+    if there's atoms not contributing to the new molecule, or if there's
     overlapping blocks.
     Node attributes in the new molecule will come from the blocks constructing
     it, except for those in `attribute_keep`, which lists the attributes that
@@ -535,7 +535,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     """
     attribute_keep = tuple(attribute_keep)
     attribute_must = tuple(attribute_must)
-    # Transfering the meta maybe should be a copy, or a deep copy...
+    # Transferring the meta maybe should be a copy, or a deep copy...
     # If it breaks we look at this line.
     graph_out = Molecule(force_field=to_ff, meta=molecule.meta)
     mappings = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
@@ -567,13 +567,13 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     # There are a few separate mapping cases to be considered:
     # One to one mapping - e.g. AA to AA, the simplest case
     # Many to one mapping - e.g. AA to CG without sharing atoms between beads
-    # Many to many mapping - e.g. AA to CG *with* sharing atoms between bonds
+    # Many to many mapping - e.g. AA to CG *with* sharing atoms between beads
     # These three cases are covered by the normal operation, the following are
     # caught with some additional logic
     # None to one - whole block taken as origin, with weights 0
     # One to none - unmapped atoms (produces a warning)
     # One to many - e.g. CG to AA. This mostly works, but we don't know how to
-    #               make sure the "many" should be connected togeher. Gives a
+    #               make sure the "many" should be connected together. Gives a
     #               warning if it's disconnected.
 
     mol_to_out = defaultdict(dict)
@@ -647,7 +647,10 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
                     attrs_not_sane.append(attr)
             if attrs_not_sane:
                 LOGGER.warning('The attributes {} for atom {} are going to'
-                               ' be garbage.', attrs_not_sane, format_atom_string(graph_out.nodes[out_idx]),
+                               ' be garbage because the attributes of the'
+                               ' constructing atoms are different.',
+                               attrs_not_sane,
+                               format_atom_string(graph_out.nodes[out_idx]),
                                type='inconsistent-data')
         if graph_out.nodes[out_idx].get('atomname', '') is None:
             to_remove.add(out_idx)
@@ -660,7 +663,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
         edges = molecule.edges_between(match1.keys(), match2.keys())
         # TODO: Backmapping needs love here
         for mol_idx, mol_jdx in edges:
-            # Substract none_to_one_mappings, since those should not be made to
+            # Subtract none_to_one_mappings, since those should not be made to
             # connect to things automatically.
             out_idxs = mol_to_out[mol_idx].keys() - none_to_one_mappings
             out_jdxs = mol_to_out[mol_jdx].keys() - none_to_one_mappings
@@ -684,10 +687,10 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
                         for out_idx in mol_to_out[mol_idx]},
                        type='inconsistent-data')
 
-    # "One to many" mapping - not necessarrily a problem, unless it leads to
+    # "One to many" mapping - not necessarily a problem, unless it leads to
     # missing edges
     for mol_idx in mol_to_out:
-        # Substract the none to one mapped nodes, since those don't contribute
+        # Subtract the none to one mapped nodes, since those don't contribute
         # and make false positives.
         out_idxs = mol_to_out[mol_idx].keys() - none_to_one_mappings
         if len(out_idxs) > 1 and not nx.is_connected(graph_out.subgraph(out_idxs)):
@@ -736,6 +739,42 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
 
 
 class DoMapping(Processor):
+    """
+    Processor for performing a resolution transformation from one force field to
+    another.
+
+    This processor will create new Molecules by stitching together Blocks from
+    the target force field, as dictated by the available mappings.
+    Fragments/atoms/residues/modifications for which no mapping is available
+    will not be represented in the resulting molecule.
+
+    The resulting molecules will have intra-block edges and interactions as
+    specified in the blocks from the target force field. Inter-block edges will
+    be added based on the connectivity of the original molecule, but no
+    interactions will be added for those.
+
+    Attributes
+    ----------
+    mappings: dict[str, dict[str, dict[str, tuple]]]
+        ``{ff_name: {ff_name: {block_name: (mapping, weights, extra)}}}``
+        A collection of mappings, as returned by e.g.
+        :func:`~vermouth.map_input.read_mapping_directory`.
+    to_ff: vermouth.forcefield.ForceField
+        The force field to map to.
+    delete_unknown: bool
+        Not currently used
+    attribute_keep: tuple[str]
+        The attributes that will always be transferred from the input molecule
+        to the produced graph.
+    attribute_must: tuple[str]
+        The attributes that the nodes in the output graph *must* have. If
+        they're not provided by the mappings/blocks they're taken from
+        the original molecule.
+
+    See Also
+    --------
+    :func:`do_mapping`
+    """
     def __init__(self, mappings, to_ff, delete_unknown=False, attribute_keep=(),
                  attribute_must=()):
         self.mappings = mappings
