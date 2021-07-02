@@ -272,7 +272,8 @@ def modification_matches(molecule, mappings):
             LOGGER.warning("Can't find modification mappings for the "
                            "modifications {}. The following modification "
                            "mappings are known: {}",
-                           list(group), known_mod_mappings)
+                           list(group), known_mod_mappings,
+                           type='unmapped-atom')
             continue
         needed_mod_mappings.update(covered_by)
     matches = []
@@ -284,7 +285,7 @@ def modification_matches(molecule, mappings):
             matches.append((mol_to_mod, modification, references))
             if not set(mol_to_mod) <= modified_nodes:
                 # TODO: better message
-                LOGGER.warning('Overlapping modification mappings')
+                LOGGER.warning('Overlapping modification mappings', type='inconsistent-data')
             modified_nodes -= set(mol_to_mod)
     return matches
 
