@@ -275,7 +275,7 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
             non_edges.update(_bonds_from_names(system, resname, idxs, force_field))
         except KeyError as error:
             # ... if that doesn't work, fall back to distance
-            warning_type = 'general'
+            warning_type = 'inconsistent-data'
             if 'is not known to force field' in str(error):
                 warning_type = 'unknown-residue'
             message = "Can't add bonds based on atom names for residue {}-{}{} because {}."
