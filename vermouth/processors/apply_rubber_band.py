@@ -367,6 +367,61 @@ def same_chain(graph, left, right):
 
 
 class ApplyRubberBand(Processor):
+    """
+    Add an elastic network to a system between particles fulfilling the
+    following criteria:
+
+    - They must be close enough together in space
+    - They must be separated far enough in graph space
+    - They must be either in the same chain/molecule/system
+    - They must be selected by :attr:`selector`
+    - The resulting elastic bond must be stiff enough
+
+    Attributes
+    ----------
+    selector: collections.abc.Callable
+        Selection function.
+    lower_bound: float
+        The minimum length for a bond to be added, expressed in
+        nanometers.
+    upper_bound: float
+        The maximum length for a bond to be added, expressed in
+        nanometers.
+    decay_factor: float
+        Parameter for the decay function.
+    decay_power: float
+        Parameter for the decay function.
+    base_constant: float
+        The base force constant for the bonds in :math:`kJ.mol^{-1}.nm^{-2}`.
+        If 'decay_factor' or 'decay_power' is set to 0, then it will be the
+        used force constant.
+    minimum_force: float
+        Minimum force constant in :math:`kJ.mol^{-1}.nm^{-2}` under which bonds
+        are not kept.
+    bond_type: int or None
+        Gromacs bond function type to apply to the elastic network bonds.
+    bond_type_variable: str
+        If bond_type is not given, it will be taken from the force field, using
+        this variable name.
+    domain_criterion: collections.abc.Callable
+        Function to establish if two atoms are part of the same domain. Elastic
+        bonds are only added within a domain. By default, all the atoms in
+        the molecule are considered part of the same domain. The function
+        expects a graph (e.g. a :class:`~vermouth.molecule.Molecule`) and two
+        atom node keys as argument and returns ``True`` if the two atoms are
+        part of the same domain; returns ``False`` otherwise.
+    res_min_dist: int or None
+        Minimum separation between two atoms for a bond to be kept.
+        Bonds are kept is the separation is greater or equal to the value
+        given.
+    res_min_dist_variable: str
+        If res_min_dist is not given it will be taken from the force field using
+        this variable name.
+
+    See Also
+    --------
+    :func:`apply_rubber_band`
+    """
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
                  base_constant, minimum_force,
                  res_min_dist=None,
