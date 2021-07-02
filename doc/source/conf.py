@@ -199,9 +199,9 @@ intersphinx_mapping = {
 # to the VF2 isomorphism module instead.
 # See https://github.com/networkx/networkx/issues/3239
 intersphinx_aliases = {
-    ('py:class', 'networkx.classes.graph.Graph'): ('py:class', 'networkx.Graph'),
+    #('py:class', 'networkx.classes.graph.Graph'): ('py:class', 'networkx.Graph'),
     #('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:class', 'networkx.isomorphism.GraphMatcher'),
-    ('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2'),
+    #('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:module','networkx.algorithms.isomorphism.isomorphvf2'),
     ('py:class', 'networkx.isomorphism.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2')
 }
 

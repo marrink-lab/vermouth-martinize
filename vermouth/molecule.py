@@ -403,10 +403,6 @@ class Molecule(nx.Graph):
     def atoms(self):
         """
         All atoms in this molecule. Alias for `nodes`.
-
-        See Also
-        --------
-        :meth:`networkx.Graph.nodes`
         """
         # TODO: should just be an alias for nodes. If you need the attributes,
         #       do g.nodes(data=<attr>) or g.nodes(data=True)
