@@ -213,3 +213,36 @@ def test_make_bonds(nodes, edges, expected_edges):
     # Make sure that for every molecule found, the edges are correct
     for found_mol, ref_edges in zip(system.molecules, expected_edges):
         assert dict(found_mol.edges) == ref_edges
+
+@pytest.mark.parametrize('nodes, edges, logtype', [
+    [
+        # Single molecule with two nodes that have an unknown resname
+        [
+            {'atomname': 'H', 'element': 'H', 'resname': 'XXX', 'position': [0, 0, 0]},
+            {'atomname': 'C', 'element': 'C', 'resname': 'XXX', 'position': [0, 0, 0.145]},
+        ],
+        [(0, 1, {}),],
+        'unknown-residue'
+    ],
+    [
+        # Single molecule with two nodes that have duplicate atoms
+        [
+            {'atomname': 'X', 'element': 'H', 'resname': 'GLY', 'position': [0, 0, 0]},
+            {'atomname': 'X', 'element': 'C', 'resname': 'GLY', 'position': [0, 0, 0.145]},
+
+        ],
+        [(0, 1, {}),],
+        'inconsistent-data'
+    ],
+
+])
+def test_make_bonds_logs(caplog, nodes, edges, logtype):
+    system = System(force_field=get_native_force_field('universal'))
+    mol = Molecule()
+    mol.add_nodes_from(enumerate(nodes))
+    mol.add_edges_from(edges)
+    system.add_molecule(mol)
+
+    MakeBonds().run_system(system)
+    for record in caplog.records:
+        assert record.type == logtype
