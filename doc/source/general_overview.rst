@@ -27,8 +27,13 @@ pip.
     pip install vermouth
 
 The behavior of the ``pip`` command can vary depending of the specificity of your
-python installation. See the `documentation on installing a python
-package <https://packaging.python.org/tutorials/installing-packages/#installing-packages>`_ to learn more.
+python installation. See the `documentation on installing a python package
+<https://packaging.python.org/tutorials/installing-packages/#installing-packages>`_
+to learn more.
+
+Vermouth has `SciPy <https://scipy.org>`_ as *optional* dependency. If available
+it will be used to accelerate the distance calculations when `making bonds
+<martinize2_workflow:Make bonds>`_
 
 Quickstart
 ----------
