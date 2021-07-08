@@ -1,19 +1,20 @@
 Data
 ====
-VerMoUTH knows several data structures, most of which describe MD particles
-(such as atoms or CG beads) and connections between those. As such, these are
-modelled as mathematical graphs, where the nodes describe the particles, and
-edges the bonds between these. In addition, these data structures describe the
-MD parameters and interactions, such as bonds, atom types, angles, etc.
+VerMoUTH knows several data structures, most of which describe atoms (or CG
+beads) and connections between those. As such, these are modelled as
+mathematical graphs, where the nodes describe the particles, and edges the bonds
+between these. In addition, these data structures describe the MD parameters and
+interactions, such as bonds, atom types, angles, etc.
 
 Molecule
 --------
 A :class:`~vermouth.molecule.Molecule` is a :class:`~networkx.Graph` where nodes
-are MD particles, and edges are the connections between theses (i.e. bonds, but
-note that not every edge has to correspond to a bond and vice versa).
-Generally, molecules are a single connected components (i.e. there is a path
-from any atom to any other atom in the molecule). Interactions are accessible
-through the :attr:`~vermouth.molecule.Molecule.interactions` attribute.
+are atoms/beads, and edges are the connections between theses (i.e. bonds [#]_)
+Generally, molecules are a single connected components [#]_. Interactions are
+accessible through the :attr:`~vermouth.molecule.Molecule.interactions`
+attribute. Non-bonded parameters are not fully defined: nodes have an 'atype'
+attribute describing the particle type to be used in an MD simulation, but we
+don't store the associated e.g. Lennard-Jones parameters.
 
 :class:`Molecules <vermouth.molecule.Molecule>` define a few notable convenience
 methods:
@@ -26,6 +27,9 @@ methods:
  - :meth:`~vermouth.molecule.Molecule.make_edges_from_interactions`: To generate
    edges from bond, angle, dihedral, cmap and constraint interactions. This is
    the only way interactions and their parameters are interpreted in vermouth.
+
+.. [#] But note that not every edge has to correspond to a bond and vice versa.
+.. [#] I.e. there is a path from any node to any other node in the molecule.
 
 Block
 -----
