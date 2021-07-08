@@ -143,15 +143,15 @@ These blocks are taken from the input force field based on residue names (taking
 any mutations and modifications into account).
 :class:`~vermouth.processors.repair_graph.RepairGraph` takes care of all this.
 
-To identify atoms in a residue we consider the largest common induced subgraph
-between the residue and its reference since the residue can be both too small
-(atoms missing in the input) and too large (atoms from PTMs) at the same time.
-Unfortunately, this is a very expensive operation which scales exponentially
-with the size of the residue. So if you know beforehand that your structure
-contains (very) large PTMs, such as lipidations, consider specifying those as
-separate residues.
+To identify atoms in a residue we consider the
+:ref:`graph_algorithms:maximum common induced subgraph` between the residue and
+its reference since the residue can be both too small (atoms missing in the
+input) and too large (atoms from PTMs) at the same time. Unfortunately, this is
+a very expensive operation which scales exponentially with the size of the
+residue. So if you know beforehand that your structure contains (very) large
+PTMs, such as lipidations, consider specifying those as separate residues.
 
-The largest common induced subgraph is found using
+The maximum common induced subgraph is found using
 :class:`~vermouth.ismags.ISMAGS`, where nodes are considered equal if their
 elements are equal. Beforehand, the atoms in the residue will be sorted such
 that the isomorphism where most atom names correspond with the reference is
@@ -171,12 +171,13 @@ atoms it did not recognise, and those are processed by
 
 This is done by finding the solution where all unknown atoms are covered by the
 atoms of exactly one :ref:`data:Modification`, where the modification must be an
-induced subgraph of the molecule. Every modification must contain at least one
-"anchoring" atom, which is an atom that is also described by a
-:ref:`data:Block`. Unknown atoms are considered to be equal if their element is
-equal; anchor atoms are considered equal if their atom name is equal. Because
-modifications must be induced subgraphs of the input structure there can be no
-missing atoms!
+:ref:`induced subgraph <graph_algorithms:Induced subgraph isomorphism>` of the
+molecule. Every modification must contain at least one "anchoring" atom, which
+is an atom that is also described by a :ref:`data:Block`. Unknown atoms are
+considered to be equal if their element is equal; anchor atoms are considered
+equal if their atom name is equal. Because modifications must be
+:ref:`induced subgraphs <graph_algorithms:Induced subgraph isomorphism>` of the
+input structure there can be no missing atoms!
 
 After this step all atoms will have correct atom names, and any residues that
 are include modifications will be labelled. This information is later used
