@@ -88,8 +88,8 @@ or remove interactions; much like a `Link`_.
 Modifications can be defined through :ref:`.ff files <file_formats:.ff file format>`.
 See also: :ref:`Identify modifications <martinize2_workflow:Identify modifications>`.
 
-ForceField
-----------
+Force Field
+-----------
 A :class:`force field <vermouth.forcefield.ForceField>` is a collection of
 :ref:`Blocks <data:Block>`, :ref:`Links <data:Link>` and
 :ref:`Modifications <data:Modification>`. Force fields are identified by their

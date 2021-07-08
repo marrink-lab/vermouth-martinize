@@ -60,12 +60,11 @@ such as PDB ``CONECT`` records. Beyond that, edges are added by
 added based on atom names and distances, but this behaviour can be changed via
 the CLI option ``-bonds-from``.
 
-To add edges based on atom names the :class:`~vermouth.molecule.Block` from the
-input force field is used as reference for every residue in the input structure
-where possible. This is not possible when a residue contains multiple atoms with
-the same name, nor when there is no :class:`~vermouth.molecule.Block`
-corresponding to the residue. Note that this will only ever create edges
-*within* residues.
+To add edges based on atom names the :ref:`data:Block` from the input force
+field is used as reference for every residue in the input structure where
+possible. This is not possible when a residue contains multiple atoms with the
+same name, nor when there is no :ref:`data:Block` corresponding to the residue
+[#]_. Note that this will only ever create edges *within* residues.
 
 Edges will be added based on distance when they are close enough together,
 except for a few exceptions (below). Atoms will be considered close enough based
@@ -74,9 +73,9 @@ name [#]_). The distance threshold is multiplied by ``-bonds-fudge`` to allow
 for conformations that are slightly out-of-equilibrium. Edges will not be added
 from distances in two cases: 1) if edges could be added based on atom names no
 edges will be added between atoms that are not bonded in the reference
-:class:`~vermouth.molecule.Block`. 2) No edges will be added between residues
-if one of the atoms involved is a hydrogen atom. Edges added this way are logged
-as debug output.
+:ref:`data:Block`. 2) No edges will be added between residues if one of the
+atoms involved is a hydrogen atom. Edges added this way are logged as debug
+output.
 
 If your input structure is far from equilibrium and adding edges based on
 distance is likely to produce erroneous results, make sure to provide ``CONECT``
@@ -93,6 +92,7 @@ strategic ``TER`` records in your PDB file.
 
 Relevant CLI options: ``-bond-from``; ``-bonds-fudge``
 
+.. [#] Based on residue name.
 .. [#] The method for deriving the element from an atom name is extremely
    simplistic: the first letter is used. This will go wrong for two-letter
    elements such as 'Fe', 'Cl', and 'Cu'. In those cases, make sure your PDB
@@ -138,9 +138,9 @@ modifications such as PTMs.
 Repair graph
 ------------
 The first step is to complete the graph so that it contains all atoms described
-by the reference :class:`Blocks <vermouth.molecule.Block>`, and that all atoms have
-the correct names. These blocks are taken from the input force field based on
-residue names (taking any mutations and modifications into account).
+by the reference :ref:`data:Block`, and that all atoms have the correct names.
+These blocks are taken from the input force field based on residue names (taking
+any mutations and modifications into account).
 :class:`~vermouth.processors.repair_graph.RepairGraph` takes care of all this.
 
 To identify atoms in a residue we consider the largest common induced subgraph
@@ -170,13 +170,13 @@ atoms it did not recognise, and those are processed by
 :class:`~vermouth.processors.canonicalize_modifications.CanonicalizeModifications`.
 
 This is done by finding the solution where all unknown atoms are covered by the
-atoms of exactly one :class:`~vermouth.molecule.Modification`, where the
-modification must be an induced subgraph of the molecule. Every modification
-must contain at least one "anchoring" atom, which is an atom that is also
-described by a :class:`~vermouth.molecule.Block`. Unknown atoms are considered
-to be equal if their element is equal; anchor atoms are considered equal if
-their atom name is equal. Because modifications must be induced subgraphs of the
-input structure there can be no missing atoms!
+atoms of exactly one :ref:`data:Modification`, where the modification must be an
+induced subgraph of the molecule. Every modification must contain at least one
+"anchoring" atom, which is an atom that is also described by a
+:ref:`data:Block`. Unknown atoms are considered to be equal if their element is
+equal; anchor atoms are considered equal if their atom name is equal. Because
+modifications must be induced subgraphs of the input structure there can be no
+missing atoms!
 
 After this step all atoms will have correct atom names, and any residues that
 are include modifications will be labelled. This information is later used
@@ -237,17 +237,17 @@ Relevant CLI options: ``-ff``, ``-map-dir``
    defined must match. Not all attributes (such as 'mass') are defined in all
    cases, depending on the source of the mappings. Note that we also take into
    account that atom names might have changed due to modifications: we use the
-   atom name as it is defined by the Block.
+   atom name as it is defined by the :ref:`data:Block`.
 
 4) Apply Links
 ==============
 Next interactions *between* residues are added by
 :class:`~vermouth.processors.do_links.DoLinks`. We do this based on the concept
-of :class:`Links <vermouth.molecule.Link>`, which are molecular fragments that
-describe interactions, and which atoms they should apply to. Links are very
-powerful and flexible tools, and we use them to generate all interactions that
-depend on the local structure of the polymer. For example, all interactions that
-depend on the protein sequence or secondary structure are defined by Links.
+of :ref:`Links <data:Link>`, which are molecular fragments that describe
+interactions, and which atoms they should apply to. Links are very powerful and
+flexible tools, and we use them to generate all interactions that depend on the
+local structure of the polymer. For example, all interactions that depend on the
+protein sequence or secondary structure are defined by :ref:`Links <data:Link>`.
 
 Links can both add, change and remove interactions and nodes. Because of this,
 the order in which links are applied matters for the final topology. We apply
@@ -272,7 +272,7 @@ might be useful.
 ==================
 There can be any number of post processing steps. For example to add an elastic
 network, or to generate Go virtual sites. We will not describe their function
-here in detail. Instead, see
+here in detail. Instead, see for example
 :class:`~vermouth.processors.apply_rubber_band.ApplyRubberBand` and
 :class:`~vermouth.processors.go_vs_includes.GoVirtIncludes`.
 

@@ -19,7 +19,7 @@ for the [Martini3]_ force field.
 
 Installation instructions
 -------------------------
-Vermouth and martinize2 are distribute through pypi and can be installed using
+Vermouth and martinize2 are distributed through pypi and can be installed using
 pip.
 
 .. code-block:: bash
@@ -47,7 +47,7 @@ used as a drop-in replacement. For example:
 
 This will read an atomistic ``lysozyme.pdb`` and produce a Martini3_ compatible
 structure and topology at ``cg_protein.pdb`` and ``topol.top`` respectively. It
-will use the program DSSP to determine the proteins secondary structure (which
+will use the program [DSSP]_ to determine the proteins secondary structure (which
 influences the topology), and produce an elastic network. See ``martinize2 -h``
 for more options! Note that if ``martinize2`` runs into problems where the
 produced topology might be invalid it will issue warnings. If this is the case
@@ -55,25 +55,29 @@ it won't write any output files, but also see the ``-maxwarn`` flag.
 
 General layout
 --------------
-In VerMoUTH a force field is defined as a collection of Blocks, Links and
-Modifications. Each of these is a graph, where nodes describe atoms (or
-coarse-grained beads) and edges describe bonds between these. Blocks describe
-idealized residues/monomeric repeat units and their MD parameters and
-interactions. Links are molecular fragments that describe MD parameters and
-interactions *between* residues/monomeric repeat units. Modifications are
-molecular fragments that describe *deviations* from Blocks, such as
-post-translational modifications and protonation states. Mappings describe how
-molecular fragments can be converted between force fields.
+In VerMoUTH a :ref:`force field <data:Force Field>` is defined as a collection
+of :ref:`Blocks <data:Block>`, :ref:`Links <data:Link>` and
+:ref:`Modifications <data:Modification>`. Each of these is a graph, where nodes
+describe atoms (or coarse-grained beads) and edges describe bonds between these.
+:ref:`Blocks <data:Block>` describe idealized residues/monomeric repeat units
+and their MD parameters and interactions. :ref:`Links <data:Link>` are molecular
+fragments that describe MD parameters and interactions *between*
+residues/monomeric repeat units. :ref:`Modifications <data:Modification>` are
+molecular fragments that describe *deviations* from :ref:`Blocks <data:Block>`,
+such as post-translational modifications and protonation states.
+:ref:`Mappings <data:Mapping>` describe how molecular fragments can be converted
+between force fields.
 
-Finally, martinize2 is a pipeline that is built up from Processors, which are
-defined by VerMoUTH. Processors are isolated steps which function on either the
-complete system, or single molecules.
+Finally, martinize2 is a pipeline that is built up from
+:ref:`Processors <processors:Processor>`, which are defined by VerMoUTH.
+Processors are isolated steps which function on either the complete system, or
+single molecules.
 
 Martinize2 identifies atoms mostly based on their *connectivity*. We read the
 bonds present in the input file (as ``CONECT`` records), and besides that we
-guess bonds based on atom names (within residues) and on distances (between
-residues, using the same criteria as [VMD]_). This means that your input structure
-must be reasonable.
+:ref:`guess bonds <martinize2_workflow:Make bonds>` based on atom names (within
+residues) and on distances (between residues, using the same criteria as
+[VMD]_). This means that your input structure must be reasonable.
 
 Citing
 ------
@@ -87,3 +91,5 @@ References
 ----------
 .. [Martini3] P.C.T. Souza, R. Alessandri, J. Barnoud, S. Thallmair, I. Faustino, F. Grünewald, et al., Martini 3: a general purpose force field for coarse-grained molecular dynamics, Nat. Methods. 18 (2021) 382–388. doi:10.1038/s41592-021-01098-3.
 .. [VMD] W. Humphrey, A. Dalke and K. Schulten, "VMD - Visual Molecular Dynamics", J. Molec. Graphics, 1996, vol. 14, pp. 33-38. http://www.ks.uiuc.edu/Research/vmd/.
+.. [DSSP] - W.G. Touw, C. Baakman, J. Black, T.A.H. te Beek, E. Krieger, R.P. Joosten, et al., A series of PDB-related databanks for everyday needs, Nucleic Acids Res. 43 (2015) D364–D368. doi:10.1093/nar/gku1028.
+   - W. Kabsch, C. Sander, Dictionary of protein secondary structure: pattern recognition of hydrogen-bonded and geometrical features., Biopolymers. 22 (1983) 2577–637. doi:10.1002/bip.360221211.
