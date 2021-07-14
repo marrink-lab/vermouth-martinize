@@ -96,6 +96,11 @@ A :class:`force field <vermouth.forcefield.ForceField>` is a collection of
 :attr:`~vermouth.forcefield.ForceField.name`, which should be unique. Within a
 force field blocks and modifications should also have unique names.
 
+The ``universal`` force field deserves special mention. If not overridden with
+the ``-from`` flag this force field is used. This force field does not define
+any MD parameters, but this is fine. Instead, this force field defines only atom
+names and the associated connections.
+
 Mapping
 -------
 A :class:`~vermouth.map_parser.Mapping` describes how molecular fragments can
