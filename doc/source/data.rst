@@ -38,7 +38,7 @@ containing all atoms and interactions, and where all atom names are correct.
 A block should be a single connected component, and atom names within a block
 are assumed to be unique.
 
-Blocks can be defined through Gromacs' ``.itp`` and ``.rtp`` files.
+Blocks can be defined through Gromacs' ``.itp`` and ``.rtp`` file formats.
 
 :class:`Blocks <vermouth.molecule.Block>` define a few notable convenience
 methods:
@@ -95,6 +95,11 @@ A :class:`force field <vermouth.forcefield.ForceField>` is a collection of
 :ref:`Modifications <data:Modification>`. Force fields are identified by their
 :attr:`~vermouth.forcefield.ForceField.name`, which should be unique. Within a
 force field blocks and modifications should also have unique names.
+
+Note that this is only a subset of a force field in the MD sense: a VerMoUTH
+:class:`force field <vermouth.forcefield.ForceField>` does not include e.g.
+non-bonded parameters (only the particle types are included), or functional
+forms.
 
 The ``universal`` force field deserves special mention. If not overridden with
 the ``-from`` flag this force field is used. This force field does not define

@@ -128,6 +128,8 @@ Relevant CLI options: ``-mutate``, ``-modify``, ``-nter``, ``-cter``, ``-nt``
 .. [#] N- and C-termini are defined as residues with 1 neighbour and having a
    higher or lower residue number than the neighbour, respectively. Note that
    this does not include zwitterionic amino acids!
+   This also means that if your protein has a chain break you'll end up with
+   more termini than you would otherwise expect.
 
 2) Repair the input graph
 =========================

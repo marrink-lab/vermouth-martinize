@@ -1,10 +1,10 @@
 General Overview
 ================
-VerMoUTH and martinize2 are tools for setting up molecular dynamics (MD)
-simulations starting from atomistic coordinates, with a special focus on
-polymeric systems (including proteins and DNA). Existing tools that do this
-are generally limited to strictly linear polymers, while VerMoUTH and
-martinize2 make *no* assumptions regarding polymer structure. VerMoUTH is a
+VerMoUTH and martinize2 are tools for setting up starting structures for
+molecular dynamics (MD) simulations starting from atomistic coordinates, with a
+special focus on polymeric systems (including proteins and DNA). Existing tools
+that do this are generally limited to strictly linear polymers, while VerMoUTH
+and martinize2 make *no* assumptions regarding polymer structure. VerMoUTH is a
 python library that can be used programmatically. Martinize2 is a command line
 tool build on top of that.
 
@@ -26,7 +26,7 @@ pip.
 
     pip install vermouth
 
-The behavior of the ``pip`` command can vary depending of the specificity of your
+The behavior of the ``pip`` command can vary depending on the specificity of your
 python installation. See the `documentation on installing a python package
 <https://packaging.python.org/tutorials/installing-packages/#installing-packages>`_
 to learn more.

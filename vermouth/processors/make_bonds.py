@@ -316,10 +316,10 @@ class MakeBonds(Processor):
 
     If :attr:`allow_names` is True, the corresponding
     :class:`~vermouth.molecule.Block` is looked up in the system's force field.
-    Based on the edges in that block, edges will be added. In addition,
+    First edges will be added based on the edges in that block. In addition,
     *non-edges* in the reference block are also stored.
 
-    Secondly, is :attr:`allow_dist` is True, edges will be added between any
+    Secondly, if :attr:`allow_dist` is True, edges will be added between any
     atoms that are close enough together. The threshold for "close enough" is
     determined based on the elements of the atoms in question and their van der
     Waals radii, multiplied by :attr:`fudge`. This way edges will *not* be added
