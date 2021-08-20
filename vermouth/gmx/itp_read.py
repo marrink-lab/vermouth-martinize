@@ -38,7 +38,7 @@ class ITPDirector(SectionLineParser):
                  'virtual_sites2': [0, 1, 2, 3],
                  'virtual_sites3': [0, 1, 2, 3],
                  'pairs_nb': [0, 1],
-                 'SETTLE': [0],
+                 'settles': [0],
                  'virtual_sites4': [slice(0, 5)],
                  'distance_restraints':  [0, 1],
                  'dihedral_restraints':  [slice(0, 4)],
@@ -55,6 +55,8 @@ class ITPDirector(SectionLineParser):
         self.header_actions = {
             ('moleculetype', ): self._new_block
         }
+        # a list of nodes of current-block
+        self.current_atom_names = []
 
     def dispatch(self, line):
         """
@@ -209,6 +211,8 @@ class ITPDirector(SectionLineParser):
         ended_section: list[str]
             The sections that have been ended.
         """
+        if "atoms" in ended_section:
+            self.current_atom_names = list(self.current_block.nodes)
 
         if self.current_block is not None:
             self.force_field.blocks[self.current_block.name] = self.current_block
@@ -258,7 +262,7 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn')
     @SectionLineParser.section_parser('moleculetype', 'position_restraints')
     @SectionLineParser.section_parser('moleculetype', 'pairs_nb')
-    @SectionLineParser.section_parser('moleculetype', 'SETTLE')
+    @SectionLineParser.section_parser('moleculetype', 'settles')
     @SectionLineParser.section_parser('moleculetype', 'distance_restraints')
     @SectionLineParser.section_parser('moleculetype', 'orientation_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints')
@@ -352,7 +356,7 @@ class ITPDirector(SectionLineParser):
                # The indices in the file are 1-based
                 reference = int(reference) - 1
                 try:
-                    reference = atom_names[reference]
+                    reference = self.current_atom_names[reference]
                 except IndexError:
                     msg = ('There are {} atoms defined in the block "{}". '
                            'Interaction in section "{}" cannot refer to '
