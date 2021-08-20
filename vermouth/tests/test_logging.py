@@ -25,7 +25,8 @@ import pytest
 
 from vermouth.log_helpers import (get_logger, TypeAdapter, StyleAdapter,
                                   PassingLoggerAdapter, Message,
-                                  BipolarFormatter, CountingHandler)
+                                  BipolarFormatter, CountingHandler,
+                                  ignore_warnings_and_count,)
 
 # Pylint does *not* like pytest fixtures... Also, sometimes you just need more
 # data
@@ -69,14 +70,6 @@ class LogHandler(logging.NullHandler):
         self.test(record)
 
 
-@pytest.fixture
-def logger(request):
-    """Sets up a logger at loglevel 1 and attaches a LogHandler."""
-    logger_ = logging.getLogger(request.function.__name__)
-    logger_.setLevel(1)
-    return logger_
-
-
 @pytest.fixture(scope='module')
 def handler():
     """Sets up a LogHandler"""
@@ -104,7 +97,7 @@ def test_get_logger(name):
         st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5)
     )
 )
-def test_type_adapter(logger, handler, args, type_, default_type, extra):
+def test_type_adapter(handler, args, type_, default_type, extra):
     """Make sure the TypeAdapter sets the correct type attr"""
     def test(record):
         """Make sure the type attribute is as expected"""
@@ -120,6 +113,8 @@ def test_type_adapter(logger, handler, args, type_, default_type, extra):
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
+    logger = logging.getLogger('test_type_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = TypeAdapter(logger, default_type=default_type, extra=extra)
     handler.set_test(test)
@@ -147,7 +142,7 @@ def test_type_adapter(logger, handler, args, type_, default_type, extra):
         st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5)
     )
 )
-def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, extra):
+def test_style_type_adapter(handler, args, kwargs, type_, default_type, extra):
     """Make sure that if you have both a TypeAdapter and a StyleAdapter the
     type you provide ends up in the right place, and that it doesn't interfere
     with keyword formatting."""
@@ -164,6 +159,8 @@ def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, 
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
+    logger = logging.getLogger('test_style_type_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = TypeAdapter(logger, default_type=default_type)
     logger = StyleAdapter(logger, extra=extra)
@@ -188,7 +185,7 @@ def test_style_type_adapter(logger, handler, args, kwargs, type_, default_type, 
     extra=st.one_of(st.none(),
                     st.dictionaries(KWARG_ST, st.integers(), min_size=0, max_size=5))
 )
-def test_style_adapter(logger, handler, args, kwargs, extra):
+def test_style_adapter(handler, args, kwargs, extra):
     """Make sure the StyleAdapter can do keyword formatting"""
     def test(record):
         """Make sure the formatting worked"""
@@ -197,6 +194,8 @@ def test_style_adapter(logger, handler, args, kwargs, extra):
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
 
+    logger = logging.getLogger('test_style_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = StyleAdapter(logger, extra=extra)
     handler.set_test(test)
@@ -212,12 +211,14 @@ def test_style_adapter(logger, handler, args, kwargs, extra):
     args=st.lists(st.text(), min_size=0, max_size=5),
     kwargs=st.dictionaries(KWARG_ST, st.text(), min_size=1, max_size=5),
 )
-def test_passing_adapter(logger, handler, args, kwargs):
+def test_passing_adapter(handler, args, kwargs):
     """Make sure the PassingLoggerAdapter does not allow keywords to be set for
     formatting."""
     def test(_):
         assert False
     handler.set_test(test)
+    logger = logging.getLogger('test_passing_adapter')
+    logger.setLevel(1)
     logger.addHandler(handler)
     logger = PassingLoggerAdapter(logger)
     fmt = ['%s']*len(args) + ['%(' + name + ')s' for name in kwargs]
@@ -327,4 +328,51 @@ def test_counter(level, type_, expected):
     assert handler.counts == expected_total
 
     assert handler.number_of_counts_by(level=level, type=type_) == expected
+
+
+@pytest.fixture
+def mock_counter():
+    class MockCountingHandler:
+        def __init__(self):
+            self.counts = {
+                logging.WARNING: {
+                    'default': 4,
+                    'something': 8,
+                    'other thing': 2,
+                    'empty': 0,
+                },
+                logging.INFO: {
+                    'something': 5,
+                },
+            }
+
+        def number_of_counts_by(self, level=None, type=None):
+            assert type is None, 'The mock does not discriminate by type'
+            results = {
+                logging.WARNING: 14,
+                logging.INFO: 5,
+            }
+            return results.get(level, 0)
+
+    return MockCountingHandler()
+
+
+@pytest.mark.parametrize('specification, level, expected', (
+    # -maxwarn 4
+    ([[(None, 4)]], logging.WARNING, 10),
+    # -maxwarn something
+    ([[('something', None)]], logging.WARNING, 6),
+    # -maxwarn something:5
+    ([[('something', 5)]], logging.WARNING, 9),
+    # -maxwarn something:5 2
+    ([[('something', 5), (None, 2)]], logging.WARNING, 7),
+    # -maxprint something:5 -maxprint 2
+    ([[('something', 5)], [(None, 2)]], logging.WARNING, 7),
+    # Not accessible from the command line
+    ([[('something', 3)]], logging.INFO, 2),
+))
+def test_ignore_warnings_and_count(mock_counter, specification, level, expected):
+    remaining = ignore_warnings_and_count(mock_counter, specification, level)
+    assert remaining == expected
+
 

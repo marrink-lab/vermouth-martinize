@@ -35,24 +35,24 @@ class Mapping:
 
     Attributes
     ----------
-    blocks_from: networkx.Graph
+    block_from: networkx.Graph
         The graph which this :class:`Mapping` object can transform.
-    blocks_to: vermouth.molecule.Block
+    block_to: vermouth.molecule.Block
         The :class:`vermouth.molecule.Block` we can transform to.
     references: collections.abc.Mapping
-        A mapping of node keys in :attr:`blocks_to` to node keys in
-        :attr:`blocks_from` that describes which node in blocks_from should be
+        A mapping of node keys in :attr:`block_to` to node keys in
+        :attr:`block_from` that describes which node in blocks_from should be
         taken as a reference when determining node attributes for nodes in
-        blocks_to.
+        block_to.
     ff_from: vermouth.forcefield.ForceField
-        The forcefield of :attr:`blocks_from`.
+        The forcefield of :attr:`block_from`.
     ff_to: vermouth.forcefield.ForceField
-        The forcefield of :attr:`blocks_to`.
+        The forcefield of :attr:`block_to`.
     names: tuple[str]
         The names of the mapped blocks.
     mapping: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
         The actual mapping that describes for every node key in
-        :attr:`blocks_from` to what node key in :attr:`blocks_to` it
+        :attr:`block_from` to what node key in :attr:`block_to` it
         contributes to with what weight.
         ``{node_from: {node_to: weight, ...}, ...}``.
 
@@ -63,9 +63,9 @@ class Mapping:
     Parameters
     ----------
     block_from: networkx.Graph
-        As per :attr:`blocks_from`.
+        As per :attr:`block_from`.
     block_to: vermouth.molecule.Block
-        As per :attr:`blocks_to`.
+        As per :attr:`block_to`.
     mapping: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
         As per :attr:`mapping`.
     references: collections.abc.Mapping
@@ -75,7 +75,7 @@ class Mapping:
     ff_to: vermouth.forcefield.ForceField
         As per :attr:`ff_to`.
     extra: tuple
-        Extra information to be attached to :attr:`blocks_to`.
+        Extra information to be attached to :attr:`block_to`.
     normalize_weights: bool
         Whether the weights should be normalized such that the sum of the
         weights of nodes mapping to something is 1.
@@ -120,11 +120,11 @@ class Mapping:
         """
         Performs the partial mapping described by this object on `graph`. It
         first find the induced subgraph isomorphisms between `graph` and
-        :attr:`blocks_from`, after which it will process the found isomorphisms
+        :attr:`block_from`, after which it will process the found isomorphisms
         according to :attr:`mapping`.
 
         None of the yielded dictionaries will refer to node keys of
-        :attr:`blocks_from`. Instead, those will be translated to node keys of
+        :attr:`block_from`. Instead, those will be translated to node keys of
         `graph` based on the found isomorphisms.
 
         Note
@@ -152,9 +152,9 @@ class Mapping:
         ------
         dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
             the correspondence between nodes in `graph` and nodes in
-            :attr:`blocks_to`, with the associated weights.
+            :attr:`block_to`, with the associated weights.
         vermouth.molecule.Block
-            :attr:`blocks_to`.
+            :attr:`block_to`.
         dict
             :attr:`references` on which :attr:`mapping` has been applied.
         """
@@ -170,8 +170,8 @@ class Mapping:
         """
         # 1 Find subgraph isomorphism between blocks_from and graph
         # 2 Translate found match ({graph idx: blocks from idx}) to indices in
-        #   blocks_to using self.mapping
-        # 3 Return found matches and blocks_to?
+        #   block_to using self.mapping
+        # 3 Return found matches and block_to?
         # PS. I don't really like this, because this object is becoming too
         # intelligent by also having to do the isomorphism. On the other hand,
         # it makes sense from the maths point of view.

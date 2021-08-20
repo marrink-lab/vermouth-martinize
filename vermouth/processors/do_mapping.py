@@ -99,7 +99,7 @@ def node_matcher(node1, node2):
     bool
     """
     return attributes_match(node1, node2,
-                            ignore_keys=('atype', 'charge', 'charge_group',
+                            ignore_keys=('atype', 'charge', 'charge_group', 'mass',
                                          'resid', 'replace', '_old_atomname'))
 
 
@@ -401,6 +401,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     """
     mol_to_mod, modification, references = match
     LOGGER.info('Applying modification mapping {}', modification.name, type='general')
+    graph_out.citations.update(modification.citations)
     mod_to_mol = defaultdict(dict)
     for mol_idx, mod_idxs in mol_to_mod.items():
         for mod_idx in mod_idxs:

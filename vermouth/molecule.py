@@ -339,6 +339,7 @@ class Molecule(nx.Graph):
         self.nrexcl = kwargs.pop('nrexcl', None)
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
+        self.citations = set()
 
     def __eq__(self, other):
         return (
@@ -441,6 +442,8 @@ class Molecule(nx.Graph):
         subgraph.nrexcl = self.nrexcl
         subgraph.name = self.name
 
+        # copy citations
+        subgraph.citations = self.citations
         node_copies = [(node, copy.copy(self.nodes[node])) for node in nodes]
         subgraph.add_nodes_from(node_copies)
 
@@ -492,7 +495,7 @@ class Molecule(nx.Graph):
             Interaction(atoms=tuple(atoms), parameters=parameters, meta=meta)
         )
 
-    def add_or_replace_interaction(self, type_, atoms, parameters, meta=None):
+    def add_or_replace_interaction(self, type_, atoms, parameters, meta=None, citations=None):
         """
         Adds a new interaction if it doesn't exists yet, and replaces it
         otherwise. Interactions are deemed the same if they're the same type,
@@ -511,6 +514,8 @@ class Molecule(nx.Graph):
         meta: collections.abc.Mapping
             Metadata for this interaction, such as comments to be written to
             the output.
+        citations: set
+            set of citations that apply when this link is addded to molecule
 
         See Also
         --------
@@ -528,6 +533,9 @@ class Molecule(nx.Graph):
                 break
         else:  # no break
             self.add_interaction(type_, atoms, parameters, meta)
+
+        if citations:
+            self.citations.update(citations)
 
     def get_interaction(self, type_):
         """
@@ -686,6 +694,9 @@ class Molecule(nx.Graph):
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:
                 self.add_edge(correspondence[node1], correspondence[node2])
+        # merge the citation sets
+        self.citations.update(molecule.citations)
+
         return correspondence
 
     def share_moltype_with(self, other):
@@ -915,6 +926,45 @@ class Molecule(nx.Graph):
         for node in nodes:
             self._remove_interactions_with_node(node)
 
+    def make_edges_from_interaction_type(self, type_):
+        """
+        Create edges from the interactions of a given type.
+
+        The interactions must be described so that two consecutive atoms in an
+        interaction should be linked by an edge. This is the case for bonds,
+        angles, proper dihedral angles, and cmap torsions. It is not always
+        true for improper torsions.
+
+        Cmap are described as two consecutive proper dihedral angles. The
+        atoms for the interaction are the 4 atoms of the first dihedral angle
+        followed by the next atom forming the second dihedral angle with the
+        3 previous ones. Each pair of consecutive atoms generate an edge.
+
+        .. warning::
+
+            If there is no interaction of the required type, it will be
+            silently ignored.
+
+        Parameters
+        ----------
+        type_: str
+            The name of the interaction type the edges should be built from.
+        """
+        for interaction in self.interactions.get(type_, []):
+            if interaction.meta.get('edge', True):
+                atoms = interaction.atoms
+                self.add_edges_from(zip(atoms[:-1], atoms[1:]))
+
+    def make_edges_from_interactions(self):
+        """
+        Create edges from the interactions we know how to convert to edges.
+
+        The known interactions are bonds, angles, proper dihedral angles,
+        cmap torsions and constraints.
+        """
+        known_types = ('bonds', 'angles', 'dihedrals', 'cmap', 'constraints')
+        for type_ in known_types:
+            self.make_edges_from_interaction_type(type_)
 
 class Block(Molecule):
     """
@@ -1016,46 +1066,6 @@ class Block(Molecule):
             # not appear as particles.
             if node_attr:
                 yield node_attr
-
-    def make_edges_from_interaction_type(self, type_):
-        """
-        Create edges from the interactions of a given type.
-
-        The interactions must be described so that two consecutive atoms in an
-        interaction should be linked by an edge. This is the case for bonds,
-        angles, proper dihedral angles, and cmap torsions. It is not always
-        true for improper torsions.
-
-        Cmap are described as two consecutive proper dihedral angles. The
-        atoms for the interaction are the 4 atoms of the first dihedral angle
-        followed by the next atom forming the second dihedral angle with the
-        3 previous ones. Each pair of consecutive atoms generate an edge.
-
-        .. warning::
-
-            If there is no interaction of the required type, it will be
-            silently ignored.
-
-        Parameters
-        ----------
-        type_: str
-            The name of the interaction type the edges should be built from.
-        """
-        for interaction in self.interactions.get(type_, []):
-            if interaction.meta.get('edge', True):
-                atoms = interaction.atoms
-                self.add_edges_from(zip(atoms[:-1], atoms[1:]))
-
-    def make_edges_from_interactions(self):
-        """
-        Create edges from the interactions we know how to convert to edges.
-
-        The known interactions are bonds, angles, proper dihedral angles, and
-        cmap torsions.
-        """
-        known_types = ('bonds', 'angles', 'dihedrals', 'cmap', 'constraints')
-        for type_ in known_types:
-            self.make_edges_from_interaction_type(type_)
 
     def guess_angles(self):
         """
@@ -1160,6 +1170,8 @@ class Block(Molecule):
             default_attributes = {'resname': self.name}
         name_to_idx = {}
         mol = Molecule(force_field=force_field)
+        mol.citations = self.citations
+
         for idx, node in enumerate(self.nodes, start=atom_offset):
             name_to_idx[node] = idx
             atom = self.nodes[node]

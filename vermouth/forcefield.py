@@ -22,9 +22,10 @@ import os
 from .file_writer import open
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
+from .citation_parser import read_bib
 from . import DATA_PATH
 
-FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff}
+FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff, '.bib': read_bib}
 
 # Cache the force fields.
 # It should only be used by the get_native_force_field function, else it would
@@ -66,6 +67,7 @@ class ForceField:
         self.renamed_residues = {}
         self.variables = {}
         self.name = None
+        self.citations = {}
         if directory is not None:
             self.read_from(directory)
             self.name = os.path.basename(str(directory))

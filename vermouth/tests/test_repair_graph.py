@@ -18,11 +18,13 @@ Test graph reparation and related operations.
 """
 import copy
 import logging
-
+import networkx as nx
+import numpy as np
 import pytest
 import vermouth
 from vermouth.molecule import Link
 import vermouth.forcefield
+from .datafiles import PDB_TRI_ALANINE
 
 # pylint: disable=redefined-outer-name
 
@@ -267,7 +269,6 @@ def test_renaming(renamed_graph):
             assert node['resname'] == 'GLY'
 
 
-
 @pytest.mark.parametrize('resid,mutations,modifications,atomnames', [
     (1, ['ALA'], [], 'O C CA HA N HN CB HB1 HB2 HB3'),  # The glutamate chain and N-ter are removed
     (1, [], ['N-ter'], 'O C CA HA N H HN CB HB1 HB2 CG HG1 HG2 CD OE1 OE2'),  # HE1 got removed
@@ -367,3 +368,38 @@ def test_unknown_mods_removed(caplog, repaired_graph, known_mod_names):
                             if node.get('expected', node['atomname']) in
                                dict(mod.nodes(data='atomname')).values()]
             assert len(contained_by) == 1
+
+
+def test_tri_alanine_termini():
+    """Test that repair_graph preferentially picks non-modification nodes
+    This is a good thing, since not all proteins come with their C-term atoms,
+    and you *must* pick O/OXT such that O gets the coordinates from the PDB file
+    since DSSP can't recognize OXT.
+    Prevents recurrence of #317.
+    """
+    ff = vermouth.forcefield.get_native_force_field('universal')
+    mol = vermouth.pdb.read_pdb(PDB_TRI_ALANINE)[0]
+    system = vermouth.system.System(force_field=None)
+    system.add_molecule(mol)
+    system.force_field = ff
+    vermouth.processors.AnnotateMutMod(modifications=[('cter', 'C-ter')]).run_system(system)
+    vermouth.processors.RepairGraph().run_system(system)
+
+    mol = system.molecules[0]
+    idx_O = next(mol.find_atoms(atomname='O'))
+    idx_OXT = next(mol.find_atoms(atomname='OXT'))
+    assert not np.any(np.isnan(mol.nodes[idx_O]['position']))
+    assert np.all(np.isnan(mol.nodes[idx_OXT].get('position', [np.nan]*3)))
+
+
+def test_reference_with_resid(system_mod):
+    system = system_mod
+    ff = copy.deepcopy(system.force_field)
+    gly = ff.blocks['GLY']
+    for n_idx in gly:
+        gly.nodes[n_idx]['resid'] = 42
+    ff.blocks['GLY'] = gly
+    system.force_field = ff
+
+    vermouth.processors.RepairGraph().run_system(system)
+    assert set(nx.get_node_attributes(system.molecules[0], 'resid').values()) == set(range(1, 6))

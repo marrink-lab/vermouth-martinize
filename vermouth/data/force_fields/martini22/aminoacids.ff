@@ -20,6 +20,11 @@ protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|
 elastic_network_bond_type 6
 res_min_dist 3
 
+[ citations ]
+Martini2
+M2ProteinModel
+M22ProteinModel
+
 ;;; GLYCINE
 
 [ moleculetype ]
@@ -29,7 +34,6 @@ GLY                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   P5   1     GLY    BB     1      0      
-
 
 ;;; ALANINE
 
@@ -558,7 +562,9 @@ TRP                1
 resname $protein_resnames
 [ bonds ]
 BB +BB 1 0.350 1250 {"group": "Backbone bonds"}
-
+;[ citation ]
+;M2ProteinModel
+;Martini2
 
 [ link ]
 resname $protein_resnames

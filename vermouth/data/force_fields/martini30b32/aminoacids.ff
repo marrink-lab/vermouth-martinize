@@ -21,6 +21,9 @@ prot_default_bb_type P2
 elastic_network_bond_type 6
 res_min_dist 3
 
+[ citations ]
+Martini3Beta
+
 ;;; GLYCINE
 
 [ moleculetype ]

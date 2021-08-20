@@ -18,13 +18,17 @@ transformation on molecular structures and topologies using graph algorithms.
 
 ## Disclaimer
 
-Martinize2 and Vermouth are under development. Bugs can occur. If you encounter an issue, please report it on
-<https://github.com/marrink-lab/vermouth-martinize/issues>. Carefully check your input and output files before
-using them; read the messages displayed by the program.
+Martinize2 and Vermouth are under development. So far they have mostly been
+tested on Martini 2 and Martini 3. If you use Martinize 2 and Vermouth for any
+other force field be sure to carefully check the resulting topologies!  
+Bugs can occur. If you encounter an issue, please report it on
+<https://github.com/marrink-lab/vermouth-martinize/issues>. Carefully check your
+ input and output files before using them; read the messages displayed by the
+ program.
 
 ## Installation
 
-Martinize2 and vermouth require python 3.5 or greater. They are distributed via [PyPi][pypi_vermouth], and can be
+Martinize2 and vermouth require python 3.6 or greater. They are distributed via [PyPi][pypi_vermouth], and can be
 installed using the `pip` command:
     
     pip install vermouth
