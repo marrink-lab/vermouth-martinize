@@ -50,6 +50,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
+    'sphinx.ext.autosectionlabel',
     'sphinxcontrib.apidoc',
 ]
 
@@ -204,6 +205,8 @@ intersphinx_aliases = {
     #('py:class', 'networkx.algorithms.isomorphism.vf2userfunc.GraphMatcher'): ('py:module','networkx.algorithms.isomorphism.isomorphvf2'),
     ('py:class', 'networkx.isomorphism.GraphMatcher'): ('py:module', 'networkx.algorithms.isomorphism.isomorphvf2')
 }
+
+autosectionlabel_prefix_document = True
 
 def add_intersphinx_aliases_to_inv(app):
     from sphinx.ext.intersphinx import InventoryAdapter

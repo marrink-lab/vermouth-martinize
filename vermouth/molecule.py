@@ -328,6 +328,23 @@ class Molecule(nx.Graph):
     determines in what order atoms will be written in the output. Same goes for
     the interactions within an interaction type. The order of edges is not
     guaranteed anywhere in the code, and they are not writen in the output.
+
+    Attributes
+    ----------
+    meta: dict
+    nrexcl: int
+    interactions: dict[str, list[Interaction]]
+        All the known interactions. Each item of the dictionary is a type of
+        interaction, with the key being the name of the kind of interaction
+        using Gromacs itp/rtp conventions ('bonds', 'angles', ...) and the
+        value being a list of all the interactions of that type in the residue.
+        An interaction is a dict with a key 'atoms' under which is stored the
+        list of the atoms involved (referred by their name), a key 'parameters'
+        under which is stored an arbitrary list of non-atom parameters as
+        written in a RTP file, and arbitrary keys to store custom metadata. A
+        given interaction can have a comment under the key 'comment'.
+    citations: set[str]
+        The citation keys associated with this molecule.
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
@@ -980,16 +997,6 @@ class Block(Molecule):
     ----------
     name: str or None
         The name of the residue. Set to `None` if undefined.
-    interactions: dict
-        All the known interactions. Each item of the dictionary is a type of
-        interaction, with the key being the name of the kind of interaction
-        using Gromacs itp/rtp conventions ('bonds', 'angles', ...) and the
-        value being a list of all the interactions of that type in the residue.
-        An interaction is a dict with a key 'atoms' under which is stored the
-        list of the atoms involved (referred by their name), a key 'parameters'
-        under which is stored an arbitrary list of non-atom parameters as
-        written in a RTP file, and arbitrary keys to store custom metadata. A
-        given interaction can have a comment under the key 'comment'.
     """
     # As the particles are stored as nodes, we want the nodes to stay
     # ordered.
@@ -1299,6 +1306,10 @@ class Link(Block):
                     return False
         return True
 
+class Modification(Link):
+    """
+    A modification which describes deviations from a :class:`Block`.
+    """
 
 def attributes_match(attributes, template_attributes, ignore_keys=()):
     """
