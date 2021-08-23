@@ -426,9 +426,11 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, modelidx=1):
 
     Returns
     -------
-    vermouth.molecule.Molecule
+    list[vermouth.molecule.Molecule]
         The parsed molecules. Will only contain edges if the PDB file has
-        CONECT records. Either way, might be disconnected.
+        CONECT records. Either way, the molecules might be disconnected. Entries
+        separated by TER, ENDMDL, and END records will result in separate
+        molecules.
     """
     parser = PDBParser(exclude, ignh, modelidx)
     with open(str(file_name)) as file_handle:

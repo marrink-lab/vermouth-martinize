@@ -27,7 +27,7 @@ import copy
 import numbers
 import json
 from .molecule import (
-    Block, Link,
+    Block, Link, Modification,
     Interaction, DeleteInteraction,
     Choice, NotDefinedOrNot,
     ParamDistance, ParamAngle, ParamDihedral, ParamDihedralPhase,
@@ -194,7 +194,7 @@ class FFDirector(SectionLineParser):
         self.current_link = Link(force_field=self.force_field)
 
     def _new_modification(self):
-        self.current_modification = Link(force_field=self.force_field)
+        self.current_modification = Modification(force_field=self.force_field)
 
     @SectionLineParser.section_parser('variables')
     def _variables(self, line, lineno=0):

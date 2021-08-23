@@ -263,7 +263,11 @@ def _build_link_interaction_from(molecule, interaction, match):
 
 
 class DoLinks(Processor):
+    """
+    Apply Links, taken from a molecule's force field, to the molecule.
+    """
     def run_molecule(self, molecule):
+        # TODO: Separate this into a function
         links = molecule.force_field.links
         _nodes_to_remove = []
         for link in links:

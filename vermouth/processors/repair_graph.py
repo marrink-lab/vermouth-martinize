@@ -159,7 +159,7 @@ def make_reference(mol):
     Takes an molecule graph (e.g. as read from a PDB file), and finds and
     returns the graph how it should look like, including all matching nodes
     between the input graph and the references.
-    Requires residuenames to be correct.
+    Requires residue names to be correct.
 
     Notes
     -----
@@ -243,7 +243,7 @@ def make_reference(mol):
         #       good at solving isomorphism problems iff graphs look alike. We
         #       can do a similar trick here by rot+trans aligning the given
         #       residue with a reference conformation. And then sort by
-        #       distance
+        #       distance as third criterion
         new_residue_names = {old: new for new, old in enumerate(sorted(
             residue,
             key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])  # pylint: disable=cell-var-from-loop
@@ -419,12 +419,12 @@ def repair_graph(molecule, reference_graph, include_graph=True):
     names will be canonicalized. Atoms not present in ``reference_graph`` will
     have the attribute ``PTM_atom`` set to ``True``.
 
-    `molecule` is modified in place. Missing atoms (as per `reference_graph`)
+    ``molecule`` is modified in place. Missing atoms (as per ``reference_graph``)
     are added, atom and residue names are canonicalized, and PTM atoms are
     marked.
 
-    If `include_graph` is `True`, then the subgraph corresponding to each node
-    is included in the node under the "graph" attribute.
+    If ``include_graph`` is ``True``, then the subgraph corresponding to each
+    node is included in the node under the "graph" attribute.
 
     Parameters
     ----------
@@ -437,7 +437,7 @@ def repair_graph(molecule, reference_graph, include_graph=True):
         :atomname: The atomname.
 
     reference_graph : networkx.Graph
-        The reference graph as produced by ``make_reference``. Required node
+        The reference graph as produced by :func:`make_reference`. Required node
         attributes:
 
         :resid: The residue id.
@@ -476,6 +476,25 @@ def repair_graph(molecule, reference_graph, include_graph=True):
 
 
 class RepairGraph(Processor):
+    """
+    Repairs a molecule such that it contains all atoms with appropriate atom
+    names, as per the blocks in the system's force field, while taking any
+    mutations and modification into account. These should be added as 'mutation'
+    and 'modification' attributes to the atoms of the relevant residues.
+
+    Attributes
+    ----------
+    delete_unknown: bool
+        If True, removes any molecules that contain residues that are not known
+        to the system's force field.
+    include_graph: bool
+        If True, every node in the resulting graph will have a 'graph' attribute
+        containing a subgraph constructed using the input atoms.
+
+    See Also
+    --------
+    :func:`repair_graph`
+    """
     def __init__(self, delete_unknown=False, include_graph=True):
         super().__init__()
         self.delete_unknown = delete_unknown
