@@ -500,6 +500,30 @@ class TestITP:
         [ bonds ]
         1   2 A B
         #if
+        """,
+        """
+        [ atoms ]
+        1 P4  1 ALA SC1 1
+        2 P4  1 ALA SC1 1
+        3 P4  1 ALA SC1 1
+        #else
+        [ bonds ]
+        1   2
+        2   3
+        #endif
+        """,
+        """
+        [ atoms ]
+        1 P4  1 ALA SC1 1
+        2 P4  1 ALA SC1 1
+        3 P4  1 ALA SC1 1
+        #ifdef FLEXIBLE
+        [ bonds ]
+        1   2
+        2   3
+        #else
+        [ angles ]
+        1 2 3
         """
     ))
     def test_pragma_fails(pragma_fail_statements):
