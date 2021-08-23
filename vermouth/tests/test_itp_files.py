@@ -386,6 +386,19 @@ class TestITP:
         ),
         (
             """
+            #ifndef FLEXIBLE
+            [ bonds ]
+            1   2
+            #else
+            2   3
+            #endif
+            """,
+            [vermouth.molecule.Interaction(atoms=[0, 1], parameters=[], meta={"ifndef":"FLEXIBLE"}),
+             vermouth.molecule.Interaction(atoms=[1, 2], parameters=[], meta={"ifdef":"FLEXIBLE"})]
+        ),
+
+        (
+            """
             [ bonds ]
             1   2
             #ifdef FLEXIBLE
