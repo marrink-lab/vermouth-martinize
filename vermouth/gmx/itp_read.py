@@ -344,7 +344,6 @@ class ITPDirector(SectionLineParser):
         section: str
             The current section header
         """
-        atom_names = list(context.nodes)
         all_references = []
         for atom in atoms:
             reference = atom[0]
