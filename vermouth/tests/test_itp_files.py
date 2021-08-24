@@ -14,8 +14,6 @@
 """
 Test that force field files are properly read.
 """
-
-from inspect import ismethod
 import textwrap
 import pytest
 import vermouth.forcefield
