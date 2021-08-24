@@ -133,11 +133,11 @@ class ITPDirector(SectionLineParser):
                raise IOError("Your #ifdef section is orderd incorrectly."
                              "At line {} I read #endif but I haven not read"
                              "a ifdef before.".format(lineno))
-            else:
-               inverse = {"ifdef": "ifndef", "ifndef": "ifdef"}
-               tag = self.current_meta["tag"]
-               condition = inverse[self.current_meta["condition"]]
-               self.current_meta = {'tag': tag, 'condition': condition.replace("#", "")}
+
+            inverse = {"ifdef": "ifndef", "ifndef": "ifdef"}
+            tag = self.current_meta["tag"]
+            condition = inverse[self.current_meta["condition"]]
+            self.current_meta = {'tag': tag, 'condition': condition.replace("#", "")}
 
         elif line.startswith("#ifdef") or line.startswith("#ifndef"):
             if self.current_meta is None:
@@ -226,6 +226,10 @@ class ITPDirector(SectionLineParser):
             raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
                           "There is no #endif for the last pragma.")
 
+        if self.current_meta == "#else":
+            raise IOError("Your #ifdef/#ifndef-#else section is orderd incorrectly."
+                          "There is no #endif for the last pragma.")
+
         super().finalize()
 
     def _new_block(self):
@@ -264,6 +268,7 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'pairs_nb')
     @SectionLineParser.section_parser('moleculetype', 'settles')
     @SectionLineParser.section_parser('moleculetype', 'distance_restraints')
+    @SectionLineParser.section_parser('moleculetype', 'dihedral_restraints')
     @SectionLineParser.section_parser('moleculetype', 'orientation_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints_z')
