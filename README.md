@@ -1,6 +1,6 @@
 # Martinize2 and vermouth: The ultimate resolution transformation tools
 
-[![Build Status](https://travis-ci.org/marrink-lab/vermouth-martinize.svg?branch=master)](https://travis-ci.org/marrink-lab/vermouth-martinize)
+[![Build Status](https://github.com/marrink-lab/vermouth-martinize/actions/workflows/run_tests.yml/badge.svg)](https://github.com/marrink-lab/vermouth-martinize/actions)
 [![codecov](https://codecov.io/gh/marrink-lab/vermouth-martinize/branch/master/graph/badge.svg)](https://codecov.io/gh/marrink-lab/vermouth-martinize)
 [![Documentation Status](https://readthedocs.org/projects/vermouth-martinize/badge/?version=latest)](https://vermouth-martinize.readthedocs.io/en/latest/?badge=latest)
 

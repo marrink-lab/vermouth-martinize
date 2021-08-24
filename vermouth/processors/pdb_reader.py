@@ -27,6 +27,27 @@ from .processor import Processor
 
 
 class PDBInput(Processor):
+    """
+    Reads PDB files.
+
+    Attributes
+    ----------
+    filename: str
+        The filename to parse.
+    exclude: collections.abc.Container[str]
+        A collection of residue names that should not be parsed and excluded
+        from the final molecule(s)
+    ignh: bool
+        If True, hydrogens will be discarded from the input structure.
+    modelidx: int
+        The model number to parse/use.
+
+    See also
+    --------
+    :func:`~vermouth.pdb.pdb.read_pdb`
+    :func:`~vermouth.pdb.pdb.PDBParser`
+
+    """
     def __init__(self, filename, exclude=(), ignh=False, modelidx=0):
         super().__init__()
         self.filename = filename
