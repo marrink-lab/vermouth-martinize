@@ -15,6 +15,7 @@
 Test that force field files are properly read.
 """
 
+from inspect import ismethod
 import textwrap
 import pytest
 import vermouth.forcefield
@@ -643,3 +644,14 @@ class TestITP:
         ff = vermouth.forcefield.ForceField(name='test_ff')
         with pytest.raises(IOError):
             vermouth.gmx.itp_read.read_itp(new_lines, ff)
+
+def test_consistency():
+    """
+    This test checks that all interaction formats defined
+    in ITPDirector.atom_idxs also have a corresponding
+    method in ITPDirector.METH_DICT.
+    """
+    ff = vermouth.forcefield.ForceField(name='test_ff')
+    itp_director = vermouth.gmx.itp_read.ITPDirector(ff)
+    for inter_type in itp_director.atom_idxs:
+        assert tuple(['moleculetype', inter_type]) in itp_director.METH_DICT
