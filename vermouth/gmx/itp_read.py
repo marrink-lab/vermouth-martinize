@@ -33,13 +33,14 @@ class ITPDirector(SectionLineParser):
                  'constraints': [0, 1],
                  'dihedrals': [0, 1, 2, 3],
                  'pairs': [0, 1],
+                 'pairs_nb': [0, 1],
                  'exclusions': [slice(None, None)],
-                 'virtual_sitesn': [0, slice(2, None)],
+                 'virtual_sites1': [0],
                  'virtual_sites2': [0, 1, 2],
                  'virtual_sites3': [0, 1, 2, 3],
-                 'pairs_nb': [0, 1],
-                 'settles': [0],
                  'virtual_sites4': [slice(0, 5)],
+                 'virtual_sitesn': [0, slice(2, None)],
+                 'settles': [0],
                  'distance_restraints':  [0, 1],
                  'dihedral_restraints':  [slice(0, 4)],
                  'orientation_restraints': [0, 1],
@@ -226,10 +227,6 @@ class ITPDirector(SectionLineParser):
             raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
                           "There is no #endif for the last pragma.")
 
-        if self.current_meta == "#else":
-            raise IOError("Your #ifdef/#ifndef-#else section is orderd incorrectly."
-                          "There is no #endif for the last pragma.")
-
         super().finalize()
 
     def _new_block(self):
@@ -260,6 +257,7 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'constraints')
     @SectionLineParser.section_parser('moleculetype', 'pairs')
     @SectionLineParser.section_parser('moleculetype', 'exclusions')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sites1')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites3')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites4')
