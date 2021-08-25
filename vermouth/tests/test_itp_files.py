@@ -14,7 +14,6 @@
 """
 Test that force field files are properly read.
 """
-
 import textwrap
 import pytest
 import vermouth.forcefield
@@ -386,6 +385,19 @@ class TestITP:
         ),
         (
             """
+            #ifndef FLEXIBLE
+            [ bonds ]
+            1   2
+            #else
+            2   3
+            #endif
+            """,
+            [vermouth.molecule.Interaction(atoms=[0, 1], parameters=[], meta={"ifndef":"FLEXIBLE"}),
+             vermouth.molecule.Interaction(atoms=[1, 2], parameters=[], meta={"ifdef":"FLEXIBLE"})]
+        ),
+
+        (
+            """
             [ bonds ]
             1   2
             #ifdef FLEXIBLE
@@ -487,6 +499,30 @@ class TestITP:
         [ bonds ]
         1   2 A B
         #if
+        """,
+        """
+        [ atoms ]
+        1 P4  1 ALA SC1 1
+        2 P4  1 ALA SC1 1
+        3 P4  1 ALA SC1 1
+        #else
+        [ bonds ]
+        1   2
+        2   3
+        #endif
+        """,
+        """
+        [ atoms ]
+        1 P4  1 ALA SC1 1
+        2 P4  1 ALA SC1 1
+        3 P4  1 ALA SC1 1
+        #ifdef FLEXIBLE
+        [ bonds ]
+        1   2
+        2   3
+        #else
+        [ angles ]
+        1 2 3
         """
     ))
     def test_pragma_fails(pragma_fail_statements):
@@ -606,3 +642,14 @@ class TestITP:
         ff = vermouth.forcefield.ForceField(name='test_ff')
         with pytest.raises(IOError):
             vermouth.gmx.itp_read.read_itp(new_lines, ff)
+
+def test_consistency():
+    """
+    This test checks that all interaction formats defined
+    in ITPDirector.atom_idxs also have a corresponding
+    method in ITPDirector.METH_DICT.
+    """
+    ff = vermouth.forcefield.ForceField(name='test_ff')
+    itp_director = vermouth.gmx.itp_read.ITPDirector(ff)
+    for inter_type in itp_director.atom_idxs:
+        assert tuple(['moleculetype', inter_type]) in itp_director.METH_DICT

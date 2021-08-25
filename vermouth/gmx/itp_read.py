@@ -33,13 +33,14 @@ class ITPDirector(SectionLineParser):
                  'constraints': [0, 1],
                  'dihedrals': [0, 1, 2, 3],
                  'pairs': [0, 1],
+                 'pairs_nb': [0, 1],
                  'exclusions': [slice(None, None)],
-                 'virtual_sitesn': [0, slice(2, None)],
+                 'virtual_sites1': [0],
                  'virtual_sites2': [0, 1, 2],
                  'virtual_sites3': [0, 1, 2, 3],
-                 'pairs_nb': [0, 1],
-                 'settles': [0],
                  'virtual_sites4': [slice(0, 5)],
+                 'virtual_sitesn': [0, slice(2, None)],
+                 'settles': [0],
                  'distance_restraints':  [0, 1],
                  'dihedral_restraints':  [slice(0, 4)],
                  'orientation_restraints': [0, 1],
@@ -55,6 +56,8 @@ class ITPDirector(SectionLineParser):
         self.header_actions = {
             ('moleculetype', ): self._new_block
         }
+        # a list of nodes of current-block
+        self.current_atom_names = []
 
     def dispatch(self, line):
         """
@@ -118,7 +121,6 @@ class ITPDirector(SectionLineParser):
         IOError
             If the def sections are missformatted
         """
-
         if line == '#endif':
             if self.current_meta is not None:
                 self.current_meta = None
@@ -126,6 +128,18 @@ class ITPDirector(SectionLineParser):
                 raise IOError("Your #ifdef section is orderd incorrectly."
                               "At line {} I read #endif but I haven not read"
                               "a ifdef before.".format(lineno))
+
+        elif line.startswith("#else"):
+            if self.current_meta is None:
+               raise IOError("Your #ifdef section is orderd incorrectly."
+                             "At line {} I read #endif but I haven not read"
+                             "a ifdef before.".format(lineno))
+
+            inverse = {"ifdef": "ifndef", "ifndef": "ifdef"}
+            tag = self.current_meta["tag"]
+            condition = inverse[self.current_meta["condition"]]
+            self.current_meta = {'tag': tag, 'condition': condition.replace("#", "")}
+
         elif line.startswith("#ifdef") or line.startswith("#ifndef"):
             if self.current_meta is None:
                 condition, tag = line.split()
@@ -198,6 +212,8 @@ class ITPDirector(SectionLineParser):
         ended_section: list[str]
             The sections that have been ended.
         """
+        if "atoms" in ended_section:
+            self.current_atom_names = list(self.current_block.nodes)
 
         if self.current_block is not None:
             self.force_field.blocks[self.current_block.name] = self.current_block
@@ -241,14 +257,16 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'constraints')
     @SectionLineParser.section_parser('moleculetype', 'pairs')
     @SectionLineParser.section_parser('moleculetype', 'exclusions')
+    @SectionLineParser.section_parser('moleculetype', 'virtual_sites1')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites2')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites3')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sites4')
     @SectionLineParser.section_parser('moleculetype', 'virtual_sitesn')
     @SectionLineParser.section_parser('moleculetype', 'position_restraints')
     @SectionLineParser.section_parser('moleculetype', 'pairs_nb')
-    @SectionLineParser.section_parser('moleculetype', 'SETTLE')
+    @SectionLineParser.section_parser('moleculetype', 'settles')
     @SectionLineParser.section_parser('moleculetype', 'distance_restraints')
+    @SectionLineParser.section_parser('moleculetype', 'dihedral_restraints')
     @SectionLineParser.section_parser('moleculetype', 'orientation_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints_z')
@@ -329,7 +347,6 @@ class ITPDirector(SectionLineParser):
         section: str
             The current section header
         """
-        atom_names = list(context.nodes)
         all_references = []
         for atom in atoms:
             reference = atom[0]
@@ -341,7 +358,7 @@ class ITPDirector(SectionLineParser):
                # The indices in the file are 1-based
                 reference = int(reference) - 1
                 try:
-                    reference = atom_names[reference]
+                    reference = self.current_atom_names[reference]
                 except IndexError:
                     msg = ('There are {} atoms defined in the block "{}". '
                            'Interaction in section "{}" cannot refer to '
