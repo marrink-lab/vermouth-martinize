@@ -680,6 +680,9 @@ def entry():
         delete_unknown=True,
     )
 
+    from vermouth.processors.generate_coordinates import GenerateCoordinates
+    GenerateCoordinates().run_system(system)
+
     # Apply position restraints if required.
     if args.posres != 'none':
         LOGGER.info('Applying position restraints.', type='step')

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2018 University of Groningen
 #
@@ -31,22 +30,23 @@ def get_missing_atoms(molecule):
     '''
     Determine particles without coordinates in molecule.
     '''
-    return [
-        ix for ix in molecule
-        if molecule.nodes[ix].get('position') is None
-    ]
-
+    missing = []
+    for ndx in molecule.nodes:
+        if all(np.isnan(molecule.nodes[ndx]['position'])):
+            missing.append(ndx)
+    return missing
 
 def get_anchors(molecule, indices):
     '''
     Determine particles with known coordinates connected to
     particles with given indices.
     '''
-    return {
-        a for ix in indices for a in molecule[ix].keys()
-        if molecule.nodes[a].get('position') is not None
-    }
-
+    anchors = []
+    for idx in indices:
+        for ndx in molecule.neighbors(idx):
+            if not all(np.isnan(molecule.nodes[ndx]['position'])):
+                anchors.append(ndx)
+    return set(anchors)
 
 def align_z(v):
     '''
@@ -193,7 +193,6 @@ def _chiral(molecule, anchor, up=None, down=None, control=None, distance=0.125):
 
     return pup, pdown
 
-
 class Segment:
     '''Class for subgraphs of (missing) atoms with anchors'''
     def __init__(self, molecule, limbs):
@@ -279,6 +278,27 @@ class Segment:
                 break
         return None
 
+def build_vs(molecule, missing):
+    """
+    Build missing virtual-sidesn in the molecule if
+    all defining nodes can be found
+    """
+    for idx in missing:
+        # loop over all interactions and see if the missing atom
+        # is defined in a vsn
+        for interaction in molecule.interactions["virtual_sitesn"]:
+            if idx == interaction.atoms[0]:
+                vs_ref_pos = np.zeros((len(interaction.atoms) - 1, 3), dtype=float)
+                for pdx, build_node in enumerate(interaction.atoms[1:]):
+                    vs_ref_pos[pdx, :] = molecule.nodes[build_node]["position"]
+                # if one of the reference atoms is not built we don't
+                # update the molecule
+                vs_pos =  np.average(vs_ref_pos, axis=0)
+                if not all(np.isnan(vs_pos)):
+                    molecule.nodes[idx]["position"] = vs_pos
+                break
+    return molecule
+
 
 class GenerateCoordinates(Processor):
     """
@@ -324,10 +344,8 @@ class GenerateCoordinates(Processor):
         vermouth.molecule.Molecule
             The provided molecule with complete coordinates
         """
-
         # Missing atoms - those without 'positions'
         missing = get_missing_atoms(molecule)
-
         prev = len(molecule)
         while prev - len(missing) > 0:
             # Limbs: subgraphs of missing atoms with anchors and bases
@@ -355,43 +373,10 @@ class GenerateCoordinates(Processor):
                 if r is not None:
                     segments.extend(r)
 
+            # here should go the proper VS builder from polyply
+            molecule = build_vs(molecule, missing)
+
             prev = len(missing)
             missing = get_missing_atoms(molecule)
-            #print(len(missing))
 
         return molecule
-
-
-def main(args):
-    '''
-    Main function for running processor with a PDB file as input (testing).
-    '''
-    pdb = args[1]
-
-    system = vermouth.System()
-    vermouth.PDBInput(pdb).run_system(system)
-    system.force_field = vermouth.forcefield.get_native_force_field('universal')
-
-    flow = [
-        vermouth.MakeBonds(allow_name=True, allow_dist=True, fudge=1),
-        vermouth.RepairGraph(delete_unknown=True, include_graph=True),
-        vermouth.SortMoleculeAtoms(),
-        GenerateCoordinates()
-    ]
-
-    for process in flow:
-        process.run_system(system)
-
-    vermouth.pdb.write_pdb(system, args[2], nan_missing_pos=True)
-
-    return 0
-
-
-if __name__ == '__main__':
-    import sys
-    import vermouth
-    import vermouth.forcefield
-    import vermouth.map_input
-
-    exco = main(sys.argv)
-    sys.exit(exco)
