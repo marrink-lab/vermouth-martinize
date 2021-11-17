@@ -45,6 +45,7 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings
 )
+from vermouth.citation_parser import citation_formatter
 
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
 # not work as intended. Investigation required.
@@ -118,6 +119,7 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
+        DeferredFileWriter().write()
 
     LOGGER.debug('Annotating required mutations and modifications.', type='step')
     vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
@@ -126,11 +128,13 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     if write_repair is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_repair),
                                omit_charges=True, nan_missing_pos=True)
+        DeferredFileWriter().write()
     LOGGER.info('Dealing with modifications.', type='step')
     vermouth.CanonicalizeModifications().run_system(canonicalized)
     if write_canon is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_canon),
                                omit_charges=True, nan_missing_pos=True)
+        DeferredFileWriter().write()
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
     vermouth.SortMoleculeAtoms().run_system(canonicalized) # was system
     return canonicalized
@@ -188,6 +192,13 @@ def write_gmx_topology(system, top_path, defines=(), header=()):
             # molecules, without being uninterupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
             with open('{}.itp'.format(moltype), 'w') as outfile:
+                # here we format and merge all citations
+                header[-1] = header[-1]+"\n"
+                header.append("Pleas cite the following papers:")
+                for citation in molecule.citations:
+                    cite_string =  citation_formatter(molecule.force_field.citations[citation])
+                    LOGGER.info("Please cite: " + cite_string)
+                    header.append(cite_string)
                 vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
             this_moltype_len = len(molecule.meta['moltype'])
             if this_moltype_len > max_name_length:
@@ -367,7 +378,7 @@ def entry():
                             'based on distances.')
 
     ff_group = parser.add_argument_group('Force field selection')
-    ff_group.add_argument('-ff', dest='to_ff', default='martini22',
+    ff_group.add_argument('-ff', dest='to_ff', default='martini3001',
                           help='Which forcefield to use')
     ff_group.add_argument('-from', dest='from_ff', default='universal',
                           help='Force field of the original structure.')

@@ -65,9 +65,12 @@ def _patch_modification(block, modification):
     for mod_idx in modification:
         if not modification.nodes[mod_idx]['PTM_atom']:
             anchor_idxs.add(mod_idx)
+
     anchor = nx.subgraph(modification, anchor_idxs)
     non_anchor_idxs = set(modification) - anchor_idxs
     non_anchor = nx.subgraph(modification, non_anchor_idxs)
+
+    block = nx.convert_node_labels_to_integers(block)
 
     ismags = ISMAGS(block, anchor, node_match=_node_equal)
     anchor_block_to_mod = list(ismags.subgraph_isomorphisms_iter())
@@ -82,29 +85,28 @@ def _patch_modification(block, modification):
                      modification.name, block.name, len(anchor_block_to_mod))  # pragma: nocover
         raise ValueError("Cannot apply modification to block")  # pragma: nocover
 
-    anchor_block_to_mod = anchor_block_to_mod[0]
-    anchor_mod_to_block = {val: key for key, val in anchor_block_to_mod.items()}
+    block_to_mod = anchor_block_to_mod[0]
+    mod_to_block = {val: key for key, val in block_to_mod.items()}
+    # Add the extra modification atoms to the mapping/match. It's important to
+    # note that this is under the assumption that when nx.disjoint_union
+    # relabels nodes in non_anchor to ints it keeps the same order.
+    # The alternative to this assumption is to reimplement disjoint_union where
+    # the mapping is also returned
+    mod_to_block.update(dict(zip(non_anchor_idxs, range(len(block), len(block)+len(non_anchor_idxs)))))
+    result = Block(nx.disjoint_union(block, non_anchor))
 
-    result = Block(nx.union(block, non_anchor, rename=(None, modification.name+'-')))
     # Mark the modified atoms with the specified modification, so canonicalize
     # modifications has an easier job
-    for idx in anchor_block_to_mod:
+    for mod_idx in modification:
+        idx = mod_to_block[mod_idx]
         node_mods = result.nodes[idx].get('modifications', [])
         if modification not in node_mods:
             result.nodes[idx]['modifications'] = node_mods + [modification]
-    for mod_idx in non_anchor_idxs:
-        idx = '{}-{}'.format(modification.name, mod_idx)
-        node_mods = result.nodes[idx].get('modifications', [])
-        if modification not in node_mods:
-            result.nodes[idx]['modifications'] = node_mods + [modification]
+
     for mod_idx, mod_jdx in modification.edges_between(anchor_idxs, non_anchor_idxs):
-        if mod_idx in non_anchor_idxs:
-            mod_idx, mod_jdx = mod_jdx, mod_idx
-        # mod_idx is always in anchor, and thus in block.
-        block_idx = anchor_mod_to_block[mod_idx]
-        # Because of how nx.union renamed nodes in non_anchor
-        mod_jdx = '{}-{}'.format(modification.name, mod_jdx)
-        result.add_edge(block_idx, mod_jdx)
+        idx = mod_to_block[mod_idx]
+        jdx = mod_to_block[mod_jdx]
+        result.add_edge(idx, jdx)
     return result
 
 
@@ -157,7 +159,7 @@ def make_reference(mol):
     Takes an molecule graph (e.g. as read from a PDB file), and finds and
     returns the graph how it should look like, including all matching nodes
     between the input graph and the references.
-    Requires residuenames to be correct.
+    Requires residue names to be correct.
 
     Notes
     -----
@@ -241,7 +243,7 @@ def make_reference(mol):
         #       good at solving isomorphism problems iff graphs look alike. We
         #       can do a similar trick here by rot+trans aligning the given
         #       residue with a reference conformation. And then sort by
-        #       distance
+        #       distance as third criterion
         new_residue_names = {old: new for new, old in enumerate(sorted(
             residue,
             key=lambda jdx: (res_names[jdx] not in ref_names.values(), res_names[jdx])  # pylint: disable=cell-var-from-loop
@@ -317,15 +319,23 @@ def repair_residue(molecule, ref_residue, include_graph):
     resname = ref_residue['resname']
     LOGGER.debug('Repairing residue {}{}', resname, resid, type='step')
     for ref_idx in reference:
+        # We're only really interested in correcting the atomname. Obscure
+        # usecases may utilize e.g. charge, mass, atype. Either way, we need
+        # to remove the resid. Resname shouldn't matter since that should
+        # already be correct.
+        ref_node = reference.nodes[ref_idx].copy()
+        if 'resid' in ref_node:
+            del ref_node['resid']
+
         if ref_idx in match:
             res_idx = match[ref_idx]
             node = molecule.nodes[res_idx]
             if include_graph:
                 node['graph'] = molecule.subgraph([res_idx])
-            node.update(reference.nodes[ref_idx])
+            node.update(ref_node)
             # Update found as well to keep found and molecule in line. It would
             # be better to try and figure why found is not a reference, but meh
-            found.nodes[res_idx].update(reference.nodes[ref_idx])
+            found.nodes[res_idx].update(ref_node)
         else:
             message = 'Missing atom {}{}:{}'
             args = (resname, resid, reference.nodes[ref_idx]['atomname'])
@@ -360,9 +370,13 @@ def repair_residue(molecule, ref_residue, include_graph):
             for key, val in ref_residue.items():
                 # Some attributes are only relevant on a residue level, not on
                 # an atom level.
-                if key not in ('match', 'found', 'reference'):
+                if key not in ('match', 'found', 'reference', 'nnodes',
+                               'nedges', 'density'):
                     node[key] = val
-            node.update(reference.nodes[ref_idx])
+            ref_node = reference.nodes[ref_idx].copy()
+            if 'resid' in ref_node:
+                del ref_node['resid']
+            node.update(ref_node)
             node['atomid'] = res_idx + 1
 
             match[ref_idx] = res_idx
@@ -405,12 +419,12 @@ def repair_graph(molecule, reference_graph, include_graph=True):
     names will be canonicalized. Atoms not present in ``reference_graph`` will
     have the attribute ``PTM_atom`` set to ``True``.
 
-    `molecule` is modified in place. Missing atoms (as per `reference_graph`)
+    ``molecule`` is modified in place. Missing atoms (as per ``reference_graph``)
     are added, atom and residue names are canonicalized, and PTM atoms are
     marked.
 
-    If `include_graph` is `True`, then the subgraph corresponding to each node
-    is included in the node under the "graph" attribute.
+    If ``include_graph`` is ``True``, then the subgraph corresponding to each
+    node is included in the node under the "graph" attribute.
 
     Parameters
     ----------
@@ -423,7 +437,7 @@ def repair_graph(molecule, reference_graph, include_graph=True):
         :atomname: The atomname.
 
     reference_graph : networkx.Graph
-        The reference graph as produced by ``make_reference``. Required node
+        The reference graph as produced by :func:`make_reference`. Required node
         attributes:
 
         :resid: The residue id.
@@ -462,6 +476,25 @@ def repair_graph(molecule, reference_graph, include_graph=True):
 
 
 class RepairGraph(Processor):
+    """
+    Repairs a molecule such that it contains all atoms with appropriate atom
+    names, as per the blocks in the system's force field, while taking any
+    mutations and modification into account. These should be added as 'mutation'
+    and 'modification' attributes to the atoms of the relevant residues.
+
+    Attributes
+    ----------
+    delete_unknown: bool
+        If True, removes any molecules that contain residues that are not known
+        to the system's force field.
+    include_graph: bool
+        If True, every node in the resulting graph will have a 'graph' attribute
+        containing a subgraph constructed using the input atoms.
+
+    See Also
+    --------
+    :func:`repair_graph`
+    """
     def __init__(self, delete_unknown=False, include_graph=True):
         super().__init__()
         self.delete_unknown = delete_unknown

@@ -30,6 +30,7 @@ PDB_PARTIALLY_PROTEIN = TEST_DATA / '1bta_mutated.pdb'  # LYS replaced by UNK
 PDB_NOT_PROTEIN = TEST_DATA / 'heme.pdb'
 PDB_ALA5 = TEST_DATA / 'ala5.pdb'
 PDB_ALA5_CG = TEST_DATA / 'ala5_cg.pdb'
+PDB_TRI_ALANINE = TEST_DATA / 'tri_alanine.pdb'
 
 # Full PDB files
 PDB_CYS = TEST_DATA / '2QWO.pdb'  # Contains cystein bridges

@@ -207,7 +207,7 @@ def partition_graph(graph, partitions):
     for idx, node_idxs in enumerate(partitions):
         subgraph = nx.subgraph(graph, node_idxs)
         new_graph.add_node(idx,
-                           graph=nx.subgraph(graph, node_idxs),
+                           graph=subgraph,
                            nnodes=len(subgraph),
                            nedges=len(subgraph.edges),
                            density=nx.density(subgraph))
@@ -216,9 +216,16 @@ def partition_graph(graph, partitions):
     for idx, jdx in graph.edges:
         if mapping[idx] != mapping[jdx]:
             new_idx, new_jdx = mapping[idx], mapping[jdx]
-            new_graph.add_edge(new_idx, new_jdx)
+            edge_attrs = graph.edges[(idx, jdx)]
+            if new_graph.has_edge(new_idx, new_jdx):
+                old_attrs = new_graph.edges[(new_idx, new_jdx)]
+                new_attrs = {key: old_attrs[key] for key in old_attrs.keys() & edge_attrs.keys()\
+                                                         if old_attrs[key] == edge_attrs[key]}
+                old_attrs.clear()
+                new_graph.add_edge(new_idx, new_jdx, **new_attrs)
+            else:
+                new_graph.add_edge(new_idx, new_jdx, **edge_attrs)
     return new_graph
-
 
 def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_code')):
     """

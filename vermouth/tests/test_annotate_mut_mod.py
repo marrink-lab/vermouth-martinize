@@ -36,18 +36,19 @@ from vermouth.tests.datafiles import (
 def example_mol():
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     nodes = [
-        {'chain': 'A', 'resname': 'A', 'resid': 1},  # 0, R1
-        {'chain': 'A', 'resname': 'A', 'resid': 2},  # 1, R2
-        {'chain': 'A', 'resname': 'A', 'resid': 2},  # 2, R2
-        {'chain': 'A', 'resname': 'B', 'resid': 2},  # 3, R3
-        {'chain': 'B', 'resname': 'A', 'resid': 1},  # 4, R4
-        {'chain': 'B', 'resname': 'A', 'resid': 2},  # 5, R5
-        {'chain': 'B', 'resname': 'A', 'resid': 2},  # 6, R5
-        {'chain': 'B', 'resname': 'B', 'resid': 2},  # 7, R6
-        {'chain': 'A', 'resname': 'C', 'resid': 3},  # 8, R7
+        {'chain': 'A', 'resname': 'GLY', 'resid': 1},  # 0, R1
+        {'chain': 'A', 'resname': 'GLY', 'resid': 2},  # 1, R2
+        {'chain': 'A', 'resname': 'GLY', 'resid': 2},  # 2, R2
+        {'chain': 'A', 'resname': 'PHE', 'resid': 2},  # 3, R3
+        {'chain': 'B', 'resname': 'GLY', 'resid': 1},  # 4, R4
+        {'chain': 'B', 'resname': 'GLY', 'resid': 2},  # 5, R5
+        {'chain': 'B', 'resname': 'GLY', 'resid': 2},  # 6, R5
+        {'chain': 'B', 'resname': 'PHE', 'resid': 2},  # 7, R6
+        {'chain': 'A', 'resname': 'CYS', 'resid': 3},  # 8, R7
+        {'chain': 'C', 'resname': 'not_protein', 'resid': 4}, # 9, R8
     ]
     mol.add_nodes_from(enumerate(nodes))
-    mol.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (4, 7), (3, 8)])
+    mol.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (4, 7), (3, 8), (3, 9)])
     return mol
 
 
@@ -90,9 +91,9 @@ def test_subdict(dict1, dict2, expected):
 
 @pytest.mark.parametrize('mutations,expected_mut', [
     ([], {}),
-    ([({'chain': 'A', 'resname': 'A', 'resid': 1}, 'ALA')], {0: {'mutation': ['ALA']}}),
+    ([({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'ALA')], {0: {'mutation': ['ALA']}}),
     (
-        [({'resname': 'A'}, 'ALA')],
+        [({'resname': 'GLY'}, 'ALA')],
         {0: {'mutation': ['ALA']},
          1: {'mutation': ['ALA']},
          2: {'mutation': ['ALA']},
@@ -122,25 +123,25 @@ def test_subdict(dict1, dict2, expected):
 ])
 @pytest.mark.parametrize('modifications,expected_mod', [
     ([], {}),
-    ([({'chain': 'A', 'resname': 'A', 'resid': 1}, 'C-ter')], {0: {'modification': ['C-ter']}}),
+    ([({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'C-ter')], {0: {'modification': ['C-ter']}}),
     (
-        [({'chain': 'A', 'resname': 'A', 'resid': 1}, 'C-ter'),
-         ({'chain': 'A', 'resname': 'A', 'resid': 1}, 'HSD')],
+        [({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'C-ter'),
+         ({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'HSD')],
         {0: {'modification': ['C-ter', 'HSD']}}
     ),
-    ([({'resname': 'B', 'resid': 1}, 'C-ter'),], {}),
+    ([({'resname': 'PHE', 'resid': 1}, 'C-ter'),], {}),
     (
-        [({'resname': 'B', 'resid': 2}, 'C-ter'),],
+        [({'resname': 'PHE', 'resid': 2}, 'C-ter'),],
         {3: {'modification': ['C-ter']},
          7: {'modification': ['C-ter']},}
     ),
-    ([({'resname': 'B', 'resid': 1}, 'C-ter'),], {}),
+    ([({'resname': 'PHE', 'resid': 1}, 'C-ter'),], {}),
     (
         [({'resname': 'nter'}, 'C-ter')],
         {0: {'modification': ['C-ter']},},
     ),
     (
-        [({'resname': 'cter', 'chain': 'B'}, 'C-ter'), ({'resname': 'C'}, 'HSD')],
+        [({'resname': 'cter', 'chain': 'B'}, 'C-ter'), ({'resname': 'CYS'}, 'HSD')],
         {7: {'modification': ['C-ter']},
          5: {'modification': ['C-ter']},
          6: {'modification': ['C-ter']},
@@ -190,9 +191,9 @@ def test_unknown_terminus_match():
 
 @pytest.mark.parametrize('mutations,expected_mut', [
     ([], {}),
-    ([('A-A1', 'ALA')], {0: {'mutation': ['ALA']}}),
+    ([('A-GLY1', 'ALA')], {0: {'mutation': ['ALA']}}),
     (
-        [('A', 'ALA')],
+        [('GLY', 'ALA')],
         {0: {'mutation': ['ALA']},
          1: {'mutation': ['ALA']},
          2: {'mutation': ['ALA']},
@@ -209,24 +210,93 @@ def test_unknown_terminus_match():
 ])
 @pytest.mark.parametrize('modifications,expected_mod', [
     ([], {}),
-    ([('A-A1', 'C-ter')], {0: {'modification': ['C-ter']}}),
+    ([('A-GLY1', 'C-ter')], {0: {'modification': ['C-ter']}}),
     (
-        [('A-A1', 'C-ter'),
-         ('A-A1', 'HSD')],
+        [('A-GLY1', 'C-ter'),
+         ('A-GLY1', 'HSD')],
         {0: {'modification': ['C-ter', 'HSD']}}
     ),
-    ([('B1', 'C-ter'),], {}),
+    ([('PHE1', 'C-ter'),], {}),
     (
-        [('B2', 'C-ter'),],
+        [('PHE2', 'C-ter'),],
         {3: {'modification': ['C-ter']},
          7: {'modification': ['C-ter']},}
     ),
-    ([('B1', 'C-ter'),], {}),
+    ([('PHE1', 'C-ter'),], {}),
 ])
 def test_annotate_mutmod_processor(example_mol, modifications, mutations, expected_mod, expected_mut):
-
     AnnotateMutMod(modifications, mutations).run_molecule(example_mol)
     for node_idx, mods in expected_mod.items():
         assert _subdict(mods, example_mol.nodes[node_idx])
     for node_idx, mods in expected_mut.items():
         assert _subdict(mods, example_mol.nodes[node_idx])
+
+
+
+@pytest.mark.parametrize('node_data, edge_data, expected', [
+    (
+        [
+            {'resname': 'ALA', 'resid': 1},
+            {'resname': 'ALA', 'resid': 2},
+            {'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        {1: ['N-ter'], 3: ['C-ter']}
+    ),
+    (
+        [
+            {'resname': 'XXX', 'resid': 1},
+            {'resname': 'ALA', 'resid': 2},
+            {'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        {3: ['C-ter']}
+    ),
+    (
+        [
+            {'resname': 'ALA', 'resid': 1},
+            {'resname': 'ALA', 'resid': 2},
+            {'resname': 'XXX', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        {1: ['N-ter']}
+    ),
+    (
+        [
+            {'resname': 'ALA', 'resid': 1},
+            {'resname': 'XXX', 'resid': 2},
+            {'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        {1: ['N-ter'], 3: ['C-ter']}
+    ),
+(
+        [
+            {'resname': 'XXX', 'resid': 1},
+            {'resname': 'ALA', 'resid': 2},
+            {'resname': 'XXX', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        {}
+    ),
+
+])
+def test_nter_cter_modifications(node_data, edge_data, expected):
+    """
+    Tests that 'nter' and 'cter' specifications only match protein N and C
+    termini
+    """
+    mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
+    mol.add_nodes_from(enumerate(node_data))
+    mol.add_edges_from(edge_data)
+    modification = [({'resname': 'cter'}, 'C-ter'), ({'resname': 'nter'}, 'N-ter')]
+
+    annotate_modifications(mol, modification, [])
+
+    found = {}
+    for node_idx in mol:
+        node = mol.nodes[node_idx]
+        if 'modification' in node:
+            found[node['resid']] = node['modification']
+
+    assert found == expected

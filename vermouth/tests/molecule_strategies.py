@@ -21,6 +21,13 @@ from vermouth.molecule import Interaction, Molecule, Block, Link, DeleteInteract
 
 # pylint: disable=no-value-for-parameter
 
+# This is a strategy that creates "sane" names. It's currently used to generate
+# interaction type names, and molecule names. The produced strings will not
+# contain characters from the unicode categories C and Z, which contain
+# control characters and separators, respectively.
+SANE_NAME_STRATEGY = st.text(st.characters(blacklist_categories=('C', 'Z')), min_size=1)
+
+
 @st.composite
 def attribute_dict(draw, min_size=0, max_size=None, max_depth=1):
     """
@@ -148,7 +155,7 @@ def interaction_collection(draw, graph,
     ninteraction_types = draw(st.integers(min_value=0, max_value=2))
     for _ in range(ninteraction_types):
         ninteractions = draw(st.integers(min_value=0, max_value=2))
-        type_name = draw(st.text())
+        type_name = draw(SANE_NAME_STRATEGY)
         if type_name not in result:
             result[type_name] = []
         for _ in range(ninteractions):

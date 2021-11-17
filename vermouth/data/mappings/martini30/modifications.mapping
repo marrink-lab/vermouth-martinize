@@ -43,7 +43,6 @@ C O
 CA C
 
 [ mapping ]
-HN1 BB
 HN2 BB
 HN3 BB
 N   BB
@@ -93,7 +92,6 @@ O
 C O
 CA C
 [ mapping ]
-HN1 BB
 HN2 BB
 HN3 BB
 N   BB
@@ -117,7 +115,6 @@ HN
 HN N
 N CA
 [ mapping ]
-HN BB
 N BB
 CA BB
 C  BB
@@ -142,7 +139,6 @@ O
 C O
 CA C
 [ mapping ]
-HN1 BB
 HN2 BB
 N   BB
 CA  BB

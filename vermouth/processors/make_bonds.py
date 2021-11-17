@@ -36,8 +36,11 @@ LOGGER = StyleAdapter(get_logger(__name__))
 # https://doi.org/10.1021/j100785a001
 # For hydrogen, we use R.S. Rowland & R. Taylor, J.Phys.Chem., 100, 7384-7391, 1996.
 # https://doi.org/10.1021/jp953141
+# For Deuterium we use the same as hydrogen, which is probably wrong/slightly
+# too large.
 VDW_RADII = {  # in nm
     'H': 0.120,
+    'D': 0.120,
     'He': 0.140,
     'C': 0.170,
     'N': 0.155,
@@ -272,12 +275,18 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
             non_edges.update(_bonds_from_names(system, resname, idxs, force_field))
         except KeyError as error:
             # ... if that doesn't work, fall back to distance
+            warning_type = 'inconsistent-data'
+            if 'is not known to force field' in str(error):
+                warning_type = 'unknown-residue'
             message = "Can't add bonds based on atom names for residue {}-{}{} because {}."
             if allow_dist:
                 _bonds_from_distance(system, idxs, fudge=fudge)
                 message += " Falling back to distance criteria."
-            LOGGER.warning(message,
-                           chain, resname, resid, error, force_field.name)
+            LOGGER.warning(
+                message,
+                chain, resname, resid, error, force_field.name,
+                type=warning_type,
+            )
     # And finally, add edges based on distance, but ignore any edges that would
     # otherwise have been added by name. So only edges between residues will be
     # added, and edges involving atoms which are not known to the blocks (PTMs,
@@ -298,6 +307,40 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
 
 
 class MakeBonds(Processor):
+    """
+    Processor to add edges to a system and separate it into separate connected
+    molecules.
+
+    Two separate criteria are used to decide where to add edges. The system's
+    molecules are separated into residues. Then intra-residue edges are added.
+
+    If :attr:`allow_names` is True, the corresponding
+    :class:`~vermouth.molecule.Block` is looked up in the system's force field.
+    First edges will be added based on the edges in that block. In addition,
+    *non-edges* in the reference block are also stored.
+
+    Secondly, if :attr:`allow_dist` is True, edges will be added between any
+    atoms that are close enough together. The threshold for "close enough" is
+    determined based on the elements of the atoms in question and their van der
+    Waals radii, multiplied by :attr:`fudge`. This way edges will *not* be added
+    between atoms that were marked as 'non-edge' in the previous step, nor
+    between residues if one of the atoms is a hydrogen.
+
+    Attributes
+    ----------
+    allow_names: bool
+        Whether edges should be added based on atom names.
+    allow_dist: bool
+        Whether edges should be added based on distance.
+    fudge: :class:`~numbers.Number`
+        A fudge factor used to increase the reference van der Waals radii to
+        allow for conformations that are slightly out of equilibrium.
+
+    See Also
+    --------
+    :func:`make_bonds`
+
+    """
     def __init__(self, allow_name=True, allow_dist=True, fudge=1.2):
         self.allow_name = allow_name
         self.allow_dist = allow_dist

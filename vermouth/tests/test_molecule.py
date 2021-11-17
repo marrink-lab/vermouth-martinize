@@ -24,7 +24,8 @@ import vermouth.molecule
 import vermouth.forcefield
 from vermouth.molecule import Interaction, Molecule
 
-from .molecule_strategies import random_molecule, random_block, random_link
+from .molecule_strategies import (random_molecule, random_block, random_link,
+                                  SANE_NAME_STRATEGY,)
 
 # pylint: disable=redefined-outer-name, no-value-for-parameter
 
@@ -1229,7 +1230,13 @@ def test_interaction_sort(interactions, expected):
     assert vermouth.molecule.Molecule.sort_interactions(interactions) == expected
 
 
-@hypothesis.given(moltype=st.one_of(st.none(), st.text()), mol=random_molecule())
+@hypothesis.given(
+    moltype=st.one_of(
+        st.none(),
+        SANE_NAME_STRATEGY,
+    ),
+    mol=random_molecule()
+)
 def test_str_method(mol, moltype):
     """
     Test Molecule.__str__

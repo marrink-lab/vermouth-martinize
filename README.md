@@ -1,6 +1,6 @@
 # Martinize2 and vermouth: The ultimate resolution transformation tools
 
-[![Build Status](https://travis-ci.org/marrink-lab/vermouth-martinize.svg?branch=master)](https://travis-ci.org/marrink-lab/vermouth-martinize)
+[![Build Status](https://github.com/marrink-lab/vermouth-martinize/actions/workflows/run_tests.yml/badge.svg)](https://github.com/marrink-lab/vermouth-martinize/actions)
 [![codecov](https://codecov.io/gh/marrink-lab/vermouth-martinize/branch/master/graph/badge.svg)](https://codecov.io/gh/marrink-lab/vermouth-martinize)
 [![Documentation Status](https://readthedocs.org/projects/vermouth-martinize/badge/?version=latest)](https://vermouth-martinize.readthedocs.io/en/latest/?badge=latest)
 
@@ -18,9 +18,13 @@ transformation on molecular structures and topologies using graph algorithms.
 
 ## Disclaimer
 
-Martinize2 and Vermouth are under development. Bugs can occur. If you encounter an issue, please report it on
-<https://github.com/marrink-lab/vermouth-martinize/issues>. Carefully check your input and output files before
-using them; read the messages displayed by the program.
+Martinize2 and Vermouth are under development. So far they have mostly been
+tested on Martini 2 and Martini 3. If you use Martinize 2 and Vermouth for any
+other force field be sure to carefully check the resulting topologies!  
+Bugs can occur. If you encounter an issue, please report it on
+<https://github.com/marrink-lab/vermouth-martinize/issues>. Carefully check your
+ input and output files before using them; read the messages displayed by the
+ program.
 
 ## Installation
 
