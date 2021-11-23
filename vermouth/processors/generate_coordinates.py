@@ -25,6 +25,9 @@ from .. import selectors
 
 
 def mindist(A, B):
+    '''
+    Determine the smallest distance between two point sets (np.ndarray) A and B
+    '''
     return ((A[:, None] - B[None])**2).sum(axis=2).min(axis=1)
 
 
@@ -45,18 +48,17 @@ def get_anchors(molecule, indices):
     '''
     return {
         a for ix in indices for a in molecule[ix].keys()
-        if not selectors.selector_has_position(molecule.nodes[a]) is not None
+        if selectors.selector_has_position(molecule.nodes[a])
     }
 
 
 def align_z(v):
     '''
-    Generate rotation matrix aligning z-axis onto v (and vice-versa).
+    Generate rotation matrix aligning z-axis onto vector v (and vice-versa).
     '''
-
     # This routine is based on the notion that for any two
-    # vectors, the alignment is a 180 degree rotation
-    # around the resultant vector.
+    # normalized vectors, the alignment is a 180 degree
+    # rotation around the resultant vector.
 
     w = v / (v ** 2).sum() ** 0.5
 
@@ -68,30 +70,30 @@ def align_z(v):
     return (2 / (w**2).sum()) * w * w[:, None] - np.eye(3)
 
 
-def conicring(n=24, distance=0.125, angle=109.4, axis=None):
+def conicring(points=24, distance=0.125, angle=109.4, axis=None):
     '''
     Create a ring of positions corresponding to a cone with given angle.
     An angle of 109.4 is suitable for ideal SP3 substituents.
     '''
-    p = 2 * np.pi * np.arange(n) / n
+    p = 2 * np.pi * np.arange(points) / points
     r = distance * np.sin(angle * np.pi / 360)
     z = distance * np.cos(angle * np.pi / 360)
-    X = np.stack([r * np.cos(p), r * np.sin(p), z * np.ones(n)], axis=1)
+    X = np.stack([r * np.cos(p), r * np.sin(p), z * np.ones(points)], axis=1)
     if axis is None:
         return X
     return X @ align_z(axis)
 
 
-def double_cone(n=24, distance=0.125, angle=109.4, axis=None):
+def double_cone(points=24, distance=0.125, angle=109.4, axis=None):
     '''Create positions for two consecutive (SP3) bonded particles'''
-    P = conicring(n, distance, angle, axis)
+    P = conicring(points, distance, angle, axis)
     S = np.array([P @ align_z(x) + x for x in P])
     return P, S
 
 
-def triple_cone(n=24, distance=0.125, angle=109.4):
+def triple_cone(points=24, distance=0.125, angle=109.4):
     '''Create possible positions for three consecutive (SP3) bonded particles'''
-    P, S = double_cone(n, distance, angle)
+    P, S = double_cone(points, distance, angle)
     T = np.array([[[P @ align_z(u - x) + u] for u in U] for x, U in zip(P, S)])
     return P, S, T
 
@@ -108,7 +110,7 @@ def _out(molecule, anchor, base, distance=0.125):
      b1
        \
     b2--a-->X
-       /  u
+       /
      b3
 
     X := position to determine
@@ -117,10 +119,18 @@ def _out(molecule, anchor, base, distance=0.125):
 
     Parameters
     ----------
+    molecule: vermouth.molecule.Molecule
+        A molecule with missing atoms
+    anchor: integer
+        Index to anchor node: a node with positions connected to a node without
+    base: list of integers
+        Indices to particles with positions connected to anchor
+    distance: float
+        Distance of target position from anchor
 
     Returns
     -------
-        None
+        position
     '''
     a = molecule.nodes[anchor]['position']
     B = [ molecule.nodes[ix]['position'] for ix in base ]
@@ -151,25 +161,34 @@ def _chiral(molecule, anchor, base, distance=(0.125, 0.125)):
 
     Parameters
     ----------
-
+    molecule: vermouth.molecule.Molecule
+        A molecule with missing atoms
+    anchor: integer
+        Index to anchor node: a node with positions connected to a node without
+    base: list of integers
+        Indices to particles with positions connected to anchor
+    distance: tuple of two floats
+        Distances of target positions from anchor
 
     Returns
     -------
-        None
+        tuple of positions (up, down)
     '''
     a = molecule.nodes[anchor]['position']
     B = [ molecule.nodes[ix]['position'] for ix in base ]
     B = B - a
+    # Negative resultant vector
     u = -0.5 * (B[0] + B[1])
     v = np.cross(B[0], B[1])
     # Set length of v to length to half distance between subs
     v = 0.5 * ((B[0] - B[1])**2).sum()**0.5 * v / (v ** 2).sum()**0.5
+    uv = u + v
     # Normalization of vector sum
-    n = 1 / ((u + v)**2).sum()**0.5
+    n = 1 / (uv**2).sum()**0.5
 
     rup, rdown = distance
 
-    pup = a + rup * n * (u + v)
+    pup = a + rup * n * uv
     pdown = a + rdown * n * (u - v)
 
     return pup, pdown
@@ -187,6 +206,9 @@ class Segment:
         return ':'.join([str(self.anchors), str(self.bases), str(self.limbs)])
 
     def extrude(self, distance=0.125, coords=None, contact=0.5):
+        '''
+        Generate positions for particles without, connected to anchors.
+        '''
         mol = self.molecule
 
         for i, (a, b) in enumerate(zip(self.anchors, self.bases)):
@@ -207,7 +229,7 @@ class Segment:
                 # Trivial chiral - except for the actual chirality
                 # a simple 'up' or 'down' flag would be helpful
                 # amino acid side chain is 'up'
-                up, down = _chiral(mol, anchor=a, base=b, up=target[0], down=target[1])
+                up, down = _chiral(mol, anchor=a, base=b)
                 mol.nodes[target[0]]['position'] = up
                 mol.nodes[target[1]]['position'] = down
                 # Simply update this segment and return it
@@ -226,7 +248,8 @@ class Segment:
                 continue
 
             # So a valence of 2 (missing 1), 3 (missing 2) or 4 (missing 3)
-            # The cases 2(1), 3(2), 4(3) can be
+            # The cases 2(1), 3(2), 4(3) can be solved by sampling possible
+            # candidate points from a conical set.
 
             if len(b) == 1 and all(len(s) < 100 for s in self.limbs):
                 ax = mol.nodes[a]['position']
@@ -343,4 +366,3 @@ class GenerateCoordinates(Processor):
             #print(len(missing))
 
         return molecule
-
