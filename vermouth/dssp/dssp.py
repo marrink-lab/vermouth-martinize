@@ -22,7 +22,7 @@ import os
 import subprocess
 import tempfile
 
-from ..file_writer import open
+from ..file_writer import deferred_open
 from ..pdb import pdb
 from ..system import System
 from ..processors.processor import Processor
@@ -143,7 +143,7 @@ def read_dssp2(lines):
     return secstructs
 
 
-def run_dssp(system, executable='dssp', savefile=None):
+def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
     """
     Run DSSP on a system and return the assigned secondary structures.
 
@@ -170,6 +170,8 @@ def run_dssp(system, executable='dssp', savefile=None):
         Where to find the DSSP executable.
     savefile: None or str or pathlib.Path
         If set to a path, the output of DSSP is written in that file.
+    defer_writing: bool
+        Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
 
     Returns
     list of str
@@ -216,6 +218,8 @@ def run_dssp(system, executable='dssp', savefile=None):
         LOGGER.debug('DSSP input file written to {}', tmpfile_name)
 
     if savefile is not None:
+        if defer_writing:
+            open = deferred_open
         with open(str(savefile), 'w') as outfile:
             outfile.write(process.stdout)
     return read_dssp2(process.stdout.split('\n'))
