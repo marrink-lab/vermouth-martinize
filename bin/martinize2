@@ -118,8 +118,8 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
                        fudge=bonds_fudge).run_system(canonicalized)
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
-        vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
-        DeferredFileWriter().write()
+        vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True,
+                               defer_writing=False)
 
     LOGGER.debug('Annotating required mutations and modifications.', type='step')
     vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
@@ -127,14 +127,14 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(canonicalized)
     if write_repair is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_repair),
-                               omit_charges=True, nan_missing_pos=True)
-        DeferredFileWriter().write()
+                               omit_charges=True, nan_missing_pos=True, 
+                               defer_writing=False)
     LOGGER.info('Dealing with modifications.', type='step')
     vermouth.CanonicalizeModifications().run_system(canonicalized)
     if write_canon is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_canon),
-                               omit_charges=True, nan_missing_pos=True)
-        DeferredFileWriter().write()
+                               omit_charges=True, nan_missing_pos=True,
+                               defer_writing=False)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
     vermouth.SortMoleculeAtoms().run_system(canonicalized) # was system
     return canonicalized
