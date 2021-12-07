@@ -20,7 +20,7 @@ from itertools import chain
 
 import numpy as np
 
-from ..file_writer import open
+from ..file_writer import deferred_open
 from ..molecule import Molecule
 from ..truncating_formatter import TruncFormatter
 from ..utils import first_alpha
@@ -110,7 +110,7 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
     return molecule
 
 
-def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)):
+def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0), defer_writing=True):
     """
     Write `system` to `file_name`, which will be a GRO96 file.
 
@@ -126,6 +126,8 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
         Title for the gro file.
     box: tuple[float]
         Box length and optionally angles.
+    defer_writing: bool
+        Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
     """
     formatter = TruncFormatter()
     pos_format_string = '{{:{ntx}.3ft}}'.format(ntx=precision + 1)
@@ -138,6 +140,8 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
         vel_format_string = '{{:{ntx}.4ft}}'*3
         vel_format_string = vel_format_string.format(ntx=precision+1)
 
+    if defer_writing:
+        open = deferred_open
     with open(str(file_name), 'w') as out:
         out.write(title + '\n')  # Title
         out.write(formatter.format('{}\n', system.num_particles))  # number of atoms

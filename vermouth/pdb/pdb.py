@@ -19,7 +19,7 @@ Provides functions for reading and writing PDB files.
 import numpy as np
 import networkx as nx
 
-from ..file_writer import open
+from ..file_writer import deferred_open
 from ..molecule import Molecule
 from ..utils import first_alpha, distance, format_atom_string
 from ..parser_utils import LineParser
@@ -552,7 +552,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
     return '\n'.join(out)
 
 
-def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=False):
+def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=False, defer_writing=True):
     """
     Writes `system` to `path` as a PDB formatted string.
 
@@ -573,10 +573,14 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
         with 'nan' as coordinates; this will cause the output file to be
         *invalid* for most uses.
         for most use.
+    defer_writing: bool
+        Whether to use :class:`~vermouth.file_writer.DeferredFileWriter` for writing data
 
     See Also
     --------
     :func:write_pdb_string
     """
+    if defer_writing:
+        open = deferred_open
     with open(path, 'w') as out:
         out.write(write_pdb_string(system, conect, omit_charges, nan_missing_pos))
