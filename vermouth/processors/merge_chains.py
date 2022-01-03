@@ -22,7 +22,7 @@ from ..molecule import Molecule
 from ..processors.processor import Processor
 
 
-def merge_chains(system, chains):
+def merge_chains(system, chains, offset_handling='simple'):
     """
     Merge molecules with the given chains as a single molecule.
 
@@ -54,7 +54,7 @@ def merge_chains(system, chains):
             if not has_merged:
                 merged.nrexcl = molecule.nrexcl
                 new_molecules.append(merged)
-            merged.merge_molecule(molecule)
+            merged.merge_molecule(molecule, offset_handling=offset_handling)
             has_merged = True
         else:
             new_molecules.append(molecule)
@@ -65,8 +65,12 @@ def merge_chains(system, chains):
 class MergeChains(Processor):
     name = 'MergeChains'
 
-    def __init__(self, chains):
+    def __init__(self, chains, protres):
         self.chains = chains
+        if protres:
+            self.offset_handling = 'protein'
+        else:
+            offset_handling = 'simple'
 
     def run_system(self, system):
-        merge_chains(system, self.chains)
+        merge_chains(system, self.chains, self.offset_handling)

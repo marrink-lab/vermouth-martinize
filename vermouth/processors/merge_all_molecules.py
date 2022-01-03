@@ -26,13 +26,19 @@ class MergeAllMolecules(Processor):
     The molecules are merged into the first molecule of the system. Nothing is
     done if there are no molecules.
     """
+    def __init__(self, protres):
+        if protres:
+            self.offset_handling = 'protein'
+        else:
+            self.offset_handling = 'simple'
+
     def run_system(self, system):
         if not system.molecules:
             return system
 
         molecule = system.molecules[0]
         for other in system.molecules[1:]:
-            molecule.merge_molecule(other)
+            molecule.merge_molecule(other, self.offset_handling)
 
         system.molecules = [molecule]
         return system
