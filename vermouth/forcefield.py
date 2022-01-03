@@ -19,7 +19,6 @@ Provides a class used to describe a forcefield and all associated data.
 import itertools
 from glob import glob
 import os
-from .file_writer import open
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
 from .citation_parser import read_bib

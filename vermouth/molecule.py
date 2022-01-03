@@ -650,7 +650,7 @@ class Molecule(nx.Graph):
         else:
             raise AttributeError('Unknown attribute "{}".'.format(name))
 
-    def merge_molecule(self, molecule):
+    def merge_molecule(self, molecule, offset_handling='simple'):
         """
         Add the atoms and the interactions of a molecule at the end of this
         one.
@@ -681,16 +681,51 @@ class Molecule(nx.Graph):
                 'This molecule has nrexcl={}, while the other has nrexcl={}.'
                 .format(self.nrexcl, molecule.nrexcl)
             )
-        if self.nodes():
+        # simple just computes and offset and renumbers all resid
+        # this works well for many molecules but especially not
+        # for proteins where for example gaps in resid are common
+        if self.nodes() and offset_handling == 'simple':
             # We assume that the last id is always the largest.
             last_node_idx = max(self)
             offset = last_node_idx
             residue_offset = self.nodes[last_node_idx].get('resid', 1)
             offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
+        # protein is more advanced and checks the intersection of chain and resid
+        # between the two merging molecules. If chains are all different, resids
+        # are preserved. If the chains are all the same but the resids are different
+        # resids are preserved. If both resid and chain are the same for at least one
+        # node we fall back to the simple scheme.
+        elif self.nodes() and offset_handling == 'protein':
+            current_chains = nx.get_node_attributes(self, 'chain')
+            new_chains = nx.get_node_attributes(molecule, 'chain')
+            same_chains = current_chains.items() & new_chains.items()
+            # all chains are the same
+            if same_chains:
+                current_resids = nx.get_node_attributes(self, 'resid')
+                new_resids = nx.get_node_attributes(molecule, 'resid')
+                same_resids = current_resids.items() & new_resids.items()
+                if same_resids:
+                    last_node_idx = max(self)
+                    offset = last_node_idx
+                    residue_offset = self.nodes[last_node_idx].get('resid', 1)
+                    offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
+                else:
+                    last_node_idx = max(self)
+                    offset = last_node_idx
+                    residue_offset = 0
+                    # we keep this because GMX might use it and then they shouldn't be equal
+                    offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
+            else:
+                last_node_idx = max(self)
+                offset = last_node_idx
+                residue_offset = 0
+                # we keep this because GMX might use it and then they shouldn't be equal
+                offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
         else:
             offset = 0
             residue_offset = 0
             offset_charge_group = 0
+
         correspondence = {}
         for idx, node in enumerate(molecule.nodes(), start=offset + 1):
             correspondence[node] = idx
@@ -699,14 +734,17 @@ class Molecule(nx.Graph):
             new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
             self.add_node(idx, **new_atom)
+
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
                 #print(atoms, interaction.meta)
                 self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
+
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:
                 self.add_edge(correspondence[node1], correspondence[node2])
+
         # merge the citation sets
         self.citations.update(molecule.citations)
 
