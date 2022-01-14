@@ -98,7 +98,7 @@ def _interpret_order(order):
     return order_type, order_value
 
 
-def match_order(order1, resid1, order2, resid2):
+def match_order(order1, resid1, chain1, order2, resid2, chain2):
     r"""
     Check if two residues match the order constraints.
 
@@ -154,10 +154,14 @@ def match_order(order1, resid1, order2, resid2):
         The order attribute of the residue on the left of the comparison.
     resid1: int
         The residue id of the residue on the left of the comparison.
+    chain1: str
+        The chain if of the residue on the left of the comparison
     order2: int or str
         The order attribute of the residue on the right of the comparison.
     resid2: int
         The residue id of the residue on the right of the comparison.
+    chain2: str
+        The chain if of the residue on the right of the comparison
 
     Returns
     -------
@@ -186,7 +190,7 @@ def match_order(order1, resid1, order2, resid2):
             if order_types[1] == '><' and sign(resid2 - resid1) != sign(orders[1]):
                 # Columns >, >>, <, and <<
                 return False
-            elif order_types[1] == '*' and resid1 == resid2:
+            elif order_types[1] == '*' and resid1 == resid2 and chain1 == chain2:
                 # Columns *, and **
                 return False
     elif order_types[0] == '><':  # Rows >, >>, <, and <<
@@ -233,7 +237,7 @@ def match_link(molecule, link):
                 if group in avoid_doubles:
                     continue
                 avoid_doubles.append(group)
-            
+
         if not _is_valid_non_edges(molecule, link, rev_raw_match):
             continue
         any_pattern_match = _any_pattern_match(molecule, link.patterns, rev_raw_match)
@@ -246,16 +250,17 @@ def match_link(molecule, link):
             if 'order' in link_node:
                 order = link_node['order']
                 resid = mol_node['resid']
+                chainid = mol_node['chain']
                 if order not in order_match:
-                    order_match[order] = resid
+                    order_match[order] = (resid, chainid)
                 # Assert all orders correspond to the same resid
                 elif order in order_match and order_match[order] != resid:
                     break
         else:  # No break
-            for ((order1, resid1), (order2, resid2)) in combinations(order_match.items(), 2):
+            for ((order1, (resid1, chainid1)), (order2, (resid2, chainid2))) in combinations(order_match.items(), 2):
                 # Assert the differences between resids correspond to what
                 # the orders require.
-                if not match_order(order1, resid1, order2, resid2):
+                if not match_order(order1, resid1, chainid1, order2, resid2, chainid2):
                     break
             else:  # No break
                 # raw_match is molecule -> link. The other way around is more
