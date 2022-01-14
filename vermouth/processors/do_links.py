@@ -216,10 +216,24 @@ def match_link(molecule, link):
     GM = nx.isomorphism.GraphMatcher(molecule, link, node_match=_atoms_match)
 
     raw_matches = GM.subgraph_isomorphisms_iter()
+    avoid_doubles = []
     for raw_match in raw_matches:
         # raw_match: mol -> link
         # rev_raw_match: link -> mol
         rev_raw_match = {value: key for key, value in raw_match.items()}
+        
+        # When the 'other' operator (*) is used, links involving
+        # same atoms from different residues will be doubled over
+        # permutations. This needs to be avoided.
+        unique = {a.lstrip('*') for a in raw_match.values()}
+        if len(unique) == 1:
+            group = (unique.pop(), set(raw_match.keys()))
+            resnames = {molecule.nodes[idx]['resname'] for idx in group[1]}
+            if len(resnames) == 1:
+                if group in avoid_doubles:
+                    continue
+                avoid_doubles.append(group)
+            
         if not _is_valid_non_edges(molecule, link, rev_raw_match):
             continue
         any_pattern_match = _any_pattern_match(molecule, link.patterns, rev_raw_match)
