@@ -229,7 +229,7 @@ def match_link(molecule, link):
         # When the 'other' operator (*) is used, links involving
         # same atoms from different residues will be doubled over
         # permutations. This needs to be avoided.
-        unique = {a.lstrip('*') for a in raw_match.values()}
+        unique = {a.lstrip('*') if isinstance(a, str) else a for a in raw_match.values()}
         if len(unique) == 1:
             group = (unique.pop(), set(raw_match.keys()))
             resnames = {molecule.nodes[idx]['resname'] for idx in group[1]}
@@ -260,6 +260,7 @@ def match_link(molecule, link):
             for ((order1, (resid1, chainid1)), (order2, (resid2, chainid2))) in combinations(order_match.items(), 2):
                 # Assert the differences between resids correspond to what
                 # the orders require.
+                print(order1, resid1, chainid1, order2, resid2, chainid2)
                 if not match_order(order1, resid1, chainid1, order2, resid2, chainid2):
                     break
             else:  # No break
