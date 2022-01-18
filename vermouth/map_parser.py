@@ -18,7 +18,6 @@ Contains the Mapping object and the associated parser.
 from collections import defaultdict
 from functools import partial
 
-from .file_writer import open
 from .ffinput import _tokenize, _parse_atom_attributes
 from .graph_utils import MappingGraphMatcher
 from .log_helpers import StyleAdapter, get_logger

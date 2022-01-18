@@ -21,7 +21,6 @@ Reads quotes, and produces a random one.
 import os.path
 import random
 
-from ..file_writer import open
 from .processor import Processor
 from .. import DATA_PATH
 from ..log_helpers import StyleAdapter, get_logger

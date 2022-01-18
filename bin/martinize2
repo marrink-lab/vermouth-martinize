@@ -28,7 +28,7 @@ import sys
 
 import vermouth
 import vermouth.forcefield
-from vermouth.file_writer import open, DeferredFileWriter
+from vermouth.file_writer import deferred_open, DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
@@ -118,8 +118,8 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
                        fudge=bonds_fudge).run_system(canonicalized)
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
-        vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True)
-        DeferredFileWriter().write()
+        vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True,
+                               defer_writing=False)
 
     LOGGER.debug('Annotating required mutations and modifications.', type='step')
     vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
@@ -127,14 +127,14 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(canonicalized)
     if write_repair is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_repair),
-                               omit_charges=True, nan_missing_pos=True)
-        DeferredFileWriter().write()
+                               omit_charges=True, nan_missing_pos=True, 
+                               defer_writing=False)
     LOGGER.info('Dealing with modifications.', type='step')
     vermouth.CanonicalizeModifications().run_system(canonicalized)
     if write_canon is not None:
         vermouth.pdb.write_pdb(canonicalized, str(write_canon),
-                               omit_charges=True, nan_missing_pos=True)
-        DeferredFileWriter().write()
+                               omit_charges=True, nan_missing_pos=True,
+                               defer_writing=False)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
     vermouth.SortMoleculeAtoms().run_system(canonicalized) # was system
     return canonicalized
@@ -191,7 +191,7 @@ def write_gmx_topology(system, top_path, defines=(), header=()):
             # A given moltype can appear more than once in the sequence of
             # molecules, without being uninterupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
-            with open('{}.itp'.format(moltype), 'w') as outfile:
+            with deferred_open('{}.itp'.format(moltype), 'w') as outfile:
                 # here we format and merge all citations
                 header[-1] = header[-1]+"\n"
                 header.append("Pleas cite the following papers:")
@@ -232,7 +232,7 @@ def write_gmx_topology(system, top_path, defines=(), header=()):
     define_string = '\n'.join(
         '#define {}'.format(define) for define in defines
     )
-    with open(str(top_path), 'w') as outfile:
+    with deferred_open(str(top_path), 'w') as outfile:
         outfile.write(
             textwrap.dedent(
                 template.format(

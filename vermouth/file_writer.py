@@ -202,4 +202,4 @@ class DeferredFileWriter(metaclass=Singleton):
         # super().__del__()  # object has no __del__
 
 
-open = DeferredFileWriter().open
+deferred_open = DeferredFileWriter().open
