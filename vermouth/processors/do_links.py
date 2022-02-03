@@ -250,8 +250,8 @@ def match_link(molecule, link):
             if 'order' in link_node:
                 order = link_node['order']
                 resid = mol_node['resid']
-                chainid = mol_node['chain']
-                if order not in order_match:
+                chainid = mol_node.get('chain')
+                if (order, chainid) not in order_match:
                     order_match[order] = (resid, chainid)
                 # Assert all orders correspond to the same resid
                 elif order in order_match and order_match[order] != resid:
