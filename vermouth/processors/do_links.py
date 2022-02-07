@@ -232,11 +232,12 @@ def match_link(molecule, link):
         unique = {a.lstrip('*') if isinstance(a, str) else a for a in raw_match.values()}
         if len(unique) == 1:
             group = (unique.pop(), set(raw_match.keys()))
-            resnames = {molecule.nodes[idx]['resname'] for idx in group[1]}
-            if len(resnames) == 1:
-                if group in avoid_doubles:
-                    continue
-                avoid_doubles.append(group)
+            # The following check is probably redundant or even wrong
+            #resnames = {molecule.nodes[idx]['resname'] for idx in group[1]}
+            #if len(resnames) == 1:
+            if group in avoid_doubles:
+                continue
+            avoid_doubles.append(group)
 
         if not _is_valid_non_edges(molecule, link, rev_raw_match):
             continue
