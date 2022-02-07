@@ -162,6 +162,7 @@ import vermouth.forcefield
         (('****', '>>>'), (5, 5), ('A', 'A'), True),
         # *, *
         (('*', '*'), (6, 6), ('A', 'A'), True),
+        (('*', '*'), (6, 6), ('A', 'B'), True),
         (('*', '*'), (6, 5), ('A', 'A'), False),
         (('**', '**'), (6, 6), ('A', 'A'), True),
         (('**', '**'), (6, 5), ('A', 'A'), False),
@@ -173,7 +174,7 @@ def test_match_order(orders, resids, chains, answer):
     order1, order2 = orders
     resid1, resid2 = resids
     chain1, chain2 = chains
-    match = do_links.match_order(order1, resid1, chain1, order2, resid2, chain2)
+    match = do_links.match_order(order1, resid1, order2, resid2, chain1, chain2)
     assert match == answer
 
 
