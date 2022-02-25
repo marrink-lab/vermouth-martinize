@@ -22,7 +22,7 @@ import argparse
 from pathlib import Path
 
 import vermouth
-from vermouth import martinize2
+from vermouth.martinize2 import martinize2
 
 
 VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
