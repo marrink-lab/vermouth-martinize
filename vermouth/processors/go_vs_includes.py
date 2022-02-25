@@ -60,8 +60,9 @@ class GoVirtIncludes(Processor):
 
     See Also
     --------
-    vermouth.processors.name_moltype.NameMolType
+    :class:`~vermouth.processors.name_moltype.NameMolType`
         Assign molecule type names to the molecules in a system.
+    :func:`add_virtual_sites`
     """
     def __init__(self, sections=('exclusions', )):
         self.sections = sections

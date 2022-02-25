@@ -36,7 +36,7 @@ def ptm_node_matcher(node1, node2):
     """
     Returns True iff node1 and node2 should be considered equal. This means
     they are both either marked as PTM_atom, or not. If they both are PTM
-    atoms, the elements need to match, and otherwise, the atomnames must
+    atoms, the elements need to match, and otherwise, the atom names must
     match.
     """
     if node1.get('PTM_atom', False) == node2.get('PTM_atom', False):
@@ -54,7 +54,7 @@ def find_ptm_atoms(molecule):
     """
     Finds all atoms in molecule that have the node attribute ``PTM_atom`` set
     to a value that evaluates to ``True``. ``molecule`` will be traversed
-    starting at these atoms untill all marked atoms are visited such that they
+    starting at these atoms until all marked atoms are visited such that they
     are identified per "branch", and for every branch the anchor node is known.
     The anchor node is the node(s) which are not PTM atoms and share an edge
     with the traversed branch.
@@ -71,7 +71,7 @@ def find_ptm_atoms(molecule):
         indices.
     """
 
-    # Atomnames have already been fixed, and missing atoms have been added.
+    # Atom names have already been fixed, and missing atoms have been added.
     # In addition, unrecognized atoms have been labeled with the PTM attribute.
     extra_atoms = set(n_idx for n_idx in molecule
                       if (molecule.nodes[n_idx].get('PTM_atom', False)
@@ -113,7 +113,7 @@ def find_ptm_atoms(molecule):
 
 def identify_ptms(residue, residue_ptms, known_ptms):
     """
-    Identifies all PTMs in ``known_PTMs`` nescessary to describe all PTM atoms in
+    Identifies all PTMs in ``known_PTMs`` necessary to describe all PTM atoms in
     ``residue_ptms``. Will take PTMs such that all PTM atoms in ``residue``
     will be covered by applying PTMs from ``known_PTMs`` in order.
     Nodes in ``residue`` must have correct ``atomname`` attributes, and may not
@@ -134,7 +134,7 @@ def identify_ptms(residue, residue_ptms, known_ptms):
         itself, but describe where it is attached to the molecule.
         In addition, its nodes must have the `atomname` attribute, which will
         be used to recognize where the PTM  is anchored, or to correct the
-        atomnames. Lastly, the nodes may have a `replace` attribute, which
+        atom names. Lastly, the nodes may have a `replace` attribute, which
         is a dictionary of ``{attribute_name: new_value}`` pairs. The special
         case here is if attribute_name is ``'atomname'`` and new_value is
         ``None``: in this case the node will be removed.
@@ -251,14 +251,14 @@ def allowed_ptms(residue, res_ptms, known_ptms):
 def fix_ptm(molecule):
     '''
     Canonizes all PTM atoms in molecule, and labels the relevant residues with
-    which PTMs were recognized. Modifies ``molecule`` such that atomnames of
+    which PTMs were recognized. Modifies ``molecule`` such that atom names of
     PTM atoms are corrected, and the relevant residues have been labeled with
     which PTMs were recognized.
 
     Parameters
     ----------
     molecule : networkx.Graph
-        Must not have missing atoms, and atomnames must be correct. Atoms which
+        Must not have missing atoms, and atom names must be correct. Atoms which
         could not be recognized must be labeled with the attribute
         PTM_atom=True.
     '''
@@ -370,6 +370,13 @@ def fix_ptm(molecule):
 
 
 class CanonicalizeModifications(Processor):
+    """
+    Identifies all modifications in a molecule and corrects their atom names.
+
+    See Also
+    --------
+    :func:`fix_ptm`
+    """
     def run_molecule(self, molecule):
         fix_ptm(molecule)
         return molecule

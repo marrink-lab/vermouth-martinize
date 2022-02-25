@@ -226,6 +226,19 @@ def annotate_modifications(molecule, modifications, mutations):
 
 
 class AnnotateMutMod(Processor):
+    """
+    Annotates residues to have the required 'modification' and 'mutation'
+    attributes on all nodes.
+
+    Attributes
+    ----------
+    modifications: list[tuple[dict, str]]
+    mutations: list[tuple[dict, str]]
+
+    See also
+    --------
+    :func:`annotate_modifications`
+    """
     def __init__(self, modifications=None, mutations=None):
         if not modifications:
             modifications = []
