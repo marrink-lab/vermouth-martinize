@@ -32,7 +32,7 @@ from .pdb import write_pdb
 from .gmx.itp import write_molecule_itp
 from . import processors
 from . import forcefield
-from .file_writer import open, DeferredFileWriter
+from .file_writer import deferred_open, DeferredFileWriter
 from . import DATA_PATH
 from .dssp import dssp
 from .dssp.dssp import (
@@ -195,7 +195,7 @@ def write_gmx_topology(system, top_path, defines=(), header=()):
             # A given moltype can appear more than once in the sequence of
             # molecules, without being uninterupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
-            with open('{}.itp'.format(moltype), 'w') as outfile:
+            with deferred_open('{}.itp'.format(moltype), 'w') as outfile:
                 # here we format and merge all citations
                 header[-1] = header[-1]+"\n"
                 header.append("Pleas cite the following papers:")
@@ -236,7 +236,7 @@ def write_gmx_topology(system, top_path, defines=(), header=()):
     define_string = '\n'.join(
         '#define {}'.format(define) for define in defines
     )
-    with open(str(top_path), 'w') as outfile:
+    with deferred_open(str(top_path), 'w') as outfile:
         outfile.write(
             textwrap.dedent(
                 template.format(
@@ -298,8 +298,7 @@ def martinize2(
     to_ff: str, default=martini3001
         Which forcefield to use.
         To know available forcefields:
-        >>> forcefield.find_force_fields(
-        ...     Path(vermouth.DATA_PATH) / 'force_fields')
+        >>> forcefield.find_force_fields(Path(vermouth.DATA_PATH) / 'force_fields')
 
     from_ff: str, default='universal'
         Force field of the original structure
