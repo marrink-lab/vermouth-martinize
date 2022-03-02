@@ -50,6 +50,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
+#    'numpydoc',
     'sphinx.ext.autosectionlabel',
     'sphinxcontrib.apidoc',
 ]
@@ -172,7 +173,6 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
 # -- Extension configuration -------------------------------------------------
 apidoc_module_dir = '../../vermouth'
 apidoc_output_dir = 'api'
@@ -189,8 +189,8 @@ napoleon_google_docstring = False
 napoleon_google_docstring = True
 napoleon_preprocess_types = False
 napoleon_type_aliases = {
-        'Molecule': 'vermouth.molecule.Molecule',
-        }
+    'Molecule': 'vermouth.molecule.Molecule',
+}
 
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.

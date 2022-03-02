@@ -268,70 +268,57 @@ def martinize2(
 
     Parameters
     ----------
-    inpath: str or libpath.Path
+    inpath: str or pathlib.Path
         Input file (PDB|GRO)
-    outpath: str or libpath.Path
+    outpath: str or pathlib.Path
         Output coarse grained structure (PDB)
-    top_path: str or libpath.Path
+    top_path: str or pathlib.Path, optional
+        Output topology (TOP). Not written by default.
+    keep_duplicate_itp: bool, optional
         Write separate topologies for identical chains
-    keep_duplicate_itp: bool, default=False
-        Write separate topologies for identical chains
-    merge_chains: list of list of str, optional
+    merge_chains: list[list[str]], optional
         Merge specified chains.
         Ex: [['A','B'], ['C', 'D', 'E']]
-    ignore_res: list of list of str, optional
+    ignore_res: list[list[str]], optional
         Ignore residues with that name.
         Ex: [['HOH','LIG']]
-    ignore_h: bool, default=False
+    ignore_h: bool, optional
         Ignore all Hydrogen atoms in the input file
     modelidx: int, optional
         Which MODEL to select. Only meaningful for PDB files.
-    bonds_from: {'both', 'name', 'distance', 'none'}, optional
+    bonds_from: `{'both', 'name', 'distance', 'none'}`, optional
         How to determine connectivity in the input.
         If 'none', only bonds from the input file (CONECT) will be used.
-    bonds_fudge: float, default=1.2
+    bonds_fudge: float, optional
         Factor with which Van der Waals radii should be scaled when
         determining bonds based on distances.
-    
-    Force field parameters
-    ----------------------
-    to_ff: str, default=martini3001
+    to_ff: str, optional
         Which forcefield to use.
         To know available forcefields:
-        >>> forcefield.find_force_fields(Path(vermouth.DATA_PATH) / 'force_fields')
-
-    from_ff: str, default='universal'
+    from_ff: str, optional
         Force field of the original structure
-    extra_ff_dir: list of str or Path, optional
+    extra_ff_dir: list[str or pathlib.Path], optional
         Additional repository for custom force fields.
-    extra_map_dir: list of str or Path, optional
+    extra_map_dir: list[str or pathlib.Path], optional
         Additional repository for mapping files.
     list_ff: bool, optional
         List all known force fields, and exit.
     list_blocks: bool, optional
         List all Blocks and Modifications known to the force field, and
         exit.
-
-    Position restraints parameters
-    ------------------------------
-    posres: {'none', 'all', 'backbone'}
+    posres: `{'none', 'all', 'backbone'}`, optional
         Output position restraints.
-    posres_fc: float, default=1000.
+    posres_fc: float, optional
         Position restraints force constant in kJ/mol/nm^2.
-    
-    Secondary structure parameters
-    ------------------------------
     dssp_exe: str, optional
         DSSP executable for determining structure.
     ss: str, optional
         Manually set the secondary structure of the proteins.
-    collagen: bool, default=False
+    collagen: bool, optional
         Use collagen parameters
-    extdih: bool, default=False
-
-    Elastic network parameters
-    --------------------------
-    elastic: bool, default=False
+    extdih: bool, optional
+        Use dihedrals for extended regions rather than elastic bonds
+    elastic: bool, optional
         Write elastic bonds
     rb_force_constant: float, optional
         Elastic bond force constant Fc in kJ/mol/nm^2
@@ -344,35 +331,30 @@ def martinize2(
         the default value is set by the force-field
     rb_decay_factor: float, optional
         Elastic bond decay factor a.
-    rb_decay_power
+    rb_decay_power: float, optional
         Elastic bond decay power p.
-    rb_minimum_force 
+    rb_minimum_force: float, optional
         Remove elastic bonds with force constant lower than this
-    rb_selection
+    rb_selection: collections.abc.Container[str], `default=['BB']`
         Comma separated list of bead names for elastic bonds
-    rb_unit: {'molecule', 'chain', 'all'}
+    rb_unit: `{'molecule', 'chain', 'all'}`, optional
         Establish what is the structural unit for the 'elastic network.
         Bonds are only created within a unit.
-
-    GoMartini parameters
-    --------------------
     govs_includes: bool, optional
+        Write include statements to use Vitrual Site Go Martini.
     govs_moltype: str, optional
         Set the name of the molecule when using Virtual Sites GoMartini.
-
-    Protein description parameters
-    ------------------------------
     scfix: bool, optional
         Apply side chain corrections.
-    cystein_bridge: {'none', 'auto', float}
+    cystein_bridge: `{'none', 'auto', float}`, optional
         Disulfide bridges distance in nanometers. Default is 'none',
         'auto' will find the distance by itself, else specify the
         distance to detect cysteines.
-    mutations: list of list of str, optional
+    mutations: list[list[str]], optional
         Mutate a residue. Ex: [['A-PHE45', 'ALA']].
         The format is <chain>-<resname><resid>:<new resname>. Elements
         of the specification can be omitted as required.
-    modifications: list of list of str, optional
+    modifications: list[list[str]], optional
         Ex: [['A-ASP45','ASP0'], ['nter', 'NH3-ter'], ['cter', 'COOH-ter']]
         Add modifications to residues. Can also specify N termini and
         C termini types. 
@@ -385,22 +367,19 @@ def martinize2(
         Set neutral termini (charged is default).
         Alias for modifications=[['nter','NH2-ter'],['cter','COOH-ter']]
         Priority over modifications.
-    
-    Debugging parameters
-    --------------------
-    write_graph: str or Path, optional
+    write_graph: str or pathlib.Path, optional
         Write the graph as PDB after the MakeBonds step.
-    write_repair: str or Path, optional
+    write_repair: str or pathlib.Path, optional
         Write the graph as PDB after the RepairGraph step. The resulting
         file may contain "nan" coordinates making it unreadable by most
         softwares. 
-    write_canon: str or Path, optional
+    write_canon: str or pathlib.Path, optional
         Write the graph as PDB after the CanonicalizeModifications step.
         The resulting file may contain "nan" coordinates making it
         unreadable by most software.
-    verbosity: int, default=0
+    verbosity: int, optional
         Enable debug logging output. Can be given multiple times.
-    maxwarn: list of str, optional
+    maxwarn: list[str], optional
         The maximum number of allowed warnings. If more warnings are
         encountered no output files are written.
     """
