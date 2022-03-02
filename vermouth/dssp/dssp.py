@@ -174,7 +174,7 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
         Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
 
     Returns
-    list of str
+    list[str]
         The assigned secondary structures as a list of one-letter codes.
         The secondary structure sequences of all the molecules are combined
         in a single list without delimitation.
