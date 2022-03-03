@@ -186,7 +186,7 @@ autodoc_default_options = {'members': None,
                            'show-inheritance': None}
 
 napoleon_google_docstring = False
-napoleon_google_docstring = True
+napoleon_numpy_docstring = True
 napoleon_preprocess_types = False
 napoleon_type_aliases = {
         'Molecule': 'vermouth.molecule.Molecule',
