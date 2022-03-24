@@ -73,7 +73,7 @@ class BibTexDirector():
 
         Yields
         --------
-        idx
+        int
             position of '@' in citation_string
         """
         for idx, token in enumerate(citation_string):
