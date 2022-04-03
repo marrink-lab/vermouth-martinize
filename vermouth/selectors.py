@@ -169,7 +169,7 @@ def filter_minimal(molecule, selector):
 
     Yields
     ------
-    keys:
+    collections.abc.Hashable:
         Keys of the atoms that match the selection.
     """
     for name, atom in molecule.nodes.items():
