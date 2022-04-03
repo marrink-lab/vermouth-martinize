@@ -651,6 +651,13 @@ class Molecule(nx.Graph):
         else:
             raise AttributeError('Unknown attribute "{}".'.format(name))
 
+    def add_node(self, *args, **kwargs):
+        super().add_node(*args, **kwargs)
+        if self.max_node:
+            self.max_node += 1
+        else:
+            self.max_node = 0
+
     def merge_molecule(self, molecule):
         """
         Add the atoms and the interactions of a molecule at the end of this
@@ -699,7 +706,6 @@ class Molecule(nx.Graph):
             self.max_node = 0
 
         correspondence = {}
-        node_count = 0
         for idx, node in enumerate(molecule.nodes(), start=offset + 1):
             correspondence[node] = idx
             new_atom = copy.copy(molecule.nodes[node])
@@ -707,9 +713,6 @@ class Molecule(nx.Graph):
             new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
             self.add_node(idx, **new_atom)
-            node_count += 1
-
-        self.max_node = self.max_node + node_count
 
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
