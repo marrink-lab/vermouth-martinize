@@ -357,6 +357,7 @@ class Molecule(nx.Graph):
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
         self.citations = set()
+        self.max_node = None
 
     def __eq__(self, other):
         return (
@@ -682,8 +683,12 @@ class Molecule(nx.Graph):
                 .format(self.nrexcl, molecule.nrexcl)
             )
         if self.nodes():
+            if not self.max_node:
+                # hopefully it is a small graph when this is called.
+                self.max_node = max(self)
+
             # We assume that the last id is always the largest.
-            last_node_idx = max(self)
+            last_node_idx = self.max_node
             offset = last_node_idx
             residue_offset = self.nodes[last_node_idx].get('resid', 1)
             offset_charge_group = self.nodes[last_node_idx].get('charge_group', 1)
@@ -691,7 +696,10 @@ class Molecule(nx.Graph):
             offset = 0
             residue_offset = 0
             offset_charge_group = 0
+            self.max_node = 0
+
         correspondence = {}
+        node_count = 0
         for idx, node in enumerate(molecule.nodes(), start=offset + 1):
             correspondence[node] = idx
             new_atom = copy.copy(molecule.nodes[node])
@@ -699,6 +707,10 @@ class Molecule(nx.Graph):
             new_atom['charge_group'] = (new_atom.get('charge_group', 1)
                                         + offset_charge_group)
             self.add_node(idx, **new_atom)
+            node_count += 1
+
+        self.max_node = self.max_node + node_count
+
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
