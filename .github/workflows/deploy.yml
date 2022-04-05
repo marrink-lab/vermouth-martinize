@@ -80,7 +80,7 @@ jobs:
     - name: Run pylint 
       run: |
          pylint --disable=fixme --fail-under=8.0 vermouth
-         pylint --disable=fixme --fail-under=9.5 bin/martinize2 
+         pylint --disable=fixme --fail-under=9.0 bin/martinize2 
          
    
   docs:
