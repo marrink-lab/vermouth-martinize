@@ -1,0 +1,37 @@
+_header{name}: "[" name "]" _NL+
+
+start: _NL* bondedtypes? residue+
+bondedtypes: _header{"bondedtypes"} INT~8 _NL*
+
+residue: _header{NAME} mol_section*
+
+?mol_section: atomsection
+            | _header{"bonds"} bond+         -> bonds
+            | _header{"angles"} angle+       -> angles
+            | _header{"dihedrals"} dihedral+ -> dihedrals
+            | _header{"impropers"} dihedral+ -> impropers
+            | _header{"cmap"} cmap+          -> cmaps
+            | _header{"exclusions"} bond+    -> exclusions
+
+name_line: NAME INT _NL*
+
+atomsection: _header{"atoms"} atom+
+atom: NAME NAME SIGNED_NUMBER INT _NL*
+
+INTERACTION_ATOM: ("+"+|"-"+)? NAME
+bond: INTERACTION_ATOM~2 [parameters] _NL+
+angle: INTERACTION_ATOM~3 [parameters] _NL+
+dihedral: INTERACTION_ATOM~4 [parameters] _NL+
+cmap: INTERACTION_ATOM~5 [parameters] _NL+
+
+parameters: (NAME|SIGNED_NUMBER+)
+
+NAME: /\w/+
+VALUE: /./+
+COMMENT: /;[^\n]*/
+%ignore COMMENT
+
+%import common (INT, SIGNED_NUMBER)
+%import common.NEWLINE -> _NL
+%import common.WS_INLINE
+%ignore WS_INLINE

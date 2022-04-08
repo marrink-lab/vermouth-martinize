@@ -32,16 +32,17 @@ LOGGER = StyleAdapter(get_logger(__name__))
 
 
 # Find the data directory once.
+from pathlib import Path
 try:
     import pkg_resources
 except ImportError:
     import os
-    DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+    DATA_PATH = Path(os.path.dirname(__file__)) / 'data'
     del os
 else:
-    DATA_PATH = pkg_resources.resource_filename('vermouth', 'data')
+    DATA_PATH = Path(pkg_resources.resource_filename('vermouth', 'data'))
     del pkg_resources
-
+del Path
 del pbr
 
 try:

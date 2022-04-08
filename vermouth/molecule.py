@@ -382,7 +382,7 @@ class Molecule(nx.Graph):
         return sorted(sort_keys, key=lambda k: sort_keys[k])
 
     def __str__(self):
-        moltype = self.meta.get('moltype', 'molecule')
+        moltype = self.meta.get('moltype', self.__class__.__name__.lower())
 
         interaction_count = OrderedDict()
         # Make sure atoms and edges get sorted first.
