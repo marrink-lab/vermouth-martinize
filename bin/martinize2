@@ -441,14 +441,16 @@ def entry():
                           help=('Establish what is the structural unit for the '
                                 'elastic network. Bonds are only created within'
                                 ' a unit.'))
-
+    rb_group.add_argument('-region', dest='rb_region', default='molecule',
+                          help=('Apply rubber bands only within the specified regions. '
+                                'The format is <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...'
+                                'Start and end resids are included'))
     go_group = parser.add_argument_group('Virtual site based GoMartini')
     go_group.add_argument('-govs-includes', action='store_true', default=False,
                           help='Write include statements to use Vitrual Site Go Martini.')
     go_group.add_argument('-govs-moltype', default='molecule_0',
                           help=('Set the name of the molecule when using '
                                 'Virtual Sites GoMartini.'))
-
     prot_group = parser.add_argument_group('Protein description')
     prot_group.add_argument('-scfix', dest='scfix',
                             action='store_true', default=False,
@@ -726,6 +728,17 @@ def entry():
             message = 'Unknown value for -eunit: "{}".'.format(args.rb_unit)
             LOGGER.critical(message)
             raise ValueError(message)
+        if args.rb_region == 'molecule':
+            domain_criterion = vermouth.processors.apply_rubber_band.always_true
+            regions = []
+        else:
+            regions = [tuple([int(i) for i in apair.split(':')]) for apair in args.rb_region.split(',')]
+            if len([i for i in [len(atuple) for atuple in regions] if i != 2])==0:
+                domain_criterion = vermouth.processors.apply_rubber_band.same_region
+            else:
+                message = 'Unknown value for -region: "{}".'.format(args.rb_region)
+                LOGGER.critical(message)
+                raise ValueError(message)
         if args.rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
@@ -743,7 +756,8 @@ def entry():
             minimum_force=args.rb_minimum_force,
             selector=selector,
             domain_criterion=domain_criterion,
-            res_min_dist=args.res_min_dist
+            res_min_dist=args.res_min_dist,
+            regions=regions
         )
         rubber_band_processor.run_system(system)
 
