@@ -333,7 +333,6 @@ def maxwarn(value):
             return (splitted[0], count)
     raise argparse.ArgumentTypeError(msg)
 
-
 def entry():
     """
     Parses commandline arguments and performs the logic.
@@ -730,15 +729,14 @@ def entry():
             raise ValueError(message)
         if args.rb_region == 'molecule':
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
-            regions = []
         else:
             regions = [tuple([int(i) for i in apair.split(':')]) for apair in args.rb_region.split(',')]
-            if len([i for i in [len(atuple) for atuple in regions] if i != 2])==0:
-                domain_criterion = vermouth.processors.apply_rubber_band.same_region
-            else:
+            if any(len(region) != 2 for region in regions):
                 message = 'Unknown value for -region: "{}".'.format(args.rb_region)
                 LOGGER.critical(message)
                 raise ValueError(message)
+            else:
+                domain_criterion = vermouth.processors.apply_rubber_band.make_same_region_criterion(regions)
         if args.rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
@@ -757,7 +755,6 @@ def entry():
             selector=selector,
             domain_criterion=domain_criterion,
             res_min_dist=args.res_min_dist,
-            regions=regions
         )
         rubber_band_processor.run_system(system)
 

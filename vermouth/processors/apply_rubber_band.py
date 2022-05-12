@@ -18,10 +18,12 @@ import itertools
 
 import numpy as np
 import networkx as nx
+import copy
 
 from .processor import Processor
 from .. import selectors
 from ..graph_utils import make_residue_graph
+
 
 # the bond type of the RB
 DEFAULT_BOND_TYPE = 6
@@ -180,7 +182,7 @@ def build_connectivity_matrix(graph, separation, node_to_idx, selected_nodes):
     return connectivity[:, selected_nodes][selected_nodes]
 
 
-def build_pair_matrix(graph, criterion, idx_to_node, selected_nodes, regions):
+def build_pair_matrix(graph, criterion, idx_to_node, selected_nodes):
     """
     Build a boolean matrix telling if a pair of nodes fulfil a criterion.
 
@@ -206,7 +208,7 @@ def build_pair_matrix(graph, criterion, idx_to_node, selected_nodes, regions):
     for kdx, jdx in node_combinations:
         key_kdx = idx_to_node[kdx]
         key_jdx = idx_to_node[jdx]
-        share_domain[kdx, jdx] = criterion(graph, key_kdx, key_jdx, regions)
+        share_domain[kdx, jdx] = criterion(graph, key_kdx, key_jdx)
         share_domain[jdx, kdx] = share_domain[kdx, jdx]
     return share_domain[:, selected_nodes][selected_nodes]
 
@@ -214,7 +216,7 @@ def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
                       base_constant, minimum_force,
-                      bond_type, domain_criterion, res_min_dist, regions):
+                      bond_type, domain_criterion, res_min_dist):
     r"""
     Adds a rubber band elastic network to a molecule.
 
@@ -311,7 +313,7 @@ def apply_rubber_band(molecule, selector,
                                           selected_nodes=selection)
 
     same_domain = build_pair_matrix(molecule, domain_criterion, idx_to_node,
-                                    selected_nodes=selection, regions=regions)
+                                    selected_nodes=selection)
 
     can_be_linked = (~connected) & same_domain
     # Multiply the force constant by 0 if the nodes cannot be linked.
@@ -365,12 +367,12 @@ def same_chain(graph, left, right):
     node_right = graph.nodes[right]
     return node_left.get('chain') == node_right.get('chain')
 
-def same_region(graph, left, right, regions):
+def make_same_region_criterion(regions):
     """
-    Returns ``True`` is the nodes are part of the same chain.
+    Returns ``True`` is the nodes are part of the same region.
 
-    Nodes are considered part of the same chain if they both have the same value
-    under the "chain" attribute, or if neither of the 2 nodes have that attribute.
+    Nodes are considered part of the same region if their value
+    under the "resid" attribute are within the same residue range.
 
     Parameters
     ----------
@@ -381,26 +383,27 @@ def same_region(graph, left, right, regions):
     right:
         A node key in 'graph'.
     regions:
-        [(atom_index_start_1,atom_index_end_1),(atom_index_start_2,atom_index_end_2),...] (atom indexes are in theh first chain; include start and end)
+        [(resid_start_1,resid_end_1),(resid_start_2,resid_end_2),...] (resids are in the first chain if there are multiple chains. the resid_start and resid_end are included)
 
     Returns
     -------
     bool
         ``True`` if the nodes are part of the same region.
     """
-    node_left = graph.nodes[left]
-    node_right = graph.nodes[right]
-    left_resid =node_left.get('resid')
-    right_resid =node_right.get('resid')
-    domain_range = [lower <= left_resid <= upper for (lower, upper) in regions]
-    if True in domain_range:
-        True_index = domain_range.index(True)
-        if regions[True_index][0] <= right_resid <= regions[True_index][1]:
-            return True
-        else:
-            return False
-    else:
-        return False
+
+    regions = copy.deepcopy(regions)
+
+    def same_region(graph, left, right):
+        node_left = graph.nodes[left]
+        node_right = graph.nodes[right]
+        left_resid = node_left.get('resid')
+        right_resid = node_right.get('resid')
+        for region in regions:
+            lower, upper = region
+            if lower <= left_resid <= upper and lower <= right_resid <= upper:
+                return True
+            return False       
+    return same_region
     
 class ApplyRubberBand(Processor):
     """
@@ -459,7 +462,7 @@ class ApplyRubberBand(Processor):
     :func:`apply_rubber_band`
     """
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
-                 base_constant, minimum_force,regions,
+                 base_constant, minimum_force,
                  res_min_dist=None,
                  bond_type=None,
                  selector=selectors.select_backbone,
@@ -479,7 +482,6 @@ class ApplyRubberBand(Processor):
         self.domain_criterion = domain_criterion
         self.res_min_dist = res_min_dist
         self.res_min_dist_variable = res_min_dist_variable
-        self.regions = regions
 
     def run_molecule(self, molecule):
         # Choose the bond type. From high to low, the priority order is:
@@ -508,6 +510,5 @@ class ApplyRubberBand(Processor):
                           minimum_force=self.minimum_force,
                           bond_type=bond_type,
                           domain_criterion=self.domain_criterion,
-                          res_min_dist=res_min_dist,
-                          regions=self.regions)
+                          res_min_dist=res_min_dist)
         return molecule
