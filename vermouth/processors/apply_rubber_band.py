@@ -383,7 +383,7 @@ def make_same_region_criterion(regions):
     right:
         A node key in 'graph'.
     regions:
-        [(resid_start_1,resid_end_1),(resid_start_2,resid_end_2),...] (resids are in the first chain if there are multiple chains. the resid_start and resid_end are included)
+        [(resid_start_1,resid_end_1),(resid_start_2,resid_end_2),...] resid_start and resid_end are included)
 
     Returns
     -------
@@ -402,7 +402,7 @@ def make_same_region_criterion(regions):
             lower, upper = region
             if lower <= left_resid <= upper and lower <= right_resid <= upper:
                 return True
-            return False       
+        return False       
     return same_region
     
 class ApplyRubberBand(Processor):
