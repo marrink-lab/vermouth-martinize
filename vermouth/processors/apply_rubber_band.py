@@ -402,7 +402,7 @@ def make_same_region_criterion(regions):
             lower, upper = region
             if lower <= left_resid <= upper and lower <= right_resid <= upper:
                 return True
-        return False       
+        return False
     return same_region
     
 class ApplyRubberBand(Processor):
