@@ -399,7 +399,8 @@ def make_same_region_criterion(regions):
         left_resid = node_left.get('resid')
         right_resid = node_right.get('resid')
         for region in regions:
-            lower, upper = region
+            lower = min(region)
+            upper = max(region)
             if lower <= left_resid <= upper and lower <= right_resid <= upper:
                 return True
         return False
