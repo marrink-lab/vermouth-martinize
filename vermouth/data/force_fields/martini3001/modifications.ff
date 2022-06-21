@@ -11,10 +11,10 @@ N-ter
 [ atoms ]
 BB {"replace": {"atype": "Q5", "charge": 1}}
 
-;[ modification ]
-;zwitter
-;[ atoms ]
-;BB {"replace": {"atype": "Qda"}}
+[ modification ]
+zwitter
+[ atoms ]
+BB {"replace": {"atype": "Q5"}}
 
 [ modification ]
 COOH-ter
@@ -25,3 +25,13 @@ BB {"replace": {"atype": "P6", "charge": 0}}
 NH2-ter
 [ atoms ]
 BB {"replace": {"atype": "P6", "charge": 0}}
+
+[ modification ]
+CCAP-ter
+[ atoms ]
+BB {"replace": {"atype": "P1", "charge": 0}}
+
+[ modification ]
+NCAP-ter
+[ atoms ]
+BB {"replace": {"atype": "P2", "charge": 0}}

@@ -1,0 +1,141 @@
+; Copyright 2018 University of Groningen
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;    http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+[ molecule ]
+CHOL
+
+[from]
+charmm
+
+[to]
+elnedyn
+elnedyn22
+elnedyn22p
+
+[ martini ]
+ROH R1 R2 R3 R4 R5 C1 C2
+
+[ mapping ]
+charmm27 charmm36
+
+[ atoms ]
+    1    C1   ROH ROH ROH R1
+    2    O2   ROH
+    3    H3   ROH
+    4    H4   ROH 
+    5    C5   ROH ROH ROH R2
+    6    H6   ROH ROH ROH R2
+    7    H7   ROH ROH ROH R2
+    8    C8    R1 ROH ROH R2 R2
+    9    C9    R2 R2 R2 R2 ROH
+   10   H10    R2 R2 R2 R2 ROH
+   11   C11    R2
+   12   H12    R2
+   13   H13    R2
+   14   C14    R2 R2 R3 R4
+   15   H15    R2 R2 R3 R4
+   16   C16    R4 R4 R3
+   17   H17    R4
+   18   C18    R4
+   19   H19    R4
+   20   H20    R4
+   21   C21    R4 R4 C1
+   22   H22    R4 R4 C1
+   23   H23    R4 R4 C1
+   24   C24    R5 R4 C1 C1
+   25   H25    R5 R3 R4 C1 C1
+   26   C26    R5 
+   27   C27    R5
+   28   H28    R5
+   29   H29    R5
+   30   H30    R5
+   31   C31    R3 R3 R3 C1
+   32   H32    R3 R3 R3 C1
+   33   H33    R3 R3 R3 C1
+   34   C34    R3 
+   35   H35    R3
+   36   H36    R3
+   37   C37    R3 R3 R3 R2 ROH
+   38   H38    R3 R3 R3 R2 ROH
+   39   C39    R1 R1
+   40   C40    R1
+   41   H41    R1
+   42   H42    R1
+   43   H43    R1
+   44   C44    R1
+   45   H45    R1
+   46   H46    R1
+   47   C47   ROH
+   48   H48   ROH
+   49   H49   ROH
+   50   C50    C1 C1 C1 R4
+   51   H51    C1
+   52   C52    C1
+   53   H53    C1
+   54   H54    C1
+   55   H55    C1
+   56   C56    C1
+   57   H57    C1
+   58   H58    C1
+   59   C59    C1 C1 C1 C2
+   60   H60    C1 C1 C1 C2
+   61   H61    C1 C1 C1 C2
+   62   C62    C2 C1
+   63   H63    C2 C1
+   64   H64    C2 C1
+   65   C65    C2 C2 C2 C1
+   66   H66    C2 C2 C2 C1
+   67   C67    C2
+   68   H68    C2
+   69   H69    C2
+   70   H70    C2
+   71   C71    C2
+   72   H72    C2
+   73   H73    C2
+   74   H74    C2
+
+[chiral]
+H4 C1 C5 O2 C47
+H15 C14 C11 C16 C37
+H17 C16 C18 C14 C26
+H38 C37 C39 C34 C14
+H25 C24 C21 C26 C50
+[out]
+C52 C50 C56 C24
+H53 C50 C56 C24
+H54 C50 C56 C24
+H44 C50 C56 C24
+[chiral]
+H51 C50 C24 C52 C56
+
+[chiral]
+C27 C26 C31 C16 C24
+H28 C26 C31 C16 C24
+H29 C26 C31 C16 C24
+H30 C26 C31 C16 C24
+
+[out]
+C47 C1 O2 C5
+H48 C1 O2 C5
+H49 C1 O2 C5
+[trans]
+C44 C47 C1 O2
+H45 C47 C1 O2
+H46 C47 C1 O2
+
+[chiral]
+C40 C39 C44 C8 C37
+H41 C39 C44 C8 C37
+H42 C39 C44 C8 C37
+H43 C39 C44 C8 C37

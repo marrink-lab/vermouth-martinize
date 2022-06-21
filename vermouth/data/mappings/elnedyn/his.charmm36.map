@@ -16,7 +16,7 @@
 HIS  ;;;; is in fact HSP but if one of hydrogen on a nitrogen is missing in the input topology file, will become HSE or HSD automatically
 
 [from]
-universal
+charmm
 
 [to]
 elnedyn21
