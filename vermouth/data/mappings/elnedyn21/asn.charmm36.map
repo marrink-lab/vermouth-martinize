@@ -13,17 +13,17 @@
 ; limitations under the License.
 
 [ molecule ]
-ARG
+ASN
 
 [from]
 universal
 
 [to]
-elnedyn
+elnedyn21
 elnedyn22
 
 [ martini ]
-BB SC1 SC2
+BB SC1
 
 [ mapping ]
 charmm27 charmm36
@@ -32,43 +32,23 @@ charmm27 charmm36
     1     N    !BB
     2    HN    !BB
     3    CA    BB
+;    4    HA    BB
     5    CB   SC1
+;    6   HB1   SC1
+;    7   HB2   SC1
     8    CG   SC1
-   11    CD   SC1 
-   14    NE   SC2
-   15    HE   SC2
-   16    CZ   SC2
-   17   NH1   SC2
-   18  HH11   SC2
-   19  HH12   SC2
-   20   NH2   SC2
-   21  HH21   SC2
-   22  HH22   SC2
-   23    C    !BB
-   24    O    !BB
+    9   OD1   SC1
+   10   ND2   SC1
+   11  HD21   SC1
+   12  HD22   SC1
+   13    C    !BB
+   14    O    !BB
 
 [ chiral ]
   CB     CA    N    C
   HB1    CA    N    C
   HB2    CA    N    C
+
 [ chiral ]
-  HA     CA    N    CB    C ; L-Arg
-; HA     CA    N    C    CB ; D-Arg
-
-
-; The cis/trans are added to ensure proper
-; splitting of the guanidinium group
-
-[ trans ]
-; Because of the use of normalized vectors, this makes sense:
-  NH1    CZ    NE    HE
-
-[ out ]
-  NH2    CZ    NE    NH1
-  NH1    CZ    NE    NH2
-
-[ out ]
- HH11    NH1   CZ   HH12
- HH12    NH1   CZ   HH11
- HH21    NH2   CZ   HH22
- HH22    NH2   CZ   HH21
+  HA     CA    N    CB    C ; L-Asn
+; HA     CA    N    C    CB ; D-Asn

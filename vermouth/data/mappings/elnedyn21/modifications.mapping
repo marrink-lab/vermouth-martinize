@@ -2,7 +2,7 @@
 [ from ]
 universal
 [ to ]
-elnedyn
+elnedyn21
 
 [ from blocks ]
 C-ter
@@ -28,7 +28,7 @@ OXT BB 0
 [ from ]
 universal
 [ to ]
-elnedyn
+elnedyn21
 [ from blocks ]
 N-ter
 [ to blocks ]
@@ -54,7 +54,7 @@ O   BB 0
 [ from ]
 universal
 [ to ]
-elnedyn
+elnedyn21
 
 [ from blocks ]
 COOH-ter
@@ -83,7 +83,7 @@ OXT BB 0
 [ from ]
 universal
 [ to ]
-elnedyn
+elnedyn21
 [ from blocks ]
 NH2-ter
 [ to blocks ]
