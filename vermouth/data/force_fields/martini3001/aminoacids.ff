@@ -13,8 +13,8 @@
 ; limitations under the License.
 
 [ macros ]
-protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|GLU|GLUP|THR|SER|LYS|LSN|ARG|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
-protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|GLU|GLUP|THR|SER|LYS|LSN|ARG|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
 prot_default_bb_type P2
 stiff_fc 1000000
 
@@ -233,8 +233,22 @@ ASPP               1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
- 1   $prot_default_bb_type     1     ASP     BB     1      0    
- 2   SP2    1     ASP     SC1    2    0    
+ 1   $prot_default_bb_type     1     ASPP     BB     1      0    
+ 2   SP2    1     ASPP     SC1    2    0    
+
+[bonds]
+#meta {"group": "Side chain bonds"}
+;  i     j   funct   length  force.c.
+  BB   SC1    1       0.352     7500
+
+[ moleculetype ]
+; molname       nrexcl
+ASH               1
+
+[ atoms ]
+;id type resnr residu atom cgnr   charge
+ 1   $prot_default_bb_type     1     ASH     BB     1      0    
+ 2   SP2    1     ASH     SC1    2    0    
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -267,6 +281,20 @@ GLUP               1
 ;id type resnr residu atom cgnr   charge
  1   $prot_default_bb_type     1     GLU    BB     1      0    
  2   P2     1     GLU     SC1    2     0    
+
+[bonds]
+#meta {"group": "Side chain bonds"}
+;  i     j   funct   length  force.c.
+  BB   SC1    1       0.400    5000    
+
+[ moleculetype ]
+; molname       nrexcl
+GLH               1
+
+[ atoms ]
+;id type resnr residu atom cgnr   charge
+ 1   $prot_default_bb_type     1     GLH    BB     1      0    
+ 2   P2     1     GLH     SC1    2     0    
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -342,9 +370,30 @@ LSN                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
- 1   $prot_default_bb_type    1     LYS     BB     1      0    
- 2   SC3    1     LYS     SC1    2      0    
- 3   SN6d   1     LYS     SC2    3      0    
+ 1   $prot_default_bb_type    1     LSN     BB     1      0    
+ 2   SC3    1     LSN     SC1    2      0    
+ 3   SN6d   1     LSN     SC2    3      0    
+
+[bonds]
+#meta {"group": "Side chain bonds"}
+;  i     j   funct   length  force.c.
+  BB   SC1    1       0.330     5000      
+ SC1   SC2    1       0.360     5000  
+
+[angles]
+#meta {"group": "Side chain angles"}
+;  i     j    k     funct   angle  force.c.
+  BB   SC1  SC2       2   180.000    25.0    
+
+[ moleculetype ]
+; molname       nrexcl
+LYN                1
+
+[ atoms ]
+;id type resnr residu atom cgnr   charge
+ 1   $prot_default_bb_type    1     LYN     BB     1      0    
+ 2   SC3    1     LYN     SC1    2      0    
+ 3   SN6d   1     LYN     SC2    3      0    
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -434,7 +483,7 @@ HIE                 1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   $prot_default_bb_type     1     HIS     BB     1      0    
+1   $prot_default_bb_type     1     HIE    BB     1      0    
 2   TC4     1     HIE     SC1    2    0    ; three side chains in triangle
 3   TN6d    1     HIE     SC2    3    0    ; configuration, mimicking
 4   TN5a    1     HIE     SC3    4    0    ; ring structure
@@ -528,7 +577,7 @@ HID                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   $prot_default_bb_type     1     HIS     BB     1      0    
+1   $prot_default_bb_type     1     HID     BB     1      0    
 2   TC4     1     HID     SC1    2    0    ; three side chains in triangle
 3   TN5a    1     HID     SC2    3    0    ; configuration, mimicking
 4   TN6d    1     HID     SC3    4    0    ; ring structure
@@ -620,7 +669,7 @@ HIP                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   $prot_default_bb_type     1     HIS     BB     1      0    
+1   $prot_default_bb_type     1     HIP     BB     1      0    
 2   TC4     1     HIP     SC1    2    0        
 3   TP1dq   1     HIP     SC2    3   +0.5     
 4   TP1dq   1     HIP     SC3    4   +0.5      

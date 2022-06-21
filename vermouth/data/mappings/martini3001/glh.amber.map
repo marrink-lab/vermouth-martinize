@@ -13,7 +13,7 @@
 ; limitations under the License.
 
 [ molecule ]
-LSN
+GLH
 
 [from]
 amber
@@ -22,10 +22,10 @@ amber
 martini3001
 
 [ martini ]
-BB SC1 SC2
+BB SC1
 
 [ mapping ]
-amber27 amber36
+amber
 
 [ atoms ]
     1     N    BB
@@ -39,17 +39,11 @@ amber27 amber36
     9   HG1   !SC1
    10   HG2   !SC1
    11    CD   SC1
-   12   HD1   !SC1
-   13   HD2   !SC1
-   14    CE   SC2
-   15   HE1   !SC2
-   16   HE2   !SC2
-   17    NZ   SC2
-   18   HZ1   SC2
-   19   HZ2   SC2
-   20   HZ3   SC2
-   21     C    BB
-   22     O    BB
+   12   OE1   SC1
+   13   OE2   SC1
+   14   HE2   !SC1
+   15     C    BB
+   16     O    BB
 
 [ chiral ]
   CB     CA    N    C
@@ -57,5 +51,5 @@ amber27 amber36
   HB2    CA    N    C
 
 [ chiral ]
-  HA     CA    N    CB    C ; L-Lys
-; HA     CA    N    C    CB ; D-Lys
+  HA     CA    N    CB    C ; L-Glu
+; HA     CA    N    C    CB ; D-Glu
