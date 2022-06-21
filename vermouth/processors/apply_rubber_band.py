@@ -18,10 +18,12 @@ import itertools
 
 import numpy as np
 import networkx as nx
+import copy
 
 from .processor import Processor
 from .. import selectors
 from ..graph_utils import make_residue_graph
+
 
 # the bond type of the RB
 DEFAULT_BOND_TYPE = 6
@@ -365,7 +367,45 @@ def same_chain(graph, left, right):
     node_right = graph.nodes[right]
     return node_left.get('chain') == node_right.get('chain')
 
+def make_same_region_criterion(regions):
+    """
+    Returns ``True`` is the nodes are part of the same region.
 
+    Nodes are considered part of the same region if their value
+    under the "resid" attribute are within the same residue range.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+        A graph the nodes are part of.
+    left:
+        A node key in 'graph'.
+    right:
+        A node key in 'graph'.
+    regions:
+        [(resid_start_1,resid_end_1),(resid_start_2,resid_end_2),...] resid_start and resid_end are included)
+
+    Returns
+    -------
+    bool
+        ``True`` if the nodes are part of the same region.
+    """
+
+    regions = copy.deepcopy(regions)
+
+    def same_region(graph, left, right):
+        node_left = graph.nodes[left]
+        node_right = graph.nodes[right]
+        left_resid = node_left.get('resid')
+        right_resid = node_right.get('resid')
+        for region in regions:
+            lower = min(region)
+            upper = max(region)
+            if lower <= left_resid <= upper and lower <= right_resid <= upper:
+                return True
+        return False
+    return same_region
+    
 class ApplyRubberBand(Processor):
     """
     Add an elastic network to a system between particles fulfilling the
