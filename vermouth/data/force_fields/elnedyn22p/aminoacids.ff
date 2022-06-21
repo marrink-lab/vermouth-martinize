@@ -75,7 +75,7 @@ VAL                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   P5   1     VAL     BB     1      0    
- 2   AC2  1     VAL     SC1    2      0    
+ 2   C2  1     VAL     SC1    2      0    
 
 [constraints]
 ;  i     j   funct   length  
@@ -91,7 +91,7 @@ LEU                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   P5   1     LEU     BB     1      0    
- 2   AC1  1     LEU     SC1    2      0    
+ 2   C1  1     LEU     SC1    2      0    
 
 [constraints]
 #meta {"group": "Side chain bonds"}
@@ -108,7 +108,7 @@ ILE                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   P5   1     ILE     BB     1      0    
- 2   AC1  1     ILE     SC1    2      0    
+ 2   C1  1     ILE     SC1    2      0    
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -159,13 +159,26 @@ ASN                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   P5    1     ASN     BB     1      0    
- 2   P5    1     ASN     SC1    2      0    
+ 2   Nda   1     ASN     SC1    2      0    
+ 3   D     1     ASN     SCP    3  +0.46  36 {"charge_dummy": 0.14}
+ 4   D     1     ASN     SCN    4  -0.46  36 {"charge_dummy": 0.14}
+
+[virtual_sites2]
+; Site from       funct a
+   2     3    4   1     0.5
+
+[ edges ]
+SCP SC1
+SCN SC1
 
 [ constraints ]
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length
    1     2    1       0.250
 
+[constraints]
+;  i     j   funct   length
+   3     4    1       0.28
 
 ;;; GLUTAMINE
 
@@ -280,7 +293,7 @@ THR                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
 1   P5     1     THR     BB     1      0    
-2   P1     1     THR     SC1    2      0     0
+2   N0     1     THR     SC1    2      0     0
 3   D      1     THR     SCP    3  +0.36    36 {"charge_dummy": 0.14}
 4   D      1     THR     SCN    4  -0.36    36 {"charge_dummy": 0.14}
 
