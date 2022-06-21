@@ -33,31 +33,14 @@ else:
     HAS_SCIPY = True
 
 
-def dict_close(left, right):
-    """
-    Compare 2 dicts whith floats as values.
-
-    Returns `True` is all the keys are the same and the values are all close
-    according to :func:`np.allclose`.
-
-    The order of the keys is not kept.
-    """
-    if left.keys() != right.keys():
-        return False
-    keys = sorted(left)
-    values_left = np.array([left[key] for key in keys])
-    values_right = np.array([right[key] for key in keys])
-    return np.allclose(values_left, values_right)
-
-
 @pytest.mark.skipif(not HAS_SCIPY, reason="Scipy is not available.")
 @hypothesis.given(
     coordinates=hnp.arrays(
         dtype=st.sampled_from((np.float32, np.float64)),
-        shape=st.tuples(st.integers(1, 10), st.integers(1, 10)),
+        shape=st.tuples(st.integers(2, 10), st.integers(2, 10)),
         elements=st.floats(allow_nan=False, allow_infinity=False, width=32),
     ),
-    max_dist=st.floats(0, 5, width=32),
+    max_dist=st.floats(1e-3, 5),
     p=st.integers(1, 5),
 )
 def test_sparse_distance_matrix(coordinates, max_dist, p):
@@ -65,10 +48,11 @@ def test_sparse_distance_matrix(coordinates, max_dist, p):
     Test that the `sparse_distance_matrix` method returns the same thing in the
     redistributed KDTree and on the actual scipy one.
     """
+
     original_tree = scipyKDTree(coordinates)
     redis_tree = redisKDTree(coordinates)
 
     original_output = original_tree.sparse_distance_matrix(original_tree, max_dist, p)
+    hypothesis.assume(original_output.count_nonzero())
     redis_output = redis_tree.sparse_distance_matrix(redis_tree, max_dist, p)
-
-    assert dict_close(redis_output, original_output)
+    assert redis_output == pytest.approx(original_output)
