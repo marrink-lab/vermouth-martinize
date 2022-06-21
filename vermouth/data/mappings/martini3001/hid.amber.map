@@ -13,7 +13,7 @@
 ; limitations under the License.
 
 [ molecule ]
-HID  
+HID
 
 [from]
 amber
@@ -25,38 +25,23 @@ martini3001
 BB SC1 SC2 SC3
 
 [ mapping ]
-amber27 amber36
+amber
 
 [ atoms ]
     1     N    BB
-    2    HN    BB
+    2     H    BB
     3    CA    BB
     4    HA    !BB
     5    CB   SC1
     6   HB1   !SC1
     7   HB2   !SC1
-    8   CD2   SC2
-    9   HD2   SC2
-   10    CG   SC1
-   11   NE2   SC2
-   12   HE2   SC2
-   13   ND1   SC3
-   14   HD1   SC3
-   15   CE1   SC3
-   16   HE1   SC3
-   17     C    BB
-   18     O    BB
-
-[ chiral ]
-  CB     CA    N    C
-  HB1    CA    N    C
-  HB2    CA    N    C
-
-[ chiral ]
-  HA     CA    N    CB    C ; L-His
-; HA     CA    N    C    CB ; D-His
-
-[out]
-HD1 ND1 CG NE2
-HD2 CD2 CE1 CG
-HE2 NE2 CE1 CD2
+    8    CG   SC2
+    9   ND1   SC2
+   10   HD1   SC1
+   11   CE1   SC2
+   12   HE1   SC2
+   13   NE2   SC3
+   14   CD2   SC3
+   15   HD2   SC3
+   16     C    BB
+   17     O    BB
