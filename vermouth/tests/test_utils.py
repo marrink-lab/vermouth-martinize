@@ -188,7 +188,7 @@ def test_distance(vec_and_dist):
     Test the results of :func:`utils.distance`.
     """
     point1, point2, distance = vec_and_dist
-    assert_allclose(utils.distance(point1, point2), distance)
+    assert_allclose(utils.distance(point1, point2), distance, atol=1e-8)
 
 
 @pytest.mark.parametrize(
