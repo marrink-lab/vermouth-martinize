@@ -140,7 +140,7 @@ PRO                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   Na   1     PRO     BB     1      0    
- 2   C2   1     PRO     SC1    2      0    
+ 2  AC2   1     PRO     SC1    2      0    
 
 [constraints]
 #meta {"group": "Side chain bonds"}

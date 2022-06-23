@@ -13,14 +13,13 @@
 ; limitations under the License.
 
 [ molecule ]
-ASP
+ASN
 
 [from]
 universal
 
 [to]
-elnedyn21
-elnedyn22
+elnedyn22p
 
 [ martini ]
 BB SC1
@@ -38,10 +37,11 @@ charmm27 charmm36
 ;    7   HB2   SC1
     8    CG   SC1
     9   OD1   SC1
-   10   OD2   SC1
-;   11   HD2   SC1
-   12    C    !BB
-   13    O    !BB
+   10   ND2   SC1
+   11  HD21   SC1
+   12  HD22   SC1
+   13    C    !BB
+   14    O    !BB
 
 [ chiral ]
   CB     CA    N    C
@@ -49,5 +49,8 @@ charmm27 charmm36
   HB2    CA    N    C
 
 [ chiral ]
-  HA     CA    N    CB    C ; L-Asp
-; HA     CA    N    C    CB ; D-Asp
+  HA     CA    N    CB    C ; L-Asn
+; HA     CA    N    C    CB ; D-Asn
+
+[ extra ]
+SCP SCN

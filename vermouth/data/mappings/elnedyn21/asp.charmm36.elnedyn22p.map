@@ -19,8 +19,7 @@ ASP
 universal
 
 [to]
-elnedyn21
-elnedyn22
+elnedyn22p
 
 [ martini ]
 BB SC1
@@ -51,3 +50,6 @@ charmm27 charmm36
 [ chiral ]
   HA     CA    N    CB    C ; L-Asp
 ; HA     CA    N    C    CB ; D-Asp
+
+[ extra ]
+SCN
