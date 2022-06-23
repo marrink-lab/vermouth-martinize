@@ -103,27 +103,3 @@ N   BB 0
 CA  BB
 C   BB 0
 O   BB 0
-
-[modification]
-[ from ]
-universal
-[ to ]
-elnedyn22p
-[ from blocks ]
-ASP0
-[ to blocks ]
-ASP0
-[ from nodes ]
-CB
-CG
-OD1
-[ from edges ]
-CB CG
-CG OD1
-CG OD2
-[ mapping ]
-CB SC1
-CG SC1
-OD1 SC1
-OD2 SC1
-HD2 SC1
