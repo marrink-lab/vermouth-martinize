@@ -642,6 +642,52 @@
    ND1   NE2   CE1   HE1
    ND1   CD2    CG    CB
                         
+[ HIS ]
+ [ atoms ]
+     N    N           -0.528120    1
+     H    H            0.281695    2
+    CA    CT           0.031249    3
+    HA    H1           0.085175    4
+    CB    CT          -0.152267    5
+   HB1    HC           0.054608    6
+   HB2    HC           0.054608    7
+    CG    CC           0.278406    8
+   ND1    NB          -0.423316    9
+   CE1    CR           0.025960   10
+   HE1    H5           0.126832   11
+   NE2    NA          -0.097984   12
+   HE2    H            0.266865   13
+   CD2    CW          -0.297563   14
+   HD2    H4           0.160413   15
+     C    C            0.662405   16
+     O    O           -0.528966   17
+ [ bonds ]
+     N     H
+     N    CA
+    CA    HA
+    CA    CB
+    CA     C
+    CB   HB2
+    CB   HB1
+    CB    CG
+    CG   ND1
+    CG   CD2
+   ND1   CE1
+   CE1   HE1
+   CE1   NE2
+   NE2   HE2
+   NE2   CD2
+   CD2   HD2
+     C     O
+    -C     N
+ [ impropers ]
+    -C    CA     N     H
+    CA    +N     C     O
+   CE1   CD2   NE2   HE2
+    CG   NE2   CD2   HD2
+   ND1   NE2   CE1   HE1
+   ND1   CD2    CG    CB
+
 [ HIP ]
  [ atoms ]
      N    N           -0.424967    1
