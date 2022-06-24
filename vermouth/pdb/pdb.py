@@ -582,5 +582,10 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
     """
     if defer_writing:
         open = deferred_open
+    else:
+        # This is needed since the variable assignment above declares `open` as
+        # a local variable, which means it won't be looked up from the global
+        # namespace any more.
+        from builtins import open
     with open(path, 'w') as out:
         out.write(write_pdb_string(system, conect, omit_charges, nan_missing_pos))
