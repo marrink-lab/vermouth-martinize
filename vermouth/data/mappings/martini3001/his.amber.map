@@ -41,22 +41,7 @@ amber27 amber36
    11   NE2   SC2
    12   HE2   SC2
    13   ND1   SC3
-   14   HD1   SC3
-   15   CE1   SC3
-   16   HE1   SC3
-   17     C    BB
-   18     O    BB
-
-[ chiral ]
-  CB     CA    N    C
-  HB1    CA    N    C
-  HB2    CA    N    C
-
-[ chiral ]
-  HA     CA    N    CB    C ; L-His
-; HA     CA    N    C    CB ; D-His
-
-[out]
-HD1 ND1 CG NE2
-HD2 CD2 CE1 CG
-HE2 NE2 CE1 CD2
+   14   CE1   SC3
+   15   HE1   SC3
+   16     C    BB
+   17     O    BB

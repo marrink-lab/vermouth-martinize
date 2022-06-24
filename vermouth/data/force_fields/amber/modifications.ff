@@ -59,36 +59,13 @@ CD OE2
 OE1 HE1
 
 [ modification ]
-HID
+HIS_PROT
 [ atoms ]
+NE2 {"resname": "HIS", "element": "N"}
+HE2 {"resname": "HIS", "element": "H"}
 ND1 {"resname": "HIS", "element": "N"}
 HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
 [ edges ]
+NE2 HE2
 ND1 HD1
 
-[ modification ]
-HIE
-[ atoms ]
-NE1 {"resname": "HIS", "element": "N"}
-HE1 {"resname": "HIS", "element": "H", "PTM_atom": true}
-[ edges ]
-NE1 HE1
-
-[ modification ]
-HIP
-[ atoms ]
-NE1 {"resname": "HIS", "element": "N"}
-HE1 {"resname": "HIS", "element": "H", "PTM_atom": true}
-ND1 {"resname": "HIS", "element": "N"}
-HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
-[ edges ]
-NE1 HE1
-ND1 HD1
-
-[ modification ]
-ASP0
-[ atoms ]
-HD2 {"resname": "ASP", "element": "H", "PTM_atom": true}
-OD2 {"resname": "ASP"}
-[ edges ]
-OD2 HD2

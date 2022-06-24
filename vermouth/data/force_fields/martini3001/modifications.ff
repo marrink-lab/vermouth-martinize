@@ -35,3 +35,11 @@ BB {"replace": {"atype": "P1", "charge": 0}}
 NCAP-ter
 [ atoms ]
 BB {"replace": {"atype": "P2", "charge": 0}}
+
+[ modification ]
+HIS_PROT
+[ atoms ]
+BB  {"resname": "HIS", "replace": {"resname": "HIP"}}
+SC1 {"resname": "HIS", "replace": {"resname": "HIP"}}
+SC2 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}
+SC3 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}

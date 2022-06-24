@@ -104,3 +104,62 @@ CA  BB
 C   BB
 O   BB
 
+
+[modification]
+[ from ]
+amber
+[ to ]
+martini3001
+[ from blocks ]
+HIS_PROT
+[ to blocks ]
+HIS_PROT
+
+[ from nodes ]
+N     
+CA  
+HA  
+CB  
+HB1 
+HB2 
+CG
+CD2
+HD2
+CE1
+HE1
+   C
+   O
+H
+[ from edges ]
+     N     H
+     N    CA
+    CA    HA
+    CA    CB
+    CA     C
+    CB   HB2
+    CB   HB1
+    CB    CG
+    CG   ND1
+    CG   CD2
+   ND1   CE1
+   CE1   HE1
+   CE1   NE2
+   NE2   CD2
+   CD2   HD2
+     C     O
+[ mapping ]
+HD1 SC3
+N    BB
+H    BB
+CA    BB
+CB   SC1
+  CG   SC1
+ NE2   SC2
+ HE2   SC2
+ CD2   SC2
+ HD2   SC2
+ ND1   SC3
+ CE1   SC3
+ HE1   SC3
+   C    BB
+   O    BB
