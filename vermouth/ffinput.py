@@ -174,7 +174,7 @@ class FFDirector(SectionLineParser):
 
         if self.current_modification is not None:
             # add FF wide citations
-            if not nx.is_connected(self.current_modification):
+            if self.current_modification and not nx.is_connected(self.current_modification):
                 LOGGER.error('Modification {} in force field {} is not a single connected component',
                              self.current_modification.name, self.force_field.name)
             self.current_modification.citations.update(self.citations)
