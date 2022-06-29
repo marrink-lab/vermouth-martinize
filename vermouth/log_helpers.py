@@ -219,7 +219,7 @@ class CountingHandler(logging.NullHandler):
         """
         out = 0
         for lvl, type_counts in self.counts.items():
-            if level is not None and level != lvl:
+            if level is not None and lvl < level:
                 continue
             for type_, count in type_counts.items():
                 if type is not None and type != type_:
