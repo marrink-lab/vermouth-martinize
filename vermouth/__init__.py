@@ -44,12 +44,7 @@ else:
 
 del pbr
 
-try:
-    from scipy.spatial import cKDTree as KDTree
-except ImportError:
-    LOGGER.info('Using redistributed KDTree. Some functionality might be slow.'
-                ' Install scipy for better performance.', type='performance')
-    from .redistributed.kdtree import KDTree
+from scipy.spatial import cKDTree as KDTree
 
 del LOGGER
 
