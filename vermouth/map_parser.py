@@ -287,11 +287,6 @@ class MappingBuilder:
         block: vermouth.molecule.Block
             The block to add.
         """
-        block = block.copy()
-        for node in block.nodes.values():
-            if 'replace' in node:
-                node.update(node['replace'])
-                del node['replace']
         self.blocks_from = self._add_block(self.blocks_from, block)
 
     def add_name(self, name):
