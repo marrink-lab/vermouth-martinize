@@ -385,4 +385,9 @@ class DoLinks(Processor):
                 if citation:
                     molecule.citations.update(citation)
 
+        # reset variables after molecule is treated
+        self.applied_links = defaultdict(dict)
+        self.current_match = None
+        self.current_link = None
+        self.nodes_to_remove = []
         return molecule
