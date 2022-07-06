@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from itertools import combinations
 import numbers
 
@@ -261,36 +262,127 @@ def _build_link_interaction_from(molecule, interaction, match):
     )
     return new_interaction
 
-
 class DoLinks(Processor):
     """
     Apply Links, taken from a molecule's force field, to the molecule.
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.applied_links = defaultdict(dict)
+        self.current_match = None
+        self.current_link = None
+        self.nodes_to_remove = []
+
+    def replace_attributes(self, molecule, match):
+        """
+        Given any nodes in `self.current_link` have the 'replace'
+        attribute, replace the attribute in molecule with the new
+        value. If the atomname is set to None stage the node to be
+        removed.
+
+        Parameters
+        ----------
+        molecule: :class:`vermouth.Molecule`
+        match: dict
+            dict relating nodes in `self.current_link` to those in molecule
+        """
+        for node, node_attrs in self.current_link.nodes.items():
+            if 'replace' in node_attrs:
+                if node_attrs['replace'].get('atomname', False) is None:
+                    self.nodes_to_remove.append(match[node])
+                else:
+                    node_mol = molecule.nodes[match[node]]
+                    node_mol.update(node_attrs['replace'])
+        return molecule
+
+    def add_interactions(self, molecule, match):
+        """
+        Add interactions from link to the `self.applied_interactions` dict.
+        We temporarily store them in this dict since links can remove and or
+        replace interactions but the built in replace_interaction function in
+        molecule requires looping over the complete interactions dict, which
+        is slow. Having interactions in a dict with key also takes care of all
+        symmetry issues.
+
+        Parameters
+        ----------
+        molecule: :class:`vermouth.Molecule`
+        match: dict
+            dict relating nodes in `self.current_link` to those in molecule
+        """
+        for inter_type in self.current_link.interactions:
+            for interaction in self.current_link.interactions[inter_type]:
+                new_interaction = _build_link_interaction_from(molecule, interaction, match)
+                # it is not guaranteed that interaction.atoms is a tuple
+                # the key is the atoms involved in the interaction and the version type so
+                # that multiple versions are kept and not overwritten
+                interaction_key = tuple(new_interaction.atoms) +\
+                                  tuple([new_interaction.meta.get("version", 0)])
+                self.applied_links[inter_type][interaction_key] = (new_interaction,
+                                                                   self.current_link.citations)
+        return molecule
+
+    def remove_interactions(self, molecule, match):
+        """
+        Remove interactions from link to the `self.applied_interactions` dict.
+
+        Parameters
+        ----------
+        molecule: :class:`vermouth.Molecule`
+        match: dict
+            dict relating nodes in `self.current_link` to those in molecule
+        """
+        for inter_type in self.current_link.removed_interactions:
+            for interaction in self.current_link.removed_interactions[inter_type]:
+                new_interaction = _build_link_interaction_from(molecule, interaction, match)
+                interaction_key = tuple(new_interaction.atoms) +\
+                                  tuple([new_interaction.meta.get("version", 0)])
+                if interaction_key in self.applied_links[inter_type]:
+                    del self.applied_links[inter_type][interaction_key]
+        return molecule
+
+    def add_edges(self, molecule, match):
+        """
+        Add edges from link to the molecule.
+
+        Parameters
+        ----------
+        molecule: :class:`vermouth.Molecule`
+        match: dict
+            dict relating nodes in `self.current_link` to those in molecule
+        """
+        # now we already add the edges of this link
+        # links can overwrite each other but the edges must be the same
+        # this is safer than using the make_edge method because it accounts
+        # for edges written in the edges directive
+        for edge in self.current_link.edges:
+            molecule.add_edge(match[edge[0]], match[edge[1]])
+        return molecule
+
     def run_molecule(self, molecule):
-        # TODO: Separate this into a function
         links = molecule.force_field.links
         _nodes_to_remove = []
+        # loop over all links in force-field
         for link in links:
+            self.current_link = link
+            # match link based on graph isomorphism and link-order
             matches = match_link(molecule, link)
+            # for each match replace attributes, interactions and edges
             for match in matches:
-                for node, node_attrs in link.nodes.items():
-                    if 'replace' in node_attrs:
-                        if node_attrs['replace'].get('atomname', False) is None:
-                            _nodes_to_remove.append(match[node])
-                        else:
-                            node_mol = molecule.nodes[match[node]]
-                            node_mol.update(node_attrs['replace'])
-                for inter_type, interactions in link.removed_interactions.items():
-                    for interaction in interactions:
-                        interaction = _build_link_interaction_from(molecule, interaction, match)
-                        try:
-                            molecule.remove_matching_interaction(inter_type, interaction)
-                        except ValueError:
-                            pass
-                for inter_type, interactions in link.interactions.items():
-                    for interaction in interactions:
-                        interaction = _build_link_interaction_from(molecule, interaction, match)
-                        molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
+                self.replace_attributes(molecule, match)
+                self.add_interactions(molecule, match)
+                self.remove_interactions(molecule, match)
+                self.add_edges(molecule, match)
 
-            molecule.remove_nodes_from(_nodes_to_remove)
+            # we remove the nodes scheduled for removal
+            molecule.remove_nodes_from(self.nodes_to_remove)
+            self.nodes_to_remove = []
+        # we need to add all interactions into the actual molecule interactions
+        # dict and remove all the nodes that have been scheduled for removal
+        for inter_type in self.applied_links:
+            for interaction, citation in self.applied_links[inter_type].values():
+                molecule.interactions[inter_type].append(interaction)
+                if citation:
+                    molecule.citations.update(citation)
+
         return molecule
