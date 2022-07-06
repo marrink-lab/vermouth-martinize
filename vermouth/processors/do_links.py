@@ -345,7 +345,14 @@ class DoLinks(Processor):
                 new_interaction = _build_link_interaction_from(molecule, interaction, match)
                 interaction_key = tuple(new_interaction.atoms) +\
                                   tuple([new_interaction.meta.get("version", 0)])
+
+                interaction_key_rev = tuple(new_interaction.atoms[::-1]) +\
+                                      tuple([new_interaction.meta.get("version", 0)])
+
                 if interaction_key in self.applied_links[inter_type]:
+                    del self.applied_links[inter_type][interaction_key]
+
+                if interaction_key_rev in self.applied_links[inter_type]:
                     del self.applied_links[inter_type][interaction_key]
         return molecule
 
