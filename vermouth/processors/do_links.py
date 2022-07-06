@@ -318,8 +318,16 @@ class DoLinks(Processor):
                 # that multiple versions are kept and not overwritten
                 interaction_key = tuple(new_interaction.atoms) +\
                                   tuple([new_interaction.meta.get("version", 0)])
-                self.applied_links[inter_type][interaction_key] = (new_interaction,
-                                                                   self.current_link.citations)
+
+                interaction_key_rev = tuple(new_interaction.atoms[::-1]) +\
+                                      tuple([new_interaction.meta.get("version", 0)])
+
+                if interaction_key_rev in self.applied_links[inter_type]:
+                    self.applied_links[inter_type][interaction_key_rev] = (new_interaction,
+                                                                           self.current_link.citations)
+                else:
+                    self.applied_links[inter_type][interaction_key] = (new_interaction,
+                                                                       self.current_link.citations)
         return molecule
 
     def remove_interactions(self, molecule, match):
