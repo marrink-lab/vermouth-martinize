@@ -156,7 +156,7 @@ def ptm_resname_match(mol_node, map_node):
                            for map_mod in map_node.pop('modifications', []))
     else:
         matching_mod = True
-    is_equal = node_matcher(mol_node, map_node)
+    is_equal = _old_atomname_match(mol_node, map_node)
     return is_equal and matching_mod
 
 

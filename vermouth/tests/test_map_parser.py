@@ -473,6 +473,7 @@ def director(force_fields):
         }
     ),
     (  # Block shorthand, fetch single from block with replace attr
+       # Behaviour changed in #440 to use atomname *before* replacement
         """
         [ block ]
         [ from ]
@@ -484,7 +485,7 @@ def director(force_fields):
         [ to nodes ]
         A
         [ mapping ]
-        B A
+        A A
         """,
         {
             'block_from': ([(0, {"resname": 'block_B', 'resid': 1,
