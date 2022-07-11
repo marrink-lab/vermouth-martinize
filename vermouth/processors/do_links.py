@@ -279,7 +279,7 @@ class DoLinks(Processor):
 
         Parameters
         ----------
-        molecule: :class:`vermouth.Molecule`
+        molecule: vermouth.Molecule
         match: dict
             dict relating nodes in `self.current_link` to those in molecule
         """
