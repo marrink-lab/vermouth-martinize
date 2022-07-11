@@ -367,7 +367,6 @@ class DoLinks(Processor):
         # for edges written in the edges directive
         for edge in self.current_link.edges:
             molecule.add_edge(match[edge[0]], match[edge[1]])
-        return molecule
 
     def run_molecule(self, molecule):
         links = molecule.force_field.links
