@@ -281,7 +281,7 @@ class DoLinks(Processor):
         ----------
         molecule: vermouth.Molecule
         match: dict
-            dict relating nodes in `self.current_link` to those in molecule
+            dict relating nodes in :attr:`current_link` to those in molecule
         """
         for node, node_attrs in self.current_link.nodes.items():
             if 'replace' in node_attrs:
