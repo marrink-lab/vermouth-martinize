@@ -391,8 +391,7 @@ class DoLinks(Processor):
         for inter_type in self.applied_links:
             for interaction, citation in self.applied_links[inter_type].values():
                 molecule.interactions[inter_type].append(interaction)
-                if citation:
-                    molecule.citations.update(citation)
+                molecule.citations.update(citation)
 
         # reset variables after molecule is treated
         self.applied_links = defaultdict(dict)
