@@ -350,7 +350,6 @@ class DoLinks(Processor):
 
                 if interaction_key_rev in self.applied_links[inter_type]:
                     del self.applied_links[inter_type][interaction_key]
-        return molecule
 
     def add_edges(self, molecule, match):
         """
