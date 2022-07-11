@@ -290,7 +290,6 @@ class DoLinks(Processor):
                 else:
                     node_mol = molecule.nodes[match[node]]
                     node_mol.update(node_attrs['replace'])
-        return molecule
 
     def add_interactions(self, molecule, match):
         """
