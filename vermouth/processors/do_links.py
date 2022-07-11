@@ -187,9 +187,6 @@ def match_order(order1, resid1, order2, resid2):
             if order_types[1] == '><' and sign(resid2 - resid1) != sign(orders[1]):
                 # Columns >, >>, <, and <<
                 return False
-        #   elif order_types[1] == '*' and resid1 == resid2:
-        #       # Columns *, and **
-        #       return False
     elif order_types[0] == '><':  # Rows >, >>, <, and <<
         if (order_types[1] == 'number' and orders[1] == 0
                 and sign(resid1 - resid2) != sign(orders[0])):
