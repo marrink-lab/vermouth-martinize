@@ -274,7 +274,7 @@ class DoLinks(Processor):
         """
         Given any nodes in `self.current_link` have the 'replace'
         attribute, replace the attribute in molecule with the new
-        value. If the atomname is set to None stage the node to be
+        value. If the atomname is set to `None` stage the node to be
         removed.
 
         Parameters
