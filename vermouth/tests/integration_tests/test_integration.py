@@ -130,6 +130,7 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-0', 'mini-protein3_trp-cage'],
     ['tier-1', 'bpti'],
     ['tier-1', 'lysozyme'],
+    ['tier-1', 'lysozyme_prot'],
     ['tier-1', 'villin'],
     ['tier-1', '3i40'],
     ['tier-1', '6LFO_gap'],
