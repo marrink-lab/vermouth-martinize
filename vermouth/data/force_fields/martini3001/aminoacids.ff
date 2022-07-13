@@ -279,8 +279,8 @@ GLUP               1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
- 1   $prot_default_bb_type     1     GLU    BB     1      0    
- 2   P2     1     GLU     SC1    2     0    
+ 1   $prot_default_bb_type     1     GLUP    BB     1      0    
+ 2   P2     1     GLUP     SC1    2     0    
 
 [bonds]
 #meta {"group": "Side chain bonds"}
