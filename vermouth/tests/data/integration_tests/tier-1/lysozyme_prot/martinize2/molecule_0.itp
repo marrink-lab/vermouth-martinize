@@ -98,8 +98,8 @@ molecule_0 1
  84 SC4    34 PHE  SC1  84  0.0     
  85 TC5    34 PHE  SC2  85  0.0     
  86 TC5    34 PHE  SC3  86  0.0     
- 87 P2     35 GLU  BB   87  0.0     
- 88 P2     35 GLU  SC1  88  0.0     
+ 87 P2     35 GLUP  BB   87  0.0     
+ 88 P2     35 GLUP  SC1  88  0.0     
  89 P2     36 SER  BB   89  0.0     
  90 TP1    36 SER  SC1  90  0.0     
  91 P2     37 ASN  BB   91  0.0     
