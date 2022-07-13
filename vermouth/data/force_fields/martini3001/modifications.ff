@@ -43,3 +43,8 @@ BB  {"resname": "HIS", "replace": {"resname": "HIP"}}
 SC1 {"resname": "HIS", "replace": {"resname": "HIP"}}
 SC2 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}
 SC3 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}
+[ edges ]
+BB SC1 
+SC1 SC2
+SC1 SC3
+SC2 SC3

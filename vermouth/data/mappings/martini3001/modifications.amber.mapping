@@ -125,10 +125,9 @@ HB2
 CG
 CD2
 HD2
-CE1
 HE1
-   C
-   O
+C
+O
 H
 [ from edges ]
      N     H
@@ -141,9 +140,7 @@ H
     CB    CG
     CG   ND1
     CG   CD2
-   ND1   CE1
    CE1   HE1
-   CE1   NE2
    NE2   CD2
    CD2   HD2
      C     O

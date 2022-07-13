@@ -65,7 +65,9 @@ NE2 {"resname": "HIS", "element": "N"}
 HE2 {"resname": "HIS", "element": "H"}
 ND1 {"resname": "HIS", "element": "N"}
 HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+CE1 {"resname": "HIS", "element": "C"}
 [ edges ]
 NE2 HE2
 ND1 HD1
-
+CE1 NE2
+CE1 ND1
