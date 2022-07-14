@@ -396,8 +396,8 @@ def make_same_region_criterion(regions):
     def same_region(graph, left, right):
         node_left = graph.nodes[left]
         node_right = graph.nodes[right]
-        left_resid = node_left.get('resid')
-        right_resid = node_right.get('resid')
+        left_resid = node_left.get('resid_old')
+        right_resid = node_right.get('resid_old')
         for region in regions:
             lower = min(region)
             upper = max(region)

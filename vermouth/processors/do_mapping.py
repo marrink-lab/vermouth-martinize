@@ -499,7 +499,7 @@ def attrs_from_node(node, attrs):
     return {attr: val for attr, val in node.items() if attr in attrs}
 
 
-def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
+def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), attribute_stash=()):
     """
     Creates a new :class:`~vermouth.molecule.Molecule` in force field `to_ff`
     from `molecule`, based on `mappings`. It does this by doing a subgraph
@@ -536,6 +536,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     """
     attribute_keep = tuple(attribute_keep)
     attribute_must = tuple(attribute_must)
+    attribute_stash = tuple(attribute_stash)
     # Transferring the meta maybe should be a copy, or a deep copy...
     # If it breaks we look at this line.
     graph_out = Molecule(force_field=to_ff, meta=molecule.meta)
@@ -622,18 +623,20 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
         if out_idx in all_references:
             ref_idx = all_references[out_idx]
             new_attrs = attrs_from_node(molecule.nodes[ref_idx],
-                                        attribute_keep+attribute_must)
+                                        attribute_keep+attribute_must+attribute_stash)
             for attr, val in new_attrs.items():
                 # Attrs in attribute_keep we always transfer, those in
                 # attribute_must we transfer only if they're not already in the
                 # created node
                 if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
                     graph_out.nodes[out_idx].update(new_attrs)
+                if attr in attribute_stash:
+                    graph_out.nodes[out_idx][attr+"_old"] = val
         else:
             attrs = defaultdict(list)
             for mol_idx in mol_idxs:
                 new_attrs = attrs_from_node(molecule.nodes[mol_idx],
-                                            attribute_keep+attribute_must)
+                                            attribute_keep+attribute_must+attribute_stash)
                 for attr, val in new_attrs.items():
                     attrs[attr].append(val)
             attrs_not_sane = []
@@ -644,8 +647,16 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
                     else:
                         # No nodes hat the attribute.
                         graph_out.nodes[out_idx][attr] = None
+                if attr in attribute_stash:
+                    if vals:
+                        graph_out.nodes[out_idx][attr+"_old"] = vals[0]
+                    else:
+                        # No nodes hat the attribute.
+                        graph_out.nodes[out_idx][attr+"_old"] = None
+
                 if not are_all_equal(vals):
                     attrs_not_sane.append(attr)
+
             if attrs_not_sane:
                 LOGGER.warning('The attributes {} for atom {} are going to'
                                ' be garbage because the attributes of the'
@@ -777,12 +788,13 @@ class DoMapping(Processor):
     :func:`do_mapping`
     """
     def __init__(self, mappings, to_ff, delete_unknown=False, attribute_keep=(),
-                 attribute_must=()):
+                 attribute_must=(), attribute_stash=()):
         self.mappings = mappings
         self.to_ff = to_ff
         self.delete_unknown = delete_unknown
         self.attribute_keep = tuple(attribute_keep)
         self.attribute_must = tuple(attribute_must)
+        self.attribute_stash = tuple(attribute_stash)
         super().__init__()
 
     def run_molecule(self, molecule):
@@ -791,7 +803,8 @@ class DoMapping(Processor):
             mappings=self.mappings,
             to_ff=self.to_ff,
             attribute_keep=self.attribute_keep,
-            attribute_must=self.attribute_must
+            attribute_must=self.attribute_must,
+            attribute_stash=self.attribute_stash
         )
 
     def run_system(self, system):
