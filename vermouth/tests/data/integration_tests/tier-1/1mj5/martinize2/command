@@ -8,4 +8,3 @@ martinize2
 -cys auto
 -dssp
 -from amber
--maxwarn 1
