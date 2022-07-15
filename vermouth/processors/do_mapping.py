@@ -629,9 +629,9 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
                 # attribute_must we transfer only if they're not already in the
                 # created node
                 if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
-                    graph_out.nodes[out_idx].update(new_attrs)
+                    graph_out.nodes[out_idx].update(new_a+ttrs)
                 if attr in attribute_stash:
-                    graph_out.nodes[out_idx][attr+"_old"] = val
+                    graph_out.nodes[out_idx]["_old_"+attr] = val
         else:
             attrs = defaultdict(list)
             for mol_idx in mol_idxs:
@@ -649,10 +649,10 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
                         graph_out.nodes[out_idx][attr] = None
                 if attr in attribute_stash:
                     if vals:
-                        graph_out.nodes[out_idx][attr+"_old"] = vals[0]
+                        graph_out.nodes[out_idx]["_old_"+attr] = vals[0]
                     else:
                         # No nodes hat the attribute.
-                        graph_out.nodes[out_idx][attr+"_old"] = None
+                        graph_out.nodes[out_idx]["_old_"+attr] = None
 
                 if not are_all_equal(vals):
                     attrs_not_sane.append(attr)

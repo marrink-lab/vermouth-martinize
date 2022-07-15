@@ -767,7 +767,7 @@ def entry():
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
         for molecule in system.molecules:
-            old_resids = nx.get_node_attributes(molecule, "resid_old")
+            old_resids = nx.get_node_attributes(molecule, "_old_resid")
             nx.set_node_attributes(molecule, old_resids, "resid")
 
     LOGGER.info('Writing output.', type='step')
