@@ -240,8 +240,13 @@ def test_peptide():
     for node in peptide:
         peptide.nodes[node]['atomid'] = node + 1
         peptide.nodes[node]['chain'] = ''
+        # create a gap in resid pattern
+        if peptide.nodes[node]['resname'] == 'ILE':
+            peptide.nodes[node]['resid'] = 5
 
-    cg = do_mapping(peptide, mappings, FF_MARTINI, attribute_keep=('chain',))
+    # make sure the old resids with the gap are stashed
+    cg = do_mapping(peptide, mappings, FF_MARTINI, attribute_keep=('chain',),
+                    attribute_stash=('resid',))
 
     expected = Molecule(force_field=FF_MARTINI)
     expected.add_nodes_from({1: {'atomname': 'BB',
@@ -250,6 +255,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 1,
                                  'resid': 1,
+                                 '_old_resid': 1,
                                  'resname': 'GLY'},
                              2: {'atomname': 'BB',
                                  'atype': 'P5',
@@ -257,6 +263,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 2,
                                  'resid': 2,
+                                 '_old_resid': 5,
                                  'resname': 'ILE'},
                              3: {'atomname': 'SC1',
                                  'atype': 'AC1',
@@ -264,6 +271,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 3,
                                  'resid': 2,
+                                 '_old_resid': 5,
                                  'resname': 'ILE'},
                              4: {'atomname': 'BB',
                                  'atype': 'P5',
@@ -271,6 +279,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 4,
                                  'resid': 3,
+                                 '_old_resid': 3,
                                  'resname': 'LEU'},
                              5: {'atomname': 'SC1',
                                  'atype': 'AC1',
@@ -278,6 +287,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 5,
                                  'resid': 3,
+                                 '_old_resid': 3,
                                  'resname': 'LEU'}}.items()
                             )
     expected.add_edges_from([(1, 2), (2, 3), (2, 4), (4, 5)])
