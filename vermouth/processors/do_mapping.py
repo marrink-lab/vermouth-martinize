@@ -529,7 +529,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
         `molecule`.
     attribute_stash: tuple[str]
         The attributes that will always be transferred from the input molecule
-        to the produced graph, but prefixed with _old.Thus they are new attributes
+        to the produced graph, but prefixed with _old_.Thus they are new attributes
         and are not conflicting with already defined attributes.
 
 
@@ -789,7 +789,7 @@ class DoMapping(Processor):
         the original molecule.
     attribute_stash: tuple[str]
         The attributes that will always be transferred from the input molecule
-        to the produced graph, but prefixed with _old.Thus they are new attributes
+        to the produced graph, but prefixed with _old_.Thus they are new attributes
         and are not conflicting with already defined attributes.
 
     See Also
