@@ -527,6 +527,11 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
         The attributes that the nodes in the output graph *must* have. If
         they're not provided by the mappings/blocks they're taken from
         `molecule`.
+    attribute_stash: tuple[str]
+        The attributes that will always be transferred from the input molecule
+        to the produced graph, but prefixed with _old.Thus they are new attributes
+        and are not conflicting with already defined attributes.
+
 
     Returns
     -------
@@ -782,6 +787,10 @@ class DoMapping(Processor):
         The attributes that the nodes in the output graph *must* have. If
         they're not provided by the mappings/blocks they're taken from
         the original molecule.
+    attribute_stash: tuple[str]
+        The attributes that will always be transferred from the input molecule
+        to the produced graph, but prefixed with _old.Thus they are new attributes
+        and are not conflicting with already defined attributes.
 
     See Also
     --------
