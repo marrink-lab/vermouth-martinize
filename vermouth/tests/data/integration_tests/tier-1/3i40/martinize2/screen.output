@@ -1,0 +1,29 @@
+    INFO - general - Merging two molecules/chains because there is a CONECT record between atoms 49A-CYS7:SG and 231B-CYS7:SG
+    INFO - general - Read 1 molecules from PDB file ../3i40.pdb
+    INFO - step - Guessing the bonds.
+    INFO - general - 1 molecules after guessing bonds
+    INFO - step - Repairing the graph.
+    INFO - general - Applying modification N-ter to residue A-GLY1
+    INFO - general - Applying modification C-ter to residue A-ASN21
+    INFO - general - Applying modification N-ter to residue B-PHE1
+    INFO - general - Applying modification C-ter to residue B-ALA30
+    INFO - step - Dealing with modifications.
+    INFO - general - Identified the modifications ['N-ter', 'N-ter'] on residues ['GLY1', 'GLY1', 'GLY1', 'GLY1']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['ASN21', 'ASN21', 'ASN21']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['ALA30', 'ALA30', 'ALA30']
+    INFO - step - Read input.
+    INFO - step - Creating the graph at the target resolution.
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - step - Averaging the coordinates.
+    INFO - step - Applying the links.
+    INFO - step - Placing the charge dummies.
+    INFO - step - Applying position restraints.
+    INFO - step - Writing output.
+    INFO - general - Please cite: Souza, P C T; Alessandri, R; Barnoud, J; Thallmair, S; Faustino, I; Grünewald, F; Patmanidis, I; Abdizadeh, H; Bruininks, B M H; Wassenaar, T A; Kroon, P C; Melcr, J; Nieto, V; Corradi, V; Khan, H M; Domański, J; Javanainen, M; Martinez-Seara, H; Reuter, N; Best, R B; Vattulainen, I; Monticelli, L; Periole, X; Tieleman, D P; de Vries, A H; Marrink, S J;  Nature Methods 2021; 10.1038/s41592-021-01098-3
+    INFO - general - Backing up /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/vermouth-martinize/vermouth/tests/data/integration_tests/tier-1/3i40/martinize2/chain_A.ssd to /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/vermouth-martinize/vermouth/tests/data/integration_tests/tier-1/3i40/martinize2/#chain_A.ssd.1#.
+    INFO - general - Backing up /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/vermouth-martinize/vermouth/tests/data/integration_tests/tier-1/3i40/martinize2/cg.top to /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/vermouth-martinize/vermouth/tests/data/integration_tests/tier-1/3i40/martinize2/#cg.top.1#.
+    INFO - general - Backing up /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/vermouth-martinize/vermouth/tests/data/integration_tests/tier-1/3i40/martinize2/cg.pdb to /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/vermouth-martinize/vermouth/tests/data/integration_tests/tier-1/3i40/martinize2/#cg.pdb.1#.
+    INFO - general - I never go jogging, it makes me spill my martini. -- George Burns
