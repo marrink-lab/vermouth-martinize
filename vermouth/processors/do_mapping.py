@@ -629,7 +629,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
                 # attribute_must we transfer only if they're not already in the
                 # created node
                 if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
-                    graph_out.nodes[out_idx].update(new_a+ttrs)
+                    graph_out.nodes[out_idx].update(new_attrs)
                 if attr in attribute_stash:
                     graph_out.nodes[out_idx]["_old_"+attr] = val
         else:
