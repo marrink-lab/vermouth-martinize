@@ -132,6 +132,7 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-1', 'lysozyme'],
     ['tier-1', 'villin'],
     ['tier-1', '3i40'],
+    ['tier-1', '6LFO_gap'],
     # ['tier-2', 'barnase_barstar'],
     # ['tier-2', 'dna'],
     # ['tier-2', 'gpa_dimer'],
