@@ -373,6 +373,8 @@ def make_same_region_criterion(regions):
 
     Nodes are considered part of the same region if their value
     under the "resid" attribute are within the same residue range.
+    By default the resids of the input file are used (i.e. "_old_resid"
+    attribute).
 
     Parameters
     ----------
