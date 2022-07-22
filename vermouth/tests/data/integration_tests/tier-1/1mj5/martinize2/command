@@ -8,3 +8,4 @@ martinize2
 -cys auto
 -dssp
 -from amber
+-resid input
