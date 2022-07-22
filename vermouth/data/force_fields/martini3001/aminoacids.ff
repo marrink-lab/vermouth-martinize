@@ -626,7 +626,7 @@ HSP                1
 #meta {"group": "Side chain bonds", "ifndef": "FLEXIBLE"}
 ;  i     j   funct   length  
  SC1   SC2    1       0.320
- SC1   SC3    1       0.300  
+ SC1   SC3    1       0.320  
  SC2   SC3    1       0.270
 
 [angles]
@@ -668,7 +668,7 @@ HIP                1
 #meta {"group": "Side chain bonds", "ifndef": "FLEXIBLE"}
 ;  i     j   funct   length  
  SC1   SC2    1       0.320
- SC1   SC3    1       0.300  
+ SC1   SC3    1       0.320  
  SC2   SC3    1       0.270
 
 [angles]
