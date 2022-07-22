@@ -1,5 +1,5 @@
 ; This file was generated using the following command:
-; /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/venv_py38/bin/martinize2 -f ../aa.pdb -x cg.pdb -o topol.top -ff martini3001 -elastic -scfix -cys auto -dssp -ignore HOH
+; /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/venv_py38/bin/martinize2 -f aa.pdb -x cg.pdb -o topol.top -ff martini3001 -elastic -scfix -cys auto -dssp -ignore HOH
 ; martinize with vermouth 0.7.3.dev30
 ; The following sequence of secondary structure 
 ; was used for the full system:
@@ -98,8 +98,8 @@ molecule_0 1
  84 SC4    34 PHE  SC1  84  0.0     
  85 TC5    34 PHE  SC2  85  0.0     
  86 TC5    34 PHE  SC3  86  0.0     
- 87 P2     35 GLUP  BB   87  0.0     
- 88 P2     35 GLUP  SC1  88  0.0     
+ 87 P2     35 GLUP BB   87  0.0     
+ 88 P2     35 GLUP SC1  88  0.0     
  89 P2     36 SER  BB   89  0.0     
  90 TP1    36 SER  SC1  90  0.0     
  91 P2     37 ASN  BB   91  0.0     
@@ -1246,7 +1246,7 @@ molecule_0 1
  22  23 1 0.270
  24  25 1 0.270
  35  36 1 0.320
- 35  37 1 0.300
+ 35  37 1 0.320
  36  37 1 0.270
  46  47 1 0.300
  46  48 1 0.300

@@ -1,5 +1,5 @@
 ; This file was generated using the following command:
-; /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/venv_py38/bin/martinize2 -f ../aa.pdb -o cg.top -x protein_cg.gro -ff martini3001 -maxwarn 1 -dssp -from amber -elastic -cys auto -scfix
+; /coarse/fabian/current-projects/polymer_itp_builder/vermouth_dev/venv_py38/bin/martinize2 -f aa.pdb -o cg.top -x protein_cg.gro -ff martini3001 -maxwarn 1 -dssp -from amber -elastic -cys auto -scfix
 ; martinize with vermouth 0.7.3.dev30
 ; The following sequence of secondary structure 
 ; was used for the full system:
@@ -3152,7 +3152,7 @@ molecule_0 1
 629 630 1 0.270
 632 633 1 0.270
 635 636 1 0.320
-635 637 1 0.300
+635 637 1 0.320
 636 637 1 0.270
 639 640 1 0.340
 639 641 1 0.340
