@@ -1,0 +1,13 @@
+### DETAILS: 
+
+# The structure is based of 6LFO but with missing
+# loops. This generates 6 molecules on martinize2
+# level. In a merged molecule there should however
+# be gaps in the resid when the original ones are
+# kept. The last three resids are set to 900 to
+# check if some crazy value works
+
+### TEST: 
+
+# - keep old resids with gaps upon merge
+# - apply EN within all molecules

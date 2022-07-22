@@ -25,7 +25,7 @@ import itertools
 import textwrap
 from pathlib import Path
 import sys
-
+import networkx as nx
 import vermouth
 import vermouth.forcefield
 from vermouth.file_writer import deferred_open, DeferredFileWriter
@@ -148,8 +148,9 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     vermouth.DoMapping(mappings=mappings,
                        to_ff=to_ff,
                        delete_unknown=delete_unknown,
-                       attribute_keep=('cgsecstruct', 'resid', 'chain'),
-                       attribute_must=('resname')).run_system(system)
+                       attribute_keep=('cgsecstruct', 'chain'),
+                       attribute_must=('resname',),
+                       attribute_stash=('resid',)).run_system(system)
     LOGGER.info('Averaging the coordinates.', type='step')
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
     LOGGER.info('Applying the links.', type='step')
@@ -355,6 +356,11 @@ def entry():
     file_group.add_argument('-merge', dest='merge_chains',
                             type=lambda x: x.split(','), action='append',
                             help='Merge chains: e.g. -merge A,B,C (+)')
+    file_group.add_argument('-resid', dest='resid_handling',
+                            type=str, default='mol',
+                            help="How to handle resid. Choice of mol or input.\n"
+                                 "mol: resids are numbered from 1 to n for each molecule\n"
+                                 "input: resids are the same as in the input pdb")
     file_group.add_argument('-ignore', dest='ignore_res', nargs='+',
                             default=[], action='append', type=lambda x: x.split(','),
                             help='Ignore residues with that name: e.g. '
@@ -757,6 +763,12 @@ def entry():
             res_min_dist=args.res_min_dist,
         )
         rubber_band_processor.run_system(system)
+
+    # Here we need to add the resids from the PDB back if that is needed
+    if args.resid_handling == "input":
+        for molecule in system.molecules:
+            old_resids = nx.get_node_attributes(molecule, "_old_resid")
+            nx.set_node_attributes(molecule, old_resids, "resid")
 
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:
