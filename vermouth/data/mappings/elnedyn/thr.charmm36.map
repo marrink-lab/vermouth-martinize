@@ -19,10 +19,10 @@ THR
 BB SC1
 
 [from]
-universal
+charmm
 
 [to]
-elnedyn
+elnedyn21
 elnedyn22
 
 [ mapping ]

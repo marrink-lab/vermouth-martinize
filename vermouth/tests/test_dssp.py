@@ -434,7 +434,7 @@ def test_cterm_atomnames():
         (12, 13), (12, 14),
         (15, 18), (15, 19), (15, 20),
     ]
-    ff = get_native_force_field('universal')
+    ff = get_native_force_field('charmm')
     mol = vermouth.molecule.Molecule(force_field=ff)
     mol.add_nodes_from(enumerate(nodes))
     mol.add_edges_from(edges)

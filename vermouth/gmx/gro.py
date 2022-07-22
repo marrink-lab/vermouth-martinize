@@ -142,6 +142,8 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
 
     if defer_writing:
         open = deferred_open
+    else:
+        from builtins import open
     with open(str(file_name), 'w') as out:
         out.write(title + '\n')  # Title
         out.write(formatter.format('{}\n', system.num_particles))  # number of atoms

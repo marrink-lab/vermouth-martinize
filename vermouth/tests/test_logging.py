@@ -301,7 +301,7 @@ def test_bipolar_formatter_logger():
 
 @pytest.mark.parametrize('level, type_, expected', (
     [None, None, 7],
-    [logging.DEBUG, None, 2],
+    [logging.DEBUG, None, 7],
     [None, 'a', 2],
     [logging.INFO, 'general', 2],
     [None, 'd', 0]

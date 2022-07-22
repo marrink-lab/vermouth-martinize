@@ -36,6 +36,9 @@ from .parser_utils import (
     SectionLineParser, _tokenize, _substitute_macros, _parse_macro
 )
 
+from .log_helpers import StyleAdapter, get_logger
+import networkx as nx
+
 # Python 3.4 does not raise JSONDecodeError but ValueError.
 
 try:
@@ -43,6 +46,7 @@ try:
 except ImportError:
     JSONDecodeError = ValueError
 
+LOGGER = StyleAdapter(get_logger(__name__))
 VALUE_PREDICATES = {
     'not': NotDefinedOrNot,
 }
@@ -170,6 +174,9 @@ class FFDirector(SectionLineParser):
 
         if self.current_modification is not None:
             # add FF wide citations
+            if self.current_modification and not nx.is_connected(self.current_modification):
+                LOGGER.error('Modification {} in force field {} is not a single connected component',
+                             self.current_modification.name, self.force_field.name)
             self.current_modification.citations.update(self.citations)
             self.force_field.modifications[self.current_modification.name] = self.current_modification
 

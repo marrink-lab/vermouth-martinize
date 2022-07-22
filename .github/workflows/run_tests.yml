@@ -25,23 +25,17 @@ jobs:
        include:
          - py_version: "3.6"
            WITH_CODECOV: true
-           WITH_SCIPY: true
          - py_version: "3.7"
            WITH_CODECOV: true
-           WITH_SCIPY: true
          - py_version: "3.8"
            WITH_CODECOV: true
-           WITH_SCIPY: true
          - py_version: "3.9"
            WITH_CODECOV: true
-           WITH_SCIPY: false
          - py_version: "3.8-dev"
            WITH_CODECOV: true
-           WITH_SCIPY: true
          - py_version: "3.9-dev"
            WITH_CODECOV: true
-           WITH_SCIPY: true
-           
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.py_version }}
@@ -52,10 +46,6 @@ jobs:
       run: |
         sudo apt-get install dssp
         pip install --upgrade setuptools pip
-    - if: ${{ matrix.WITH_SCIPY }}
-      name: Install scipy
-      run: |
-        pip install scipy
     - name: Install package and requirements
       run: |
         pip install --upgrade .
@@ -87,8 +77,8 @@ jobs:
         pip install -r requirements-tests.txt
     - name: Run pylint 
       run: |
-         python run_pylint.py --disable=fixme --fail-under=8.0 vermouth
-         python run_pylint.py --disable=fixme --fail-under=9.5 bin/martinize2 
+         pylint --disable=fixme --fail-under=8.0 vermouth
+         pylint --disable=fixme --fail-under=9.0 bin/martinize2 
          
    
   docs:

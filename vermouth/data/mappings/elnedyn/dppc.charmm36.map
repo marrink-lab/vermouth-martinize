@@ -16,7 +16,7 @@
 DPPC
 
 [from]
-universal
+charmm
 
 [to]
 elnedyn

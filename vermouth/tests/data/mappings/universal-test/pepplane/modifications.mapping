@@ -23,8 +23,8 @@ C-ter
 C-ter
 [ mapping ]
 C   BB
-O1  BB
-O2  BB
+O  BB
+OXT  BB
 [ reference atoms ]
 BB C
 
@@ -40,7 +40,7 @@ N-ter
 [mapping]
 CA  CA
 N   CA
-HN1 CA  0
+HN CA  0
 HN2 CA  0
 HN3 CA  0
 [ reference atoms ]

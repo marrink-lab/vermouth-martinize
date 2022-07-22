@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/marrink-lab/vermouth-martinize/actions/workflows/run_tests.yml/badge.svg)](https://github.com/marrink-lab/vermouth-martinize/actions)
 [![codecov](https://codecov.io/gh/marrink-lab/vermouth-martinize/branch/master/graph/badge.svg)](https://codecov.io/gh/marrink-lab/vermouth-martinize)
 [![Documentation Status](https://readthedocs.org/projects/vermouth-martinize/badge/?version=latest)](https://vermouth-martinize.readthedocs.io/en/latest/?badge=latest)
-
+[![DOI](https://zenodo.org/badge/327071500.svg)]()
 
 Martinize2 is a rewrite of [Martinize]. It is aimed at producing
 coarse-grained structures and topologies from an atomistic structure. Martinize
