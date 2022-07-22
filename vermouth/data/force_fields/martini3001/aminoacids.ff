@@ -465,10 +465,6 @@ HIS                 1
    BB   SC1  SC2       2   120.000   50.0  
    BB   SC1  SC3       2   120.000   50.0 
 
-;[dihedrals]
-;  i     j    k    l   funct   angle  force.c.
-;  BB   SC2  SC3  SC1       2    0.0    50.0     ; to prevent backflipping of ring
-
 [exclusions]
 ; We do not want non-bounded interactions within the residue.
 BB SC1 SC2 SC3
@@ -510,10 +506,6 @@ HIE                 1
 ;  i     j    k     funct   angle  force.c.
    BB   SC1  SC2       2   120.000   50.0  
    BB   SC1  SC3       2   120.000   50.0 
-
-;[dihedrals]
-;  i     j    k    l   funct   angle  force.c.
-;  BB   SC2  SC3  SC1       2    0.0    50.0     ; to prevent backflipping of ring
 
 [exclusions]
 ; We do not want non-bounded interactions within the residue.
@@ -558,10 +550,6 @@ HSD                1
    BB   SC1  SC2       2   120.000   50.0  
    BB   SC1  SC3       2   120.000   50.0 
 
-;[dihedrals]
-;  i     j    k    l   funct   angle  force.c.
-;  BB   SC2  SC3  SC1       2    0.0    50.0     ; to prevent backflipping of ring
-
 [exclusions]
 ; We do not want non-bounded interactions within the residue.
 BB SC1 SC2 SC3
@@ -605,10 +593,6 @@ HID                1
    BB   SC1  SC2       2   120.000   50.0  
    BB   SC1  SC3       2   120.000   50.0 
 
-;[dihedrals]
-;  i     j    k    l   funct   angle  force.c.
-;  BB   SC2  SC3  SC1       2    0.0    50.0     ; to prevent backflipping of ring
-
 [exclusions]
 ; We do not want non-bounded interactions within the residue.
 BB SC1 SC2 SC3
@@ -650,10 +634,6 @@ HSP                1
 ;  i     j    k     funct   angle  force.c.
    BB   SC1  SC2       2   120.000   50.0  
    BB   SC1  SC3       2   120.000   50.0 
-
-;[dihedrals]
-;  i     j    k    l   funct   angle  force.c.
-;  BB   SC2  SC3  SC1       2    0.0    50.0     ; to prevent backflipping of ring
 
 [exclusions]
 ; We do not want non-bounded interactions within the residue.
@@ -697,10 +677,6 @@ HIP                1
    BB   SC1  SC2       2   120.000   50.0  
    BB   SC1  SC3       2   120.000   50.0 
 
-;[dihedrals]
-;  i     j    k    l   funct   angle  force.c.
-;  BB   SC2  SC3  SC1       2    0.0    50.0     ; to prevent backflipping of ring
-
 [exclusions]
 ; We do not want non-bounded interactions within the residue.
 BB SC1 SC2 SC3
@@ -742,10 +718,6 @@ PHE                1
 ;  i     j    k     funct   angle  force.c.
   BB   SC1  SC2        2   120.000   50.0  
   BB   SC1  SC3        2   120.000   50.0 
-
-;[dihedrals]
-;  i     j    k    l   funct   angle  force.c.
-;  BB   SC2  SC3  SC1       2    0.0    50.0     ; to prevent backflipping of ring
 
 [exclusions]
 ; We do not want non-bounded interactions within the residue.
