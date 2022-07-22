@@ -62,7 +62,7 @@ def build_forcefield_with_mods():
     ))
     gluh.add_edges_from([[0, 1], [0, 2], [1, 3]])
 
-    forcefield = copy.copy(vermouth.forcefield.get_native_force_field('universal'))
+    forcefield = copy.copy(vermouth.forcefield.get_native_force_field('charmm'))
     forcefield.modifications = {}
     for mod in [nter, gluh, cter]:
         forcefield.modifications[mod.name] = mod
@@ -377,7 +377,7 @@ def test_tri_alanine_termini():
     since DSSP can't recognize OXT.
     Prevents recurrence of #317.
     """
-    ff = vermouth.forcefield.get_native_force_field('universal')
+    ff = vermouth.forcefield.get_native_force_field('charmm')
     mol = vermouth.pdb.read_pdb(PDB_TRI_ALANINE)[0]
     system = vermouth.system.System(force_field=None)
     system.add_molecule(mol)

@@ -201,7 +201,7 @@ def test_make_bonds(nodes, edges, expected_edges):
     expected_edges is a List[Dict[Tuple[Int, Int], Dict]], allowing for
         multiple molecules
     """
-    system = System(force_field=get_native_force_field('universal'))
+    system = System(force_field=get_native_force_field('charmm'))
     for node_set, edge_set in zip(nodes, edges):
         mol = Molecule()
         mol.add_nodes_from(enumerate(node_set))
@@ -237,7 +237,7 @@ def test_make_bonds(nodes, edges, expected_edges):
 
 ])
 def test_make_bonds_logs(caplog, nodes, edges, logtype):
-    system = System(force_field=get_native_force_field('universal'))
+    system = System(force_field=get_native_force_field('charmm'))
     mol = Molecule()
     mol.add_nodes_from(enumerate(nodes))
     mol.add_edges_from(edges)

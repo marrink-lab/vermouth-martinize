@@ -16,7 +16,7 @@
 ARG
 
 [from]
-universal
+charmm
 
 [to]
 elnedyn21

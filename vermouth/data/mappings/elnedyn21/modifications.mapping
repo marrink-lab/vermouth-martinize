@@ -1,6 +1,6 @@
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 elnedyn21
 
@@ -26,7 +26,7 @@ OXT BB 0
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 elnedyn21
 [ from blocks ]
@@ -52,7 +52,7 @@ O   BB 0
 
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 elnedyn21
 
@@ -81,7 +81,7 @@ OXT BB 0
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 elnedyn21
 [ from blocks ]

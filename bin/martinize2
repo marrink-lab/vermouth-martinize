@@ -104,7 +104,7 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
     if force_field is None:
-        force_field = vermouth.forcefield.get_native_force_field('universal')
+        force_field = vermouth.forcefield.get_native_force_field('charmm')
     if modifications is None:
         modifications = []
     if mutations is None:
@@ -344,9 +344,9 @@ def entry():
     parser.add_argument('-V', '--version', action='version', version=VERSION)
 
     file_group = parser.add_argument_group('Input and output files')
-    file_group.add_argument('-f', dest='inpath', required=True, type=Path,
+    file_group.add_argument('-f', dest='inpath', required=False, type=Path,
                             help='Input file (PDB|GRO)')
-    file_group.add_argument('-x', dest='outpath', required=True, type=Path,
+    file_group.add_argument('-x', dest='outpath', required=False, type=Path,
                             help='Output coarse grained structure (PDB)')
     file_group.add_argument('-o', dest='top_path', type=Path,
                             help='Output topology (TOP)')
@@ -385,7 +385,7 @@ def entry():
     ff_group = parser.add_argument_group('Force field selection')
     ff_group.add_argument('-ff', dest='to_ff', default='martini3001',
                           help='Which forcefield to use')
-    ff_group.add_argument('-from', dest='from_ff', default='universal',
+    ff_group.add_argument('-from', dest='from_ff', default='charmm',
                           help='Force field of the original structure.')
     ff_group.add_argument('-ff-dir', dest='extra_ff_dir', action='append',
                           type=Path, default=[],
@@ -520,27 +520,6 @@ def entry():
                              ' written.')
 
     args = parser.parse_args()
-    if args.elastic and args.govs_includes:
-        parser.error('A rubber band elastic network and GoMartini are not '
-                     'compatible. The -elastic and -govs-include flags cannot '
-                     'be used together.')
-
-    if args.to_ff.startswith('elnedyn'):
-        # FIXME: This type of thing should be added to the FF itself.
-        LOGGER.info('The forcefield {} must always be used with an elastic '
-                    'network. Enabling it now.', args.to_ff)
-        args.elastic = True
-
-    file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
-    if file_extension in ['GRO'] and args.modelidx is not None:
-        parser.error("GRO files don't know the concept of models.")
-    if args.modelidx is None:
-        # Set a sane default value. Can't do this using argparse machinery,
-        # since we need to be able to check whether the flag was given.
-        args.modelidx = 1
-
-    bonds_from_name = args.bonds_from in ('name', 'both')
-    bonds_from_dist = args.bonds_from in ('distance', 'both')
 
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
     LOGGER.setLevel(loglevels[args.verbosity])
@@ -597,6 +576,28 @@ def entry():
         print('The following Modifications are known to force field {}:'.format(args.to_ff))
         print(', '.join(known_force_fields[args.to_ff].modifications))
         parser.exit()
+
+    if args.elastic and args.govs_includes:
+        parser.error('A rubber band elastic network and GoMartini are not '
+                     'compatible. The -elastic and -govs-include flags cannot '
+                     'be used together.')
+
+    if args.to_ff.startswith('elnedyn'):
+        # FIXME: This type of thing should be added to the FF itself.
+        LOGGER.info('The forcefield {} must always be used with an elastic '
+                    'network. Enabling it now.', args.to_ff)
+        args.elastic = True
+
+    file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
+    if file_extension in ['GRO'] and args.modelidx is not None:
+        parser.error("GRO files don't know the concept of models.")
+    if args.modelidx is None:
+        # Set a sane default value. Can't do this using argparse machinery,
+        # since we need to be able to check whether the flag was given.
+        args.modelidx = 1
+
+    bonds_from_name = args.bonds_from in ('name', 'both')
+    bonds_from_dist = args.bonds_from in ('distance', 'both')
 
 
     # args.ignore_res is a pretty deep list: given "-ignore HOH CU,LIG -ignore LIG2"

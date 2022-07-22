@@ -1,6 +1,6 @@
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 
@@ -26,7 +26,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 [ from blocks ]
@@ -52,7 +52,7 @@ O   BB
 
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 
@@ -81,7 +81,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 [ from blocks ]
@@ -110,7 +110,7 @@ O   BB
 
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
@@ -132,7 +132,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
@@ -155,7 +155,7 @@ O   BB
 
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
@@ -180,7 +180,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
