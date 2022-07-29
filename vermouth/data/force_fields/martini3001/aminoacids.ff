@@ -522,7 +522,7 @@ HSD                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   $prot_default_bb_type     1     HIS     BB     1      0    
+1   $prot_default_bb_type     1     HSD     BB     1      0    
 2   TC4     1     HSD     SC1    2    0    ; three side chains in triangle
 3   TN5a    1     HSD     SC2    3    0    ; configuration, mimicking
 4   TN6d    1     HSD     SC3    4    0    ; ring structure
