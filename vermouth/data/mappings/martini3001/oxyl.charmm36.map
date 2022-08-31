@@ -1,0 +1,35 @@
+; OXYLE
+[ molecule ]
+OXYL
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 R1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C1 R2
+2 CZ R2
+3 CE2 R1
+4 C2 R1
+5 CD2 R1
+6 CG R3
+7 CD1 R3
+8 CE1 R2
+9 H11 R2
+10 H12 R2
+11 H13 R2
+12 H21 R1
+13 H22 R1
+14 H23 R1
+15 HD2 R1
+16 HG R3
+17 HD1 R3
+18 HE1 R2

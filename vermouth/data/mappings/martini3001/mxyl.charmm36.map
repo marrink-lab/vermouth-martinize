@@ -1,0 +1,35 @@
+; MXYLE
+[ molecule ]
+MXYL
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R1 R2
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C2 R1
+2 CD2 R1
+3 CG R1
+4 CD1 R3
+5 CE1 R3
+6 CZ R2
+7 CE2 R2
+8 C1 R2
+9 H21 R1
+10 H22 R1
+11 H23 R1
+12 HG R1
+13 HD1 R3
+14 HE1 R3
+15 HE2 R2
+16 H13 R2
+17 H11 R2
+18 H12 R2

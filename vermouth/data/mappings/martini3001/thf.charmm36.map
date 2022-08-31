@@ -1,0 +1,26 @@
+; THF
+[ molecule ]
+THF
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C2' R2
+2 C3' R2
+3 C4' O1 R2
+4 O4' O1
+5 C1' O1 R2
+6 H21' R2
+7 H22' R2
+8 H31' R2
+9 H32' R2

@@ -1,0 +1,32 @@
+; ACPH
+[ molecule ]
+PHMK
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 R1 R4 R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C1 R1
+2 C2 R1
+3 O2 R1
+4 C3 R2 R3
+5 C8 R2
+6 C7 R2 R4
+7 C6 R4
+8 C5 R3 R4
+9 C4 R3
+10 H13 R1
+11 H11 R1
+12 H12 R1
+13 H8 R2
+14 H6 R4
+15 H4 R3

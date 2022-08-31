@@ -1,0 +1,31 @@
+; STYR
+[ molecule ]
+STYR
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 R4 R1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CE1 R2
+2 CD1 R2 R4
+3 CG R4
+4 CD2 R3 R4
+5 CE2 R3
+6 CZ R2 R3
+7 C1 R1
+8 C2 R1
+9 HE1 R2
+10 HG R4
+11 HE2 R3
+12 H1 R1
+13 H21 R1
+14 H22 R1

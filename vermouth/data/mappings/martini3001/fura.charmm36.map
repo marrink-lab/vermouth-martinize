@@ -1,0 +1,26 @@
+; FURA
+[ molecule ]
+FURA
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 R3 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C3 R3
+2 C2 R2
+3 C1 R2
+4 O5 O1
+5 C4 R3
+6 H3 R3
+7 H2 R2
+8 H1 R2
+9 H4 R3

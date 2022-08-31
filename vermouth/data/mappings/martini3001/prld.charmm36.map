@@ -1,0 +1,27 @@
+; PYLI
+[ molecule ]
+PRLD
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 N1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C4 R2
+2 C3 R2
+3 C2 N1 R2
+4 N1 N1
+5 C5 N1 R2
+6 H41 R2
+7 H42 R2
+8 H32 R2
+9 H31 R2
+10 H1 N1
