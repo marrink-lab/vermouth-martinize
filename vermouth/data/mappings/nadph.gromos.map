@@ -1,0 +1,71 @@
+[ molecule ]
+NADPH
+
+[from]
+gromos
+
+[to]
+martini22
+
+[ martini ]
+ADN1 ADN2 ADN3 RBSA1 RBSA2 PO4A PO4B RBSB1 RBSB2 NCT1 NCT2 NCT3 PO4C
+
+[ mapping ]
+gromos
+
+[ atoms ]
+    1     AP PO4A
+    2   AO1P PO4A
+    3   AO2P PO4A
+    4   AO5* PO4A
+    5    O3P PO4A PO4B
+    6     NP PO4B
+    7   NO1P PO4B
+    8   NO2P PO4B
+    9   NO5* PO4B
+   10   AC5* RBSA1
+   11   AC4* RBSA1
+   12   AO4* RBSA1
+   13   AC1* RBSA1
+   14    AN9 ADN3
+   15    AC4 ADN2
+   16    AN3 ADN2
+   17    AC2 ADN2
+   18    AN1 ADN1
+   19    AC6 ADN1
+   20    AN6 ADN1
+   21   AH61 ADN1
+   22   AH62 ADN1
+   23    AC5 ADN1
+   24    AN7 ADN3
+   25    AC8 ADN3
+   26   AC2* RBSA2
+   27   AO2* PO4C RBSA2
+   28   AP2* PO4C
+   29   AO6* PO4C
+   30   AO7* PO4C
+   31   AO8* PO4C
+   32   AC3* RBSA2
+   33   AO3* RBSA2
+   34   AH3* RBSA2
+   35   NC5* RBSB1
+   36   NC4* RBSB1
+   37   NO4* RBSB1
+   38   NC1* RBSB1
+   39    NN1 NCT1
+   40    NC6 NCT1
+   41    NC2 NCT1
+   42    NC3 NCT2
+   43    NC4 NCT2
+   44    NC5 NCT2
+   45    NC7 NCT3
+   46    NO7 NCT3
+   47    NN7 NCT3
+   48   NH71 NCT3
+   49   NH72 NCT3
+   50   NC2* RBSB2
+   51   NO2* RBSB2
+   52   NH2* RBSB2
+   53   NC3* RBSB2
+   54   NO3* RBSB2
+   55   NH3* RBSB2
