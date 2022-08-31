@@ -303,36 +303,38 @@ def apply_rubber_band(molecule, selector,
         raise ValueError('All atoms from the selection must have coordinates. '
                          'The following atoms do not have some: {}.'
                          .format(' '.join(missing)))
-    coordinates = np.stack(coordinates)
-    distance_matrix = self_distance_matrix(coordinates)
-    constants = compute_force_constants(distance_matrix, lower_bound,
-                                        upper_bound, decay_factor, decay_power,
-                                        base_constant, minimum_force)
+        
+    if coordinates:
+        coordinates = np.stack(coordinates)
+        distance_matrix = self_distance_matrix(coordinates)
+        constants = compute_force_constants(distance_matrix, lower_bound,
+                                            upper_bound, decay_factor, decay_power,
+                                            base_constant, minimum_force)
 
-    connected = build_connectivity_matrix(molecule, res_min_dist, node_to_idx,
-                                          selected_nodes=selection)
+        connected = build_connectivity_matrix(molecule, res_min_dist, node_to_idx,
+                                              selected_nodes=selection)
 
-    same_domain = build_pair_matrix(molecule, domain_criterion, idx_to_node,
-                                    selected_nodes=selection)
+        same_domain = build_pair_matrix(molecule, domain_criterion, idx_to_node,
+                                        selected_nodes=selection)
 
-    can_be_linked = (~connected) & same_domain
-    # Multiply the force constant by 0 if the nodes cannot be linked.
-    constants *= can_be_linked
-    distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
-    for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
-        # note the indices in the matrix are not anymore the idx of
-        # the full molecule but the subset of nodes in selection
-        from_key = idx_to_node[selection[from_idx]]
-        to_key = idx_to_node[selection[to_idx]]
-        force_constant = constants[from_idx, to_idx]
-        length = distance_matrix[from_idx, to_idx]
-        if force_constant > minimum_force:
-            molecule.add_interaction(
-                type_='bonds',
-                atoms=(from_key, to_key),
-                parameters=[bond_type, length, force_constant],
-                meta={'group': 'Rubber band'},
-            )
+        can_be_linked = (~connected) & same_domain
+        # Multiply the force constant by 0 if the nodes cannot be linked.
+        constants *= can_be_linked
+        distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
+        for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
+            # note the indices in the matrix are not anymore the idx of
+            # the full molecule but the subset of nodes in selection
+            from_key = idx_to_node[selection[from_idx]]
+            to_key = idx_to_node[selection[to_idx]]
+            force_constant = constants[from_idx, to_idx]
+            length = distance_matrix[from_idx, to_idx]
+            if force_constant > minimum_force:
+                molecule.add_interaction(
+                    type_='bonds',
+                    atoms=(from_key, to_key),
+                    parameters=[bond_type, length, force_constant],
+                    meta={'group': 'Rubber band'},
+                )
 
 
 def always_true(*args, **kwargs):  # pylint: disable=unused-argument
