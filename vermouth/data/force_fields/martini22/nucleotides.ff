@@ -2,18 +2,18 @@
 ; Flavin Mononucleotide (ox) 
 [ moleculetype ]
 ; name  nrexcl
-  FMNO   1
+  FMN    1
 
 [ atoms ]
 ; nr  type  resnr  resid  atom   cgnr  charge  mass
-  1   SC3   1      FMNO   FLA1   1     0.0     37.9
-  2   SNa   1      FMNO   FLA2   2     0.0      0.0
-  3   SN0   1      FMNO   FLA3   3     0.0      0.0
-  4   SP4   1      FMNO   FLA4   4     0.0    115.6
-  5   SP3   1      FMNO   FLA5   5     0.0     71.5
-  6   P3    1      FMNO   RIB1   6     0.0     72.0
-  7   P3    1      FMNO   RIB2   7     0.0     72.0
-  8   Qa    1      FMNO   PO4    8    -2.0     72.0 ;Note 2
+  1   SC3   1      FMN   FLA1   1     0.0     37.9
+  2   SNa   1      FMN   FLA2   2     0.0      0.0
+  3   SN0   1      FMN   FLA3   3     0.0      0.0
+  4   SP4   1      FMN   FLA4   4     0.0    115.6
+  5   SP3   1      FMN   FLA5   5     0.0     71.5
+  6   P3    1      FMN   RIB1   6     0.0     72.0
+  7   P3    1      FMN   RIB2   7     0.0     72.0
+  8   Qa    1      FMN   PO4    8    -2.0     72.0 ;Note 2
 
 [ virtual_sites3 ]
  2   1  4  5  1   0.58763  -0.05956
