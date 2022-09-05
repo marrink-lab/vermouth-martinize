@@ -384,7 +384,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'patterns')
     @SectionLineParser.section_parser('moleculetype', 'features')
     @SectionLineParser.section_parser('moleculetype', 'non-edge')
-    @SectionLineParser.section_parser('modifications', 'non-edge')
+    @SectionLineParser.section_parser('modification', 'non-edge')
     def _invalid_out_of_link(self, line, lineno=0):
         raise IOError('The "{}" section is only valid in links.'
                       .format(self.section[-1]))
@@ -409,7 +409,7 @@ class FFDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         _parse_link_atom(tokens, self.current_modification,
                          defaults={'PTM_atom': False},
-                         treat_prefix=False)
+                         treat_prefix=True)
 
     @SectionLineParser.section_parser('link', 'patterns', context_type='link')
     @SectionLineParser.section_parser('modification', 'patterns', context_type='modification')
@@ -806,9 +806,8 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
     # * interactions create nodes
     if context_type == 'block':
         treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
-    elif context_type in ('link', 'modifications'):
+    elif context_type in ('link', 'modification'):
         treated_atoms = _treat_link_interaction_atoms(atoms, context, section)
-
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
     # are the interaction parameters or the meta attributes.
