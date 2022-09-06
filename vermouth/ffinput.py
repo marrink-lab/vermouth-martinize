@@ -384,7 +384,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'patterns')
     @SectionLineParser.section_parser('moleculetype', 'features')
     @SectionLineParser.section_parser('moleculetype', 'non-edge')
-    @SectionLineParser.section_parser('modifications', 'non-edge')
+    @SectionLineParser.section_parser('modification', 'non-edge')
     def _invalid_out_of_link(self, line, lineno=0):
         raise IOError('The "{}" section is only valid in links.'
                       .format(self.section[-1]))
@@ -806,7 +806,7 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
     # * interactions create nodes
     if context_type == 'block':
         treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
-    elif context_type in ('link', 'modifications'):
+    elif context_type in ('link', 'modification'):
         treated_atoms = _treat_link_interaction_atoms(atoms, context, section)
 
 
