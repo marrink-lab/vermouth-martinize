@@ -200,8 +200,6 @@ CA  BB
 C   BB
 O   BB
 
-
-
 [ modification ]
 [ from ]
 charmm
@@ -214,52 +212,11 @@ TYRPHOS
 TYRPHOS
 
 [ from nodes ]
-N
-HN
-CA
-HA
-CB
-HB1
-HB2
-CG
-CD1
-HD1
 CE1
 HE1
-CD2
-HD2
-CE2
-HE2
-C
-O
 [ from edges ]
-CB	CA
-CG	CB
-CD2	CG
-CE1	CD1
-CZ	CE2
-OH	CZ
-N	HN
-N	CA
-C	CA
-CA	HA
-CB	HB1
-CB	HB2
-CD1	HD1
-CD2	HD2
 CE1	HE1
-CE2	HE2
-OH	HH
-O	C
-CD1	CG
 CE1	CZ
-CE2	CD2
-OH P1
-P1 O2
-P1 O3
-P1 O4
-H2 O2
-
 [ mapping ]
 P1   PO4
 O3   PO4
