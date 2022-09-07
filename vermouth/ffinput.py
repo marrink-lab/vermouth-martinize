@@ -409,7 +409,7 @@ class FFDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         _parse_link_atom(tokens, self.current_modification,
                          defaults={'PTM_atom': False},
-                         treat_prefix=False)
+                         treat_prefix=True)
 
     @SectionLineParser.section_parser('link', 'patterns', context_type='link')
     @SectionLineParser.section_parser('modification', 'patterns', context_type='modification')
@@ -808,7 +808,6 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
         treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
     elif context_type in ('link', 'modification'):
         treated_atoms = _treat_link_interaction_atoms(atoms, context, section)
-
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
     # are the interaction parameters or the meta attributes.

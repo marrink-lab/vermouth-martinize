@@ -114,6 +114,8 @@ def _old_atomname_match(node1, node2):
     node2 = node2.copy()
     node1['_name'] = name1
     node2['_name'] = name2
+    if 'order' in node2 and 'order' not in node1:
+        node1['order'] = node2['order']
     del node1['atomname']
     del node2['atomname']
     return node_matcher(node1, node2)
