@@ -1,0 +1,13 @@
+### DETAILS: 
+
+# Human Insluin HOMRO dimer
+# 2 chains which are connecte by disulphide bridge
+
+### TEST: 
+
+# the test checks -eunit flag
+# with setting region and a
+# residue range
+# elastic bonds should be formed
+# only within the regions within
+# the chains -> old_resids are used

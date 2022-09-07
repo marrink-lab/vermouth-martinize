@@ -442,14 +442,11 @@ def entry():
                           type=lambda x: x.split(','), default=None,
                           help='Comma separated list of bead names for elastic bonds')
     rb_group.add_argument('-eunit', dest='rb_unit', default='molecule',
-                          choices=['chain', 'molecule', 'all'],
                           help=('Establish what is the structural unit for the '
                                 'elastic network. Bonds are only created within'
-                                ' a unit.'))
-    rb_group.add_argument('-region', dest='rb_region', default='molecule',
-                          help=('Apply rubber bands only within the specified regions. '
-                                'The format is <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...'
-                                'Start and end resids are included'))
+                                ' a unit. Options are molecule, chain, all, or a'
+                                'specified region defined by resids, with follwing'
+                                'format: <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...'))
     go_group = parser.add_argument_group('Virtual site based GoMartini')
     go_group.add_argument('-govs-includes', action='store_true', default=False,
                           help='Write include statements to use Vitrual Site Go Martini.')
@@ -731,19 +728,14 @@ def entry():
         elif args.rb_unit == 'chain':
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
         else:
-            message = 'Unknown value for -eunit: "{}".'.format(args.rb_unit)
-            LOGGER.critical(message)
-            raise ValueError(message)
-        if args.rb_region == 'molecule':
-            domain_criterion = vermouth.processors.apply_rubber_band.always_true
-        else:
-            regions = [tuple([int(i) for i in apair.split(':')]) for apair in args.rb_region.split(',')]
+            regions = [tuple([int(i) for i in apair.split(':')]) for apair in args.rb_unit.split(',')]
             if any(len(region) != 2 for region in regions):
-                message = 'Unknown value for -region: "{}".'.format(args.rb_region)
+                message = 'Faulty resid interval for elastic network unit: "{}".'.format(args.rb_unit)
                 LOGGER.critical(message)
                 raise ValueError(message)
             else:
                 domain_criterion = vermouth.processors.apply_rubber_band.make_same_region_criterion(regions)
+
         if args.rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
