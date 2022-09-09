@@ -1,0 +1,29 @@
+; BENZ
+[ molecule ]
+BENZ
+
+[ from ]
+charmm
+
+[ to ]
+martini30b32
+
+[ martini ]
+R2 R3 R1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CG R3
+2 CD1 R1
+3 CE1 R1
+4 CZ R2
+5 CE2 R2
+6 CD2 R3
+7 HG R3
+8 HD1 R1
+9 HE1 R1
+10 HZ R2
+11 HE2 R2
+12 HD2 R3
