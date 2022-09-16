@@ -478,3 +478,62 @@ def test_apply_rubber_bands_same_regions(test_molecule, regions, chain_attribute
         res_min_dist=res_min_dist)
     process.run_molecule(test_molecule)
     assert test_molecule.interactions['bonds'] == outcome
+
+def test_skip_no_matches(test_molecule):
+    """
+    Tests that when no node matches the EN selectors, the molecule is simply skipped.
+    """
+    selector = functools.partial(
+        selectors.proto_select_attribute_in,
+        attribute='matches_none',
+        values=['BB', 'SC1'])
+
+    domain_criterion = vermouth.processors.apply_rubber_band.always_true
+
+    process = vermouth.processors.apply_rubber_band.ApplyRubberBand(
+        selector=selector,
+        lower_bound=0.0,
+        upper_bound=10.,
+        decay_factor=0,
+        decay_power=0.,
+        base_constant=1000,
+        minimum_force=1,
+        bond_type=6,
+        domain_criterion=domain_criterion,
+        res_min_dist=3)
+    process.run_molecule(test_molecule)
+    assert test_molecule.interactions['bonds'] == []
+
+def test_bail_out_on_nan(caplog, test_molecule):
+    """
+    Test the the EN processor bails out when nan coordinate
+    is found.
+    """
+    test_molecule.nodes[0]['position'] = np.array([np.nan, np.nan, np.nan])
+    test_molecule.moltype = "testmol"
+    selector = functools.partial(
+        selectors.proto_select_attribute_in,
+        attribute='atomname',
+        values=['BB'])
+
+    domain_criterion = vermouth.processors.apply_rubber_band.always_true
+
+    process = vermouth.processors.apply_rubber_band.ApplyRubberBand(
+        selector=selector,
+        lower_bound=0.0,
+        upper_bound=10.,
+        decay_factor=0,
+        decay_power=0.,
+        base_constant=1000,
+        minimum_force=1,
+        bond_type=6,
+        domain_criterion=domain_criterion,
+        res_min_dist=3)
+    process.run_molecule(test_molecule)
+
+    required_warning = ("Found nan coordinates in molecule testmol. "
+                        "Will not generate an EN for it. ")
+    record = caplog.records[0]
+    assert record.getMessage() == required_warning
+
+    assert test_molecule.interactions['bonds'] == []
