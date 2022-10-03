@@ -1,0 +1,11 @@
+### DETAILS: 
+
+# Human Insulin HOMRO dimer
+# 2 chains which are connected by disulphide bridge
+
+### TEST: 
+
+# the test checks -eunit flag
+# with setting chain; no EN
+# bond should be formed between
+# the two chains
