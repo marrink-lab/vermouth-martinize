@@ -261,7 +261,7 @@ def test_make_same_region_criterion(regions, left, right, nodes, edges, chain, r
     assert same_region(graph=graph, left=left, right=right) == outcome
 
 @pytest.fixture
-def test_molecule():
+def test_molecule(scope='function'):
     """
     Molecule with the following connectivity and atom-naming:
 
