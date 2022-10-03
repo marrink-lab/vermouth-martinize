@@ -445,7 +445,7 @@ def entry():
                           help=('Establish what is the structural unit for the '
                                 'elastic network. Bonds are only created within'
                                 ' a unit. Options are molecule, chain, all, or a'
-                                'specified region defined by resids, with follwing'
+                                'specified region defined by resids, with following'
                                 'format: <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...'))
     go_group = parser.add_argument_group('Virtual site based GoMartini')
     go_group.add_argument('-govs-includes', action='store_true', default=False,
