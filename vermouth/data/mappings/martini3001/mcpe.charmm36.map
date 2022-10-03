@@ -1,0 +1,31 @@
+; MCYPE
+[ molecule ]
+MCPE
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+C1 C2
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C6 C1
+2 C5 C1
+3 C1 C1
+4 C2 C2
+5 C3 C2
+6 C4 C1
+7 H62 C1
+8 H63 C1
+9 H61 C1
+10 H51 C1
+11 H22 C2
+12 H21 C2
+13 H31 C2
+14 H32 C2

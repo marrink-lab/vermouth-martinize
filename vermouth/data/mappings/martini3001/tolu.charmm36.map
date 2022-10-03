@@ -1,0 +1,29 @@
+; TOLU
+[ molecule ]
+TOLU
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 R1 R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CT R1
+2 CZ R1
+3 CE1 R1 R2
+4 CD1 R2
+5 CG R2 R3
+6 CD2 R3
+7 CE2 R1 R3
+8 H13 R1
+9 H11 R1
+10 H12 R1
+11 HD1 R2
+12 HD2 R3

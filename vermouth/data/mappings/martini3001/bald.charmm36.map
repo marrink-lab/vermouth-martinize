@@ -1,0 +1,29 @@
+; BEAL
+[ molecule ]
+BALD
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 R4 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 O O1
+2 C O1
+3 CG R2 R3
+4 CD1 R2
+5 CE1 R2 R4
+6 CZ R4
+7 CE2 R3 R4
+8 CD2 R3
+9 HA O1
+10 HD1 R2
+11 HZ R4
+12 HD2 R3

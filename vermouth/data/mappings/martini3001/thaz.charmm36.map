@@ -1,0 +1,25 @@
+; THAZ
+[ molecule ]
+THAZ
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 R3 N1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 N3 N1
+2 C2 R3
+3 C1 R3
+4 S5 R2
+5 C4 N1
+6 H2 R3
+7 H1 R3
+8 H4 N1

@@ -1,0 +1,31 @@
+; DIOX
+[ molecule ]
+DIOX
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+O2 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 O1 O2
+2 C2 O2
+3 C3 O1
+4 O4 O1
+5 C5 O1
+6 C6 O2
+7 H21 O2
+8 H22 O2
+9 H31 O1
+10 H32 O1
+11 H51 O1
+12 H52 O1
+13 H61 O2
+14 H62 O2

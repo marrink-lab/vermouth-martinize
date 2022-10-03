@@ -1,0 +1,10 @@
+[ moleculetype ]
+BENZ 1
+[ atoms ]
+1 TC4 1 BENZ R1 1 0.0
+2 TC4 1 BENZ R2 2 0.0
+3 TC4 1 BENZ R3 3 0.0
+[ constraints ]
+0 1 1 0.290 {}
+1 2 1 0.290 {}
+0 2 1 0.290 {}

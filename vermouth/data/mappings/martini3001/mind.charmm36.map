@@ -1,0 +1,36 @@
+; MIND
+[ molecule ]
+MIND
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R4 R1 N5 R2 R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CE3 R1
+2 CZ3 R1
+3 CH2 R2
+4 CZ2 R2
+5 CE2 R3
+6 CD2 R3
+7 CG R4
+8 CD1 N5
+9 NE1 N5
+10 HE1 N5
+11 CB R4
+12 HE3 R1
+13 HZ3 R1
+14 HH2 R2
+15 HZ2 R2
+16 HD1 N5
+17 HB1 R4
+18 HB2 R4
+19 HB3 R4

@@ -1,0 +1,33 @@
+; MBZOA
+[ molecule ]
+MBOA
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 R4 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C8 O1
+2 O8 O1
+3 C7 O1
+4 O7 O1
+5 C1 R2 R3
+6 C2 R2
+7 C3 R2 R4
+8 C4 R4
+9 C5 R3 R4
+10 C6 R3
+11 H81 O1
+12 H82 O1
+13 H83 O1
+14 H2 R2
+15 H4 R4
+16 H6 R3

@@ -1,0 +1,25 @@
+[ molecule ]
+CYS
+
+[from]
+gromos
+
+[to]
+martini22
+
+[ martini ]
+BB SC1
+
+[ mapping ]
+gromos
+
+[ atoms ]
+    1     N    BB
+    2     H    BB
+    3    CA    BB
+    4    CB   SC1 BB
+    5    SG   SC1
+    6    HG   SC1
+    7     C    BB
+    8     O    BB
+

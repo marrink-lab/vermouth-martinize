@@ -1,0 +1,33 @@
+; PCRE
+[ molecule ]
+PCRO
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 R4 P1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C1 R4
+2 CZ R4
+3 CE1 R2
+4 CD1 R2
+5 CG P1
+6 O2 P1
+7 CD2 R3
+8 CE2 R3
+9 H11 R4
+10 H12 R4
+11 H13 R4
+12 HE1 R2
+13 HD1 R2
+14 H2 P1
+15 HD2 R3
+16 HE2 R3

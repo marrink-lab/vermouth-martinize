@@ -1,0 +1,52 @@
+[ molecule ]
+FMN
+
+[from]
+gromos
+
+[to]
+martini22
+
+[ martini ]
+FLA1 FLA2 FLA3 FLA4 FLA5 RIB1 RIB2 PO4
+
+[ mapping ]
+gromos
+
+[ atoms ]
+    1   C9A FLA3
+    2   N10 FLA3
+    3  C10A FLA3
+    4    N1 FLA5
+    5    C2 FLA5
+    6    O2 FLA5
+    7    N3 FLA4
+    8    H3 !FLA4
+    9    C4 FLA4
+   10    O4 FLA4
+   11    C4A FLA2
+   12    N5 FLA2
+   13   C5A FLA2
+   14    C6 FLA2
+   15    C7 FLA1
+   16   CM7 FLA1
+   17    C8 FLA1
+   18   CM8 FLA1
+   19    C9 FLA3
+   20    CA RIB1
+   21    CB RIB1
+   22    OB RIB1
+   23    HB !RIB1 
+   24    CG RIB1 RIB2
+   25    OG RIB1 RIB2
+   26    HG !RIB2
+   27    CD RIB2
+   28    OD RIB2
+   29    HD !RIB2
+   30    CE RIB2
+   31    OZ PO4
+   32    PH !PO4
+   33    OH PO4
+   34    HH !PO4
+   35    OT1 PO4
+   36    OT2 PO4

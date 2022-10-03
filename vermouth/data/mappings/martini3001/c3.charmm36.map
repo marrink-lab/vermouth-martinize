@@ -1,0 +1,26 @@
+; CPR
+[ molecule ]
+C3
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C1 R1
+2 C2 R1
+3 C3 R1
+4 H11 R1
+5 H12 R1
+6 H21 R1
+7 H22 R1
+8 H32 R1
+9 H31 R1

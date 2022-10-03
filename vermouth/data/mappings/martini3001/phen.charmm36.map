@@ -1,0 +1,27 @@
+; PHEN
+[ molecule ]
+PHEN
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CG R2 R3
+2 CD1 R2
+3 CE1 O1 R2
+4 CZ O1
+5 CE2 O1 R3
+6 CD2 R3
+7 OH O1
+8 HD1 R2
+9 HD2 R3
+10 HH O1

@@ -1,0 +1,41 @@
+; ANTH
+[ molecule ]
+ANTR
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R4 R1 R6 R5 R2 R3 R7
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C3 R1
+2 C2 R1
+3 C1 R3
+4 C14 R3
+5 C13 R4
+6 C12 R6
+7 C11 R6
+8 C10 R7
+9 C9 R7
+10 C8 R5
+11 C7 R5
+12 C6 R4
+13 C5 R2
+14 C4 R2
+15 H3 R1
+16 H2 R1
+17 H1 R3
+18 H13 R4
+19 H11 R6
+20 H10 R7
+21 H9 R7
+22 H8 R5
+23 H6 R4
+24 H4 R2
