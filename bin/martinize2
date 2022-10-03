@@ -763,6 +763,9 @@ def entry():
             old_resids = nx.get_node_attributes(molecule, "_old_resid")
             nx.set_node_attributes(molecule, old_resids, "resid")
 
+    LOGGER.info("Sorting atomids", type='step')
+    vermouth.SortNodes().run_system(system)
+
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:
         LOGGER.debug("Writing molecule {}.", molecule, type='step')
