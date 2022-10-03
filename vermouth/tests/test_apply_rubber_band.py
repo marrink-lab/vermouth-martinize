@@ -535,5 +535,5 @@ def test_bail_out_on_nan(caplog, test_molecule):
                         "Will not generate an EN for it. ")
     record = caplog.records[0]
     assert record.getMessage() == required_warning
-
+    assert len(caplog.records) == 1
     assert test_molecule.interactions['bonds'] == []
