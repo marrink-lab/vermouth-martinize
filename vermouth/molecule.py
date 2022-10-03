@@ -428,6 +428,10 @@ class Molecule(nx.Graph):
             node_attr = self.nodes[node]
             yield node, node_attr
 
+    @property
+    def sorted_nodes(self):
+        yield from sorted(self.nodes, key=lambda n_idx: self.nodes[n_idx].get('atomid', np.inf))
+
     def copy(self):
         """
         Creates a copy of the molecule.
