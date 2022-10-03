@@ -1,0 +1,33 @@
+; THP
+[ molecule ]
+THP
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 O1 O1
+2 C2 O1
+3 C3 R2
+4 C4 R2
+5 C5 R2
+6 C6 O1
+7 H21 O1
+8 H22 O1
+9 H31 R2
+10 H32 R2
+11 H41 R2
+12 H42 R2
+13 H51 R2
+14 H52 R2
+15 H61 O1
+16 H62 O1

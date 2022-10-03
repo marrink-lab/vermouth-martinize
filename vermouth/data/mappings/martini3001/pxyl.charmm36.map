@@ -1,0 +1,35 @@
+; PXYLE
+[ molecule ]
+PXYL
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 R1 R4 R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C2 R1
+2 CG R1
+3 CD1 R2
+4 CE1 R2
+5 CZ R4
+6 C1 R4
+7 CE2 R3
+8 CD2 R3
+9 H21 R1
+10 H22 R1
+11 H23 R1
+12 HD1 R2
+13 HE1 R2
+14 H11 R4
+15 H12 R4
+16 H13 R4
+17 HE2 R3
+18 HD2 R3

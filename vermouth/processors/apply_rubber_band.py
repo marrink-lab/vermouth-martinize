@@ -23,7 +23,9 @@ import copy
 from .processor import Processor
 from .. import selectors
 from ..graph_utils import make_residue_graph
+from ..log_helpers import StyleAdapter, get_logger
 
+LOGGER = StyleAdapter(get_logger(__name__))
 
 # the bond type of the RB
 DEFAULT_BOND_TYPE = 6
@@ -303,7 +305,18 @@ def apply_rubber_band(molecule, selector,
         raise ValueError('All atoms from the selection must have coordinates. '
                          'The following atoms do not have some: {}.'
                          .format(' '.join(missing)))
+
+    if not coordinates:
+        return
+
     coordinates = np.stack(coordinates)
+    if np.any(np.isnan(coordinates)):
+        LOGGER.warning("Found nan coordinates in molecule {}. "
+                       "Will not generate an EN for it. ",
+                       molecule.moltype,
+                       type='unmapped-atom')
+        return
+
     distance_matrix = self_distance_matrix(coordinates)
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,

@@ -101,3 +101,23 @@ HD2 {"resname": "ASP", "element": "H", "PTM_atom": true}
 OD2 {"resname": "ASP"}
 [ edges ]
 OD2 HD2
+
+[ modification ]
+TYRPHOS
+[ atoms ]
+OH  {"resname": "TYR", "element": "O"}
+CZ  {"resname": "TYR", "element": "C"}
+P1  {"resname": "TYR", "PTM_atom": true, "element": "P"}
+O2  {"resname": "TYR", "PTM_atom": true, "element": "O"}
+H2  {"resname": "TYR", "PTM_atom": true, "element": "H"}
+O3  {"resname": "TYR", "PTM_atom": true, "element": "O"}
+O4  {"resname": "TYR", "PTM_atom": true, "element": "O"}
+HH  {"resname": "TYR", "replace": {"atomname": null}, "element": "H"}
+[ edges ]
+ OH	P1
+ P1 O2
+ O2 H2
+ P1 O3
+ P1 O4
+ OH CZ
+ OH HH
