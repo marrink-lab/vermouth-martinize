@@ -136,7 +136,6 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
                                omit_charges=True, nan_missing_pos=True,
                                defer_writing=False)
     vermouth.AttachMass(attribute='mass').run_system(canonicalized)
-    vermouth.SortMoleculeAtoms().run_system(canonicalized) # was system
     return canonicalized
 
 
@@ -764,7 +763,7 @@ def entry():
             nx.set_node_attributes(molecule, old_resids, "resid")
 
     LOGGER.info("Sorting atomids", type='step')
-    vermouth.SortNodes().run_system(system)
+    vermouth.SortMoleculeAtoms().run_system(system)
 
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:

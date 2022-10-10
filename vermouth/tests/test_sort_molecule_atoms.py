@@ -54,10 +54,11 @@ def test_sort_molecule_atoms():
     molecule.add_nodes_from(nodes)
     molecule.add_edges_from(edges)
     molecule.interactions = copy.copy(interactions)
+    edges = {frozenset((i, j)): data for i, j, data in edges}
 
     processor = SortMoleculeAtoms()
     processor.run_molecule(molecule)
 
     assert list(molecule.nodes) == [5, 1, 4, 0, 3, 6, 2]
-    assert sorted(molecule.edges(data=True)) == edges
+    assert {frozenset((i, j)): data for i, j, data in molecule.edges(data=True)} == edges
     assert molecule.interactions == interactions
