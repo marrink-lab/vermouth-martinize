@@ -18,11 +18,15 @@ processor.
 """
 
 import copy
+import pytest
 from vermouth import Molecule, SortMoleculeAtoms
 from vermouth.molecule import Interaction
 
-
-def test_sort_molecule_atoms():
+@pytest.mark.parametrize("target_attr", [
+    None,
+    "atomid",
+ ])
+def test_sort_molecule_atoms(target_attr):
     """
     Test the :class:`vermouth.processors.sort_molecule_atoms.SortMoleculeAtoms`
     processor in normal conditions.
@@ -56,9 +60,11 @@ def test_sort_molecule_atoms():
     molecule.interactions = copy.copy(interactions)
     edges = {frozenset((i, j)): data for i, j, data in edges}
 
-    processor = SortMoleculeAtoms()
+    processor = SortMoleculeAtoms(target_attr=target_attr)
     processor.run_molecule(molecule)
 
     assert list(molecule.nodes) == [5, 1, 4, 0, 3, 6, 2]
+    if target_attr:
+        [molecule.nodes[nidx][target_attr] for nidx in molecule] == list(range(len(molecule)))
     assert {frozenset((i, j)): data for i, j, data in molecule.edges(data=True)} == edges
     assert molecule.interactions == interactions
