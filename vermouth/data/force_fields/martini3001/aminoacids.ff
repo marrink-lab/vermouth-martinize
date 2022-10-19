@@ -607,7 +607,7 @@ HSP                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   $prot_default_bb_type     1     HIS     BB     1      0    
+1   $prot_default_bb_type     1     HSP     BB     1      0    
 2   TC4     1     HSP     SC1    2    0        
 3   TP1dq   1     HSP     SC2    3   +0.5     
 4   TP1dq   1     HSP     SC3    4   +0.5      
