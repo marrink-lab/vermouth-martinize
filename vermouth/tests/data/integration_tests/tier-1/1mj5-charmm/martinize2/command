@@ -1,10 +1,10 @@
 martinize2
 -f ../aa.pdb
--x cg.pdb
 -o cg.top
+-x protein_cg.gro
 -ff martini3001
--elastic
--scfix
--cys auto
+-maxwarn 1
 -dssp
--resid input
+-elastic
+-cys auto
+-scfix
