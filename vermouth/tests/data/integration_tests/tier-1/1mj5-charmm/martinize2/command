@@ -1,7 +1,7 @@
 martinize2
 -f ../aa.pdb
 -o cg.top
--x protein_cg.gro
+-x cg.pdb
 -ff martini3001
 -maxwarn 1
 -dssp
