@@ -766,6 +766,9 @@ def entry():
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:
         LOGGER.debug("Writing molecule {}.", molecule, type='step')
+        for loglevel, entries in molecule.log_entries.items():
+            for entry in entries:
+                LOGGER.log(loglevel, entry)
 
     # Write the topology if requested
     # grompp has a limit in the number of character it can read per line

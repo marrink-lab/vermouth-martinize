@@ -24,6 +24,7 @@ is done in the same way an ITP file describes a molecule.
 
 import collections
 import copy
+import logging
 import numbers
 import json
 from .molecule import (
@@ -437,6 +438,25 @@ class FFDirector(SectionLineParser):
         # parses force-field wide citations
         cite_keys = line.split()
         self.citations.update(cite_keys)
+
+    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block', loglevel='debug')
+    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='debug')
+    @SectionLineParser.section_parser('modification', 'citation', context_type='modification', loglevel='debug')
+    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block',
+                                      loglevel='info')
+    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='info')
+    @SectionLineParser.section_parser('modification', 'citation', context_type='modification',
+                                      loglevel='info')
+    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block', loglevel='warning')
+    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='warning')
+    @SectionLineParser.section_parser('modification', 'citation', context_type='modification', loglevel='warning')
+    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block', loglevel='error')
+    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='error')
+    @SectionLineParser.section_parser('modification', 'citation', context_type='modification', loglevel='error')
+    def _parse_log_entry(self, line, lineno=0, context_type="", loglevel=""):
+        loglevel = logging.getLevelName(loglevel.upper())
+        self.get_context(context_type).log_entries[loglevel].add(line)
+
 
 def _some_atoms_left(tokens, atoms, natoms):
     """

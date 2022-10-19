@@ -357,6 +357,7 @@ class Molecule(nx.Graph):
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
         self.citations = set()
+        self.log_entries = defaultdict(set)
         self.max_node = None
 
     def __eq__(self, other):
@@ -724,6 +725,9 @@ class Molecule(nx.Graph):
                 self.add_edge(correspondence[node1], correspondence[node2])
         # merge the citation sets
         self.citations.update(molecule.citations)
+        # Merge the log entries
+        for loglevel, entries in molecule.log_entries.items():
+            self.log_entries[loglevel].update(entries)
 
         return correspondence
 
@@ -1189,6 +1193,7 @@ class Block(Molecule):
         name_to_idx = {}
         mol = Molecule(force_field=force_field)
         mol.citations = self.citations
+        mol.log_entries = copy.deepcopy(self.log_entries)
 
         for idx, node in enumerate(self.nodes, start=atom_offset):
             name_to_idx[node] = idx
