@@ -456,7 +456,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('modification', 'error')
     def _parse_log_entry(self, line, lineno=0):
         loglevel = logging.getLevelName(self.section[-1].upper())
-        self.get_context().log_entries[loglevel].add(line)
+        self.get_context().log_entries[loglevel][line] = []
 
 
 def _some_atoms_left(tokens, atoms, natoms):

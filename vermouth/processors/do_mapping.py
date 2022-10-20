@@ -405,8 +405,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     mol_to_mod, modification, references = match
     LOGGER.info('Applying modification mapping {}', modification.name, type='general')
     graph_out.citations.update(modification.citations)
-    for loglevel, entries in modification.log_entries.items():
-        graph_out.log_entries[loglevel].update(entries)
+
     mod_to_mol = defaultdict(dict)
     for mol_idx, mod_idxs in mol_to_mod.items():
         for mod_idx in mod_idxs:
@@ -479,6 +478,15 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             interaction = interaction._replace(atoms=atoms)
             applied_interactions[interaction_type][tuple(atoms)].append(modification)
             graph_out.add_interaction(interaction_type, **interaction._asdict())
+
+    # Some jank needed here, since modification node indices are integers
+    mod_atom_name_to_out = {}
+    for mod_idx in modification.nodes:
+        name = modification.nodes[mod_idx]['atomname']
+        mod_atom_name_to_out[name] = mod_to_out[mod_idx]
+    for loglevel, entries in modification.log_entries.items():
+        for entry in entries:
+            graph_out.log_entries[loglevel][entry] += [mod_atom_name_to_out]
     return dict(applied_interactions), new_references
 
 

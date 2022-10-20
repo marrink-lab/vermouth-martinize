@@ -357,7 +357,8 @@ class Molecule(nx.Graph):
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
         self.citations = set()
-        self.log_entries = defaultdict(set)
+        # {loglevel: {entry: [fmt_args]}}
+        self.log_entries = defaultdict(lambda: defaultdict(list))
         self.max_node = None
 
     def __eq__(self, other):
@@ -728,7 +729,10 @@ class Molecule(nx.Graph):
         self.citations.update(molecule.citations)
         # Merge the log entries
         for loglevel, entries in molecule.log_entries.items():
-            self.log_entries[loglevel].update(entries)
+            for entry, fmt_args in entries.items():
+                # Renumber any existing formatting maps
+                fmt_args = [{name: correspondence[old] for (name, old) in fmt_arg.items()} for fmt_arg in fmt_args]
+                self.log_entries[loglevel][entry] += fmt_args + [correspondence]
 
         return correspondence
 

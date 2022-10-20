@@ -272,8 +272,6 @@ class DoLinks(Processor):
         _nodes_to_remove = []
         for link in links:
             matches = match_link(molecule, link)
-            for loglevel, entries in link.log_entries.items():
-                molecule.log_entries[loglevel].update(entries)
 
             for match in matches:
                 for node, node_attrs in link.nodes.items():
@@ -294,6 +292,11 @@ class DoLinks(Processor):
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
                         molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
+
+                for loglevel, entries in link.log_entries.items():
+                    for entry, fmt_args in entries.items():
+                        fmt_args = fmt_args + [match]
+                        molecule.log_entries[loglevel][entry] += fmt_args
 
             molecule.remove_nodes_from(_nodes_to_remove)
         return molecule
