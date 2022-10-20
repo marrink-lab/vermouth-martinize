@@ -1,0 +1,4 @@
+Amber based pbd of 1mj5
+This test makes sure the protonation states
+of Histidine (i.e. HIE, HID, HIP) are correctly
+recognized

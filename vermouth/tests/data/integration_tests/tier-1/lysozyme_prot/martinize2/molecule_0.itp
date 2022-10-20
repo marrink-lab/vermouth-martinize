@@ -45,7 +45,7 @@ molecule_0 1
  31 P2     14 ARG  BB   31  0.0     
  32 SC3    14 ARG  SC1  32  0.0     
  33 SQ3p   14 ARG  SC2  33  1.0     
- 34 P2     15 HIS  BB   34  0.0     
+ 34 P2     15 HSP  BB   34  0.0     
  35 TC4    15 HSP  SC1  35  0.0     
  36 TP1dq  15 HSP  SC2  36  0.5     
  37 TP1dq  15 HSP  SC3  37  0.5     

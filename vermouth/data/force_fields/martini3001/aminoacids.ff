@@ -13,8 +13,8 @@
 ; limitations under the License.
 
 [ macros ]
-protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
-protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
 prot_default_bb_type P2
 stiff_fc 1000000
 
@@ -518,6 +518,50 @@ SC2 SC3
 
 [ moleculetype ]
 ;molname       nrexcl
+HSE                 1
+
+[ atoms ]
+;id type resnr residu atom cgnr   charge
+1   $prot_default_bb_type     1     HSE    BB     1      0    
+2   TC4     1     HSE     SC1    2    0    ; three side chains in triangle
+3   TN6d    1     HSE     SC2    3    0    ; configuration, mimicking
+4   TN5a    1     HSE     SC3    4    0    ; ring structure
+
+[ bonds ]
+#meta {"group": "Side chain bonds"}
+;  i     j   funct   length  force.c.
+  BB   SC1    1       0.336     7500 
+#meta {"group": "Side chain bonds", "ifdef": "FLEXIBLE"}
+;  i     j   funct   length  
+ SC1   SC2    1       0.320  $stiff_fc
+ SC1   SC3    1       0.300  $stiff_fc 
+ SC2   SC3    1       0.270  $stiff_fc
+
+[ constraints ]
+#meta {"group": "Side chain bonds", "ifndef": "FLEXIBLE"}
+;  i     j   funct   length  
+ SC1   SC2    1       0.320
+ SC1   SC3    1       0.300  
+ SC2   SC3    1       0.270
+
+[angles]
+#meta {"group": "Side chain angles"}
+;  i     j    k     funct   angle  force.c.
+   BB   SC1  SC2       2   120.000   50.0  
+   BB   SC1  SC3       2   120.000   50.0 
+
+[exclusions]
+; We do not want non-bounded interactions within the residue.
+BB SC1 SC2 SC3
+SC1 SC2 SC3
+SC2 SC3
+
+
+
+;;; HISTIDINE 
+
+[ moleculetype ]
+;molname       nrexcl
 HSD                1
 
 [ atoms ]
@@ -607,7 +651,7 @@ HSP                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   $prot_default_bb_type     1     HIS     BB     1      0    
+1   $prot_default_bb_type     1     HSP     BB     1      0    
 2   TC4     1     HSP     SC1    2    0        
 3   TP1dq   1     HSP     SC2    3   +0.5     
 4   TP1dq   1     HSP     SC3    4   +0.5      
