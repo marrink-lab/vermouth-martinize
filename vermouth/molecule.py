@@ -439,6 +439,8 @@ class Molecule(nx.Graph):
         """
         new = self.subgraph(self.nodes)
         new.name = self.name
+        new.citations = self.citations.copy()
+        new.log_entries = copy.deepcopy(self.log_entries)
         return new
 
     def subgraph(self, nodes):
@@ -718,7 +720,6 @@ class Molecule(nx.Graph):
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
-                #print(atoms, interaction.meta)
                 self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:

@@ -181,9 +181,12 @@ class FFDirector(SectionLineParser):
             self.current_modification.citations.update(self.citations)
             self.force_field.modifications[self.current_modification.name] = self.current_modification
 
-    def get_context(self, context_type):
+    def get_context(self, context_type=''):
+        if not context_type:
+            context_type = self.section[0]
         possible_contexts = {
             'block': self.current_block,
+            'moleculetype': self.current_block,
             'link': self.current_link,
             'molmeta': self.current_link,
             'modification': self.current_modification,
@@ -439,23 +442,21 @@ class FFDirector(SectionLineParser):
         cite_keys = line.split()
         self.citations.update(cite_keys)
 
-    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block', loglevel='debug')
-    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='debug')
-    @SectionLineParser.section_parser('modification', 'citation', context_type='modification', loglevel='debug')
-    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block',
-                                      loglevel='info')
-    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='info')
-    @SectionLineParser.section_parser('modification', 'citation', context_type='modification',
-                                      loglevel='info')
-    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block', loglevel='warning')
-    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='warning')
-    @SectionLineParser.section_parser('modification', 'citation', context_type='modification', loglevel='warning')
-    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block', loglevel='error')
-    @SectionLineParser.section_parser('link', 'citation', context_type='link', loglevel='error')
-    @SectionLineParser.section_parser('modification', 'citation', context_type='modification', loglevel='error')
-    def _parse_log_entry(self, line, lineno=0, context_type="", loglevel=""):
-        loglevel = logging.getLevelName(loglevel.upper())
-        self.get_context(context_type).log_entries[loglevel].add(line)
+    @SectionLineParser.section_parser('moleculetype', 'debug',)
+    @SectionLineParser.section_parser('link', 'debug',)
+    @SectionLineParser.section_parser('modification', 'debug')
+    @SectionLineParser.section_parser('moleculetype', 'info')
+    @SectionLineParser.section_parser('link', 'info')
+    @SectionLineParser.section_parser('modification', 'info')
+    @SectionLineParser.section_parser('moleculetype', 'warning')
+    @SectionLineParser.section_parser('link', 'warning')
+    @SectionLineParser.section_parser('modification', 'warning')
+    @SectionLineParser.section_parser('moleculetype', 'error')
+    @SectionLineParser.section_parser('link', 'error')
+    @SectionLineParser.section_parser('modification', 'error')
+    def _parse_log_entry(self, line, lineno=0):
+        loglevel = logging.getLevelName(self.section[-1].upper())
+        self.get_context().log_entries[loglevel].add(line)
 
 
 def _some_atoms_left(tokens, atoms, natoms):
