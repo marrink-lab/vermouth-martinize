@@ -19,15 +19,15 @@ jobs:
     
     strategy:
       matrix:
-       py_version: ["3.6", "3.7", "3.8", "3.9"] 
+       py_version: ["3.7", "3.8", "3.9", "3.10"]
        include:
-         - py_version: "3.6"
-           WITH_CODECOV: true
          - py_version: "3.7"
            WITH_CODECOV: true
          - py_version: "3.8"
            WITH_CODECOV: true
          - py_version: "3.9"
+           WITH_CODECOV: true
+         - py_version: "3.10"
            WITH_CODECOV: true
 
     steps:
@@ -61,10 +61,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
+        python-version: 3.10
         cache: pip
     - name: Install dependencies
       run: |
@@ -82,10 +82,10 @@ jobs:
       
       steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.9
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-           python-version: 3.9
+           python-version: 3.10
            cache: pip
       - name: Install dependencies
         run: |
@@ -105,10 +105,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
+        python-version: 3.10
         cache: pip
         
     - name: Install pypa/build
