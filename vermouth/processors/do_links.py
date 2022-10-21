@@ -272,7 +272,6 @@ class DoLinks(Processor):
         _nodes_to_remove = []
         for link in links:
             matches = match_link(molecule, link)
-
             for match in matches:
                 for node, node_attrs in link.nodes.items():
                     if 'replace' in node_attrs:
