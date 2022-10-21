@@ -37,11 +37,12 @@ jobs:
            WITH_CODECOV: true
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.py_version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.py_version }}
+        cache: pip
     - name: Install dependencies part I
       run: |
         sudo apt-get install dssp
@@ -65,11 +66,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9
+        cache: pip
     - name: Install dependencies
       run: |
         pip install --upgrade setuptools pip
@@ -85,11 +87,12 @@ jobs:
       runs-on: ubuntu-latest
       
       steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
         with:
            python-version: 3.9
+           cache: pip
       - name: Install dependencies
         run: |
           pip install --upgrade setuptools pip
