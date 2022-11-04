@@ -11,10 +11,8 @@ C-ter
 
 [ from nodes ]
 N
-HN
 
 [ from edges ]
-HN N
 N CA
 
 [ mapping ]
@@ -63,14 +61,11 @@ COOH-ter
 
 [ from nodes ]
 N
-HN
 
 [ from edges ]
-HN N
 N CA
 
 [ mapping ]
-HN BB
 N BB
 CA BB
 C  BB
