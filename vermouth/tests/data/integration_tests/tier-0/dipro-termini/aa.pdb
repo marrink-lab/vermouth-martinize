@@ -1,0 +1,62 @@
+ATOM      1  N   PRO     2       0.649  -0.549   1.064  1.00  0.00           N  
+ATOM      2  CA  PRO     2       1.159   0.454   0.141  1.00  0.00           C  
+ATOM      3  C   PRO     2       1.064   1.870   0.735  1.00  0.00           C  
+ATOM      4  O   PRO     2       0.038   2.239   1.307  1.00  0.00           O  
+ATOM      5  CB  PRO     2       0.249   0.252  -1.080  1.00  0.00           C  
+ATOM      6  CG  PRO     2      -1.068  -0.252  -0.471  1.00  0.00           C  
+ATOM      7  CD  PRO     2      -0.604  -1.157   0.674  1.00  0.00           C  
+ATOM      8  HA  PRO     2       2.202   0.248  -0.110  1.00  0.00           H  
+ATOM      9 2HB  PRO     2       0.674  -0.529  -1.713  1.00  0.00           H  
+ATOM     10 3HB  PRO     2       0.122   1.162  -1.671  1.00  0.00           H  
+ATOM     11 2HG  PRO     2      -1.687  -0.787  -1.194  1.00  0.00           H  
+ATOM     12 3HG  PRO     2      -1.629   0.591  -0.063  1.00  0.00           H  
+ATOM     13 2HD  PRO     2      -0.421  -2.174   0.318  1.00  0.00           H  
+ATOM     14 3HD  PRO     2      -1.313  -1.168   1.504  1.00  0.00           H  
+ATOM     15  N   PRO     3       2.065   2.676   0.631  1.00  0.00           N  
+ATOM     16  CA  PRO     3       2.041   4.028   1.170  1.00  0.00           C  
+ATOM     17  C   PRO     3       1.097   4.940   0.368  1.00  0.00           C  
+ATOM     18  O   PRO     3       0.469   4.496  -0.594  1.00  0.00           O  
+ATOM     19  CB  PRO     3       3.516   4.441   1.055  1.00  0.00           C  
+ATOM     20  CG  PRO     3       4.021   3.647  -0.159  1.00  0.00           C  
+ATOM     21  CD  PRO     3       3.298   2.304  -0.028  1.00  0.00           C  
+ATOM     22  H01 PRO     3       1.032   6.867  -0.035  1.00  0.00           H  
+ATOM     23  O01 PRO     3       0.947   6.312   0.743  1.00  0.00           O  
+ATOM     24  HA  PRO     3       1.718   4.019   2.214  1.00  0.00           H  
+ATOM     25 2HB  PRO     3       4.048   4.108   1.949  1.00  0.00           H  
+ATOM     26 3HB  PRO     3       3.648   5.519   0.942  1.00  0.00           H  
+ATOM     27 2HG  PRO     3       5.107   3.532  -0.162  1.00  0.00           H  
+ATOM     28 3HG  PRO     3       3.703   4.143  -1.078  1.00  0.00           H  
+ATOM     29 2HD  PRO     3       3.860   1.618   0.609  1.00  0.00           H  
+ATOM     30 3HD  PRO     3       3.102   1.845  -1.000  1.00  0.00           H  
+TER   
+CONECT    1    2    7
+CONECT    2    1    3    5    8
+CONECT    3    2    4   15
+CONECT    4    3
+CONECT    5    2    6    9   10
+CONECT    6    5    7   11   12
+CONECT    7    1    6   13   14
+CONECT    8    2
+CONECT    9    5
+CONECT   10    5
+CONECT   11    6
+CONECT   12    6
+CONECT   13    7
+CONECT   14    7
+CONECT   15    3   16   21
+CONECT   16   15   17   19   24
+CONECT   17   16   18   23
+CONECT   18   17
+CONECT   19   16   20   25   26
+CONECT   20   19   21   27   28
+CONECT   21   15   20   29   30
+CONECT   22   23
+CONECT   23   17   22
+CONECT   24   16
+CONECT   25   19
+CONECT   26   19
+CONECT   27   20
+CONECT   28   20
+CONECT   29   21
+CONECT   30   21
+END
