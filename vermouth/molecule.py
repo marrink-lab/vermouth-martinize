@@ -596,6 +596,8 @@ class Molecule(nx.Graph):
                    "and with version {}")
             raise KeyError(msg.format(type_, atoms, version))
         del self.interactions[type_][idx]
+        if not self.interactions[type_]:
+            del self.interactions[type_]
 
     def remove_matching_interaction(self, type_, template_interaction):
         """

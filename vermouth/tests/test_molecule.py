@@ -1279,3 +1279,49 @@ def test_to_molecule():
                              parameters=['a', '0.1', '300'],
                              meta={'b': 1}),]
     assert ref_bonds == test_molecule.interactions['bonds']
+
+
+@pytest.mark.parametrize('atoms, bonds, interactions, removed, expected', [
+    # empty molecule
+    ([], [], [], {}, {}),
+    # interactions that all need to be removed
+    ([1, 2], [(1, 2)], [('bond', (1, 2), {})], {'type_': 'bond', "atoms": (1, 2)}, {}),
+    # Molecule with interactions of different types of which some need to be removed
+    (
+        [1, 2, 3, 4, 5, 6, 7],
+        [(1, 2), (3, 4), (5, 7), (6, 7)],
+        [('bond', (1, 6), {}), ('bond', (5, 4), {}), ('angle', (1, 2), {})],
+        {'type_': 'bond', 'atoms': (5, 4)},
+        {'angle': [vermouth.molecule.Interaction(atoms=(1, 2), meta={}, parameters={})],
+         'bond': [vermouth.molecule.Interaction(atoms=(1, 6), meta={}, parameters={})]}
+    ),
+    (
+        [1, 2, 3, 4],
+        [(1, 2), (2, 3), (3, 4)],
+        [('bond', (1, 2), {}), ('bond', (2, 3), {}), ('bond', (2, 3), {}, {'version': 1})],
+        {'type_': 'bond', 'atoms': (2, 3), 'version': 1},
+        {'bond': [
+            vermouth.molecule.Interaction(atoms=(1, 2), meta={}, parameters={}),
+            vermouth.molecule.Interaction(atoms=(2, 3), meta={}, parameters={}),
+        ]},
+    ),
+])
+def test_remove_interaction(atoms, bonds, interactions, removed, expected):
+    """
+    Test whether molecule.remove_node also removes the corresponding
+    interactions
+    """
+    molecule = vermouth.molecule.Molecule()
+    molecule.add_nodes_from(atoms)
+    molecule.add_edges_from(bonds)
+    for type_, atoms, params, *meta in interactions:
+        if meta:
+            meta = meta[0]
+        else:
+            meta = None
+        molecule.add_interaction(type_, atoms, params, meta=meta)
+
+    if removed:
+        molecule.remove_interaction(**removed)
+
+    assert molecule.interactions == expected
