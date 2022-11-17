@@ -589,7 +589,7 @@ class Molecule(nx.Graph):
         """
         idx = 0
         for idx, interaction in enumerate(self.interactions[type_]):
-            if interaction.atoms == atoms and interaction.meta.get('version', 0):
+            if interaction.atoms == atoms and interaction.meta.get('version', 0) == version:
                 break
         else:  # no break
             msg = ("Can't find interaction of type {} between atoms {} "
