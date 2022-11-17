@@ -11,10 +11,8 @@ C-ter
 
 [ from nodes ]
 N
-HN
 
 [ from edges ]
-HN N
 N CA
 
 [ mapping ]
@@ -63,14 +61,11 @@ COOH-ter
 
 [ from nodes ]
 N
-HN
 
 [ from edges ]
-HN N
 N CA
 
 [ mapping ]
-HN BB
 N BB
 CA BB
 C  BB
@@ -104,3 +99,63 @@ CA  BB
 C   BB
 O   BB
 
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+CCAP-ter
+[ to blocks ]
+CCAP-ter
+[ from nodes ]
+N
+HN
+CA
+[ from edges ]
+HN N
+N CA
+CA C
+[ mapping ]
+HN  BB
+N   BB
+CA  BB
+C   BB
+O   BB
+OC  BB
+CC1 BB
+HCC1 BB
+HCC2 BB
+HCC3 BB
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+NCAP-ter
+[ to blocks ]
+NCAP-ter
+[ from nodes ]
+C
+O
+CA
+HN
+[ from edges ]
+C O
+CA C
+CA N
+HN N
+[ mapping ]
+O   BB
+C   BB
+CA  BB
+N   BB
+HN  BB
+CC1 BB
+HCC1 BB
+HCC2 BB
+HCC3 BB
