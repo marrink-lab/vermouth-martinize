@@ -589,13 +589,15 @@ class Molecule(nx.Graph):
         """
         idx = 0
         for idx, interaction in enumerate(self.interactions[type_]):
-            if interaction.atoms == atoms and interaction.meta.get('version', 0):
+            if interaction.atoms == atoms and interaction.meta.get('version', 0) == version:
                 break
         else:  # no break
             msg = ("Can't find interaction of type {} between atoms {} "
                    "and with version {}")
             raise KeyError(msg.format(type_, atoms, version))
         del self.interactions[type_][idx]
+        if not self.interactions[type_]:
+            del self.interactions[type_]
 
     def remove_matching_interaction(self, type_, template_interaction):
         """
