@@ -1305,6 +1305,15 @@ def test_to_molecule():
             vermouth.molecule.Interaction(atoms=(2, 3), meta={}, parameters={}),
         ]},
     ),
+    (
+            [1, 2, 3, 4, 5, 6, 7],
+            [(1, 2), (3, 4), (5, 7), (6, 7)],
+            [('bond', (1, 6), [1, 2, 3], {'comment': 'a'}), ('bond', (5, 4), {'comment': 'b'}), ('angle', (1, 2), (4, 5, 6), {'version': 1})],
+            {'type_': 'bond', 'atoms': (5, 4)},
+            {'angle': [vermouth.molecule.Interaction(atoms=(1, 2), meta={'version': 1}, parameters=(4, 5, 6))],
+             'bond': [vermouth.molecule.Interaction(atoms=(1, 6), meta={'comment': 'a'}, parameters=[1, 2, 3])]}
+    ),
+
 ])
 def test_remove_interaction(atoms, bonds, interactions, removed, expected):
     """
