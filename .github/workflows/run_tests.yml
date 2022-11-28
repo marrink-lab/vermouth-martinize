@@ -17,7 +17,7 @@ env:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     
     strategy:
       matrix:
@@ -47,8 +47,7 @@ jobs:
           **/pyproject.toml
     - name: Install dependencies part I
       run: |
-        wget http://de.archive.ubuntu.com/ubuntu/pool/universe/d/dssp/dssp_3.0.0-3build1_amd64.deb
-        sudo apt-get install ./dssp_3.0.0-3build1_amd64.deb
+        sudo apt-get install dssp
         pip install --upgrade setuptools pip
     - name: Install package and requirements
       run: |
