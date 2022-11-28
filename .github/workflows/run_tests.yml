@@ -47,7 +47,7 @@ jobs:
           **/pyproject.toml
     - name: Install dependencies part I
       run: |
-        sudo apt-get install dssp
+        sudo apt-get install dssp=3.0.0-3build1
         pip install --upgrade setuptools pip
     - name: Install package and requirements
       run: |
