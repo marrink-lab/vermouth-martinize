@@ -47,8 +47,8 @@ jobs:
           **/pyproject.toml
     - name: Install dependencies part I
       run: |
-        apt-cache madison dssp
-        sudo apt-get install dssp=3.0.0-3build1
+        wget http://de.archive.ubuntu.com/ubuntu/pool/universe/d/dssp/dssp_3.0.0-3build1_amd64.deb
+        sudo apt-get install ./dssp_3.0.0-3build1_amd64.deb
         pip install --upgrade setuptools pip
     - name: Install package and requirements
       run: |
