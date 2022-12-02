@@ -195,7 +195,7 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
     """
     # check version
     process = subprocess.run(["dssp", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout_UTF8 = process.stdout.decode('UTF8')
+    version_found = process.stdout.decode('UTF8')
     if version not in stdout_UTF8:
         raise DSSPError('Vermouth currently only supports DSSP version 3.0.0.')
 
