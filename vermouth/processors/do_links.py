@@ -292,5 +292,10 @@ class DoLinks(Processor):
                         interaction = _build_link_interaction_from(molecule, interaction, match)
                         molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
 
+                for loglevel, entries in link.log_entries.items():
+                    for entry, fmt_args in entries.items():
+                        fmt_args = fmt_args + [match]
+                        molecule.log_entries[loglevel][entry] += fmt_args
+
             molecule.remove_nodes_from(_nodes_to_remove)
         return molecule
