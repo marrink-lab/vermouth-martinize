@@ -498,7 +498,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
     nodeidx2atomid = {}
     atomid = 1
     for mol_idx, molecule in enumerate(system.molecules):
-        for node_idx in molecule:
+        for node_idx in molecule.sorted_nodes:
             # Node indices do not have to be unique across molecules. So store
             # them as (mol_idx, node_idx)
             nodeidx2atomid[(mol_idx, node_idx)] = atomid

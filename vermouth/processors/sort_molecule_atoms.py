@@ -16,41 +16,56 @@
 Provides a processor that sorts atoms within molecules.
 """
 
-import copy
 from functools import partial
 from .processor import Processor
+from ..log_helpers import StyleAdapter, get_logger
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
 class SortMoleculeAtoms(Processor):
     """
-    Sort the atoms within a molecule by chain, resid, and resname.
+    Sort the atoms within a molecule by the attributes listed in the
+    :attr:`sortby_attrs`. Optionally, new atom indices are assigned to the node
+    attribute :attr:`target_attr`.
 
-    This is usefull, for instance, when atoms have been added (*e.g.* missing
-    atoms identified by :class:`vermouth.processors.repair_graph.RepairGraph`).
-    The atom keys are left identical, only the order of the nodes is changed.
+    Sorting nodes is useful because a lot of software assumes chains and
+    residues are listed contiguously. In particular this gets important when we
+    add atoms --- for instance missing atoms identified by
+    :class:`vermouth.processors.repair_graph.RepairGraph`).
+
+    Nodes in the molecule are reordered according to the node attributes listed
+    in :attr:`sortby_attrs`. The atom keys are left identical, only the order
+    of the nodes is changed. Optionally, the new indices can be assigned to
+    nodes :attr:`target_attr` attribute.
+
+    Attributes
+    ----------
+    sortby_attrs: collections.abc.Sequence[collections.abc.Hashable]
+        Nodes will be sorted by these node attributes.
+    target_attr: collections.abc.Hashable
+        If not ``None``, new indices will be assigned to this node attribute,
+        starting with 1. It is a good idea to make sure this attribute is also
+        listed in :attr:`sortby_attrs` so that the sorting is stable.
     """
+    def __init__(self, sortby_attrs=('chain', 'resid', 'resname', 'insertion_code', 'atomid'),
+                 target_attr=None):
+        self.sortby_attrs = sortby_attrs
+        self.target_attr = target_attr
+        if self.target_attr is not None and  self.target_attr not in self.sortby_attrs:
+            LOGGER.warning("{} is not in {}. Atom sorting may be unstable.",
+                           self.target_attr, self.sortby_attrs)
+
     def run_molecule(self, molecule):
-        node_order = sorted(molecule, key=partial(_keyfunc, molecule))
-        sorted_nodes = [
-            (node_key, molecule.nodes[node_key])
-            for node_key in node_order
-        ]
-        edges = tuple(molecule.edges(data=True))
-        interactions = copy.copy(molecule.interactions)
-        molecule.remove_nodes_from(node_order)
-        molecule.add_nodes_from(sorted_nodes)
-        molecule.add_edges_from(edges)
-        molecule.interactions = interactions
+        node_order = sorted(molecule, key=partial(_keyfunc, molecule, attrs=self.sortby_attrs))
+        for new_idx, node_key in enumerate(node_order, 1):
+            molecule._node.move_to_end(node_key)
+            if self.target_attr is not None:
+                molecule.nodes[node_key][self.target_attr] = new_idx
         return molecule
 
 
-def _keyfunc(graph, node_idx):
+def _keyfunc(graph, node_idx, attrs):
     """
     Reduce a molecule node to a tuple of chain, resid, and resname.
     """
-    # TODO add something like idx_in_residue
-    return (
-        graph.nodes[node_idx]['chain'],
-        graph.nodes[node_idx]['resid'],
-        graph.nodes[node_idx]['resname'],
-    )
+    return [graph.nodes[node_idx].get(attr) for attr in attrs]

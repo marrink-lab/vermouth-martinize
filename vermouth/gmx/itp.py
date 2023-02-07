@@ -161,7 +161,9 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     seen_sections.add('atoms')
     for line in pre_section_lines.get('atoms', []):
         outfile.write(line + '\n')
-    for idx, (original_idx, atom) in enumerate(molecule.atoms, start=1):
+    # for idx, (original_idx, atom) in enumerate(molecule.atoms, start=1):
+    for idx, original_idx in enumerate(molecule.sorted_nodes, start=1):
+        atom = molecule.nodes[original_idx]
         correspondence[original_idx] = idx
         new_atom = copy.copy(atom)
         # The charge and the mass can be blank and read from the [atomtypes]
