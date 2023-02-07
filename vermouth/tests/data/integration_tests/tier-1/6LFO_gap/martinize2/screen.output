@@ -1,0 +1,64 @@
+    INFO - general - Read 1 molecules from PDB file ../6LFO_gap.pdb
+    INFO - step - Guessing the bonds.
+    INFO - general - 7 molecules after guessing bonds
+    INFO - step - Repairing the graph.
+    INFO - general - Applying modification N-ter to residue R-THR36
+    INFO - general - Applying modification C-ter to residue R-SER67
+    INFO - missing-atom - Missing atom SER67:OXT
+    INFO - general - Applying modification N-ter to residue R-SER72
+    INFO - general - Applying modification C-ter to residue R-ASN101
+    INFO - missing-atom - Missing atom ASN101:OXT
+    INFO - general - Applying modification N-ter to residue R-GLY106
+    INFO - general - Applying modification C-ter to residue R-HIS141
+    INFO - missing-atom - Missing atom HIS141:OXT
+    INFO - general - Applying modification N-ter to residue R-LEU152
+    INFO - general - Applying modification C-ter to residue R-ARG175
+    INFO - missing-atom - Missing atom ARG175:OXT
+    INFO - general - Applying modification N-ter to residue R-ASP194
+    INFO - general - Applying modification C-ter to residue R-ALA232
+    INFO - missing-atom - Missing atom ALA232:OXT
+    INFO - general - Applying modification N-ter to residue R-GLN236
+    INFO - general - Applying modification C-ter to residue R-GLN271
+    INFO - missing-atom - Missing atom GLN271:OXT
+    INFO - general - Applying modification N-ter to residue R-SER276
+    INFO - general - Applying modification C-ter to residue R-HIS923
+    INFO - missing-atom - Missing atom HIS923:OXT
+    INFO - step - Dealing with modifications.
+    INFO - general - Identified the modifications ['N-ter'] on residues ['THR36', 'THR36', 'THR36', 'THR36']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['SER67', 'SER67', 'SER67']
+    INFO - general - Identified the modifications ['N-ter'] on residues ['SER72', 'SER72', 'SER72', 'SER72']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['ASN101', 'ASN101', 'ASN101']
+    INFO - general - Identified the modifications ['N-ter'] on residues ['GLY106', 'GLY106', 'GLY106', 'GLY106']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['HIS141', 'HIS141', 'HIS141']
+    INFO - general - Identified the modifications ['N-ter'] on residues ['LEU152', 'LEU152', 'LEU152', 'LEU152']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['ARG175', 'ARG175', 'ARG175']
+    INFO - general - Identified the modifications ['N-ter'] on residues ['ASP194', 'ASP194', 'ASP194', 'ASP194']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['ALA232', 'ALA232', 'ALA232']
+    INFO - general - Identified the modifications ['N-ter'] on residues ['GLN236', 'GLN236', 'GLN236', 'GLN236']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['GLN271', 'GLN271', 'GLN271']
+    INFO - general - Identified the modifications ['N-ter'] on residues ['SER276', 'SER276', 'SER276', 'SER276']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['HIS923', 'HIS923', 'HIS923']
+    INFO - step - Read input.
+    INFO - step - Creating the graph at the target resolution.
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - general - Applying modification mapping ('N-ter',)
+    INFO - general - Applying modification mapping ('C-ter',)
+    INFO - step - Averaging the coordinates.
+    INFO - step - Applying the links.
+    INFO - step - Placing the charge dummies.
+    INFO - step - Applying position restraints.
+    INFO - step - Setting the rubber bands.
+    INFO - step - Writing output.
+    INFO - general - Please cite: Souza, P C T; Alessandri, R; Barnoud, J; Thallmair, S; Faustino, I; Grünewald, F; Patmanidis, I; Abdizadeh, H; Bruininks, B M H; Wassenaar, T A; Kroon, P C; Melcr, J; Nieto, V; Corradi, V; Khan, H M; Domański, J; Javanainen, M; Martinez-Seara, H; Reuter, N; Best, R B; Vattulainen, I; Monticelli, L; Periole, X; Tieleman, D P; de Vries, A H; Marrink, S J;  Nature Methods 2021; 10.1038/s41592-021-01098-3
+    INFO - general - I prefer one with gin, but James Bond liked a vodka martini. -- Sir Roger Moore (The Guardian, 17/03/2015)

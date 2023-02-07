@@ -1,0 +1,31 @@
+; BZIM
+[ molecule ]
+ZIMI
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+N4 R1 N5 R2 R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C7 R2
+2 C6 R1
+3 C5 R1
+4 C4 R3
+5 C9 R3
+6 C8 R2
+7 N1 N5
+8 H1 N5
+9 C2 N4 N5
+10 N3 N4
+11 H7 R2
+12 H6 R1
+13 H5 R1
+14 H8 R2

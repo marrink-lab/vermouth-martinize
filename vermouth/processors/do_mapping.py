@@ -114,6 +114,8 @@ def _old_atomname_match(node1, node2):
     node2 = node2.copy()
     node1['_name'] = name1
     node2['_name'] = name2
+    if 'order' in node2 and 'order' not in node1:
+        node1['order'] = node2['order']
     del node1['atomname']
     del node2['atomname']
     return node_matcher(node1, node2)
@@ -156,7 +158,7 @@ def ptm_resname_match(mol_node, map_node):
                            for map_mod in map_node.pop('modifications', []))
     else:
         matching_mod = True
-    is_equal = node_matcher(mol_node, map_node)
+    is_equal = _old_atomname_match(mol_node, map_node)
     return is_equal and matching_mod
 
 
@@ -403,6 +405,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     mol_to_mod, modification, references = match
     LOGGER.info('Applying modification mapping {}', modification.name, type='general')
     graph_out.citations.update(modification.citations)
+
     mod_to_mol = defaultdict(dict)
     for mol_idx, mod_idxs in mol_to_mod.items():
         for mod_idx in mod_idxs:
@@ -475,6 +478,15 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             interaction = interaction._replace(atoms=atoms)
             applied_interactions[interaction_type][tuple(atoms)].append(modification)
             graph_out.add_interaction(interaction_type, **interaction._asdict())
+
+    # Some jank needed here, since modification node indices are integers
+    mod_atom_name_to_out = {}
+    for mod_idx in modification.nodes:
+        name = modification.nodes[mod_idx]['atomname']
+        mod_atom_name_to_out[name] = mod_to_out[mod_idx]
+    for loglevel, entries in modification.log_entries.items():
+        for entry in entries:
+            graph_out.log_entries[loglevel][entry] += [mod_atom_name_to_out]
     return dict(applied_interactions), new_references
 
 
@@ -499,7 +511,7 @@ def attrs_from_node(node, attrs):
     return {attr: val for attr, val in node.items() if attr in attrs}
 
 
-def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
+def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), attribute_stash=()):
     """
     Creates a new :class:`~vermouth.molecule.Molecule` in force field `to_ff`
     from `molecule`, based on `mappings`. It does this by doing a subgraph
@@ -527,6 +539,11 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
         The attributes that the nodes in the output graph *must* have. If
         they're not provided by the mappings/blocks they're taken from
         `molecule`.
+    attribute_stash: tuple[str]
+        The attributes that will always be transferred from the input molecule
+        to the produced graph, but prefixed with _old_.Thus they are new attributes
+        and are not conflicting with already defined attributes.
+
 
     Returns
     -------
@@ -536,6 +553,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     """
     attribute_keep = tuple(attribute_keep)
     attribute_must = tuple(attribute_must)
+    attribute_stash = tuple(attribute_stash)
     # Transferring the meta maybe should be a copy, or a deep copy...
     # If it breaks we look at this line.
     graph_out = Molecule(force_field=to_ff, meta=molecule.meta)
@@ -622,18 +640,20 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
         if out_idx in all_references:
             ref_idx = all_references[out_idx]
             new_attrs = attrs_from_node(molecule.nodes[ref_idx],
-                                        attribute_keep+attribute_must)
+                                        attribute_keep+attribute_must+attribute_stash)
             for attr, val in new_attrs.items():
                 # Attrs in attribute_keep we always transfer, those in
                 # attribute_must we transfer only if they're not already in the
                 # created node
                 if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
                     graph_out.nodes[out_idx].update(new_attrs)
+                if attr in attribute_stash:
+                    graph_out.nodes[out_idx]["_old_"+attr] = val
         else:
             attrs = defaultdict(list)
             for mol_idx in mol_idxs:
                 new_attrs = attrs_from_node(molecule.nodes[mol_idx],
-                                            attribute_keep+attribute_must)
+                                            attribute_keep+attribute_must+attribute_stash)
                 for attr, val in new_attrs.items():
                     attrs[attr].append(val)
             attrs_not_sane = []
@@ -644,8 +664,16 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
                     else:
                         # No nodes hat the attribute.
                         graph_out.nodes[out_idx][attr] = None
+                if attr in attribute_stash:
+                    if vals:
+                        graph_out.nodes[out_idx]["_old_"+attr] = vals[0]
+                    else:
+                        # No nodes hat the attribute.
+                        graph_out.nodes[out_idx]["_old_"+attr] = None
+
                 if not are_all_equal(vals):
                     attrs_not_sane.append(attr)
+
             if attrs_not_sane:
                 LOGGER.warning('The attributes {} for atom {} are going to'
                                ' be garbage because the attributes of the'
@@ -771,18 +799,23 @@ class DoMapping(Processor):
         The attributes that the nodes in the output graph *must* have. If
         they're not provided by the mappings/blocks they're taken from
         the original molecule.
+    attribute_stash: tuple[str]
+        The attributes that will always be transferred from the input molecule
+        to the produced graph, but prefixed with _old_.Thus they are new attributes
+        and are not conflicting with already defined attributes.
 
     See Also
     --------
     :func:`do_mapping`
     """
     def __init__(self, mappings, to_ff, delete_unknown=False, attribute_keep=(),
-                 attribute_must=()):
+                 attribute_must=(), attribute_stash=()):
         self.mappings = mappings
         self.to_ff = to_ff
         self.delete_unknown = delete_unknown
         self.attribute_keep = tuple(attribute_keep)
         self.attribute_must = tuple(attribute_must)
+        self.attribute_stash = tuple(attribute_stash)
         super().__init__()
 
     def run_molecule(self, molecule):
@@ -791,7 +824,8 @@ class DoMapping(Processor):
             mappings=self.mappings,
             to_ff=self.to_ff,
             attribute_keep=self.attribute_keep,
-            attribute_must=self.attribute_must
+            attribute_must=self.attribute_must,
+            attribute_stash=self.attribute_stash
         )
 
     def run_system(self, system):

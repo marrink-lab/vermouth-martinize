@@ -1,6 +1,6 @@
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 
@@ -26,7 +26,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 [ from blocks ]
@@ -52,7 +52,7 @@ O   BB
 
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 
@@ -81,7 +81,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22
 [ from blocks ]
@@ -110,7 +110,7 @@ O   BB
 
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
@@ -132,7 +132,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
@@ -155,7 +155,7 @@ O   BB
 
 [ modification ]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
@@ -180,7 +180,7 @@ OXT BB
 
 [modification]
 [ from ]
-universal
+charmm
 [ to ]
 martini22p
 [ from blocks ]
@@ -199,3 +199,32 @@ N   BB
 CA  BB
 C   BB
 O   BB
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+
+[ from blocks ]
+TYRPHOS
+[ to blocks ]
+TYRPHOS
+
+[ from nodes ]
+CE1
+HE1
+[ from edges ]
+CE1	HE1
+CE1	CZ
+[ mapping ]
+P1   PO4
+O3   PO4
+O4   PO4
+O2   PO4
+H2   PO4
+CE1  SC3
+HE1  SC3
+CZ   SC3
+OH   SC3
+HH   SC3

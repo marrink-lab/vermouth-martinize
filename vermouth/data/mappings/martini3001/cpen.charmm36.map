@@ -1,0 +1,32 @@
+; CYPE
+[ molecule ]
+CPEN
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+C1 C2
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C1 C2
+2 C2 C1
+3 C3 C1
+4 C4 C2
+5 C5 C2
+6 H11 C2
+7 H12 C2
+8 H22 C1
+9 H21 C1
+10 H31 C1
+11 H32 C1
+12 H41 C2
+13 H42 C2
+14 H51 C2
+15 H52 C2

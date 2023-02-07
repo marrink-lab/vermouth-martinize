@@ -35,7 +35,7 @@ from vermouth.tests.helper_functions import equal_graphs
 
 
 FF_MARTINI = vermouth.forcefield.get_native_force_field(name='martini22')
-FF_UNIVERSAL = vermouth.forcefield.get_native_force_field(name='universal')
+FF_UNIVERSAL = vermouth.forcefield.get_native_force_field(name='charmm')
 
 AA_MOL = Molecule(force_field=FF_UNIVERSAL)
 AA_MOL.add_nodes_from((
@@ -102,7 +102,7 @@ def test_no_residue_crossing():
     """
     mapping = {'C1': {'B1': 1}, 'C2': {'B1': 1}, 'C3': {'B1': 1}}
     extra = ()
-    mappings = {'universal': {'martini22': {'IPO': Mapping(FF_UNIVERSAL.blocks['IPO'],
+    mappings = {'charmm': {'martini22': {'IPO': Mapping(FF_UNIVERSAL.blocks['IPO'],
                                                            FF_MARTINI.blocks['IPO'],
                                                            mapping=mapping,
                                                            references={},
@@ -139,7 +139,7 @@ def test_residue_crossing():
                }
     extra = ()
     mappings = {
-        'universal': {
+        'charmm': {
             'martini22': {
                 'IPO_large': Mapping(FF_UNIVERSAL.blocks['IPO_large'],
                                      FF_MARTINI.blocks['IPO_large'],
@@ -196,8 +196,8 @@ def test_peptide():
            'CB': {'SC1': 1}, 'CG': {'SC1': 1}, 'CD1': {'SC1': 1}, 'CD2': {'SC1': 1}}
     extra = ()
 
-    mappings = {'universal': {'martini22': {}}}
-    mappings['universal']['martini22']['GLY'] = Mapping(FF_UNIVERSAL.blocks['GLY'],
+    mappings = {'charmm': {'martini22': {}}}
+    mappings['charmm']['martini22']['GLY'] = Mapping(FF_UNIVERSAL.blocks['GLY'],
                                                         FF_MARTINI.blocks['GLY'],
                                                         mapping=gly,
                                                         references={},
@@ -205,7 +205,7 @@ def test_peptide():
                                                         ff_to=FF_MARTINI,
                                                         names=('GLY',),
                                                         extra=extra)
-    mappings['universal']['martini22']['ILE'] = Mapping(FF_UNIVERSAL.blocks['ILE'],
+    mappings['charmm']['martini22']['ILE'] = Mapping(FF_UNIVERSAL.blocks['ILE'],
                                                         FF_MARTINI.blocks['ILE'],
                                                         mapping=ile,
                                                         references={},
@@ -213,7 +213,7 @@ def test_peptide():
                                                         ff_to=FF_MARTINI,
                                                         names=('ILE',),
                                                         extra=extra)
-    mappings['universal']['martini22']['LEU'] = Mapping(FF_UNIVERSAL.blocks['LEU'],
+    mappings['charmm']['martini22']['LEU'] = Mapping(FF_UNIVERSAL.blocks['LEU'],
                                                         FF_MARTINI.blocks['LEU'],
                                                         mapping=leu,
                                                         references={},
@@ -240,8 +240,13 @@ def test_peptide():
     for node in peptide:
         peptide.nodes[node]['atomid'] = node + 1
         peptide.nodes[node]['chain'] = ''
+        # create a gap in resid pattern
+        if peptide.nodes[node]['resname'] == 'ILE':
+            peptide.nodes[node]['resid'] = 5
 
-    cg = do_mapping(peptide, mappings, FF_MARTINI, attribute_keep=('chain',))
+    # make sure the old resids with the gap are stashed
+    cg = do_mapping(peptide, mappings, FF_MARTINI, attribute_keep=('chain',),
+                    attribute_stash=('resid',))
 
     expected = Molecule(force_field=FF_MARTINI)
     expected.add_nodes_from({1: {'atomname': 'BB',
@@ -250,6 +255,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 1,
                                  'resid': 1,
+                                 '_old_resid': 1,
                                  'resname': 'GLY'},
                              2: {'atomname': 'BB',
                                  'atype': 'P5',
@@ -257,6 +263,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 2,
                                  'resid': 2,
+                                 '_old_resid': 5,
                                  'resname': 'ILE'},
                              3: {'atomname': 'SC1',
                                  'atype': 'AC1',
@@ -264,6 +271,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 3,
                                  'resid': 2,
+                                 '_old_resid': 5,
                                  'resname': 'ILE'},
                              4: {'atomname': 'BB',
                                  'atype': 'P5',
@@ -271,6 +279,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 4,
                                  'resid': 3,
+                                 '_old_resid': 3,
                                  'resname': 'LEU'},
                              5: {'atomname': 'SC1',
                                  'atype': 'AC1',
@@ -278,6 +287,7 @@ def test_peptide():
                                  'charge': 0.0,
                                  'charge_group': 5,
                                  'resid': 3,
+                                 '_old_resid': 3,
                                  'resname': 'LEU'}}.items()
                             )
     expected.add_edges_from([(1, 2), (2, 3), (2, 4), (4, 5)])
@@ -513,7 +523,7 @@ def test_do_mapping_mods(modified_molecule, modifications):
         mappings[name] = Mapping(mod, mod, mapping={idx: {idx: 1} for idx in mod},
                                  references={}, ff_from=FF_UNIVERSAL,
                                  ff_to=FF_UNIVERSAL, names=name, type='modification')
-    mappings = {'universal': {'universal': mappings}}
+    mappings = {'charmm': {'charmm': mappings}}
 
     out = do_mapping(modified_molecule, mappings, FF_UNIVERSAL,
                      attribute_keep=('chain', 'resid'))

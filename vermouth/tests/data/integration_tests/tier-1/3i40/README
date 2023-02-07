@@ -1,0 +1,11 @@
+### DETAILS: 
+
+# The structure contains a homo-dimers where 
+# the monomers are connected by 3 disulphide brdiges
+# one of the disulphide bridges has the same name
+# and resid in the dimers
+
+### TEST: 
+
+# - symmetric dishulphide bridge present
+# - merge but with new resids -> i.e. continious

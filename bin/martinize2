@@ -25,7 +25,7 @@ import itertools
 import textwrap
 from pathlib import Path
 import sys
-
+import networkx as nx
 import vermouth
 import vermouth.forcefield
 from vermouth.file_writer import deferred_open, DeferredFileWriter
@@ -104,7 +104,7 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
     if force_field is None:
-        force_field = vermouth.forcefield.get_native_force_field('universal')
+        force_field = vermouth.forcefield.get_native_force_field('charmm')
     if modifications is None:
         modifications = []
     if mutations is None:
@@ -148,8 +148,9 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     vermouth.DoMapping(mappings=mappings,
                        to_ff=to_ff,
                        delete_unknown=delete_unknown,
-                       attribute_keep=('cgsecstruct', 'resid', 'chain'),
-                       attribute_must=('resname')).run_system(system)
+                       attribute_keep=('cgsecstruct', 'chain'),
+                       attribute_must=('resname',),
+                       attribute_stash=('resid',)).run_system(system)
     LOGGER.info('Averaging the coordinates.', type='step')
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
     LOGGER.info('Applying the links.', type='step')
@@ -343,9 +344,9 @@ def entry():
     parser.add_argument('-V', '--version', action='version', version=VERSION)
 
     file_group = parser.add_argument_group('Input and output files')
-    file_group.add_argument('-f', dest='inpath', required=True, type=Path,
+    file_group.add_argument('-f', dest='inpath', required=False, type=Path,
                             help='Input file (PDB|GRO)')
-    file_group.add_argument('-x', dest='outpath', required=True, type=Path,
+    file_group.add_argument('-x', dest='outpath', required=False, type=Path,
                             help='Output coarse grained structure (PDB)')
     file_group.add_argument('-o', dest='top_path', type=Path,
                             help='Output topology (TOP)')
@@ -355,6 +356,11 @@ def entry():
     file_group.add_argument('-merge', dest='merge_chains',
                             type=lambda x: x.split(','), action='append',
                             help='Merge chains: e.g. -merge A,B,C (+)')
+    file_group.add_argument('-resid', dest='resid_handling',
+                            type=str, default='mol',
+                            help="How to handle resid. Choice of mol or input.\n"
+                                 "mol: resids are numbered from 1 to n for each molecule\n"
+                                 "input: resids are the same as in the input pdb")
     file_group.add_argument('-ignore', dest='ignore_res', nargs='+',
                             default=[], action='append', type=lambda x: x.split(','),
                             help='Ignore residues with that name: e.g. '
@@ -379,7 +385,7 @@ def entry():
     ff_group = parser.add_argument_group('Force field selection')
     ff_group.add_argument('-ff', dest='to_ff', default='martini3001',
                           help='Which forcefield to use')
-    ff_group.add_argument('-from', dest='from_ff', default='universal',
+    ff_group.add_argument('-from', dest='from_ff', default='charmm',
                           help='Force field of the original structure.')
     ff_group.add_argument('-ff-dir', dest='extra_ff_dir', action='append',
                           type=Path, default=[],
@@ -436,14 +442,11 @@ def entry():
                           type=lambda x: x.split(','), default=None,
                           help='Comma separated list of bead names for elastic bonds')
     rb_group.add_argument('-eunit', dest='rb_unit', default='molecule',
-                          choices=['chain', 'molecule', 'all'],
                           help=('Establish what is the structural unit for the '
                                 'elastic network. Bonds are only created within'
-                                ' a unit.'))
-    rb_group.add_argument('-region', dest='rb_region', default='molecule',
-                          help=('Apply rubber bands only within the specified regions. '
-                                'The format is <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...'
-                                'Start and end resids are included'))
+                                ' a unit. Options are molecule, chain, all, or a'
+                                'specified region defined by resids, with following'
+                                'format: <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...'))
     go_group = parser.add_argument_group('Virtual site based GoMartini')
     go_group.add_argument('-govs-includes', action='store_true', default=False,
                           help='Write include statements to use Vitrual Site Go Martini.')
@@ -514,27 +517,6 @@ def entry():
                              ' written.')
 
     args = parser.parse_args()
-    if args.elastic and args.govs_includes:
-        parser.error('A rubber band elastic network and GoMartini are not '
-                     'compatible. The -elastic and -govs-include flags cannot '
-                     'be used together.')
-
-    if args.to_ff.startswith('elnedyn'):
-        # FIXME: This type of thing should be added to the FF itself.
-        LOGGER.info('The forcefield {} must always be used with an elastic '
-                    'network. Enabling it now.', args.to_ff)
-        args.elastic = True
-
-    file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
-    if file_extension in ['GRO'] and args.modelidx is not None:
-        parser.error("GRO files don't know the concept of models.")
-    if args.modelidx is None:
-        # Set a sane default value. Can't do this using argparse machinery,
-        # since we need to be able to check whether the flag was given.
-        args.modelidx = 1
-
-    bonds_from_name = args.bonds_from in ('name', 'both')
-    bonds_from_dist = args.bonds_from in ('distance', 'both')
 
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
     LOGGER.setLevel(loglevels[args.verbosity])
@@ -591,6 +573,28 @@ def entry():
         print('The following Modifications are known to force field {}:'.format(args.to_ff))
         print(', '.join(known_force_fields[args.to_ff].modifications))
         parser.exit()
+
+    if args.elastic and args.govs_includes:
+        parser.error('A rubber band elastic network and GoMartini are not '
+                     'compatible. The -elastic and -govs-include flags cannot '
+                     'be used together.')
+
+    if args.to_ff.startswith('elnedyn'):
+        # FIXME: This type of thing should be added to the FF itself.
+        LOGGER.info('The forcefield {} must always be used with an elastic '
+                    'network. Enabling it now.', args.to_ff)
+        args.elastic = True
+
+    file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
+    if file_extension in ['GRO'] and args.modelidx is not None:
+        parser.error("GRO files don't know the concept of models.")
+    if args.modelidx is None:
+        # Set a sane default value. Can't do this using argparse machinery,
+        # since we need to be able to check whether the flag was given.
+        args.modelidx = 1
+
+    bonds_from_name = args.bonds_from in ('name', 'both')
+    bonds_from_dist = args.bonds_from in ('distance', 'both')
 
 
     # args.ignore_res is a pretty deep list: given "-ignore HOH CU,LIG -ignore LIG2"
@@ -724,19 +728,14 @@ def entry():
         elif args.rb_unit == 'chain':
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
         else:
-            message = 'Unknown value for -eunit: "{}".'.format(args.rb_unit)
-            LOGGER.critical(message)
-            raise ValueError(message)
-        if args.rb_region == 'molecule':
-            domain_criterion = vermouth.processors.apply_rubber_band.always_true
-        else:
-            regions = [tuple([int(i) for i in apair.split(':')]) for apair in args.rb_region.split(',')]
+            regions = [tuple([int(i) for i in apair.split(':')]) for apair in args.rb_unit.split(',')]
             if any(len(region) != 2 for region in regions):
-                message = 'Unknown value for -region: "{}".'.format(args.rb_region)
+                message = 'Faulty resid interval for elastic network unit: "{}".'.format(args.rb_unit)
                 LOGGER.critical(message)
                 raise ValueError(message)
             else:
                 domain_criterion = vermouth.processors.apply_rubber_band.make_same_region_criterion(regions)
+
         if args.rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
@@ -758,9 +757,20 @@ def entry():
         )
         rubber_band_processor.run_system(system)
 
+    # Here we need to add the resids from the PDB back if that is needed
+    if args.resid_handling == "input":
+        for molecule in system.molecules:
+            old_resids = nx.get_node_attributes(molecule, "_old_resid")
+            nx.set_node_attributes(molecule, old_resids, "resid")
+
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:
         LOGGER.debug("Writing molecule {}.", molecule, type='step')
+        for loglevel, entries in molecule.log_entries.items():
+            for entry, fmt_args in entries.items():
+                for fmt_arg in fmt_args:
+                    fmt_arg = {str(k): molecule.nodes[v] for k, v in fmt_arg.items()}
+                    LOGGER.log(loglevel, entry, **fmt_arg, type='model')
 
     # Write the topology if requested
     # grompp has a limit in the number of character it can read per line

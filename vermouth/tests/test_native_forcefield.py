@@ -35,7 +35,7 @@ def test_get_native_force_field_identity():
     # need to make sure that different requested name result in different
     # instances. Without that, the test would pass if the function was always
     # returning the same object regardless of the argument.
-    requests = ('universal', 'martini22', 'martini22p')
+    requests = ('charmm', 'martini22', 'martini22p')
     first_call = set(id(vermouth.forcefield.get_native_force_field(name))
                      for name in requests)
     second_call = set(id(vermouth.forcefield.get_native_force_field(name))

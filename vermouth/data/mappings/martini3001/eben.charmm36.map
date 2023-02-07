@@ -1,0 +1,33 @@
+; EBEN
+[ molecule ]
+EBEN
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 R4 R1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CA R4
+2 CB R4
+3 CG R2 R3
+4 CD1 R2
+5 CE1 R1 R2
+6 CZ R1
+7 CE2 R1 R3
+8 CD2 R3
+9 HA1 R4
+10 HA2 R4
+11 HA3 R4
+12 HB1 R4
+13 HB2 R4
+14 HD1 R2
+15 HZ R1
+16 HD2 R3

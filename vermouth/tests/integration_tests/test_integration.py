@@ -128,12 +128,20 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-0', 'mini-protein1_betasheet'],
     ['tier-0', 'mini-protein2_helix'],
     ['tier-0', 'mini-protein3_trp-cage'],
+    ['tier-0', 'dipro-termini'],
     ['tier-1', 'bpti'],
     ['tier-1', 'lysozyme'],
+    ['tier-1', 'lysozyme_prot'],
     ['tier-1', 'villin'],
+    ['tier-1', '3i40'],
+    ['tier-1', '6LFO_gap'],
+    ['tier-1', '1mj5'],
+    ['tier-1', '1mj5-charmm'],
+    ['tier-1', 'EN_chain'],
+    ['tier-1', 'EN_region'],
     # ['tier-2', 'barnase_barstar'],
     # ['tier-2', 'dna'],
-    # ['tier-2', 'gpa_dimer'],
+   # ['tier-2', 'gpa_dimer'],
 ])
 def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     """
@@ -171,7 +179,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     with open(str(data_path/'citation')) as cite_file:
         for line in cite_file:
             citations.append(line.strip())
-
+    print(command)
     proc = subprocess.run(command, cwd='.', timeout=60, check=False,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE,

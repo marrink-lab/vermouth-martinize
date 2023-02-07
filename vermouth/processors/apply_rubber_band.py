@@ -386,6 +386,8 @@ def make_same_region_criterion(regions):
 
     Nodes are considered part of the same region if their value
     under the "resid" attribute are within the same residue range.
+    By default the resids of the input file are used (i.e. "_old_resid"
+    attribute).
 
     Parameters
     ----------
@@ -409,8 +411,8 @@ def make_same_region_criterion(regions):
     def same_region(graph, left, right):
         node_left = graph.nodes[left]
         node_right = graph.nodes[right]
-        left_resid = node_left.get('resid')
-        right_resid = node_right.get('resid')
+        left_resid = node_left.get('_old_resid', node_left['resid'])
+        right_resid = node_right.get('_old_resid', node_right['resid'])
         for region in regions:
             lower = min(region)
             upper = max(region)

@@ -1,0 +1,23 @@
+[ modification ]
+C-ter
+[ atoms ]
+CA {"element": "C"}
+C {"element": "C"}
+O {"element": "O"}
+OXT {"element": "O", "PTM_atom": true}
+[ edges ]
+CA C
+C O
+C OXT
+
+[ modification ]
+N-ter
+[ atoms ]
+CA {"element": "C"}
+N {"element": "N"}
+HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}
+HN3 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN3"}}
+[ edges ]
+N CA
+N HN2
+N HN3

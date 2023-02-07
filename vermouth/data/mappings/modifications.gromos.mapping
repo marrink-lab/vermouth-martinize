@@ -1,0 +1,51 @@
+[ modification ]
+[ from ]
+gromos
+[ to ]
+martini22
+
+[ from blocks ]
+C-ter
+[ to blocks ]
+C-ter
+
+[ from nodes ]
+N
+HN
+
+[ from edges ]
+HN N
+N CA
+
+[ mapping ]
+CA BB
+C  BB
+O  BB
+OXT BB
+
+
+[modification]
+[ from ]
+gromos
+[ to ]
+martini22
+[ from blocks ]
+N-ter
+[ to blocks ]
+N-ter
+
+[ from nodes ]
+C
+O
+
+[ from edges ]
+C O
+CA C
+
+[ mapping ]
+HN2 BB
+HN3 BB
+N   BB
+CA  BB
+C   BB
+O   BB

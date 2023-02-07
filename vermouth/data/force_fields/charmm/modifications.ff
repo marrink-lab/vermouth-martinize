@@ -1,0 +1,155 @@
+[ modification ]
+C-ter
+[ atoms ]
+CA {"element": "C"}
+C {"element": "C"}
+O {"element": "O"}
+OXT {"element": "O", "PTM_atom": true}
+[ edges ]
+CA C
+C O
+C OXT
+
+[ modification ]
+COOH-ter
+[ atoms ]
+CA {"element": "C"}
+C {"element": "C"}
+O {"element": "O"}
+OXT {"element": "O", "PTM_atom": true}
+HO {"element": "H", "PTM_atom": true}
+[ edges ]
+CA C
+C O
+C OXT
+OXT HO
+
+[ modification ]
+N-ter
+[ atoms ]
+CA {"element": "C"}
+N {"element": "N"}
+HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}
+HN3 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN3"}}
+[ edges ]
+N CA
+N HN2
+N HN3
+
+[ modification ]
+NH2-ter
+[ atoms ]
+CA {"element": "C"}
+N {"element": "N"}
+HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}
+[ edges ]
+N CA
+N HN2
+
+[ modification ]
+CCAP-ter
+[ atoms ]
+C {"element": "C"}
+O {"element": "O"}
+OC {"element": "O", "PTM_atom": true}
+CC1 {"element": "C", "PTM_atom": true}
+HCC1 {"element": "H", "PTM_atom": true}
+HCC2 {"element": "H", "PTM_atom": true}
+HCC3 {"element": "H", "PTM_atom": true}
+[ edges ]
+C O
+C OC
+OC CC1
+CC1 HCC1
+CC1 HCC2
+CC1 HCC3
+
+[ modification ]
+NCAP-ter
+[ atoms ]
+N {"element": "N"}
+CC1  {"element": "C", "PTM_atom": true}
+HCC1 {"element": "H", "PTM_atom": true}
+HCC2 {"element": "H", "PTM_atom": true}
+HCC3 {"element": "H", "PTM_atom": true}
+[ edges ]
+N CC1
+CC1 HCC1
+CC1 HCC2
+CC1 HCC3
+
+[ modification ]
+GLU-H
+[ atoms ]
+CD {"element": "C"}
+OE1 {"element": "O"}
+OE2 {"element": "O"}
+HE1 {"element": "H", "PTM_atom": true}
+[ edges ]
+CD OE1
+CD OE2
+OE1 HE1
+
+[ modification ]
+HSD
+[ atoms ]
+NE2 {"resname": "HIS", "element": "N"}
+HE2 {"resname": "HIS", "element": "H", "replace": {"atomname": null}}
+CE1 {"resname": "HIS", "element": "C"}
+ND1 {"resname": "HIS", "element": "N"}
+HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+NE2 HE2
+CE1 NE2
+ND1 CE1
+ND1 HD1
+
+[ modification ]
+HSE
+[ atoms ]
+NE2 {"resname": "HIS", "element": "N"}
+HE2 {"resname": "HIS", "element": "H", "PTM_atom": false}
+[ edges ]
+NE2 HE2
+
+[ modification ]
+HSP
+[ atoms ]
+NE2 {"resname": "HIS", "element": "N"}
+HE2 {"resname": "HIS", "element": "H", "PTM_atom": false}
+CE1 {"resname": "HIS", "element": "C"}
+ND1 {"resname": "HIS", "element": "N"}
+HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+[ edges ]
+NE2 HE2
+CE1 NE2
+ND1 CE1
+ND1 HD1
+
+[ modification ]
+ASP0
+[ atoms ]
+HD2 {"resname": "ASP", "element": "H", "PTM_atom": true}
+OD2 {"resname": "ASP"}
+[ edges ]
+OD2 HD2
+
+[ modification ]
+TYRPHOS
+[ atoms ]
+OH  {"resname": "TYR", "element": "O"}
+CZ  {"resname": "TYR", "element": "C"}
+P1  {"resname": "TYR", "PTM_atom": true, "element": "P"}
+O2  {"resname": "TYR", "PTM_atom": true, "element": "O"}
+H2  {"resname": "TYR", "PTM_atom": true, "element": "H"}
+O3  {"resname": "TYR", "PTM_atom": true, "element": "O"}
+O4  {"resname": "TYR", "PTM_atom": true, "element": "O"}
+HH  {"resname": "TYR", "replace": {"atomname": null}, "element": "H"}
+[ edges ]
+ OH	P1
+ P1 O2
+ O2 H2
+ P1 O3
+ P1 O4
+ OH CZ
+ OH HH
