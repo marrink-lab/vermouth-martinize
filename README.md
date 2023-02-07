@@ -61,6 +61,16 @@ tutorials]; in most cases, replacing calls to `martinize.py` by calls to
 
 The documentation of the vermouth python library will come soon.
 
+## Citation
+```
+@article{kroon2022martinize2,
+  title={Martinize2 and Vermouth: Unified Framework for Topology Generation},
+  author={Kroon, Peter C and Gr{\"u}newald, Fabian and Barnoud, Jonathan and van Tilburg, Marco 
+          and Souza, Paulo CT and Wassenaar, Tsjerk A and Marrink, Siewert-Jan},
+  journal={arXiv preprint arXiv:2212.01191},
+  year={2022}}
+```
+
 ## License
 
 Martinize2 and vermouth are distributed under the Apache 2.0 license.
