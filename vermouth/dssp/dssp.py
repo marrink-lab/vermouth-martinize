@@ -21,6 +21,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import re
 
 from ..file_writer import deferred_open
 from ..pdb import pdb
@@ -194,10 +195,15 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
         Parse a DSSP output.
     """
     # check version
-    process = subprocess.run(["dssp", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    version_found = process.stdout.decode('UTF8')
-    if version not in version_found:
-        raise DSSPError('Vermouth currently only supports DSSP version 3.0.0.')
+    supported_versions = [2, 3]
+    process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
+    version_found = match[0] if match else None
+    print(version, version_found)
+    if not version_found:
+        raise DSSPError('Failed to get DSSP version information.')
+    if not int(version_found.split('.')[0]) in supported_versions and version != version_found:
+        raise DSSPError(f'DSSP {version_found} is not supported.')
 
     tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
                                                     dir='.', prefix='dssp_in_')
@@ -245,7 +251,7 @@ def _savefile_path(molecule, savedir=None):
     return savefile
 
 
-def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruct'):
+def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruct', version='3.0.0'):
     """
     Adds the DSSP assignation to the atoms of a molecule.
 
@@ -278,6 +284,8 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
         atom attribute.
     attribute: str
         The name of the atom attribute in which to store the annotation.
+    version: str
+        Supported version for running dssp
 
     See Also
     --------
@@ -298,7 +306,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
 
     system = System()
     system.add_molecule(clean_pos)
-    secstructs = run_dssp(system, executable, savefile)
+    secstructs = run_dssp(system, executable, savefile, version=version)
 
     annotate_residues_from_sequence(molecule, attribute, secstructs)
 
@@ -461,13 +469,14 @@ def convert_dssp_annotation_to_martini(
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
-    def __init__(self, executable='dssp', savedir=None):
+    def __init__(self, executable='dssp', savedir=None, version='3.0.0'):
         super().__init__()
         self.executable = executable
         self.savedir = savedir
+        self.version = version
 
     def run_molecule(self, molecule):
-        annotate_dssp(molecule, self.executable, self.savedir)
+        annotate_dssp(molecule, self.executable, self.savedir, self.version)
         return molecule
 
 
