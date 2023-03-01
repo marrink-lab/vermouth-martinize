@@ -199,7 +199,6 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
     process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
     version_found = match[0] if match else None
-    print(version, version_found)
     if not version_found:
         raise DSSPError('Failed to get DSSP version information.')
     if not int(version_found.split('.')[0]) in supported_versions and version != version_found:
