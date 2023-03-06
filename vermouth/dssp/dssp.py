@@ -32,6 +32,7 @@ from .. import utils
 from ..log_helpers import StyleAdapter, get_logger
 
 LOGGER = StyleAdapter(get_logger(__name__))
+SUPPORTED_DSSP_VERSIONS = ("2.2.1", "3.0.0")
 
 
 class DSSPError(Exception):
@@ -195,13 +196,12 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
         Parse a DSSP output.
     """
     # check version
-    supported_versions = [2, 3]
     process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
     version_found = match[0] if match else None
     if not version_found:
         raise DSSPError('Failed to get DSSP version information.')
-    if not int(version_found.split('.')[0]) in supported_versions and version != version_found:
+    if not version_found in SUPPORTED_DSSP_VERSIONS and version != version_found:
         raise DSSPError(f'DSSP {version_found} is not supported.')
 
     tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
@@ -475,7 +475,7 @@ class AnnotateDSSP(Processor):
         self.version = version
 
     def run_molecule(self, molecule):
-        annotate_dssp(molecule, self.executable, self.savedir, self.version)
+        annotate_dssp(molecule, self.executable, self.savedir, version=self.version)
         return molecule
 
 
