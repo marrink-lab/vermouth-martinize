@@ -145,7 +145,7 @@ def read_dssp2(lines):
     return secstructs
 
 
-def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, version="3.0.0"):
+def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
     """
     Run DSSP on a system and return the assigned secondary structures.
 
@@ -174,8 +174,6 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
         If set to a path, the output of DSSP is written in that file.
     defer_writing: bool
         Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
-    version: str
-        Supported versions for running dssp
 
     Returns
     list[str]
@@ -198,11 +196,15 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
     # check version
     process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
-    version_found = match[0] if match else None
-    if not version_found:
+    version = match[0] if match else None
+    if not version:
         raise DSSPError('Failed to get DSSP version information.')
-    if not version_found in SUPPORTED_DSSP_VERSIONS and version != version_found:
-        raise DSSPError(f'DSSP {version_found} is not supported.')
+    if not version in SUPPORTED_DSSP_VERSIONS:
+        LOGGER.warning("Vermouth is tested only with DSSP versions {}. "
+                       "The specified DSSP version {} may result inaccurate "
+                       "secondary structure assignment.",
+                       SUPPORTED_DSSP_VERSIONS, version,
+                       type='DSSP-version')
 
     tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
                                                     dir='.', prefix='dssp_in_')
@@ -250,7 +252,7 @@ def _savefile_path(molecule, savedir=None):
     return savefile
 
 
-def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruct', version='3.0.0'):
+def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruct'):
     """
     Adds the DSSP assignation to the atoms of a molecule.
 
@@ -283,8 +285,6 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
         atom attribute.
     attribute: str
         The name of the atom attribute in which to store the annotation.
-    version: str
-        Supported version for running dssp
 
     See Also
     --------
@@ -305,7 +305,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
 
     system = System()
     system.add_molecule(clean_pos)
-    secstructs = run_dssp(system, executable, savefile, version=version)
+    secstructs = run_dssp(system, executable, savefile)
 
     annotate_residues_from_sequence(molecule, attribute, secstructs)
 
@@ -468,14 +468,13 @@ def convert_dssp_annotation_to_martini(
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
-    def __init__(self, executable='dssp', savedir=None, version='3.0.0'):
+    def __init__(self, executable='dssp', savedir=None):
         super().__init__()
         self.executable = executable
         self.savedir = savedir
-        self.version = version
 
     def run_molecule(self, molecule):
-        annotate_dssp(molecule, self.executable, self.savedir, version=self.version)
+        annotate_dssp(molecule, self.executable, self.savedir)
         return molecule
 
 
