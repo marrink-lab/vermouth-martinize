@@ -201,8 +201,10 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
         raise DSSPError('Failed to get DSSP version information.')
     if not version in SUPPORTED_DSSP_VERSIONS:
         LOGGER.warning("Vermouth is tested only with DSSP versions {}. "
-                       "The specified DSSP version {} may result inaccurate "
-                       "secondary structure assignment.",
+                       "The provided DSSP (version {}) may result in inaccurate "
+                       "secondary structure assignments. As alternative you can "
+                       "provide a secondary structure assignment string using "
+                       "the `-ss` option.",
                        SUPPORTED_DSSP_VERSIONS, version,
                        type='DSSP-version')
 
