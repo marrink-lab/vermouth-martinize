@@ -21,6 +21,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import re
 
 from ..file_writer import deferred_open
 from ..pdb import pdb
@@ -31,6 +32,7 @@ from .. import utils
 from ..log_helpers import StyleAdapter, get_logger
 
 LOGGER = StyleAdapter(get_logger(__name__))
+SUPPORTED_DSSP_VERSIONS = ("2.2.1", "3.0.0")
 
 
 class DSSPError(Exception):
@@ -143,7 +145,7 @@ def read_dssp2(lines):
     return secstructs
 
 
-def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, version="3.0.0"):
+def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
     """
     Run DSSP on a system and return the assigned secondary structures.
 
@@ -172,8 +174,6 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
         If set to a path, the output of DSSP is written in that file.
     defer_writing: bool
         Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
-    version: str
-        Supported versions for running dssp
 
     Returns
     list[str]
@@ -194,10 +194,19 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True, versi
         Parse a DSSP output.
     """
     # check version
-    process = subprocess.run(["dssp", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    version_found = process.stdout.decode('UTF8')
-    if version not in version_found:
-        raise DSSPError('Vermouth currently only supports DSSP version 3.0.0.')
+    process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
+    version = match[0] if match else None
+    if not version:
+        raise DSSPError('Failed to get DSSP version information.')
+    if not version in SUPPORTED_DSSP_VERSIONS:
+        LOGGER.warning("Vermouth is tested only with DSSP versions {}. "
+                       "The provided DSSP (version {}) may result in inaccurate "
+                       "secondary structure assignments. As alternative you can "
+                       "provide a secondary structure assignment string using "
+                       "the `-ss` option.",
+                       SUPPORTED_DSSP_VERSIONS, version,
+                       type='DSSP-version')
 
     tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
                                                     dir='.', prefix='dssp_in_')

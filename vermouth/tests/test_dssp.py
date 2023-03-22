@@ -32,6 +32,7 @@ from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
     PDB_PROTEIN,
     DSSP_OUTPUT,
+    DSSP_SS_OUTPUT,
     PDB_ALA5_CG,
 )
 
@@ -306,14 +307,25 @@ class TestAnnotateResidues:
         assert found[0] is None
 
 
-def test_read_dssp2():
+@pytest.mark.parametrize('input_file, expected',
+    [
+        (str(DSSP_OUTPUT), ''.join(SECSTRUCT_1BTA)),
+        (str(DSSP_SS_OUTPUT/'mini-protein1_betasheet.pdb.v2.2.1-3b2-deb_cv1.ssd'), 'CEEEEEETTEEEEEECCCCCCTTCEEEEC'),
+        (str(DSSP_SS_OUTPUT/'mini-protein1_betasheet.pdb.v3.0.0-3b1-deb_cv1.ssd'), 'CEEEEEETTEEEEEECCCCCCTTCEEEEC'),
+        (str(DSSP_SS_OUTPUT/'mini-protein2_helix.pdb.v2.2.1-3b2-deb_cv1.ssd'), 'CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC'),
+        (str(DSSP_SS_OUTPUT/'mini-protein2_helix.pdb.v3.0.0-3b1-deb_cv1.ssd'), 'CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC'),
+        (str(DSSP_SS_OUTPUT/'mini-protein3_trp-cage.pdb.v2.2.1-3b2-deb_cv1.ssd'), 'CHHHHHHHTTGGGGTCCCCC'),
+        (str(DSSP_SS_OUTPUT/'mini-protein3_trp-cage.pdb.v3.0.0-3b1-deb_cv1.ssd'), 'CHHHHHHHTTGGGGTCCCCC'),
+    ]
+)
+def test_read_dssp2(input_file, expected):
     """
     Test that :func:`vermouth.dssp.dssp.read_dssp2` returns the expected
     secondary structure sequence.
     """
-    with open(str(DSSP_OUTPUT)) as infile:
+    with open(input_file) as infile:
         secondary_structure = dssp.read_dssp2(infile)
-    assert secondary_structure == SECSTRUCT_1BTA
+    assert ''.join(secondary_structure) == expected
 
 
 @pytest.mark.parametrize('savefile', [True, False])
