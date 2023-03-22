@@ -40,7 +40,8 @@ PDB_MULTIMODEL = TEST_DATA / '6E8W.pdb'  # HIV-1, 15 models
 # DNA
 SHORT_DNA = TEST_DATA / 'dna-short.pdb'
 
-DSSP_OUTPUT = TEST_DATA / 'dssp_1bta.ssd'
+DSSP_OUTPUT = TEST_DATA / 'dssp_tests' / 'dssp_1bta.ssd'
+DSSP_SS_OUTPUT = TEST_DATA / 'dssp_tests'
 
 # Test force fields
 FF_UNIVERSAL_TEST = TEST_DATA / 'force_fields' / 'universal-test'
