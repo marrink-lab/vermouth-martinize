@@ -279,13 +279,12 @@ class PDBParser(LineParser):
             ('beta', float, 7),
             ('gamma', float, 7),
             ('space_group', str, 11),
+            ('', str, 1),
             ('z_value', int, 4),
             ]
         start = 0
         field_slices = []
         for name, type_, width in fields:
-            if name == "space_group":
-                start+=1
             if name:
                 field_slices.append((name, type_, slice(start, start + width)))
             start += width
