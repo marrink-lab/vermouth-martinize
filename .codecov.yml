@@ -10,5 +10,8 @@ coverage:
         patch:
             default:
                 target: 90
+                
+ignore:
+  - vermouth/tests
 comment: off
 
