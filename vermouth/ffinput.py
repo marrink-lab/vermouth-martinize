@@ -222,6 +222,20 @@ class FFDirector(SectionLineParser):
     def _block_atoms(self, line, lineno=0):
         tokens = collections.deque(_tokenize(line))
         _parse_block_atom(tokens, self.current_block)
+        
+    @SectionLineParser.section_parser('moleculetype', 'meta')
+    def _parse_block_meta(self, line, lineno=0):
+        # parse each line
+        # update the object current_block
+        line_splited = line.split()
+        key = line_splited[0]
+        if len(line_splited[1:]) == 1 : 
+            #one value
+            value = line_splited[1] 
+        else: 
+            #case list of values
+            value = line_splited[1:]
+        self.current_block.meta[key] = value
 
     @SectionLineParser.section_parser('moleculetype', 'edges',
                                       negate=False, context_type='block')
