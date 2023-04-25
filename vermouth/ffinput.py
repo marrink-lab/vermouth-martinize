@@ -226,14 +226,21 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'meta')
     def _parse_block_meta(self, line, lineno=0):
         # parse each line
-        # update the object current_block
+        # update the object current_block with meta information
+        # exemple :
+        # [meta]
+        # key value
+        # key2 value1 value2 
+        # will give
+        # {'key': value, 'key2': ['value1' , 'value2']}
+        
         line_splited = line.split()
         key = line_splited[0]
+        
+        # depend of the number of value 
         if len(line_splited[1:]) == 1 : 
-            #one value
             value = line_splited[1] 
         else: 
-            #case list of values
             value = line_splited[1:]
         self.current_block.meta[key] = value
 
