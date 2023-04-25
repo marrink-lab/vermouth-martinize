@@ -540,7 +540,7 @@ def test_read_gro(gro_reference, exclude, ignh):  # pylint: disable=redefined-ou
     molecule = gro.read_gro(filename, exclude=exclude, ignh=ignh)
     pprint(list(molecule.nodes.items()))
     assert_molecule_equal(molecule, reference)
-
+    assert all(molecule.box == np.array([10.0, 11.1, 12.2]))
 
 def test_read_gro_wrong_atom_number(gro_wrong_length):  # pylint: disable=redefined-outer-name
     """

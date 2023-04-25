@@ -107,6 +107,11 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
 
             molecule.add_node(idx, **properties)
             idx += 1
+        box = np.array(line.strip().split(), dtype=float)
+        # not pretty but the parser is out of touch with the rest of the parsing
+        # infrastructure already
+        molecule.box = box
+
     return molecule
 
 
