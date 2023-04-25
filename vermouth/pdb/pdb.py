@@ -61,6 +61,7 @@ class PDBParser(LineParser):
         self.ignh = ignh
         self.modelidx = modelidx
         self._skipahead = False
+        self.cryst = {}
 
     def dispatch(self, line):
         """
@@ -151,7 +152,6 @@ class PDBParser(LineParser):
     site   = _skip
 
     # CRYSTALLOGRAPHIC AND COORDINATE TRANSFORMATION SECTION
-    cryst1 = _skip
     origx1 = _skip
     origx2 = _skip
     origx3 = _skip
@@ -264,6 +264,38 @@ class PDBParser(LineParser):
 
     atom = _atom
     hetatm = _atom
+
+    def cryst1(self, line, lineno=0):
+        """
+        Parse the CRYST1 record. Crystal structure information are stored with
+        the parser object and may be extracted later.
+        """
+        fields = [
+            ('', str, 6),
+            ('a', float, 9),
+            ('b', float, 9),
+            ('c', float, 9),
+            ('alpha', float, 7),
+            ('beta', float, 7),
+            ('gamma', float, 7),
+            ('space_group', str, 11),
+            ('z_value', int, 4),
+            ]
+        start = 0
+        field_slices = []
+        for name, type_, width in fields:
+            if name == "space_group":
+                start+=1
+            if name:
+                field_slices.append((name, type_, slice(start, start + width)))
+            start += width
+
+        for name, type_, slice_ in field_slices:
+            value = line[slice_].strip()
+            if value:
+                self.cryst[name] = type_(value)
+            else:
+                LOGGER.warning(f"CRYST1 directive incomplete. Missing entry for {name}.")
 
     def model(self, line, lineno=0):
         """
