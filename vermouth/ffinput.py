@@ -225,23 +225,38 @@ class FFDirector(SectionLineParser):
         
     @SectionLineParser.section_parser('moleculetype', 'meta')
     def _parse_block_meta(self, line, lineno=0):
-        # parse each line
-        # update the object current_block with meta information
-        # exemple :
-        # [meta]
-        # key value
-        # key2 value1 value2 
-        # will give
-        # {'key': value, 'key2': ['value1' , 'value2']}
+        """
+        Parse the meta section and update the object current_block with meta information
         
-        line_splited = line.split()
-        key = line_splited[0]
+        Example :
+            [meta]
+            flag1
+            key value
+            key2 value1 value2 
+        
+            will give :
+                {'flag1' : None, 'key': value, 'key2': ['value1' , 'value2']}
+        
+        Parameters
+        ----------
+        line: str
+        lineno: str
+        """
+        
+        split_line = line.split()
+        key = split_line[0]
         
         # depend of the number of value 
-        if len(line_splited[1:]) == 1 : 
-            value = line_splited[1] 
+        if len(split_line[1:]) == 0 : 
+            value = None
+        elif len(split_line[1:]) == 1 : 
+            value = split_line[1]
+            #check the value, numeric, float or string
+            if value.replace(".", "").isnumeric(): 
+                value = float( value)
         else: 
-            value = line_splited[1:]
+            value = [ float(e) if e.replace(".", "").isnumeric() else e for e in split_line[1:]]
+        
         self.current_block.meta[key] = value
 
     @SectionLineParser.section_parser('moleculetype', 'edges',
