@@ -226,16 +226,17 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'meta')
     def _parse_block_meta(self, line, lineno=0):
         """
-        Parse the meta section and update the object current_block with meta information
+        Parse the meta section and update the object current_block with meta information. 
+        Allow the dictionnary value to be None (in case of flag), string, int or float. 
         
         Example :
             [meta]
             flag1
             key value
-            key2 value1 value2 
+            key2 value1 0.37 
         
             will give :
-                {'flag1' : None, 'key': value, 'key2': ['value1' , 'value2']}
+                {'flag1' : None, 'key': value, 'key2': ['value1' , 0.37]}
         
         Parameters
         ----------
