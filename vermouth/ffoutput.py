@@ -40,7 +40,7 @@ class ForceFieldDirectiveWriter():
         self.stream = stream
         # these attributes have a specific order in the moleculetype section
         self.normal_order_block_atoms = ["atype", "resid", "resname",
-                                         "atomname", "charge_group", "charge", "mass"]
+                                         "atomname", "charge_group", "charge"] #, "mass"]
 
     def write(self):
         """
@@ -54,7 +54,7 @@ class ForceFieldDirectiveWriter():
             self.write_interaction_dict(block.interactions)
 
         for link in self.forcefield.links:
-            self.write_link_header(link)
+            self.write_link_header()
             self.write_atoms_link(link.nodes(data=True))
             self.write_interaction_dict(link.interactions)
             self.write_edges(link.edges)
