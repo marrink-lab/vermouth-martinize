@@ -247,16 +247,13 @@ class FFDirector(SectionLineParser):
         split_line = line.split()
         key = split_line[0]
         
-        # depend of the number of value 
+        # depend of the number of value(s) 
         if len(split_line[1:]) == 0 : 
             value = None
         elif len(split_line[1:]) == 1 : 
             value = split_line[1]
-            #check the value, numeric, float or string
-            if value.replace(".", "").isnumeric(): 
-                value = float( value)
         else: 
-            value = [ float(e) if e.replace(".", "").isnumeric() else e for e in split_line[1:]]
+            value = split_line[1:]
         
         self.current_block.meta[key] = value
 
