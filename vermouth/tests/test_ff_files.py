@@ -94,7 +94,7 @@ class TestBlock:
         ff = vermouth.forcefield.ForceField(name='test_ff')
         vermouth.ffinput.read_ff(lines, ff)
         block = ff.blocks['XXX']
-        assert len(block.meta) == 4
+        assert len(block.meta) == 3
         assert block.meta['flag'] == None 
         assert block.meta['key1'] == '0.15' 
         assert block.meta['key2'] ==  ['value1', 'value2']
