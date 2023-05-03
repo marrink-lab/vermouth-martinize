@@ -236,7 +236,11 @@ class FFDirector(SectionLineParser):
             key2 value1 0.37 
         
             will give :
-                {'flag1' : None, 'key': value, 'key2': ['value1' , 0.37]}
+                {   
+                    'flag1' : None, 
+                    'key': 'value', 
+                    'key2': ['value1' , '0.37']
+                }
         
         Parameters
         ----------
