@@ -81,6 +81,26 @@ class TestBlock:
                                       'other': 'plop'}
 
     @staticmethod
+    def test_meta():
+        lines = """
+        [ moleculetype ]
+        XXX 1
+        [ meta ]
+        flag
+        key1 0.15 ;test
+        key2 value1 value2
+        """
+        lines = textwrap.dedent(lines).splitlines()
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        vermouth.ffinput.read_ff(lines, ff)
+        block = ff.blocks['XXX']
+        assert len(block.meta) == 3
+        assert block.meta['flag'] == None 
+        assert block.meta['key1'] == '0.15' 
+        assert block.meta['key2'] ==  ['value1', 'value2']
+        
+        
+    @staticmethod
     def test_fixed_number_interaction():
         """
         Define an interaction for which the number of atoms required is known.

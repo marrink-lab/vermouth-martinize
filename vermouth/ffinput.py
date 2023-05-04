@@ -222,6 +222,44 @@ class FFDirector(SectionLineParser):
     def _block_atoms(self, line, lineno=0):
         tokens = collections.deque(_tokenize(line))
         _parse_block_atom(tokens, self.current_block)
+        
+    @SectionLineParser.section_parser('moleculetype', 'meta')
+    def _parse_block_meta(self, line, lineno=0):
+        """
+        Parse the meta section and update the object current_block with meta information. 
+        Allow the dictionnary value to be None (in case of flag), string, int or float. 
+        
+        Example :
+            [meta]
+            flag1
+            key value
+            key2 value1 0.37 
+        
+            will give :
+                {   
+                    'flag1' : None, 
+                    'key': 'value', 
+                    'key2': ['value1' , '0.37']
+                }
+        
+        Parameters
+        ----------
+        line: str
+        lineno: str
+        """
+        
+        split_line = line.split()
+        key = split_line[0]
+        
+        # depend of the number of value(s) 
+        if len(split_line[1:]) == 0 : 
+            value = None
+        elif len(split_line[1:]) == 1 : 
+            value = split_line[1]
+        else: 
+            value = split_line[1:]
+        
+        self.current_block.meta[key] = value
 
     @SectionLineParser.section_parser('moleculetype', 'edges',
                                       negate=False, context_type='block')
