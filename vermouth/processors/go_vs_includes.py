@@ -128,6 +128,7 @@ def add_virtual_sites(molecule, prefix, backbone='BB', atomname='CA', charge=0):
             new_charge_group += 1
             virtual_site_nodes.append((new_node_id, {
                 'resid': atom['resid'],
+                '_old_resid': atom['_old_resid'],
                 'resname': atom['resname'],
                 'atype': '{}_{}'.format(prefix, atom['resid']),
                 'charge_group': new_charge_group,
