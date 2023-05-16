@@ -762,8 +762,12 @@ def entry():
             old_resids = nx.get_node_attributes(molecule, "_old_resid")
             nx.set_node_attributes(molecule, old_resids, "resid")
 
-    LOGGER.info("Sorting atomids", type='step')
-    vermouth.SortMoleculeAtoms().run_system(system)
+   # The Martini Go model assumes that we do not mess with the order of
+   # particles in any way especially the virtual sites needed for the Go
+   # model, thus we skip the sorting here altogether. 
+    if not args.govs_includes:
+        LOGGER.info("Sorting atomids", type='step')
+        vermouth.SortMoleculeAtoms().run_system(system)
 
     LOGGER.info('Writing output.', type='step')
     for molecule in system.molecules:

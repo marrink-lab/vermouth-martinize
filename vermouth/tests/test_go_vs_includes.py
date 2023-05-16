@@ -41,6 +41,7 @@ def molecule_for_go(request):
             molecule.add_node(
                 base_atom_idx + relative_atom_idx,
                 resid=residue_idx,
+                _old_resid=residue_idx,
                 resname='XX',
                 atomname=atomname,
                 charge_group=base_atom_idx,
