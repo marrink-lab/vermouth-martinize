@@ -155,7 +155,6 @@ def test_single_model(pdbstr, ignh, nnodesnedges):
         assert len(mol.nodes) == nnodes
         assert len(mol.edges) == nedges
 
-
 @pytest.mark.parametrize('ignh', [True, False])
 @pytest.mark.parametrize('modelidx', range(1, 16))
 def test_integrative(ignh, modelidx):
@@ -233,3 +232,34 @@ def test_atom_attributes():
                     assert np.allclose(n_attrs[n_idx][attr], mol.nodes[n_idx][attr])
                 else:
                     assert n_attrs[n_idx][attr] == mol.nodes[n_idx][attr]
+
+
+@pytest.mark.parametrize('pdbstr, cryst_dict', (
+    # complete directive
+    ('''CRYST1   77.987   77.987   77.987  90.00  90.00  90.00 P 1           1
+    MODEL        1
+    ATOM      1  EO  PEO     0      74.550  37.470  22.790  1.00  0.00
+    ATOM      2  EO  PEO     1      77.020  38.150  25.000  1.00  0.00
+    ATOM      3  EO  PEO     2      76.390  37.180  28.130  1.00  0.00
+    ATOM      4  EO  PEO     3      75.430  37.920  31.450  1.00  0.00
+    ''',
+    {"a": 77.987, "b": 77.987, "c": 77.987,
+     "alpha": 90.0, "beta": 90.0, "gamma": 90,
+    "space_group": "P 1", "z_value": 1}
+    ),
+    # incomplete directive
+    ('''CRYST1   77.987   77.987   77.987
+    MODEL        1
+    ATOM      1  EO  PEO     0      74.550  37.470  22.790  1.00  0.00
+    ATOM      2  EO  PEO     1      77.020  38.150  25.000  1.00  0.00
+    ATOM      3  EO  PEO     2      76.390  37.180  28.130  1.00  0.00
+    ATOM      4  EO  PEO     3      75.430  37.920  31.450  1.00  0.00
+    ''',
+    {"a": 77.987, "b": 77.987, "c": 77.987,}
+    )))
+def test_cryst1(caplog, pdbstr, cryst_dict):
+    parser = PDBParser()
+    mols = list(parser.parse(pdbstr.splitlines()))
+    assert parser.cryst == cryst_dict
+    if len(cryst_dict) < 8:
+        assert any(rec.levelname == 'WARNING' for rec in caplog.records)
