@@ -539,7 +539,7 @@ def write_pdb_string(system, conect=True, omit_charges=True, nan_missing_pos=Fal
             resname = get_not_none(node, 'resname', '')
             chain = get_not_none(node, 'chain', '')
             resid = get_not_none(node, 'resid', 1)
-            insertion_code = get_not_none(node, 'insertioncode', '')
+            insertion_code = get_not_none(node, 'insertion_code', '')
             try:
                 # converting from nm to A
                 x, y, z = node['position'] * 10  # pylint: disable=invalid-name
