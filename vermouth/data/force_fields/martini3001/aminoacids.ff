@@ -1091,15 +1091,6 @@ resname $protein_resnames
 [ link ]
 [ angles ]
 ; (Modified by Paulo)
--BB BB +BB 10 127 25 {"group": "BBB angles"}
-[ patterns ]
--BB BB {"cgsecstruct": "C", "resname": "PRO|HYP"} +BB 
--BB {"cgsecstruct": "C", "resname": "PRO|HYP"} BB +BB 
--BB  BB +BB {"cgsecstruct": "C", "resname": "PRO|HYP"}
-
-[ link ]
-[ angles ]
-; (Modified by Paulo)
 -BB BB +BB 10 100 25 {"group": "BBB angles"}
 [ patterns ]
 -BB BB {"cgsecstruct": "T", "resname": "PRO|HYP"} +BB 
