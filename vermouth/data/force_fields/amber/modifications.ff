@@ -47,27 +47,55 @@ N CA
 N HN2
 
 [ modification ]
-GLU-H
+GLU-HE1
 [ atoms ]
-CD {"element": "C"}
 OE1 {"element": "O"}
-OE2 {"element": "O"}
 HE1 {"element": "H", "PTM_atom": true}
 [ edges ]
-CD OE1
-CD OE2
 OE1 HE1
 
 [ modification ]
-HIS_PROT
+GLU-HE2
+[ atoms ]
+OE2 {"element": "O"}
+HE2 {"element": "H", "PTM_atom": true}
+[ edges ]
+OE2 HE2
+
+[ modification ]
+HIS-HIP
 [ atoms ]
 NE2 {"resname": "HIS", "element": "N"}
-HE2 {"resname": "HIS", "element": "H"}
 ND1 {"resname": "HIS", "element": "N"}
 HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+HE2 {"resname": "HIS", "element": "H", "PTM_atom": true}
 CE1 {"resname": "HIS", "element": "C"}
 [ edges ]
 NE2 HE2
 ND1 HD1
+CE1 NE2
+CE1 ND1
+
+[ modification ]
+HIS-HID
+[ atoms ]
+NE2 {"resname": "HIS", "element": "N"}
+ND1 {"resname": "HIS", "element": "N"}
+HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+CE1 {"resname": "HIS", "element": "C"}
+[ edges ]
+ND1 HD1
+CE1 NE2
+CE1 ND1
+
+[ modification ]
+HIS-HIE
+[ atoms ]
+NE2 {"resname": "HIS", "element": "N"}
+HE2 {"resname": "HIS", "element": "H", "PTM_atom": true}
+ND1 {"resname": "HIS", "element": "N"}
+CE1 {"resname": "HIS", "element": "C"}
+[ edges ]
+NE2 HE2
 CE1 NE2
 CE1 ND1

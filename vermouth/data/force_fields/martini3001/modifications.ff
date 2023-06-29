@@ -37,12 +37,63 @@ NCAP-ter
 BB {"replace": {"atype": "P2", "charge": 0}}
 
 [ modification ]
-HIS_PROT
+GLU-HE1
+[ atoms ]
+SC1 {"replace": {"atype": "P2", "charge": 0}}
+
+[ modification ]
+GLU-HE2
+[ atoms ]
+SC1 {"replace": {"atype": "P2", "charge": 0}}
+
+[ modification ]
+ASP-HD1
+[ atoms ]
+SC1 {"replace": {"atype": "P2", "charge": 0}}
+
+[ modification ]
+ASP-HD2
+[ atoms ]
+SC1 {"replace": {"atype": "P2", "charge": 0}}
+
+[ modification ]
+LYS-LSN
+[ atoms ]
+SC2 {"replace": {"atype": "SN6d", "charge": 0}}
+
+[ modification ]
+HIS-HIP
 [ atoms ]
 BB  {"resname": "HIS", "replace": {"resname": "HIP"}}
 SC1 {"resname": "HIS", "replace": {"resname": "HIP"}}
 SC2 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}
 SC3 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}
+[ edges ]
+BB SC1 
+SC1 SC2
+SC1 SC3
+SC2 SC3
+
+[ modification ]
+HIS-HIE
+[ atoms ]
+BB  {"resname": "HIS", "replace": {"resname": "HIE"}}
+SC1 {"resname": "HIS", "replace": {"resname": "HIE"}}
+SC2 {"resname": "HIS", "replace": {"resname": "HIE"}}
+SC3 {"resname": "HIS", "replace": {"resname": "HIE"}}
+[ edges ]
+BB SC1 
+SC1 SC2
+SC1 SC3
+SC2 SC3
+
+[ modification ]
+HIS-HID
+[ atoms ]
+BB  {"resname": "HIS", "replace": {"resname": "HID"}}
+SC1 {"resname": "HIS", "replace": {"resname": "HID"}}
+SC2 {"resname": "HIS", "replace": {"resname": "HID", "atype": "TN5a"}}
+SC3 {"resname": "HIS", "replace": {"resname": "HID", "atype": "TN6a"}}
 [ edges ]
 BB SC1 
 SC1 SC2

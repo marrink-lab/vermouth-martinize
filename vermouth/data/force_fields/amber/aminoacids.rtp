@@ -514,11 +514,10 @@
    CE1    CR           0.025960   10
    HE1    H5           0.126832   11
    NE2    NA          -0.097984   12
-   HE2    H            0.266865   13
-   CD2    CW          -0.297563   14
-   HD2    H4           0.160413   15
-     C    C            0.662405   16
-     O    O           -0.528966   17
+   CD2    CW          -0.297563   13
+   HD2    H4           0.160413   14
+     C    C            0.662405   15
+     O    O           -0.528966   16
  [ bonds ]
      N     H
      N    CA
@@ -533,18 +532,10 @@
    ND1   CE1
    CE1   HE1
    CE1   NE2
-   NE2   HE2
    NE2   CD2
    CD2   HD2
      C     O
     -C     N
- [ impropers ]
-    -C    CA     N     H
-    CA    +N     C     O
-   CE1   CD2   NE2   HE2
-    CG   NE2   CD2   HD2
-   ND1   NE2   CE1   HE1
-   ND1   CD2    CG    CB
 
 [ HIP ]
  [ atoms ]
