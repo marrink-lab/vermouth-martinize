@@ -316,3 +316,169 @@ HE2 SC2
 NZ  SC2
 HZ1 SC2
 HZ2 SC2
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+HIS-HP
+[ to blocks ]
+HIS-HP
+
+[ from nodes ]
+N     
+CA  
+HA  
+CB  
+HB1 
+HB2 
+CG
+CD2
+HD2
+HE1
+C
+O
+H
+[ from edges ]
+     N     H
+     N    CA
+    CA    HA
+    CA    CB
+    CA     C
+    CB   HB2
+    CB   HB1
+    CB    CG
+    CG   ND1
+    CG   CD2
+   CE1   HE1
+   NE2   CD2
+   CD2   HD2
+     C     O
+[ mapping ]
+HD1 SC3
+N    BB
+H    BB
+CA    BB
+CB   SC1
+  CG   SC1
+ NE2   SC2
+ HE2   SC2
+ CD2   SC2
+ HD2   SC2
+ ND1   SC3
+ CE1   SC3
+ HE1   SC3
+   C    BB
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+HIS-HD
+[ to blocks ]
+HIS-HD
+
+[ from nodes ]
+N     
+CA  
+HA  
+CB  
+HB1 
+HB2 
+CG
+CD2
+HD2
+C
+O
+H
+HE1
+[ from edges ]
+     N     H
+     N    CA
+    CA    HA
+    CA    CB
+    CA     C
+    CB   HB2
+    CB   HB1
+    CB    CG
+    CG   ND1
+    CG   CD2
+   CE1   HE1
+   NE2   CD2
+   CD2   HD2
+     C     O
+[ mapping ]
+HD1 SC3
+N    BB
+H    BB
+CA    BB
+CB   SC1
+  CG   SC1
+ NE2   SC2
+ CD2   SC2
+ HD2   SC2
+ ND1   SC3
+ CE1   SC3
+ HE1   SC3
+   C    BB
+   O    BB
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+HIS-HE
+[ to blocks ]
+HIS-HE
+
+[ from nodes ]
+N
+CA
+HA
+CB
+HB1
+HB2
+CG
+CD2
+HD2
+C
+O
+H
+HE1
+[ from edges ]
+     N     H
+     N    CA
+    CA    HA
+    CA    CB
+    CA     C
+    CB   HB2
+    CB   HB1
+    CB    CG
+    CG   ND1
+    CG   CD2
+   CE1   HE1
+   NE2   CD2
+   CD2   HD2
+     C     O
+[ mapping ]
+N    BB
+H    BB
+CA    BB
+CB   SC1
+  CG   SC1
+ NE2   SC2
+ HE2   SC2
+ CD2   SC2
+ HD2   SC2
+ ND1   SC3
+ CE1   SC3
+ HE1   SC3
+   C    BB
+   O    BB
+

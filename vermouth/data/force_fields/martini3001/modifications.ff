@@ -62,12 +62,12 @@ LYS-LSN
 SC2 {"replace": {"atype": "SN6d", "charge": 0}}
 
 [ modification ]
-HIS-HIP
+HIS-HP
 [ atoms ]
-BB  {"resname": "HIS", "replace": {"resname": "HIP"}}
-SC1 {"resname": "HIS", "replace": {"resname": "HIP"}}
-SC2 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}
-SC3 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIP"}}
+BB  {"resname": "HIS", "replace": {"resname": "HIS"}}
+SC1 {"resname": "HIS", "replace": {"resname": "HIS"}}
+SC2 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIS"}}
+SC3 {"resname": "HIS", "replace": {"atype": "TP1dq", "charge": "0.5", "resname": "HIS"}}
 [ edges ]
 BB SC1 
 SC1 SC2
@@ -75,12 +75,12 @@ SC1 SC3
 SC2 SC3
 
 [ modification ]
-HIS-HIE
+HIS-HE
 [ atoms ]
-BB  {"resname": "HIS", "replace": {"resname": "HIE"}}
-SC1 {"resname": "HIS", "replace": {"resname": "HIE"}}
-SC2 {"resname": "HIS", "replace": {"resname": "HIE"}}
-SC3 {"resname": "HIS", "replace": {"resname": "HIE"}}
+BB  {"resname": "HIS", "replace": {"resname": "HIS"}}
+SC1 {"resname": "HIS", "replace": {"resname": "HIS"}}
+SC2 {"resname": "HIS", "replace": {"resname": "HIS"}}
+SC3 {"resname": "HIS", "replace": {"resname": "HIS"}}
 [ edges ]
 BB SC1 
 SC1 SC2
@@ -88,12 +88,12 @@ SC1 SC3
 SC2 SC3
 
 [ modification ]
-HIS-HID
+HIS-HD
 [ atoms ]
-BB  {"resname": "HIS", "replace": {"resname": "HID"}}
-SC1 {"resname": "HIS", "replace": {"resname": "HID"}}
-SC2 {"resname": "HIS", "replace": {"resname": "HID", "atype": "TN5a"}}
-SC3 {"resname": "HIS", "replace": {"resname": "HID", "atype": "TN6a"}}
+BB  {"resname": "HIS", "replace": {"resname": "HIS"}}
+SC1 {"resname": "HIS", "replace": {"resname": "HIS"}}
+SC2 {"resname": "HIS", "replace": {"resname": "HIS", "atype": "TN5a"}}
+SC3 {"resname": "HIS", "replace": {"resname": "HIS", "atype": "TN6a"}}
 [ edges ]
 BB SC1 
 SC1 SC2
