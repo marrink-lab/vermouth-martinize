@@ -59,7 +59,12 @@ SC1 {"replace": {"atype": "P2", "charge": 0}}
 [ modification ]
 LYS-LSN
 [ atoms ]
-SC2 {"replace": {"atype": "SN6d", "charge": 0}}
+SC2 {"resname": "LYS", "replace": {"atype": "SN6d", "charge": 0}}
+
+[ modification ]
+LYS-HZ3
+[ atoms ]
+SC2 {"replace": {"resname": "LYS"}}
 
 [ modification ]
 HIS-HP

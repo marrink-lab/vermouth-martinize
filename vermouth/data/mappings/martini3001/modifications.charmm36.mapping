@@ -292,6 +292,7 @@ HD2  SC1
 CB   SC1
 CG   SC1
 
+
 [ modification ]
 [ from ]
 charmm
@@ -306,9 +307,9 @@ CE
 HE1
 HE2
 [ from edges ]
+CE NZ
 CE HE1
 CE HE2
-CE NZ
 [ mapping ]
 CE  SC2
 HE1 SC2
@@ -316,6 +317,32 @@ HE2 SC2
 NZ  SC2
 HZ1 SC2
 HZ2 SC2
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+LYS-HZ3
+[ to blocks ]
+LYS-HZ3
+[ from nodes ]
+CE
+HE1
+HE2
+[ from edges ]
+CE NZ
+CE HE1
+CE HE2
+[ mapping ]
+CE  SC2
+HE1 SC2
+HE2 SC2
+NZ  SC2
+HZ1 SC2
+HZ2 SC2
+HZ3 SC2
 
 [modification]
 [ from ]

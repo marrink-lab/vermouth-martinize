@@ -119,16 +119,26 @@ OD1 HD1
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 [ modification ]
-LYS-LSN
+LYS-HZ3
 [ atoms ]
 NZ  {"resname": "LYS", "element": "N"}
-HZ1 {"resname": "LYS", "element": "H"}
-HZ2 {"resname": "LYS", "element": "H"}
-HZ3 {"resnmae": "LYS", "element": "H", "PTM_atom": true, "replace": {"atomname": null}}
+HZ1 {"resname": "LYS", "element": "H", "PTM_atom": true}
+HZ2 {"resnmae": "LYS", "element": "H", "PTM_atom": true}
+HZ3 {"resnmae": "LYS", "element": "H", "PTM_atom": true}
 [ edges ]
 NZ HZ1
 NZ HZ2
 NZ HZ3
+
+[ modification ]
+LYS-LSN
+[ atoms ]
+NZ  {"resname": "LYS", "element": "N"}
+HZ1 {"resname": "LYS", "element": "H", "PTM_atom": true}
+HZ2 {"resname": "LYS", "element": "H", "PTM_atom": true}
+[ edges ]
+NZ HZ1
+NZ HZ2
 
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  HISTIDINE MODIFICATIONS
