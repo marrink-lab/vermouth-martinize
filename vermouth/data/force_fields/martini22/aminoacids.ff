@@ -309,13 +309,13 @@ LYS                1
 
 [ moleculetype ]
 ; molname       nrexcl
-LYS0               1
+LSN               1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
- 1   P5    1     LYS     BB     1      0    
- 2   C3    1     LYS     SC1    2      0    
- 3   P1    1     LYS     SC2    3      0    
+ 1   P5    1     LSN     BB     1      0    
+ 2   C3    1     LSN     SC1    2      0    
+ 3   P1    1     LSN     SC2    3      0    
 
 [bonds]
 #meta {"group": "Side chain bonds"}

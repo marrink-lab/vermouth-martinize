@@ -32,3 +32,13 @@ PO4 {"atype": "Qa", "charge": "-1", "PTM_atom": true}
 SC3 PO4 1 0.47 1250 {"comment": "phospho"}
 [ edges ]
 SC3 PO4
+
+[ modification ]
+LYS-LSN
+[ atoms ]
+SC2 {"resname": "LYS", "replace": {"atype": "P1", "charge": 0}}
+
+[ modification ]
+LYS-HZ3
+[ atoms ]
+SC2 {"replace": {"resname": "LYS"}}
