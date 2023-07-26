@@ -45,11 +45,8 @@ charmm27 charmm36
    15   HE1   !SC2
    16   HE2   !SC2
    17    NZ   SC2
-   18   HZ1   SC2
-   19   HZ2   SC2
-   20   HZ3   SC2
-   21     C    BB
-   22     O    BB
+   18     C    BB
+   19     O    BB
 
 [ chiral ]
   CB     CA    N    C

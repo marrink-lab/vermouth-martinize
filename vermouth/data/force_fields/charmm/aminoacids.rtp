@@ -759,9 +759,6 @@
 	HE1	HA	0.05	14
 	HE2	HA	0.05	15
 	NZ	NH3	-0.30	16
-	HZ1	HC	0.33	17
-	HZ2	HC	0.33	18
-	HZ3	HC	0.33	19
 	C	C	0.51	20
 	O	O	-0.51	21
  [ bonds ]
@@ -784,9 +781,6 @@
 	CE	HE1
 	CE	HE2
 	O	C
-	NZ	HZ1
-	NZ	HZ2
-	NZ	HZ3
  [ impropers ]
 	N	-C	CA	HN
 	C	CA	+N	O

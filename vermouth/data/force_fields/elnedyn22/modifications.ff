@@ -24,6 +24,21 @@ NH2-ter
 BB {"replace": {"atype": "P5", "charge": 0}}
 
 [ modification ]
-ASP0
+ASP-HD1
 [ atoms ]
 SC1 {"resname": "ASP", "replace": {"atype": "P3", "charge": 0}}
+
+[ modification ]
+ASP-HD2
+[ atoms ]
+SC1 {"resname": "ASP", "replace": {"atype": "P3", "charge": 0}}
+
+[ modification ]
+LYS-LSN
+[ atoms ]
+SC2 {"resname": "LYS", "replace": {"atype": "P1", "charge": 0}}
+
+[ modification ]
+LYS-HZ3
+[ atoms ]
+SC2 {"replace": {"resname": "LYS"}}

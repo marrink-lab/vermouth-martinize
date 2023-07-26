@@ -228,3 +228,55 @@ HE1  SC3
 CZ   SC3
 OH   SC3
 HH   SC3
+
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+[ from blocks ]
+LYS-LSN
+[ to blocks ]
+LYS-LSN
+[ from nodes ]
+CE
+HE1
+HE2
+[ from edges ]
+CE NZ
+CE HE1
+CE HE2
+[ mapping ]
+CE  SC2
+HE1 SC2
+HE2 SC2
+NZ  SC2
+HZ1 SC2
+HZ2 SC2
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+[ from blocks ]
+LYS-HZ3
+[ to blocks ]
+LYS-HZ3
+[ from nodes ]
+CE
+HE1
+HE2
+[ from edges ]
+CE NZ
+CE HE1
+CE HE2
+[ mapping ]
+CE  SC2
+HE1 SC2
+HE2 SC2
+NZ  SC2
+HZ1 SC2
+HZ2 SC2
+HZ3 SC2
