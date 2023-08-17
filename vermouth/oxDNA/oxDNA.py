@@ -63,10 +63,10 @@ def read_oxDNA(file_name, exclude=()):
             properties['position'] = np.array(pos, dtype=float)
 
             if has_b:
-                vector = columns[4:6]
+                vector = columns[3:6]
                 properties['base vector'] = np.array(vector, dtype=float)
                 if has_n:
-                    vector = columns[7:9]
+                    vector = columns[6:9]
                     properties['base normal vector'] = np.array(vector, dtype=float)
 
             molecule.add_node(idx, **properties)
