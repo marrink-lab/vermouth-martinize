@@ -342,9 +342,9 @@ class PDBParser(LineParser):
         # parsed yet, and the molecule won't have any edges.
         if self.active_molecule:
             if {"a", "b", "c"}.issubset(set(self.cryst.keys())):
-                self.active_molecule.box = np.array([self.cryst['a'],
-                                                     self.cryst['b'],
-                                                     self.cryst['b']])
+                self.active_molecule.box = np.array([self.cryst['a']/10.,
+                                                     self.cryst['b']/10.,
+                                                     self.cryst['b']/10.])
             self.molecules.append(self.active_molecule)
         self.active_molecule = Molecule()
 
