@@ -260,6 +260,7 @@ def test_atom_attributes():
 def test_cryst1(caplog, pdbstr, cryst_dict):
     parser = PDBParser()
     mols = list(parser.parse(pdbstr.splitlines()))
+    assert np.all(np.isclose(mols[0].box, np.array([7.7987, 7.7987, 7.7987])))
     assert parser.cryst == cryst_dict
     if len(cryst_dict) < 8:
         assert any(rec.levelname == 'WARNING' for rec in caplog.records)

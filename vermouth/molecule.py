@@ -360,6 +360,8 @@ class Molecule(nx.Graph):
         # {loglevel: {entry: [fmt_args]}}
         self.log_entries = defaultdict(lambda: defaultdict(list))
         self.max_node = None
+        # box of the system the molecule is in
+        self.box = None
 
     def __eq__(self, other):
         return (
