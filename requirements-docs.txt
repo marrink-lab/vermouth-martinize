@@ -1,4 +1,4 @@
-sphinx == 7.2.3
+sphinx == 7.2.2
 sphinxcontrib-apidoc
 pbr
 setuptools >= 30.3.0
