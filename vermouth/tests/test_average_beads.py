@@ -28,7 +28,7 @@ def mol_with_subgraph():
     """
     Create a molecule with a subgraph under the "graph" attribute of each node.
     """
-    mol = nx.OrderedGraph()
+    mol = nx.Graph()
 
     subgraph = nx.Graph()
     subgraph.add_nodes_from((
