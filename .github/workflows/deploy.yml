@@ -19,10 +19,8 @@ jobs:
     
     strategy:
       matrix:
-       py_version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+       py_version: ["3.8", "3.9", "3.10", "3.11"]
        include:
-         - py_version: "3.7"
-           WITH_CODECOV: true
          - py_version: "3.8"
            WITH_CODECOV: true
          - py_version: "3.9"
@@ -67,10 +65,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
         cache: pip
         cache-dependency-path: |
           **/setup.cfg
@@ -92,10 +90,10 @@ jobs:
       
       steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.10
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
-           python-version: '3.10'
+           python-version: '3.11'
            cache: pip
            cache-dependency-path: |
              **/setup.cfg
@@ -110,7 +108,7 @@ jobs:
       - name: Run docs
         run: | 
           mkdir -p doc/source/_static
-          sphinx-build -EnW -b html doc/source/ doc/build/html
+          sphinx-build -EW -b html doc/source/ doc/build/html
   
   
   deploy:
@@ -119,10 +117,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
         cache: pip
         cache-dependency-path: |
           **/setup.cfg
