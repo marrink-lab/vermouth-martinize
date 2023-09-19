@@ -236,7 +236,7 @@ def test_atom_attributes():
 
 @pytest.mark.parametrize('pdbstr, cryst_dict', (
     # complete directive
-    ('''CRYST1   77.987   77.987   77.987  90.00  90.00  90.00 P 1           1
+    ('''CRYST1   77.987   87.987   97.987  90.00  90.00  90.00 P 1           1
     MODEL        1
     ATOM      1  EO  PEO     0      74.550  37.470  22.790  1.00  0.00
     ATOM      2  EO  PEO     1      77.020  38.150  25.000  1.00  0.00
@@ -248,7 +248,7 @@ def test_atom_attributes():
     "space_group": "P 1", "z_value": 1}
     ),
     # incomplete directive
-    ('''CRYST1   77.987   77.987   77.987
+    ('''CRYST1   77.987   87.987   97.987
     MODEL        1
     ATOM      1  EO  PEO     0      74.550  37.470  22.790  1.00  0.00
     ATOM      2  EO  PEO     1      77.020  38.150  25.000  1.00  0.00
@@ -260,7 +260,7 @@ def test_atom_attributes():
 def test_cryst1(caplog, pdbstr, cryst_dict):
     parser = PDBParser()
     mols = list(parser.parse(pdbstr.splitlines()))
-    assert np.all(np.isclose(mols[0].box, np.array([7.7987, 7.7987, 7.7987])))
+    assert np.all(np.isclose(mols[0].box, np.array([7.7987, 8.7987, 9.7987])))
     assert parser.cryst == cryst_dict
     if len(cryst_dict) < 8:
         assert any(rec.levelname == 'WARNING' for rec in caplog.records)
