@@ -243,7 +243,7 @@ def test_atom_attributes():
     ATOM      3  EO  PEO     2      76.390  37.180  28.130  1.00  0.00
     ATOM      4  EO  PEO     3      75.430  37.920  31.450  1.00  0.00
     ''',
-    {"a": 77.987, "b": 77.987, "c": 77.987,
+    {"a": 77.987, "b": 87.987, "c": 97.987,
      "alpha": 90.0, "beta": 90.0, "gamma": 90,
     "space_group": "P 1", "z_value": 1}
     ),
@@ -255,7 +255,7 @@ def test_atom_attributes():
     ATOM      3  EO  PEO     2      76.390  37.180  28.130  1.00  0.00
     ATOM      4  EO  PEO     3      75.430  37.920  31.450  1.00  0.00
     ''',
-    {"a": 77.987, "b": 77.987, "c": 77.987,}
+    {"a": 77.987, "b": 87.987, "c": 97.987,}
     )))
 def test_cryst1(caplog, pdbstr, cryst_dict):
     parser = PDBParser()
