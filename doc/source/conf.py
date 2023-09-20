@@ -32,8 +32,8 @@ author = 'Peter C Kroon, Jonathan Barnoud, Tsjerk A Wassenaar, Siewert-Jan Marri
 # The full version, including alpha/beta/rc tags
 release = get_distribution('vermouth').version
 # The short X.Y version
-version = '.'.join(release.split('.')[:2])
-
+# version = '.'.join(release.split('.')[:2])
+version = release
 
 # -- General configuration ---------------------------------------------------
 

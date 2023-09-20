@@ -1,8 +1,8 @@
 File formats
 ============
 VerMoUTH introduces two new file formats. The ``.ff`` format for defining
-:ref:`blocks <data:block>`, :ref:`links <data:link>` and :
-ref:`modifications <data:modification>`. Note that you can also define blocks
+:ref:`blocks <data:block>`, :ref:`links <data:link>` and
+:ref:`modifications <data:modification>`. Note that you can also define blocks
 (and basic links) with Gromacs ``.itp`` and ``.rtp`` files. The ``.mapping``
 format can be used to define :ref:`mappings <data:mapping>`. Mappings that don't
 cross residue boundaries can also be defined using ``.map`` files.
