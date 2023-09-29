@@ -685,7 +685,7 @@ class MappingDirector(SectionLineParser):
                 identifier     := string that does not start with '!'
                 res_attrs      := json dict
                 An "!" signifies that no block should be fetched based on the
-                the resname automatically.
+                resname automatically.
 
         Identifier *must* be unique for this mapping/direction.
 
