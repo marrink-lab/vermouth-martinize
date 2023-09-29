@@ -13,6 +13,8 @@ serine residue (``OC(=O)C(N)COP(=O)(=O)[O-]``). Note that the parameters
 presented here are for demonstration purposes only and not fit for actual
 science or simulations!
 
+All input files for this tutorial can be found on `github <https://github.com/marrink-lab/vermouth-martinize/tree/master/doc/source/tutorials/6_adding_residues_links/files>`_.
+
 The input force field
 ---------------------
 The input force field is the force field best describing the structure and atom
@@ -23,10 +25,10 @@ your input structure, only the atom names and edges are relevant.
 We'll start by creating a force fields folder we can use to create the tutorial
 files; and in that folder we need to create a force field named ``charmm``::
 
-  mkdir -p tutorial_ff/charmm
+  mkdir -p force_fields/charmm
 
 Now we need to add the SEP :ref:`data:block` to our ``charmm`` folder. Let's
-put it in the file ``tutorial_ff/charmm/sep.rtp``::
+put it in the file ``force_fields/charmm/sep.rtp``::
 
   [ bondedtypes ]
   1 5 9 2 1 3 1 0
@@ -71,9 +73,9 @@ We also need to add the SEP :ref:`data:block` to the output force field. Of
 course we'll use Martini 3 for this. Let's again start by making a martini3001
 folder::
 
-    mkdir -p tutorial_ff/martini3001
+    mkdir -p force_fields/martini3001
 
-Now to add the block to ``tutorial_ff/martini3001/sep.ff``::
+Now to add the block to ``force_fields/martini3001/sep.ff``::
 
     ;;; PHOSPHOSERINE
     [ moleculetype ]
@@ -88,7 +90,7 @@ Now to add the block to ``tutorial_ff/martini3001/sep.ff``::
     [ bonds ]
     BB SC1 1 0.33 5000
 
-At this point we can run ``martinize2 -ff-dir tutorial_ff -list-blocks`` to
+At this point we can run ``martinize2 -ff-dir force_fields -list-blocks`` to
 check whether our new SEP blocks are picked up.
 
 The mapping
@@ -137,7 +139,7 @@ CB will contribute to BB and SC1 with equal weight.
 
 Ok, this great! At this point we can run ``martinize2``::
 
-    martinize2 -ff-dir tutorial_ff -map-dir mappings -f ala-sep-ala.pdb -x AJA.pdb -o topol.top
+    martinize2 -ff-dir force_fields -map-dir mappings -f ala-sep-ala.pdb -x AJA.pdb -o topol.top
 
 And inspect the resulting ``molecule_0.itp`` to make sure our final topology is
 correct::
@@ -182,7 +184,7 @@ In Vermouth and martinize2 we use :ref:`links <data:link>` to describe interacti
 between residues. We need to these to the output force field---in this case
 martini3001.
 
-We can add the following to ``tutorial_ff/martini3001/sep.ff``::
+We can add the following to ``force_fields/martini3001/sep.ff``::
 
     [ link ]
     [ bonds ]

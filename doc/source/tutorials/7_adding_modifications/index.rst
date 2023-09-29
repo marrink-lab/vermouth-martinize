@@ -15,6 +15,8 @@ field, and mapping between the two. Note that the parameters
 presented here are for demonstration purposes only and not fit for actual
 science or simulations!
 
+All input files for this tutorial can be found on `github <https://github.com/marrink-lab/vermouth-martinize/tree/master/doc/source/tutorials/7_adding_modifications/files>`_.
+
 The input force field
 ---------------------
 During :ref:`repair <martinize2_workflow:repair graph>` the regular SER atoms
@@ -30,7 +32,7 @@ expected, the warning that not all modifications could be identified::
 
   WARNING - unknown-input - Could not identify the modifications for residues ['SER3'], involving atoms ['21-O1', '22-O2', '23-O3', '24-P']
 
-So let's define the modification in ``forcefields/charmm/modification.ff``::
+So let's define the modification in ``force_fields/charmm/modification.ff``::
 
     ; THESE PARAMETERS ARE FOR DEMONSTRATION PURPOSES ONLY. DO NOT USE.
     [ modification ]
@@ -73,7 +75,7 @@ and charge.
 The output force field
 ----------------------
 We have to add a similar modification for the output force field in
-``forcefields/martini3001/modification.ff``::
+``force_fields/martini3001/modification.ff``::
 
     [ modification ]
     ; THESE PARAMETERS ARE FOR DEMONSTRATION PURPOSES ONLY. DO NOT USE.
@@ -153,7 +155,7 @@ nodes required to describe the complete mapping for the BB and SC1 nodes, so
 these need to be described under `from nodes` and `from edges`. Finally, the
 actual mapping section should be self explanatory.
 
-Now if we run ``martinize2 -f ala-sep-ala.pdb -x AJA.pdb -o topol.top -ff-dir forcefields/ -map-dir mappings/``
+Now if we run ``martinize2 -f ala-sep-ala.pdb -x AJA.pdb -o topol.top -ff-dir force_fields/ -map-dir mappings/``
 we see ``INFO - general - Applying modification mapping ('SER-phos',)``
 
 Now we need to check the produced itp file::

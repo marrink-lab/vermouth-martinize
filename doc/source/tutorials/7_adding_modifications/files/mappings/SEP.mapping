@@ -1,0 +1,45 @@
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+SER-phos
+[ to blocks ]
+SER-PO4
+[ from nodes ]
+N
+HN
+CA
+HA
+C
+O
+CB
+HB1
+HB2
+[ from edges ]
+N  HN
+N  CA
+CA HA
+CA C
+C  O
+CA CB
+CB HB1
+CB HB2
+CB OG
+[ mapping ]
+N   BB
+HN  BB
+CA  BB
+HA  BB 0
+C   BB
+O   BB
+CB  BB 
+CB  SC1
+HB1 SC1 0
+HB2 SC1 0
+OG  SC1
+P   SC1
+O1  SC1
+O2  SC1
+O3  SC1
