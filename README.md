@@ -43,6 +43,9 @@ the following command:
 Note that vermouth and Martinize2, in particular development versions, may contain bugs that cause it to produce
 incorrect topologies. Check the produced output carefully!
 
+Martinize2 and vermouth have `mdtraj` as optional dependency as an alternative
+to dssp.
+
 The behavior of the `pip` command can vary depending of the specificity of your
 python installation. See the [documentation on installing a python
 package][pipdoc] to learn more.
