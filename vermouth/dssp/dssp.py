@@ -153,7 +153,7 @@ def read_dssp2(lines):
     return secstructs
 
 
-def run_mdtraj(system, savefile=None):
+def run_mdtraj(system):
     """
     Compute DSSP secondary structure assignments for the system by using
     ``mdtraj.compute_dssp``.
@@ -168,8 +168,6 @@ def run_mdtraj(system, savefile=None):
     ----------
     system: System
         The system to process
-    savefile: Any
-        Not used
 
     Returns
     -------
@@ -199,7 +197,7 @@ def run_mdtraj(system, savefile=None):
     return dssp
 
 
-def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
+def run_dssp(system, executable='dssp'):
     """
     Run DSSP on a system and return the assigned secondary structures.
 
@@ -210,26 +208,20 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
     In order to call DSSP, a PDB file is produced. Therefore, all the molecules
     in the system must contain the required attributes for such a file to be
     generated. Also, the atom names are assumed to be compatible with the
-    'universal' force field for DSSP to recognize them.
+    'charmm' force field for DSSP to recognize them.
     However, the molecules do not require the edges to be defined.
 
     DSSP is assumed to be in version 2 or 3. The secondary structure codes are
     described in :func:`read_dssp2`.
-
-    If "savefile" is set to a path, then the output of DSSP is written in
-    that file.
 
     Parameters
     ----------
     system: System
     executable: str
         Where to find the DSSP executable.
-    savefile: None or str or pathlib.Path
-        If set to a path, the output of DSSP is written in that file.
-    defer_writing: bool
-        Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
 
     Returns
+    -------
     list[str]
         The assigned secondary structures as a list of one-letter codes.
         The secondary structure sequences of all the molecules are combined
@@ -288,27 +280,10 @@ def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
     else:
         LOGGER.debug('DSSP input file written to {}', tmpfile_name)
 
-    if savefile is not None:
-        if defer_writing:
-            open = deferred_open
-        with open(str(savefile), 'w') as outfile:
-            outfile.write(process.stdout)
     return read_dssp2(process.stdout.split('\n'))
 
 
-def _savefile_path(molecule, savedir=None):
-    savefile = None
-    if savedir is not None:
-        first_atom = list(molecule.nodes.keys())[0]
-        chain = molecule.nodes[first_atom].get('chain')
-        if chain is None:
-            msg = 'The "savedir" argument can only be used if chains are set.'
-            raise ValueError(msg)
-        savefile = os.path.join(savedir, 'chain_{}.ssd'.format(chain))
-    return savefile
-
-
-def annotate_dssp(molecule, executable=None, savedir=None, attribute='secstruct'):
+def annotate_dssp(molecule, callable=None, attribute='secstruct'):
     """
     Adds the DSSP assignation to the atoms of a molecule.
 
@@ -333,18 +308,15 @@ def annotate_dssp(molecule, executable=None, savedir=None, attribute='secstruct'
         The molecule to annotate. Its atoms must have the attributes required
         to write a PDB file; other atom attributes, edges, or molecule
         attributes are not used.
-    executable: str
-        The path or name in the research PATH of the DSSP executable.
-    savedir: None or str
-        If set to a path, the DSSP output will be written in this **directory**.
-        The option is only available if chains are defined with the 'chain'
-        atom attribute.
+    callable: callable
+        The function to call to generate DSSP secondary structure assignments.
+        See also: :func:`run_dssp`, :func:`run_mdtraj`
     attribute: str
         The name of the atom attribute in which to store the annotation.
 
     See Also
     --------
-    run_dssp, read_dssp2
+    run_mdtraj, run_dssp, read_dssp2
     """
     if not is_protein(molecule):
         return
@@ -357,11 +329,9 @@ def annotate_dssp(molecule, executable=None, savedir=None, attribute='secstruct'
     if not clean_pos:
         return
 
-    savefile = _savefile_path(molecule, savedir)
-
     system = System()
     system.add_molecule(clean_pos)
-    secstructs = executable(system, savefile=savefile)
+    secstructs = callable(system)
 
     annotate_residues_from_sequence(molecule, attribute, secstructs)
 
@@ -524,16 +494,15 @@ def convert_dssp_annotation_to_martini(
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
-    def __init__(self, executable=None, savedir=None):
+    def __init__(self, executable=None):
         super().__init__()
         if HAVE_MDTRAJ and executable is None:
             self.dssp = run_mdtraj
         else:
             self.dssp = partial(run_dssp, executable=executable)
-        self.savedir = savedir
 
     def run_molecule(self, molecule):
-        annotate_dssp(molecule, self.dssp, self.savedir)
+        annotate_dssp(molecule, self.dssp)
         return molecule
 
 
