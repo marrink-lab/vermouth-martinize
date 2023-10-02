@@ -191,7 +191,7 @@ def run_mdtraj(system):
                   "The input file provided to MDTraj can be found at {file}."
         raise DSSPError(message.format(err=str(error), file=tmpfile_name)) from error
     else:
-        dssp = ['C' if ss == ' ' else ss for ss in dssp[0]]
+        dssp = ['C' if ss == ' ' else ss for mol in dssp for ss in mol]
         if LOGGER.getEffectiveLevel() > logging.DEBUG:
             os.remove(tmpfile_name)
     return dssp
