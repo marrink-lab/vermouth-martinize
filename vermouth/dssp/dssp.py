@@ -308,7 +308,7 @@ def annotate_dssp(molecule, callable=None, attribute='secstruct'):
         The molecule to annotate. Its atoms must have the attributes required
         to write a PDB file; other atom attributes, edges, or molecule
         attributes are not used.
-    callable: callable
+    callable: Callable
         The function to call to generate DSSP secondary structure assignments.
         See also: :func:`run_dssp`, :func:`run_mdtraj`
     attribute: str
