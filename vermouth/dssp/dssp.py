@@ -17,6 +17,7 @@ Assign protein secondary structures using DSSP.
 """
 
 import collections
+from functools import partial
 import logging
 import os
 import subprocess
@@ -30,6 +31,13 @@ from ..processors.processor import Processor
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 from .. import utils
 from ..log_helpers import StyleAdapter, get_logger
+
+try:
+    import mdtraj
+except ImportError:
+    HAVE_MDTRAJ = False
+else:
+    HAVE_MDTRAJ = True
 
 LOGGER = StyleAdapter(get_logger(__name__))
 SUPPORTED_DSSP_VERSIONS = ("2.2.1", "3.0.0")
@@ -145,6 +153,52 @@ def read_dssp2(lines):
     return secstructs
 
 
+def run_mdtraj(system, savefile=None):
+    """
+    Compute DSSP secondary structure assignments for the system by using
+    ``mdtraj.compute_dssp``.
+
+    During processing, a PDB file is produced. Therefore, all the molecules
+    in the system must contain the required attributes for such a file to be
+    generated. Also, the atom names are assumed to be compatible with the
+    'charmm' force field for MDTraj to recognize them.
+    However, the molecules do not require the edges to be defined.
+
+    Parameters
+    ----------
+    system: System
+        The system to process
+    savefile: Any
+        Not used
+
+    Returns
+    -------
+    list[str]
+        The assigned secondary structures as a list of one-letter codes.
+        The secondary structure sequences of all the molecules are combined
+        in a single list without delimitation.
+    """
+    tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
+                                                    dir='.', prefix='dssp_in_')
+    tmpfile_handle = os.fdopen(tmpfile_handle, mode='w')
+    tmpfile_handle.write(pdb.write_pdb_string(system, conect=False))
+    tmpfile_handle.close()
+
+    try:
+        struct = mdtraj.load_pdb(tmpfile_name)
+        dssp = mdtraj.compute_dssp(struct, simplified=False)
+    except Exception as error:
+        # Don't delete the temporary file
+        message = "MDTraj encountered an error. The message was {err}. "\
+                  "The input file provided to MDTraj can be found at {file}."
+        raise DSSPError(message.format(err=str(error), file=tmpfile_name)) from error
+    else:
+        dssp = ['C' if ss == ' ' else ss for ss in dssp[0]]
+        if LOGGER.getEffectiveLevel() > logging.DEBUG:
+            os.remove(tmpfile_name)
+    return dssp
+
+
 def run_dssp(system, executable='dssp', savefile=None, defer_writing=True):
     """
     Run DSSP on a system and return the assigned secondary structures.
@@ -254,7 +308,7 @@ def _savefile_path(molecule, savedir=None):
     return savefile
 
 
-def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruct'):
+def annotate_dssp(molecule, executable=None, savedir=None, attribute='secstruct'):
     """
     Adds the DSSP assignation to the atoms of a molecule.
 
@@ -307,7 +361,7 @@ def annotate_dssp(molecule, executable='dssp', savedir=None, attribute='secstruc
 
     system = System()
     system.add_molecule(clean_pos)
-    secstructs = run_dssp(system, executable, savefile)
+    secstructs = executable(system, savefile=savefile)
 
     annotate_residues_from_sequence(molecule, attribute, secstructs)
 
@@ -470,13 +524,16 @@ def convert_dssp_annotation_to_martini(
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
-    def __init__(self, executable='dssp', savedir=None):
+    def __init__(self, executable=None, savedir=None):
         super().__init__()
-        self.executable = executable
+        if HAVE_MDTRAJ and executable is None:
+            self.dssp = run_mdtraj
+        else:
+            self.dssp = partial(run_dssp, executable=executable)
         self.savedir = savedir
 
     def run_molecule(self, molecule):
-        annotate_dssp(molecule, self.executable, self.savedir)
+        annotate_dssp(molecule, self.dssp, self.savedir)
         return molecule
 
 

@@ -520,7 +520,7 @@ def entry():
     secstruct_exclusion.add_argument(
         "-dssp",
         nargs="?",
-        const="dssp",
+        const=True,
         help="DSSP executable for determining structure",
     )
     secstruct_exclusion.add_argument(
@@ -890,7 +890,9 @@ def entry():
         LOGGER.debug("Read molecule {}.", molecule, type="step")
 
     target_ff = known_force_fields[args.to_ff]
-    if args.dssp is not None:
+    if args.dssp:
+        if not isinstance(args.dssp, str):
+            args.dssp = None
         AnnotateDSSP(executable=args.dssp, savedir=".").run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
