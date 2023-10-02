@@ -496,10 +496,15 @@ class AnnotateDSSP(Processor):
 
     def __init__(self, executable=None):
         super().__init__()
-        if HAVE_MDTRAJ and executable is None:
-            self.dssp = run_mdtraj
-        else:
+        if executable is None:
+            if HAVE_MDTRAJ:
+                self.dssp = run_mdtraj
+            else:
+                self.dssp = partial(run_dssp, executable='dssp')
+        elif isinstance(executable, str):
             self.dssp = partial(run_dssp, executable=executable)
+        else:
+            self.dssp = executable
 
     def run_molecule(self, molecule):
         annotate_dssp(molecule, self.dssp)
