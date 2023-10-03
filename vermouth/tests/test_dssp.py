@@ -372,14 +372,14 @@ def test_run_dssp(savefile, tmpdir):
     # The "tmpdir" argument is set by pytest and is the path to a temporary
     # directory that exists only for one iteration of the test.
     if savefile:
-        path = tmpdir.join("dssp_output")
+        path = tmpdir
     else:
         path = None
     system = vermouth.System()
     for molecule in read_pdb(str(PDB_PROTEIN)):
         system.add_molecule(molecule)
     secondary_structure = dssp.run_dssp(
-        system, executable=DSSP_EXECUTABLE, savefile=path
+        system, executable=DSSP_EXECUTABLE, savedir=path
     )
 
     # Make sure we produced the expected sequence of secondary structures
@@ -393,9 +393,12 @@ def test_run_dssp(savefile, tmpdir):
     if savefile:
         DeferredFileWriter().write()
         assert path.exists()
-        with open(str(path), encoding="utf-8") as genfile, open(
-            str(DSSP_OUTPUT), encoding="utf-8"
-        ) as reffile:
+        foundfile = list(path.glob('chain_*.ssd'))
+        assert len(foundfile) == 1
+        foundfile = foundfile[0]
+
+        with (open(foundfile, encoding="utf-8") as genfile,
+              open(str(DSSP_OUTPUT), encoding="utf-8") as reffile):
             # DSSP 3 is outputs mostly the same thing as DSSP2, though there
             # are some differences in non significant whitespaces, and an extra
             # field header. We need to normalize these differences to be able

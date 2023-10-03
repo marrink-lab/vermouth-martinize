@@ -197,7 +197,23 @@ def run_mdtraj(system):
     return dssp
 
 
-def run_dssp(system, executable='dssp'):
+def _savefile_path(system, savedir=None):
+    savefile = None
+    if savedir is not None:
+        chains = set()
+        for molecule in system.molecules:
+            first_atom = list(molecule.nodes.keys())[0]
+            chain = molecule.nodes[first_atom].get('chain')
+            if chain is not None:
+                chains.add(chain)
+        if not chains:
+            msg = 'The "savedir" argument can only be used if chains are set.'
+            raise ValueError(msg)
+        savefile = os.path.join(savedir, 'chain_{}.ssd'.format(','.join(sorted(chains))))
+    return savefile
+
+
+def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
     """
     Run DSSP on a system and return the assigned secondary structures.
 
@@ -219,6 +235,10 @@ def run_dssp(system, executable='dssp'):
     system: System
     executable: str
         Where to find the DSSP executable.
+    savefile: None or str or pathlib.Path
+        If set to a path, the output of DSSP is written in this directory.
+    defer_writing: bool
+        Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
 
     Returns
     -------
@@ -239,6 +259,13 @@ def run_dssp(system, executable='dssp'):
     read_dssp2
         Parse a DSSP output.
     """
+    if savedir:
+        # I don't love this. A system could contain multiple molecules, a mol
+        # could contain multiple chains. Adapt _savefile_path to iterate over
+        # all atoms to collect all chains sounds expensive though.
+        savefile = _savefile_path(system, savedir)
+    else:
+        savefile = None
     # check version
     process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
@@ -279,6 +306,12 @@ def run_dssp(system, executable='dssp'):
         raise DSSPError(message.format(err=process.stderr, file=tmpfile_name))
     else:
         LOGGER.debug('DSSP input file written to {}', tmpfile_name)
+
+    if savefile is not None:
+        if defer_writing:
+            open = deferred_open
+        with open(str(savefile), 'w') as outfile:
+            outfile.write(process.stdout)
 
     return read_dssp2(process.stdout.split('\n'))
 
@@ -494,15 +527,15 @@ def convert_dssp_annotation_to_martini(
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
-    def __init__(self, executable=None):
+    def __init__(self, executable=None, savedir=None):
         super().__init__()
         if executable is None:
             if HAVE_MDTRAJ:
                 self.dssp = run_mdtraj
             else:
-                self.dssp = partial(run_dssp, executable='dssp')
+                self.dssp = partial(run_dssp, executable='dssp', savedir=savedir)
         elif isinstance(executable, str):
-            self.dssp = partial(run_dssp, executable=executable)
+            self.dssp = partial(run_dssp, executable=executable, savedir=savedir)
         else:
             self.dssp = executable
 
