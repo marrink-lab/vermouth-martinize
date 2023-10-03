@@ -360,7 +360,7 @@ def test_read_dssp2(input_file, expected):
 
 
 @pytest.mark.parametrize("savefile", [True, False])
-def test_run_dssp(savefile, tmpdir):
+def test_run_dssp(savefile, tmp_path):
     """
     Test that :func:`vermouth.molecule.dssp.dssp.run_dssp` runs as expected and
     generate a save file only if requested.
@@ -372,7 +372,7 @@ def test_run_dssp(savefile, tmpdir):
     # The "tmpdir" argument is set by pytest and is the path to a temporary
     # directory that exists only for one iteration of the test.
     if savefile:
-        path = tmpdir
+        path = tmp_path
     else:
         path = None
     system = vermouth.System()
@@ -412,7 +412,7 @@ def test_run_dssp(savefile, tmpdir):
             assert gen == ref
     else:
         # Is the directory empty?
-        assert not os.listdir(str(tmpdir))
+        assert list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize(
