@@ -397,8 +397,7 @@ def test_run_dssp(savefile, tmpdir):
         assert len(foundfile) == 1
         foundfile = foundfile[0]
 
-        with (open(foundfile, encoding="utf-8") as genfile,
-              open(str(DSSP_OUTPUT), encoding="utf-8") as reffile):
+        with open(foundfile, encoding="utf-8") as genfile, open(str(DSSP_OUTPUT), encoding="utf-8") as reffile:
             # DSSP 3 is outputs mostly the same thing as DSSP2, though there
             # are some differences in non significant whitespaces, and an extra
             # field header. We need to normalize these differences to be able
