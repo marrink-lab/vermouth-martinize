@@ -369,7 +369,7 @@ def test_run_dssp(savefile, tmp_path):
     # saving the DSSP output to file, and once with savefile set t False so we
     # do not generate the file. The "savefile" argument is set by
     # pytest.mark.parametrize.
-    # The "tmpdir" argument is set by pytest and is the path to a temporary
+    # The "tmp_path" argument is set by pytest and is the path to a temporary
     # directory that exists only for one iteration of the test.
     if savefile:
         path = tmp_path
@@ -425,7 +425,7 @@ def test_run_dssp(savefile, tmp_path):
         (PDB_ALA5_CG, 30, True),  # WARNING
     ],
 )
-def test_run_dssp_input_file(tmpdir, caplog, pdb, loglevel, expected):
+def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
     """
     Test that the DSSP input file is preserved (only) in the right conditions
     """
@@ -433,20 +433,20 @@ def test_run_dssp_input_file(tmpdir, caplog, pdb, loglevel, expected):
     system = vermouth.System()
     for molecule in read_pdb(str(pdb)):
         system.add_molecule(molecule)
-    with tmpdir.as_cwd():
-        try:
-            dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
-        except DSSPError:
-            pass
-        if expected:
-            target = 1
-        else:
-            target = 0
-        matches = glob.glob("dssp_in*.pdb")
-        assert len(matches) == target, matches
-        if matches:
-            # Make sure it's a valid PDB file. Mostly anyway.
-            list(read_pdb(matches[0]))
+    os.chdir(tmp_path)
+    try:
+        dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
+    except DSSPError:
+        pass
+    if expected:
+        target = 1
+    else:
+        target = 0
+    matches = glob.glob("dssp_in*.pdb")
+    assert len(matches) == target, matches
+    if matches:
+        # Make sure it's a valid PDB file. Mostly anyway.
+        list(read_pdb(matches[0]))
 
 
 def test_cterm_atomnames():
