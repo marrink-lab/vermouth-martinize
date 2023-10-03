@@ -28,44 +28,47 @@ files; and in that folder we need to create a force field named ``charmm``::
   mkdir -p force_fields/charmm
 
 Now we need to add the SEP :ref:`data:block` to our ``charmm`` folder. Let's
-put it in the file ``force_fields/charmm/sep.rtp``::
+put it in the file ``force_fields/charmm/sep.ff``::
 
-  [ bondedtypes ]
-  1 5 9 2 1 3 1 0
-  [SEP]
+    [ moleculetype ]
+    SEP 3
+
     [ atoms ]
-        N   N  0 0
-        HN  H  0 1
-        CA  C  0 2
-        HA  H  0 3
-        CB  C  0 4
-        HB1 H  0 5
-        HB2 H  0 6
-        OG  O  0 7
-        C   C  0 8
-        O   O  0 9
-        P   P  0 10
-        O1  O  0 11
-        O2  O  0 12
-        O3  O -1 13
-    [ bonds ]
-        CB CA
-        OG CB
-        N  HN
-        N  CA
-        C  CA
-        C  +N
-        CA HA
-        CB HB1
-        CB HB2
-        O  C
-        OG P
-        P  O1
-        P  O2
-        P  O3
+     1 N 1 SEP N    1 0
+     2 H 1 SEP HN   2 0
+     3 C 1 SEP CA   3 0
+     4 H 1 SEP HA   4 0
+     5 C 1 SEP CB   5 0
+     6 H 1 SEP HB1  6 0
+     7 H 1 SEP HB2  7 0
+     8 O 1 SEP OG   8 0
+     9 C 1 SEP C    9 0
+    10 O 1 SEP O   10 0
+    11 P 1 SEP P   11 0
+    12 O 1 SEP O1  12 0
+    13 O 1 SEP O2  13 0
+    14 O 1 SEP O3  14 -1
 
-Note that we only add atom names and bonds, since those are all we need. Also
-note that we added all hydrogens.
+    [ bonds ]
+     3  5
+     5  8
+     1  2
+     1  3
+     3  9
+     3  4
+     5  6
+     5  7
+     9 10
+     8 11
+    11 12
+    11 13
+    11 14
+
+This file looks a lot like an ITP file, and if you have one of those you can
+simply drop it in and use it as is. In this case we didn't have an ITP file
+for SEP yet, so we had to make one. Since we only need atom names and bonds
+that's all we provide. Note that we added all hydrogens. Finally, if you
+prefer, you could also provide a RTP file instead of ITP.
 
 The output force field
 ----------------------
