@@ -412,7 +412,7 @@ def test_run_dssp(savefile, tmp_path):
             assert gen == ref
     else:
         # Is the directory empty?
-        assert list(tmp_path.iterdir())
+        assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize(
