@@ -37,9 +37,9 @@ try:
     import atexit
     from contextlib import ExitStack
 except ImportError:
-    import os
-    DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-    del os
+    from pathlib import Path
+    DATA_PATH = Path(__file__).parent / 'data'
+    del Path
 else:
     ref = files('vermouth') / 'data'
     file_manager = ExitStack()
