@@ -182,7 +182,7 @@ def citation_formatter(citation, title=False):
 
     <authors> [journal] <year>; [doi]
 
-    Note that the formatter cannot fromat latex
+    Note that the formatter cannot format latex
     like syntax (e.g. a{\"} for ae)
     """
     # first we split the author-list

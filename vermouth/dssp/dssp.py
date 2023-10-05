@@ -541,6 +541,7 @@ class AnnotateDSSP(Processor):
 
     def run_molecule(self, molecule):
         annotate_dssp(molecule, self.dssp)
+        molecule.citations.add('MDTraj')
         return molecule
 
 
