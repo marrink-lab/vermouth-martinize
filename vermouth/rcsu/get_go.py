@@ -14,95 +14,151 @@
 """
 Process the Go contact pairs.
 """
-from vermouth.processors.apply_rubber_bands import self_distance_matrix
+import numpy as np
+import networkx as nx
+from vermouth.molecule import Interaction
 
-def extract_position_matrix(molecule, selector):
-    """
-    Given a selector extract a distance matrix from
-    a molecule.
-    """
-    selection = []
-    coordinates = []
-    missing = []
-    node_to_idx = {}
-    idx_to_node = {}
-    for node_idx, (node_key, attributes) in enumerate(molecule.nodes.items()):
-        node_to_idx[node_key] = node_idx
-        idx_to_node[node_idx] = node_key
-        if selector(attributes):
-            selection.append(node_idx)
-            coordinates.append(attributes.get('position'))
-            if coordinates[-1] is None:
-                missing.append(node_key)
-        node_idx += 1
-
-    if missing:
-        raise ValueError('All atoms from the selection must have coordinates. '
-                         'The following atoms do not have some: {}.'
-                         .format(' '.join(missing)))
-
-    if not coordinates:
-        return
-
-    coordinates = np.stack(coordinates)
-    if np.any(np.isnan(coordinates)):
-        LOGGER.warning("Found nan coordinates in molecule {}. "
-                       "Will not generate an EN for it. ",
-                       molecule.moltype,
-                       type='unmapped-atom')
-        return
-
-    distance_matrix = self_distance_matrix(coordinates)
-    return distance_matrix 
-
-def _get_bb_pos(moleule, nodes):
-    for node in molecule.nodes:
+def _get_bb_nodes(molecule, nodes):
+    for node in nodes:
         if molecule.nodes[node]['atomname'] == "BB":
-            return molecule.nodes[node]['position']
+            return node
     return None
+
+def _get_go_type(molecule, resid, chain, prefix):
+    for node in molecule.nodes:
+        attrs = molecule.nodes[node]
+        if attrs['resid'] == resid and attrs['chain'] == chain:
+            if prefix in attrs['atype']:
+                return attrs['atype']
+    raise IOError(f"Could not find GoVs with resid {resid} in chain {chain}.")
+
+def _in_region(resid, regions):
+    """
+    Check if resid falls in regions interval.
+    """
+    for low, up in regions:
+        if low <= resid <= up:
+            return True
+    return False
 
 class GetGo():
     """
     Generate the Go model interaction parameters.
     """
-    def __init__(self, 
-                 contact_map, 
-                 cutoff_short, 
-                 cutoff_long, 
-                 go_eps, 
-                 res_dist, 
-                 domain,
-                 selector):
+    def __init__(self,
+                 contact_map,
+                 cutoff_short,
+                 cutoff_long,
+                 go_eps,
+                 res_dist,
+                 res_graph,
+                 regions=None,
+                 water_bias=None,
+                 idp_water_bias=None,
+                 prefix="VS"):
+
         self.contact_map = contact_map
         self.cutoff_short = cutoff_short
         self.cutoff_long = cutoff_long
         self.go_eps = go_eps
         self.res_dist = res_dist
-        self.domain = domain
-        self.selector = selector
+        self.itp_file = open('GoVirtIncludes.itp', "w", encoding='UTF-8')
+        self.prefix = prefix
+        self.res_graph = res_graph
+        self.water_bias = water_bias
+        self.idp_water_bias = idp_water_bias
+        self.regions = regions
 
-    def run_molecule(molecule):
-        res_graph = molecule.residue_graph
+    def write_go_structural_bias(self, molecule):
         chain_id_to_resnode = {}
-        for resnode in res_graph.nodes:
-            chain = res_graph.nodes[resnode].get('chain', None)
-            resid = res_graph.nodes[resnode].get('resid')
+        # find all pairs of residues that are within bonded distance of
+        # self.res_dist
+        connected_pairs = dict(nx.all_pairs_shortest_path_length(self.res_graph,
+                                                            cutoff=self.res_dist))
+
+        # for each residue collect the chain and residue in a dict
+        # we use this later for identifying the residues from the
+        # contact map
+        for resnode in self.res_graph.nodes:
+            chain = self.res_graph.nodes[resnode].get('chain', None)
+            # in vermouth within a molecule all resid are unique
+            # when merging multiple chains we store the old resid
+            # the go model always references the input resid i.e.
+            # the _old_resid
+            resid = self.res_graph.nodes[resnode].get('_old_resid')
             chain_id_to_resnode[(chain, resid)] = resnode
-            
-        # compute the go parameters
-        for chainA, resA, chainB, resB in self.contact_map:
-            resA = chain_id_to_resnode[(chainA, resA)]
-            resB = chain_id_to_resnode[(chainB, resB)]
-            if graph_distance(resA, resB) > self.res_dist:
-                posA = _get_bb_pos(molecule, res_graph.nodes[resA]['graph'].nodes)
-                posB = _get_bb_pos(molecule, res_graph.nodes[resA]['graph'].nodes)
-                dist = np.linalg.norm(posA, posB)
-                if dist > self.cutoff_short or dist < self.cutoff_large:
+
+        for contact in self.contact_map:
+            resIDA, chainA, resIDB, chainB = contact
+            # identify the contact in the residue graph based on
+            # chain ID and resid
+            resA = chain_id_to_resnode[(chainA, resIDA)]
+            resB = chain_id_to_resnode[(chainB, resIDB)]
+            # make sure that both residues are not connected
+            # note: contacts should be symmteric so we should be
+            # able to get rid of the second if clause
+            if resB not in connected_pairs[resA] and resA not in connected_pairs[resB]:
+                # now we lookup the backbone nodes within the residue contact
+                bb_node_A = _get_bb_nodes(molecule, self.res_graph.nodes[resA]['graph'].nodes)
+                bb_node_B = _get_bb_nodes(molecule, self.res_graph.nodes[resB]['graph'].nodes)
+                # compute the distance between bb-beads
+                dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
+                                      molecule.nodes[bb_node_B]['position'])
+                # verify that the distance between BB-beads satisfies the
+                # cut-off criteria
+                if dist > self.cutoff_short or dist < self.cutoff_long:
+                    # compute the LJ sigma paramter for this contact
                     sigma = dist / 1.12246204830
-                    Vii = 4.0 * pow(sigma, 6) * self.go_eps
-                    Wii = 4.0 * pow(sigma, 12) * self.go_eps
+                    # find the go virtual-sites for this residue
+                    # probably can be done smarter but mehhhh
+                    nodeA = _get_go_type(molecule, resid=resIDA, chain=chainA, prefix=self.prefix)
+                    nodeB = _get_go_type(molecule, resid=resIDB, chain=chainB, prefix=self.prefix)
+                    # write itp file with go interaction parameters
+                    self.itp_file.write(f"{nodeA} {nodeB} 1 {sigma:3.8F} {self.go_eps:3.8F} ; structural Go bias\n")
+                    # generate the exclusions between pairs of bb beads
+                    excl = Interaction(atoms=(bb_node_A, bb_node_B), parameters=[], meta={"group": "Go model exclusion"})
+                    molecule.interactions['exclusions'].append(excl)
 
+    def write_water_bias_auto(self, molecule):
+        """
+        Automatically calculate the water bias depending on the secondary structure.
+        """
+        self.itp_file.write('; additional Lennard-Jones interaction between virtual BB bead and W\n')
+        for res_node in self.res_graph.nodes:
+            resid = self.res_graph.nodes[res_node]['resid']
+            chain = self.res_graph.nodes[res_node]['chain']
+            vs_go_node = _get_go_type(molecule, resid=resid, chain=chain, prefix=self.prefix)
+            sec_struc = self.res_graph.nodes[res_node]['sec_struc']
+            eps = self.water_bias.get(sec_struc, 0.0)
+            if self.res_graph.nodes[res_node]['resname'] in ['GLY', 'ALA', 'VAL', 'PRO']:
+                sigma = 0.430
+            else:
+                sigma = 0.470
 
+            self.itp_file.write(f"W {vs_go_node} 1 {sigma:3.8F} {eps:3.8F} ; secondary structure water bias\n")
 
+    def write_water_bias_idr(self, molecule):
+        """
+        Write bias for intrinsically disordered domains from manual selection.
+        """
+        self.itp_file.write('; additional Lennard-Jones interaction between virtual BB bead and W\n')
+        for res_node in self.res_graph.nodes:
+            if _in_region(self.res_graph.nodes[res_node], self.regions):
+                resid = self.res_graph.nodes[res_node]['resid']
+                chain = self.res_graph.nodes[res_node]['chain']
+                vs_go_node = _get_go_type(molecule, resid=resid, chain=chain, prefix=self.prefix)
+                eps = self.idp_water_bias
+                if self.res_graph.nodes[res_node]['resname'] in ['GLY', 'ALA', 'VAL', 'PRO']:
+                    sigma = 0.430
+                else:
+                    sigma = 0.470
 
+                self.itp_file.write(f"W {vs_go_node} 1 {sigma:3.8F} {eps:3.8F} ; idp water bias\n")
 
+    def run_system(self, system):
+        for molecule in system.molecules:
+            self.write_go_structural_bias(molecule)
+            if self.water_bias:
+                self.write_water_bias_auto(self, molecule)
+
+        self.itp_file.close()

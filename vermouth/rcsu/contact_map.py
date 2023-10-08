@@ -16,7 +16,7 @@
 Read RCSU Go model contact maps.
 """
 
-def read_contmap(file_path, file_OV, file_rCSU, header_lines=0, cols=[2, 6, 10]):
+def read_go_map(file_path, header_lines=0, cols=[2, 6, 10]):
     """
     Read a RCSU contact map.
     """
@@ -26,7 +26,9 @@ def read_contmap(file_path, file_OV, file_rCSU, header_lines=0, cols=[2, 6, 10])
     contacts = []
     read = False
     for line in lines:
-        tokens = line.strip().splilt()
+        tokens = line.strip().split()
+        if len(tokens) == 0:
+            continue
         # we start parsing
         # using R1 is super flaky but I don't see a good way to identify
         # when the contact map starts ...
@@ -34,7 +36,7 @@ def read_contmap(file_path, file_OV, file_rCSU, header_lines=0, cols=[2, 6, 10])
             read = True
         elif read:
         # a contact consits of a resid and the chain ID
-            contacts.append((int(tokens[1]), tokens[2], int(tokens[4]), tokens[5]))            
+            contacts.append((int(tokens[1]), tokens[2], int(tokens[4]), tokens[5]))
         else:
             continue
     return contacts
