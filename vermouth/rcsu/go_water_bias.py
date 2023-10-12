@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from vermouth.processor import Processor
+from ..processors.processor import Processor
+from ..graph_utils import make_residue_graph
+from .go_utils import get_go_type_from_attributes, _get_bead_size
 
 class ComputeWaterGoBias(Processor):
     """
@@ -21,7 +23,7 @@ class ComputeWaterGoBias(Processor):
 
     The water bias streght is defined per secondary
     structure element in `water_bias` and assinged if
-    `auto_bias` is set to True. Using the `selector`
+    `auto_bias` is set to True. Using the `idr_regions`
     argument the water_bias can be changed for
     intrinsically disordered regions (IDRs). The IDR
     bias superseeds the auto bias.
@@ -37,8 +39,8 @@ class ComputeWaterGoBias(Processor):
 
     def __init__(self,
                  water_bias,
-                 auto_bias
-                 selector,
+                 auto_bias,
+                 idr_regions,
                  prefix=""):
         """
 
@@ -49,14 +51,14 @@ class ComputeWaterGoBias(Processor):
             a dict of secondary structure codes and
             epsilon value for the water bias in kJ/mol
         auto_bias: bool
-        selector:
-            selector for IDRs
+        idr_regions:
+            regions defining the IDRs
         prefix: str
             prefix of the Go virtual-site atomtypes
         """
         self.water_bias = water_bias
         self.auto_bias = auto_bias
-        self.selector = selecor
+        self.idr_regions = idr_regions
         self.prefix = prefix
 
     def assign_residue_water_bias(self, molecule, res_graph):
@@ -81,28 +83,23 @@ class ComputeWaterGoBias(Processor):
 
             if self.selector(res_graph, res_node):
                 eps = self.water_bias.get('idr', 0.0)
-            elif:
+            elif self.auto_bias:
                 sec_struc = self.res_graph.nodes[res_node]['sec_struc']
                 eps = self.water_bias.get(sec_struc, 0.0)
             else:
                 continue
 
-                vs_go_node = _get_go_type(res_graph.nodes[res_node],
-                                          resid=resid,
-                                          chain=chain,
-                                          prefix=self.prefix)
+            vs_go_node = get_go_type_from_attributes(res_graph.nodes[res_node],
+                                                     resid=resid,
+                                                     chain=chain,
+                                                     prefix=self.prefix)
 
-                # what is the blocks bb-type
-                bb_type = molecule.forcefield.blocks[resname]['BB']['atype']
-                if bb_type.startswith('S'):
-                    size = _get_bead_size(bb_type)
-                    sigma = molecule.forcefield.variables['bead_sizes'][size]
-                elif bb_type.startswith('T'):
-                    sigma = 0.41
-                else:
-                    sigma = 0.47
+            # what is the blocks bb-type
+            bb_type = molecule.force_field.blocks[resname]['BB']['atype']
+            size = _get_bead_size(bb_type)
+            sigma = molecule.force_field.variables['bead_sizes'][size]
+            bias_params[frozenset([molecule.force_field.water_name, vs_go_node])] = (sigma, eps)
 
-                bias_params[frozenset([forcefield.water_name, vs_go_node])] = (sigma, eps)
         return bias_params
 
     def run_system(self, system):
@@ -115,7 +112,7 @@ class ComputeWaterGoBias(Processor):
         ----------
         molecule: :class:`vermouth.Molecule`
         """
-        if self.selector or self.auto:
+        if self.idr_regions or self.auto:
             for molecule in system.molecules:
                 if hasattr(molecule.res_graph):
                     res_graph = molecule.res_graph

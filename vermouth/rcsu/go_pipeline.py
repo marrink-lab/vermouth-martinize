@@ -14,6 +14,8 @@
 """
 Wrapper of Processors defining the GoPipline.
 """
+import inspect
+import vermouth
 from vermouth.processors import Processor
 from .go_vs_includes import GoVirtIncludes
 from .go_structure_bias import ComputeStructuralGoBias
@@ -26,6 +28,7 @@ class GoProcessorPipline(Processor):
     """
     def __init__(self, processor_list, **kwargs):
         self.processor_list = processor_list
+        self.kwargs = kwargs
 
     def prepare_run(self, system):
         """
@@ -47,10 +50,13 @@ class GoProcessorPipline(Processor):
 
     def run_system(self, system):
         self.prepare_run(self, system)
-        for processor in processor_list:
+        for processor in self.processor_list:
             process_args = inspect.getfullargspec(processor).args
             process_args_values = {self.kwargs[arg] for arg in process_args}
             processor(**process_args_values).run_system(system)
-    return system
+        return system
 
-GoPipeline = ProcessorPipline([SetMoleculeMeta, GoVirtIncludes, ComputeStructuralGoBias, ComputeWaterGoBias])
+GoPipeline = GoProcessorPipline([SetMoleculeMeta,
+                                 GoVirtIncludes,
+                                 ComputeStructuralGoBias,
+                                 ComputeWaterGoBias])

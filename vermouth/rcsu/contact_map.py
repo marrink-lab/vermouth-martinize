@@ -36,7 +36,6 @@ def read_go_map(file_path):
         lines = _file.readlines()
 
     contacts = []
-    read = False
     for line in lines:
         tokens = line.strip().split()
         if len(tokens) == 0:

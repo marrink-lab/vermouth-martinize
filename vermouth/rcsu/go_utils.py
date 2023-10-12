@@ -68,3 +68,12 @@ def _in_resid_region(resid, regions):
         if low <= resid <= up:
             return True
     return False
+
+def _get_bead_size(atype):
+    if atype.startswith("S"):
+        bead_size = "small"
+    elif atype.startswith("T"):
+        bead_size = "tiny"
+    else:
+        bead_size = "regular"
+    return bead_size

@@ -16,8 +16,10 @@ Obtain the structural bias for the Go model.
 """
 import numpy as np
 import networkx as nx
-from vermouth.molecule import Interaction, attributes_match
-from vermouth.processors import Procssor
+from ..molecule import Interaction
+from .. import Processor
+from ..selectors import filter_minimal, select_backbone
+from .go_utils import _get_go_type
 
 class ComputeStructuralGoBias(Processor):
     """
@@ -164,14 +166,14 @@ class ComputeStructuralGoBias(Processor):
                 if self.cut_off_large > dist > self.cutoff_short:
                     # find the go virtual-sites for this residue
                     # probably can be done smarter but mehhhh
-                    nodeA = _get_go_type(molecule, resid=resIDA, chain=chainA, prefix=self.prefix)
-                    nodeB = _get_go_type(molecule, resid=resIDB, chain=chainB, prefix=self.prefix)
+                    atype_a = _get_go_type(molecule, resid=resIDA, chain=chainA, prefix=self.prefix)
+                    atype_b = _get_go_type(molecule, resid=resIDB, chain=chainB, prefix=self.prefix)
                     # generate backbone backbone exclusions
                     # perhaps one day can be it's own function
                     excl = Interaction(atoms=(bb_node_A, bb_node_B), parameters=[], meta={"group": "Go model exclusion"})
                     molecule.interactions['exclusions'].append(excl)
 
-                    contact_matrix.append((nodeA, nodeB, dist))
+                    contact_matrix.append((atype_a, atype_b, dist))
         return contact_matrix
 
     def compute_go_interaction(self, contacts):
@@ -191,7 +193,7 @@ class ComputeStructuralGoBias(Processor):
             dict of interaction parameters indexed by atomtype
         """
         go_inters = {}
-        for node_a, node_b, dist in contacts:
+        for atype_a, atype_b, dist in contacts:
             # compute the LJ sigma paramter for this contact
             # 1.12246204830 is a magic number by Sebastian
             sigma = dist / 1.12246204830
