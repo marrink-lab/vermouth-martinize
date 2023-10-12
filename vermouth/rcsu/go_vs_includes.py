@@ -82,6 +82,10 @@ class GoVirtIncludes(Processor):
         molecule.meta['post_section_lines'] = includes
         return molecule
 
+    def run_system(self, system):
+        LOGGER.info("Adding includes for Virtual Site Go Martini.", type="step")
+        for molecule in system.molecules:
+            self.run_molecule(system)
 
 def add_virtual_sites(molecule, prefix, backbone='BB', atomname='CA', charge=0):
     """
