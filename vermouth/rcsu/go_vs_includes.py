@@ -41,8 +41,7 @@ section.
 
 import networkx as nx
 from ..molecule import Interaction
-from .processor import Processor
-
+from ..processors.processor import Processor
 
 class GoVirtIncludes(Processor):
     """
