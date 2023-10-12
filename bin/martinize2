@@ -673,6 +673,36 @@ def entry():
         default=3,
         help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
     )
+    go_group.add_argument(
+        "-govs-bias-auto",
+        dest="go_water",
+        type=float,
+        default=0.0,
+        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+    )
+    go_group.add_argument(
+        "-govs-auto-bias",
+        dest="go_water",
+        type=float,
+        default=0.0,
+        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+    )
+    go_group.add_argument(
+        "-govs-idrs",
+        dest="go_idrs",
+        type=float,
+        default=0.0,
+        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+    )
+    go_group.add_argument(
+        "-govs-bias-auto",
+        dest="water-bias",
+        action="append",
+        type=lambda s: s.split(":"),
+        default=[],
+        help=("Define the water bias for the Go model by secondary structure type. "
+              "For example, use H:3.6, C:2.1 to bias helixes and coils."),
+    )
 
     prot_group = parser.add_argument_group("Protein description")
     prot_group.add_argument(
