@@ -16,9 +16,21 @@
 Read RCSU Go model contact maps.
 """
 
-def read_go_map(file_path, header_lines=0, cols=[2, 6, 10]):
+def read_go_map(file_path):
     """
-    Read a RCSU contact map.
+    Read a RCSU contact map from the c code as published in
+    doi:zzzz. The format requires all contacts to have 18
+    columns and the first column to be a capital R.
+
+    Paraemters
+    ---------
+    file_path: :cls:pathlib.Path
+        path to the contact map file
+
+    Returns
+    -------
+    list(tuple(4))
+        contact as chain id, res id, chain id, res id
     """
     with open(file_path, "r", encoding='UTF-8') as _file:
         lines = _file.readlines()
@@ -29,14 +41,10 @@ def read_go_map(file_path, header_lines=0, cols=[2, 6, 10]):
         tokens = line.strip().split()
         if len(tokens) == 0:
             continue
-        # we start parsing
-        # using R1 is super flaky but I don't see a good way to identify
-        # when the contact map starts ...
-        if tokens[0] == "R1":
-            read = True
-        elif read:
-        # a contact consits of a resid and the chain ID
+
+        if tokens[0] == "R" and len(tokens) == 18:
             contacts.append((int(tokens[1]), tokens[2], int(tokens[4]), tokens[5]))
-        else:
-            continue
+
+    if len(contacts) == 0:
+        raise IOError("You contact map is empty. Are you sure it has the right formatting?")
     return contacts
