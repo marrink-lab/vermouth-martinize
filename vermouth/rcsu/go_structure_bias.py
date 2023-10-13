@@ -17,9 +17,9 @@ Obtain the structural bias for the Go model.
 import numpy as np
 import networkx as nx
 from ..molecule import Interaction
-from .. import Processor
+from ..processors.processor import Processor
 from ..selectors import filter_minimal, select_backbone
-from .go_utils import _get_go_type
+from .go_utils import get_go_type_from_attributes
 
 class ComputeStructuralGoBias(Processor):
     """
@@ -166,8 +166,14 @@ class ComputeStructuralGoBias(Processor):
                 if self.cut_off_large > dist > self.cutoff_short:
                     # find the go virtual-sites for this residue
                     # probably can be done smarter but mehhhh
-                    atype_a = _get_go_type(molecule, resid=resIDA, chain=chainA, prefix=self.prefix)
-                    atype_b = _get_go_type(molecule, resid=resIDB, chain=chainB, prefix=self.prefix)
+                    atype_a = get_go_type_from_attributes(molecule,
+                                                          resid=resIDA,
+                                                          chain=chainA,
+                                                          prefix=self.prefix)
+                    atype_b = get_go_type_from_attributes(molecule,
+                                                          resid=resIDB,
+                                                          chain=chainB,
+                                                          prefix=self.prefix)
                     # generate backbone backbone exclusions
                     # perhaps one day can be it's own function
                     excl = Interaction(atoms=(bb_node_A, bb_node_B), parameters=[], meta={"group": "Go model exclusion"})

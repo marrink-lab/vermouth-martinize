@@ -50,8 +50,9 @@ from vermouth.map_input import (
     combine_mappings,
 )
 from vermouth.rcsu.contact_map import read_go_map
-from vermouth.rcsu.get_go import GetGo
+from vermouth.rcsu.go_pipeline import GoPipeline
 from vermouth.citation_parser import citation_formatter
+from vermouth.gmx.topology import write_gmx_topology
 
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
 # not work as intended. Investigation required.
@@ -189,96 +190,6 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     LOGGER.info("Placing the charge dummies.", type="step")
     vermouth.LocateChargeDummies().run_system(system)
     return system
-
-
-def write_gmx_topology(system, top_path, defines=(), header=()):
-    """
-    Writes a Gromacs .top file for the specified system.
-    """
-    if not system.molecules:
-        raise ValueError("No molecule in the system. Nothing to write.")
-
-    # Write the ITP files for the molecule types, and prepare writing the
-    # [ molecules ] section of the top file.
-    # * We write one ITP file for each different moltype in the system, the
-    #   moltype being defined by the name provided under the "moltype" meta of
-    #   the molecules. If more than one molecule share the same moltype, we use
-    #   the first one to write the ITP file.
-    moltype_written = set()
-    # * We keep track of the length of the longer moltype name, to align the
-    #   [ molecules ] section.
-    max_name_length = 0
-    # * We keep track of groups of successive molecules with the same moltypes.
-    moltype_count = []  # items will be [moltype, number of molecules]
-
-    # Iterate over groups of successive molecules with the same moltypes. We
-    # shall *NOT* sort the molecules before hand, as groups of successive
-    # molecules with the same moltype can be interupted by other moltypes, and
-    # we want to reflect these interuptions in the [ molecules ] section of the
-    # top file.
-    molecule_groups = itertools.groupby(
-        system.molecules, key=lambda x: x.meta["moltype"]
-    )
-    for moltype, molecules in molecule_groups:
-        molecule = next(molecules)
-        if moltype not in moltype_written:
-            # A given moltype can appear more than once in the sequence of
-            # molecules, without being uninterupted by other moltypes. Even in
-            # that case, we want to write the ITP only once.
-            with deferred_open("{}.itp".format(moltype), "w") as outfile:
-                # here we format and merge all citations
-                header[-1] = header[-1] + "\n"
-                header.append("Pleas cite the following papers:")
-                for citation in molecule.citations:
-                    cite_string = citation_formatter(
-                        molecule.force_field.citations[citation]
-                    )
-                    LOGGER.info("Please cite: " + cite_string)
-                    header.append(cite_string)
-                vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
-            this_moltype_len = len(molecule.meta["moltype"])
-            if this_moltype_len > max_name_length:
-                max_name_length = this_moltype_len
-            moltype_written.add(moltype)
-        # We already removed one element from the "molecules" generator, do not
-        # forget to count it in the number of molecules in that group.
-        moltype_count.append([moltype, 1 + len(list(molecules))])
-
-    # Write the top file
-    template = textwrap.dedent(
-        """\
-        {defines}
-        #include "martini.itp"
-        {includes}
-
-        [ system ]
-        Title of the system
-
-        [ molecules ]
-        {molecules}
-    """
-    )
-    include_string = "\n".join(
-        '#include "{}.itp"'.format(molecule_type) for molecule_type, _ in moltype_count
-    )
-    molecule_string = "\n".join(
-        "{mtype:<{length}}    {num}".format(
-            mtype=mtype, num=num, length=max_name_length
-        )
-        for mtype, num in moltype_count
-    )
-    define_string = "\n".join("#define {}".format(define) for define in defines)
-    with deferred_open(str(top_path), "w") as outfile:
-        outfile.write(
-            textwrap.dedent(
-                template.format(
-                    includes=include_string,
-                    molecules=molecule_string,
-                    defines=define_string,
-                )
-            )
-        )
-
 
 def _cys_argument(value):
     """
@@ -623,22 +534,10 @@ def entry():
         "-go",
         action="store_true",
         default=False,
-        help="Apply the Martini Go model as structural bias.",
+        help="Apply the Martini Go model as structural bias and/or water bias.",
     )
     go_group.add_argument(
-        "-govs-moltype",
-        dest="govs_moltype",
-        default="molecule_0",
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
-    )
-    go_group.add_argument(
-        "-govs-includes",
-        action="store_true",
-        default=False,
-        help="Write include statements to use Vitrual Site Go Martini.",
-    )
-    go_group.add_argument(
-        "-govs-map",
+        "-go-map",
         dest="go_map",
         required=False,
         type=Path,
@@ -646,63 +545,70 @@ def entry():
         help="Write include statements to use Vitrual Site Go Martini.",
     )
     go_group.add_argument(
-        "-govs-low",
-        dest="go_low",
-        type=float,
-        default=0.3,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
-    )
-    go_group.add_argument(
-        "-govs-up",
-        dest="go_up",
-        type=float,
-        default=1.1,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
-    )
-    go_group.add_argument(
-        "-govs-eps",
+        "-go-eps",
         dest="go_eps",
         type=float,
         default=0.0,
         help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
     )
     go_group.add_argument(
-        "-govs-res-dist",
+        "-go-moltype",
+        dest="govs_moltype",
+        default="molecule_0",
+        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+    )
+    go_group.add_argument(
+        "-go-low",
+        dest="go_low",
+        type=float,
+        default=0.3,
+        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+    )
+    go_group.add_argument(
+        "-go-up",
+        dest="go_up",
+        type=float,
+        default=1.1,
+        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+    )
+    go_group.add_argument(
+        "-go-res-dist",
         dest="go_res_dist",
         type=int,
         default=3,
         help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
     )
-    go_group.add_argument(
-        "-govs-bias-auto",
-        dest="go_water",
-        type=float,
-        default=0.0,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+
+    water_group = parser.add_argument_group("Apply water bias.")
+    water_group.add_argument(
+        "-water-bias-auto",
+        dest="water_bias_auto",
+        action="store_true",
+        default=False,
+        help=("Automatically apply water bias to different secondary structure elements."),
     )
-    go_group.add_argument(
-        "-govs-auto-bias",
-        dest="go_water",
-        type=float,
-        default=0.0,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
-    )
-    go_group.add_argument(
-        "-govs-idrs",
-        dest="go_idrs",
-        type=float,
-        default=0.0,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
-    )
-    go_group.add_argument(
-        "-govs-bias-auto",
-        dest="water-bias",
+    water_group.add_argument(
+        "-water-bias-eps",
+        dest="water_bias_eps",
         action="append",
         type=lambda s: s.split(":"),
         default=[],
-        help=("Define the water bias for the Go model by secondary structure type. "
-              "For example, use H:3.6, C:2.1 to bias helixes and coils."),
+        help=("Define the strength of the water bias by secondary structure type. "
+              "For example, use H:3.6, C:2.1 to bias helixes and coils. "
+              "Using the idr option (e.g. idr:2.1) intrinsically disordered regions "
+              "are biased seperately."),
     )
+    water_group.add_argument(
+        "-id-regions",
+        dest="water_idrs",
+        type=lambda s: s.split(":"),
+        default=[],
+        help=("Regions of resid defining the intrinsically disordered parts of the protein."
+              "These parts are biased differently when applying a water bias."
+              "format: <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>..."
+             ),
+    )
+
 
     prot_group = parser.add_argument_group("Protein description")
     prot_group.add_argument(
@@ -1054,7 +960,10 @@ def entry():
                   ).run_system(system)
 
         defines = ("GO_VIRT",)
+        itp_paths = ["go_atomtypes.itp", "go_nbparams.itp"]
     else:
+        # don't write non-bonded interactions
+        itp_paths = []
         # Merge chains if required.
         if args.merge_chains:
             for chain_set in args.merge_chains:
@@ -1157,7 +1066,12 @@ def entry():
         ]
 
     if args.top_path is not None:
-        write_gmx_topology(system, args.top_path, defines=defines, header=header)
+        write_gmx_topology(system,
+                           args.top_path,
+                           itp_paths=itp_paths,
+                           C6C12=False,
+                           defines=defines,
+                           header=header)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
