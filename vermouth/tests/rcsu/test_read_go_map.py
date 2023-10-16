@@ -25,6 +25,7 @@ from vermouth.rcsu.contact_map import read_go_map
          ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count Model
          ============================================================================================
          R      1     1  LYS A    1        2  VAL A    2       3.8094     1 1 1 1    11     369    0
+
          R      6     1  LYS A    1       40  THR A   40       5.4657     1 1 1 1   222     238    0
          R     13     2  VAL A    2       37  ASN A   37       7.9443     0 1 0 0   -75      75    0
          R     15     2  VAL A    2       39  ASN A   39       4.2809     1 1 1 0   -13     121    0
@@ -43,11 +44,23 @@ from vermouth.rcsu.contact_map import read_go_map
          [(1, "A", 2, "B"), (1, "A", 40, "B"), (2, "C", 37, "D"), (2, "C", 39, "D")]
         )))
 def test_go_map(tmp_path, lines, contacts):
+    # write the go contact map file
+    with open(tmp_path / "go_file.txt", "w") as in_file:
+        in_file.write(lines)
 
-        # write the go contact map file
-        with open(tmp_path / "go_file.txt", "w") as in_file:
-            in_file.write(lines)
+    # read go map
+    contact_map = read_go_map(tmp_path / "go_file.txt")
+    assert contact_map == contacts
 
-        # read go map
-        contact_map = read_go_map(tmp_path / "go_file.txt")
-        assert contact_map == contacts
+def test_go_error(tmp_path):
+    lines="""
+          ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count Model
+          ============================================================================================
+          No valid contacts in this file.
+          """
+    # write the go contact map file
+    with open(tmp_path / "go_file.txt", "w") as in_file:
+        in_file.write(lines)
+
+    with pytest.raises(IOError):
+        read_go_map(tmp_path / "go_file.txt")
