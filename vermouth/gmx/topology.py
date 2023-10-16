@@ -100,7 +100,10 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                 else:
                     nb1, nb2 = nb_params.sigma, nb_params.epsilon
 
-                comments = ";" + " ".join(nb_params.meta['comment'])
+                if nb_params.meta.get('comment'):
+                    comments = ";" + " ".join(nb_params.meta['comment'])
+                else:
+                    comments = ""
                 itp_file.write(f"{a1} {a2} 1 {nb1:3.8F} {nb2:3.8F} {comments}\n")
 
 def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), header=()):
