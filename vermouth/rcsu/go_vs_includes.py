@@ -45,7 +45,7 @@ class VirtualSideCreator(Processor):
         Assign molecule type names to the molecules in a system.
     :func:`add_virtual_sites`
     """
-    def __init__(self, sections=('exclusions', )):
+    def __init__(self, sections=()):
         self.sections = sections
         self.system = None
 

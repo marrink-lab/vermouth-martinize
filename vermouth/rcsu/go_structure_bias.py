@@ -16,9 +16,11 @@ Obtain the structural bias for the Go model.
 """
 import numpy as np
 import networkx as nx
+from ..graph_utils import make_residue_graph
 from ..molecule import Interaction
 from ..processors.processor import Processor
 from ..selectors import filter_minimal, select_backbone
+from ..gmx.topology import NonbondParam
 from .go_utils import get_go_type_from_attributes
 
 class ComputeStructuralGoBias(Processor):
@@ -48,8 +50,8 @@ class ComputeStructuralGoBias(Processor):
                  cutoff_long,
                  go_eps,
                  res_dist,
-                 res_graph=None,
-                 prefix="VS"):
+                 moltype,
+                 res_graph=None):
         """
         Initialize the Processor with arguments required
         to setup the Go model structural bias.
@@ -71,21 +73,28 @@ class ComputeStructuralGoBias(Processor):
             the residue graph they are ignored; this
             is similar to sequence distance but takes
             into account disulfide bridges for example
+        moltype: str
+            name of the molecule to treat
         res_graph: :class:vermouth.Molecule
             residue graph of the molecule; if None it
             get's generated automatically
-        prefix: str
-            prefix for all virtual-site atomtypes
+        system: :class:vermouth.System
+            the system
+        magic_number: float
+            magic number for Go contacts from the old
+            GoVirt script.
         """
         self.contact_map = contact_map
         self.cutoff_short = cutoff_short
         self.cutoff_long = cutoff_long
         self.go_eps = go_eps
         self.res_dist = res_dist
-        self.prefix = prefix
-        self.res_graph = res_graph
+        self.moltype = moltype
         # don't modify
+        self.res_graph = None
+        self.system = None
         self.__chain_id_to_resnode = {}
+        self.magic_number = 1.12246204830
 
     # do not overwrite when subclassing
     def _chain_id_to_resnode(self, chain, resid):
@@ -107,7 +116,7 @@ class ComputeStructuralGoBias(Processor):
             a dict matching the chain,resid to the self.res_graph node
         """
         if self.__chain_id_to_resnode:
-            return self.__chain_id_to_resnode
+            return self.__chain_id_to_resnode[(chain, resid)]
 
         # for each residue collect the chain and residue in a dict
         # we use this later for identifying the residues from the
@@ -120,7 +129,7 @@ class ComputeStructuralGoBias(Processor):
             # the _old_resid
             resid = self.res_graph.nodes[resnode].get('_old_resid')
             self.__chain_id_to_resnode[(chain, resid)] = resnode
-        return self.__chain_id_to_resnode
+        return self.__chain_id_to_resnode[(chain, resid)]
 
     def contact_selector(self, molecule):
         """
@@ -149,31 +158,31 @@ class ComputeStructuralGoBias(Processor):
             resIDA, chainA, resIDB, chainB = contact
             # identify the contact in the residue graph based on
             # chain ID and resid
-            resA = self.chain_id_to_resnode[(chainA, resIDA)]
-            resB = self.chain_id_to_resnode[(chainB, resIDB)]
+            resA = self._chain_id_to_resnode(chainA, resIDA)
+            resB = self._chain_id_to_resnode(chainB, resIDB)
             # make sure that both residues are not connected
             # note: contacts should be symmteric so we only
             # check against one
             if resB not in connected_pairs[resA]:
                 # now we lookup the backbone nodes within the residue contact
-                bb_node_A = next(filter_minimal(self.res_graph.nodes[resB], select_backbone))
-                bb_node_B = next(filter_minimal(self.res_graph.nodes[resB], select_backbone))
+                bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'], select_backbone))
+                bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'], select_backbone))
                 # compute the distance between bb-beads
                 dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
                                       molecule.nodes[bb_node_B]['position'])
                 # verify that the distance between BB-beads satisfies the
                 # cut-off criteria
-                if self.cut_off_large > dist > self.cutoff_short:
+                if self.cutoff_long > dist > self.cutoff_short:
                     # find the go virtual-sites for this residue
                     # probably can be done smarter but mehhhh
-                    atype_a = get_go_type_from_attributes(molecule,
-                                                          resid=resIDA,
-                                                          chain=chainA,
-                                                          prefix=self.prefix)
-                    atype_b = get_go_type_from_attributes(molecule,
-                                                          resid=resIDB,
-                                                          chain=chainB,
-                                                          prefix=self.prefix)
+                    atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
+                                                               resid=resIDA,
+                                                               chain=chainA,
+                                                               prefix=self.moltype))
+                    atype_b = next(get_go_type_from_attributes(self.res_graph.nodes[resB]['graph'],
+                                                               resid=resIDB,
+                                                               chain=chainB,
+                                                               prefix=self.moltype))
                     # generate backbone backbone exclusions
                     # perhaps one day can be it's own function
                     excl = Interaction(atoms=(bb_node_A, bb_node_B), parameters=[], meta={"group": "Go model exclusion"})
@@ -202,11 +211,23 @@ class ComputeStructuralGoBias(Processor):
         for atype_a, atype_b, dist in contacts:
             # compute the LJ sigma paramter for this contact
             # 1.12246204830 is a magic number by Sebastian
-            sigma = dist / 1.12246204830
+            sigma = dist / self.magic_number
             # find the go virtual-sites for this residue
             # probably can be done smarter but mehhhh
-            go_inters[frozenset(atype_a, atype_b)] = (sigma, self.go_eps)
-        return go_inters
+            contact_bias = NonbondParam(atoms=(atype_a, atype_b),
+                                        sigma=sigma,
+                                        epsilon=self.go_eps,
+                                        meta={"comment": ["go bond {resid_a} {resid_b}"]})
+            self.system.gmx_topology_params["nonbond_params"].append(contact_bias)
+
+    def run_molecule(self, molecule):
+        self.res_graph = make_residue_graph(molecule)
+        # compute the contacts; this also creates
+        # the exclusions
+        contacts = self.contact_selector(molecule)
+        # compute the interaction parameters
+        self.compute_go_interaction(contacts)
+        return molecule
 
     def run_system(self, system):
         """
@@ -217,11 +238,6 @@ class ComputeStructuralGoBias(Processor):
         system: vermouth.system.System
             The system to process. Is modified in-place.
         """
+        self.system = system
         for molecule in system.molecules:
-            # compute the contacts; this also creates
-            # the exclusions
-            contacts = self.contact_selector(molecule)
-            # compute the interaction parameters
-            inters = self.compute_go_interaction(contacts)
-            # update the contacts for the system
-            self.system.gmx_topology_params.upadte(inters)
+            self.run_molecule(molecule)
