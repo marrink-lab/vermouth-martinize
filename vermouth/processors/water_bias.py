@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..processors.processor import Processor
+from .processors.processor import Processor
 from ..graph_utils import make_residue_graph
-from .go_utils import get_go_type_from_attributes, _get_bead_size
+from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size
 
-class ComputeWaterGoBias(Processor):
+class ComputeWaterBias(Processor):
     """
     Processor which computes the water  bias for
     the Martini Go and Martini IDP model.

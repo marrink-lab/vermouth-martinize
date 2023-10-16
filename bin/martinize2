@@ -581,8 +581,8 @@ def entry():
 
     water_group = parser.add_argument_group("Apply water bias.")
     water_group.add_argument(
-        "-water-bias-auto",
-        dest="water_bias_auto",
+        "-water-bias",
+        dest="water_bias",
         action="store_true",
         default=False,
         help=("Automatically apply water bias to different secondary structure elements."),
@@ -945,7 +945,8 @@ def entry():
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
-    if args.govs_includes:
+    # Generate the Go model if required
+    if args.go:
         LOGGER.info("Reading Go model contact map.", type="step")
         go_map = read_go_map(args.go_map)
         LOGGER.info("Generating the Go model.", type="step")
@@ -1021,6 +1022,12 @@ def entry():
             res_min_dist=args.res_min_dist,
         )
         rubber_band_processor.run_system(system)
+
+    # If required add some water bias
+    if args.water_bias:
+        if not args.go:
+            Create
+        ComputeWaterBias().run_system(system)
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":

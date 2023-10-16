@@ -58,5 +58,4 @@ class GoProcessorPipline(Processor):
 
 GoPipeline = GoProcessorPipline([SetMoleculeMeta,
                                  VirtualSideCreator,
-                                 ComputeStructuralGoBias,
-                                 ComputeWaterGoBias])
+                                 ComputeStructuralGoBias])

@@ -61,7 +61,7 @@ class VirtualSideCreator(Processor):
         return molecule
 
     def run_system(self, system):
-        LOGGER.info("Adding includes for Virtual Site Go Martini.", type="step")
+        LOGGER.info("Adding Virtual Sites to backbone beads.", type="step")
         for molecule in system.molecules:
             self.run_molecule(system)
 
