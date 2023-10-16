@@ -87,3 +87,63 @@ def test_atomtypes(tmp_path, dummy_molecule, atomtypes, expected, C6C12):
     with open(str(outpath)) as infile:
         for line, ref_line in zip(infile.readlines(), expected):
             assert line == ref_line
+
+
+@pytest.mark.parametrize('nbparams, expected, C6C12',
+        # simple atomtype
+        #'Atomtype', 'molecule node sigma epsilon meta
+        ((
+        [{"atoms": ("A", "B"), "sigma": 0.43, "epsilon": 2.3, "meta": {}}],
+        ["[ nonbond_params ]\n", 
+         "A B 1 0.43000000 2.30000000 \n"], False),
+        (
+        [{"atoms": ("A", "B"), "sigma": 0.43, "epsilon": 2.3, "meta": {}}],
+        ["[ nonbond_params ]\n", 
+         "A B 1 254.62172908 37693.15402307 \n"], True),
+        (
+        [{"atoms": ("A", "B"), "sigma": 0.43, "epsilon": 2.3, "meta": {}},
+         {"atoms": ("A", "C"), "sigma": 0.47, "epsilon": 2.5, "meta": {}}],
+        ["[ nonbond_params ]\n", 
+         "A B 1 0.43000000 2.30000000 \n",
+         "A C 1 0.47000000 2.50000000 \n"], False),
+        (
+        [{"atoms": ("A", "B"), "sigma": 0.43, "epsilon": 2.3, "meta": {"comment": ["comment"]}}],
+        ["[ nonbond_params ]\n", 
+         "A B 1 0.43000000 2.30000000 ;comment\n"], False),
+        (
+        [{"atoms":("A", "B"), "sigma": 0.43, "epsilon": 2.3, "meta": {"group": "g1"}},
+         {"atoms":("B", "C"), "sigma": 0.44, "epsilon": 3.3, "meta": {}},
+         {"atoms":("A", "C"), "sigma": 0.47, "epsilon": 2.5, "meta": {"group": "g1"}}],
+        ['[ nonbond_params ]\n', 
+         'B C 1 0.44000000 3.30000000 \n', 
+         '; g1\n', 
+         'A B 1 0.43000000 2.30000000 \n', 
+         'A C 1 0.47000000 2.50000000 \n'], False
+        ),
+        (
+        [{"atoms":("A", "B"), "sigma": 0.43, "epsilon": 2.3, "meta": {"ifdef": "g1"}},
+         {"atoms":("B", "C"), "sigma": 0.44, "epsilon": 3.3, "meta": {}},
+         {"atoms":("A", "C"), "sigma": 0.47, "epsilon": 2.5, "meta": {"ifdef": "g1"}}],
+        ['[ nonbond_params ]\n', 
+         'B C 1 0.44000000 3.30000000 \n', 
+         '#ifdef g1\n', 
+         'A B 1 0.43000000 2.30000000 \n', 
+         'A C 1 0.47000000 2.50000000 \n',
+         '#endif'], False
+        ),
+        ))
+def test_nonbond_params(tmp_path, nbparams, expected, C6C12):
+    """
+    Test that the atomtypes directive is properly written.
+    """
+    dummy_sys = vermouth.system.System("")
+    for nbparam in nbparams:
+        dummy_sys.gmx_topology_params['nonbond_params'].append(NonbondParam(**nbparam))
+
+    outpath = tmp_path / 'out.itp'
+    write_nonbond_params(dummy_sys, outpath, C6C12=C6C12)
+    DeferredFileWriter().write()
+
+    with open(str(outpath)) as infile:
+        for line, ref_line in zip(infile.readlines(), expected):
+            assert line == ref_line
