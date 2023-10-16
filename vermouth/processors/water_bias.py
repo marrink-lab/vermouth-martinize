@@ -14,14 +14,8 @@
 
 from .processor import Processor
 from ..graph_utils import make_residue_graph
-from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size
+from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size, _in_resid_region
 from ..gmx.topology import NonbondParam
-
-def _in_region(resid, regions):
-    for start, stop in regions:
-        if start <= resid <= stop:
-            return True
-    return False
 
 class ComputeWaterBias(Processor):
     """
@@ -91,7 +85,7 @@ class ComputeWaterBias(Processor):
             chain = res_graph.nodes[res_node]['chain']
             resname = res_graph.nodes[res_node]['resname']
 
-            if _in_region(resid, self.idr_regions):
+            if _in_resid_region(resid, self.idr_regions):
                 eps = self.water_bias.get('idr', 0.0)
             elif self.auto_bias:
                 sec_struc = res_graph.nodes[res_node]['cgsecstruct']
