@@ -25,11 +25,11 @@ class GoProcessorPipline(Processor):
     """
     Wrapping all processors for the go model.
     """
-    def __init__(self, processor_list, **kwargs):
+    def __init__(self, processor_list):
         self.processor_list = processor_list
-        self.kwargs = kwargs
+        self.kwargs = {}
 
-    def prepare_run(self, system):
+    def prepare_run(self, system, moltype):
         """
         Things to do before running the pipeline.
         """
@@ -37,21 +37,17 @@ class GoProcessorPipline(Processor):
         # this will eventually become deprecated
         # with the proper Go-model for multimers
         vermouth.MergeAllMolecules().run_system(system)
-        for molecule in system.molecules:
-            res_graph = vermouth.graph_utils.make_residue_graph(system.molecules[0])
-            molecule.residue_graph = res_graph
+        molecule = system.molecules[0]
+#        res_graph = vermouth.graph_utils.make_residue_graph(molecule)
+#        molecule.res_graph = res_graph
+        molecule.meta['moltype'] = moltype
 
-    def postprocess_run(self, system):
-        """
-        Do required post-processing.
-        """
-        pass
-
-    def run_system(self, system):
-        self.prepare_run(self, system)
+    def run_system(self, system, **kwargs):
+        self.kwargs = kwargs
+        self.prepare_run(system, moltype=kwargs['moltype'])
         for processor in self.processor_list:
             process_args = inspect.getfullargspec(processor).args
-            process_args_values = {self.kwargs[arg] for arg in process_args}
+            process_args_values = {arg:self.kwargs[arg] for arg in kwargs.keys() if arg in process_args}
             processor(**process_args_values).run_system(system)
         return system
 

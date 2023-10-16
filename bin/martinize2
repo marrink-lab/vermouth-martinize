@@ -953,15 +953,13 @@ def entry():
         LOGGER.info("Reading Go model contact map.", type="step")
         go_map = read_go_map(args.go_map)
         LOGGER.info("Generating the Go model.", type="step")
-        GoPipeline(moltype=args.govs_moltype,
-                   contact_map=go_map,
-                   cutoff_short=args.go_low,
-                   cutoff_long=args.go_up,
-                   go_eps=args.go_eps,
-                   res_dist=args.go_res_dist,
-                   prefix=args.govs_moltype,
-                   res_graph=res_graph,
-                  ).run_system(system)
+        GoPipeline.run_system(system,
+                              moltype=args.govs_moltype,
+                              contact_map=go_map,
+                              cutoff_short=args.go_low,
+                              cutoff_long=args.go_up,
+                              go_eps=args.go_eps,
+                              res_dist=args.go_res_dist,)
 
         defines = ("GO_VIRT",)
         itp_paths = ["go_atomtypes.itp", "go_nbparams.itp"]

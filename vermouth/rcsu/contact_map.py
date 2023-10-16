@@ -42,8 +42,9 @@ def read_go_map(file_path):
             continue
 
         if tokens[0] == "R" and len(tokens) == 18:
-            contacts.append((int(tokens[1]), tokens[2], int(tokens[4]), tokens[5]))
+            contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
 
     if len(contacts) == 0:
         raise IOError("You contact map is empty. Are you sure it has the right formatting?")
+
     return contacts

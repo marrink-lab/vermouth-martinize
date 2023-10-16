@@ -44,7 +44,6 @@ def get_go_type_from_attributes(molecule, prefix, **kwargs):
         attrs = molecule.nodes[node]
         if attributes_match(attrs, kwargs) and attrs['atype'].startswith(prefix):
             yield attrs['atype']
-
     resid = kwargs['resid']
     chain = kwargs['chain']
     raise IOError(f"Could not find GoVs with resid {resid} in chain {chain}.")
