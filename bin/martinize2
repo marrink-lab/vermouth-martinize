@@ -800,7 +800,7 @@ def entry():
         print(", ".join(known_force_fields[args.to_ff].modifications))
         parser.exit()
 
-    if args.elastic and args.govs_includes:
+    if args.elastic and args.go:
         parser.error(
             "A rubber band elastic network and GoMartini are not "
             "compatible. The -elastic and -govs-include flags cannot "
