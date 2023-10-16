@@ -63,7 +63,9 @@ def _in_resid_region(resid, regions):
     -------
     bool
     """
-    for low, up in regions:
+    for limits in regions:
+        # perhaps someone gives them as reversed
+        low, up = sorted(limits)
         if low <= resid <= up:
             return True
     return False
