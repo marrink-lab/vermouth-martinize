@@ -26,23 +26,27 @@ from vermouth.gmx.topology import (convert_sigma_epsilon,
                                    NonbondParam)
 from vermouth.tests.gmx.test_itp import dummy_molecule
 
-@pytest.mark.parametrize('atomtypes, expected',
+@pytest.mark.parametrize('atomtypes, expected, C6C12',
         # simple atomtype
         #'Atomtype', 'molecule node sigma epsilon meta
         ((
         [{"node": 0, "sigma": 0.43, "epsilon": 2.3, "meta": {}}],
         ["[ atomtypes ]\n", 
-         "A 72 0 A 0.43000000 2.30000000 \n"]),
+         "A 72 0 A 0.43000000 2.30000000 \n"], False),
+        (
+        [{"node": 0, "sigma": 0.43, "epsilon": 2.3, "meta": {}}],
+        ["[ atomtypes ]\n", 
+         "A 72 0 A 254.62172908 37693.15402307 \n"], True),
         (
         [{"node":0, "sigma": 0.43, "epsilon": 2.3, "meta": {}},
          {"node":1, "sigma": 0.47, "epsilon": 2.5, "meta": {}}],
         ["[ atomtypes ]\n", 
          "A 72 0 A 0.43000000 2.30000000 \n",
-         "B 72 0 A 0.47000000 2.50000000 \n"]),
+         "B 72 0 A 0.47000000 2.50000000 \n"], False),
         (
         [{"node": 0, "sigma": 0.43, "epsilon": 2.3, "meta": {"comment": ["comment"]}}],
         ["[ atomtypes ]\n", 
-         "A 72 0 A 0.43000000 2.30000000 ;comment\n"]),
+         "A 72 0 A 0.43000000 2.30000000 ;comment\n"], False),
         (
         [{"node":0, "sigma": 0.43, "epsilon": 2.3, "meta": {"group": "g1"}},
          {"node":1, "sigma": 0.44, "epsilon": 3.3, "meta": {}},
@@ -51,7 +55,7 @@ from vermouth.tests.gmx.test_itp import dummy_molecule
          'B 72 0 A 0.44000000 3.30000000 \n', 
          '; g1\n', 
          'A 72 0 A 0.43000000 2.30000000 \n', 
-         'C 72 0 A 0.47000000 2.50000000 \n']
+         'C 72 0 A 0.47000000 2.50000000 \n'], False
         ),
         (
         [{"node":0, "sigma": 0.43, "epsilon": 2.3, "meta": {"ifdef": "g1"}},
@@ -62,10 +66,10 @@ from vermouth.tests.gmx.test_itp import dummy_molecule
          '#ifdef g1\n', 
          'A 72 0 A 0.43000000 2.30000000 \n', 
          'C 72 0 A 0.47000000 2.50000000 \n',
-         '#endif']
+         '#endif'], False
         ),
         ))
-def test_no_header(tmp_path, dummy_molecule, atomtypes, expected):
+def test_no_header(tmp_path, dummy_molecule, atomtypes, expected, C6C12):
     """
     Test that the atomtypes directive is properly written.
     """
@@ -77,7 +81,7 @@ def test_no_header(tmp_path, dummy_molecule, atomtypes, expected):
         dummy_sys.gmx_topology_params['atomtypes'].append(Atomtype(**atype))
 
     outpath = tmp_path / 'out.itp'
-    write_atomtypes(dummy_sys, outpath)
+    write_atomtypes(dummy_sys, outpath, C6C12=C6C12)
     DeferredFileWriter().write()
 
     with open(str(outpath)) as infile:
