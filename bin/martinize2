@@ -542,14 +542,15 @@ def entry():
         required=False,
         type=Path,
         default=False,
-        help="Write include statements to use Vitrual Site Go Martini.",
+        help="Contact map to be used for the Martini Go model."
+             "Currently, only one format is supported. See docs.",
     )
     go_group.add_argument(
         "-go-eps",
         dest="go_eps",
         type=float,
         default=0.0,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+        help=("The strength of the Go model structural bias in kJ/mol."),
     )
     go_group.add_argument(
         "-go-moltype",
@@ -562,21 +563,22 @@ def entry():
         dest="go_low",
         type=float,
         default=0.3,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+        help=("Minimum distance (nm) below which contacts are removed."),
     )
     go_group.add_argument(
         "-go-up",
         dest="go_up",
         type=float,
         default=1.1,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+        help=("Maximum distance (nm) above which contacts are removed."),
     )
     go_group.add_argument(
         "-go-res-dist",
         dest="go_res_dist",
         type=int,
         default=3,
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+        help=("Minimum graph distance (similar seqeuence distance) below which"
+              "contacts are removed. "),
     )
 
     water_group = parser.add_argument_group("Apply water bias.")
@@ -590,7 +592,7 @@ def entry():
     water_group.add_argument(
         "-water-bias-eps",
         dest="water_bias_eps",
-        action="append",
+        nargs='+',
         type=lambda s: s.split(":"),
         default=[],
         help=("Define the strength of the water bias by secondary structure type. "
@@ -603,7 +605,8 @@ def entry():
         dest="water_idrs",
         type=lambda s: s.split(":"),
         default=[],
-        help=("Regions of resid defining the intrinsically disordered parts of the protein."
+        nargs='+',
+        help=("Intrinsically disordered regions specified by resid."
               "These parts are biased differently when applying a water bias."
               "format: <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>..."
              ),
@@ -1025,9 +1028,16 @@ def entry():
 
     # If required add some water bias
     if args.water_bias:
+        # if the go model hasn't been used we need to create virtual
+        # sites for the biasing
         if not args.go:
-            Create
-        ComputeWaterBias().run_system(system)
+            vermouth.rcsu.go_vs_includes.VirtualSideCreator().run_system(system)
+            itp_paths = ["virtual_sites_atomtypes.itp", "virtual_sites_nonbond_params.itp"]
+        # now we add a bias by defining specific virtual-site water interactions
+        vermouth.processors.ComputeWaterBias(args.water_bias,
+                                             { s:float(eps) for s, eps in args.water_bias_eps},
+                                             [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                            ).run_system(system)
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
@@ -1038,7 +1048,7 @@ def entry():
     # The Martini Go model assumes that we do not mess with the order of
     # particles in any way especially the virtual sites needed for the Go
     # model, thus we skip the sorting here altogether.
-    if not args.govs_includes:
+    if not args.go:
         LOGGER.info("Sorting atomids", type="step")
         vermouth.SortMoleculeAtoms().run_system(system)
 

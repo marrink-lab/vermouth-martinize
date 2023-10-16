@@ -16,7 +16,7 @@ Utilities for Go model processors.
 """
 from vermouth.molecule import attributes_match
 
-def get_go_type_from_attributes(molecule, prefix, kwargs):
+def get_go_type_from_attributes(molecule, prefix, **kwargs):
     """
     Find all nodes that satisfy a number of attributes specified
     as kwargs and have a specific atomtype prefix.
@@ -41,8 +41,8 @@ def get_go_type_from_attributes(molecule, prefix, kwargs):
         and prefix an IOError is raised.
     """
     for node in molecule.nodes:
-        if attributes_match(molecule.nodes[node], kwargs) and\
-        attrs['atype'].startswith(prefix):
+        attrs = molecule.nodes[node]
+        if attributes_match(attrs, kwargs) and attrs['atype'].startswith(prefix):
             yield attrs['atype']
 
     resid = kwargs['resid']

@@ -13,7 +13,7 @@ from .itp import _interaction_sorting_key
 LOGGER = StyleAdapter(get_logger(__name__))
 
 Atomtype = namedtuple('Atomtype', 'molecule node sigma epsilon meta')
-NonbondParam = namedtuple('NonbondParam', 'sigma epsilon meta')
+NonbondParam = namedtuple('NonbondParam', 'atoms sigma epsilon meta')
 
 def _group_by_conditionals(interactions):
     interactions_group_sorted = sorted(interactions,
@@ -43,6 +43,7 @@ def write_atomtypes(system, itp_path, C6C12=False):
     """
     conditional_keys = {True: '#ifdef', False: '#ifndef'}
     with deferred_open(itp_path, "w") as itp_file:
+        itp_file.write("[ atomtypes ]\n")
         grouped_types = _group_by_conditionals(system.gmx_topology_params['atomtypes'])
         for (conditional, group), interactions_in_group in grouped_types:
             if conditional:
@@ -61,7 +62,10 @@ def write_atomtypes(system, itp_path, C6C12=False):
                 else:
                     nb1, nb2 = atomtype.sigma, atomtype.epsilon
 
-                comments = ";" + " ".join(atomtype.meta['comment'])
+                if 'comment' in atomtype.meta:
+                    comments = ";" + " ".join(atomtype.meta['comment'])
+                else:
+                    comments = ""
                 itp_file.write(f"{atype} {mass} {charge} A {nb1:3.8F} {nb2:3.8F} {comments}\n")
 
 def write_nonbond_params(system, itp_path, C6C12=False):
@@ -73,6 +77,7 @@ def write_nonbond_params(system, itp_path, C6C12=False):
     """
     conditional_keys = {True: '#ifdef', False: '#ifndef'}
     with deferred_open(itp_path, "w") as itp_file:
+        itp_file.write("[ nonbond_params ]\n")
         grouped_types = _group_by_conditionals(system.gmx_topology_params['nonbond_params'])
         for (conditional, group), interactions_in_group in grouped_types:
             if conditional:
@@ -82,13 +87,13 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                 itp_file.write('; {}\n'.format(group))
 
 
-            for atoms, nb_params in interactions_in_group:
-                if len(atoms) == 2:
-                    a1, a2 = atoms
+            for nb_params in interactions_in_group:
+                if len(nb_params.atoms) == 2:
+                    a1, a2 = nb_params.atoms
                 # self interaction
                 else:
-                    a1 = atoms[0]
-                    a2 = atoms[0]
+                    a1 = nb_params.atoms[0]
+                    a2 = nb_params.atoms[0]
 
                 if C6C12:
                     nb1, nb2 = convert_sigma_epsilon(nb_params.sigma, nb_params.epsilon)
@@ -96,7 +101,7 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                     nb1, nb2 = nb_params.sigma, nb_params.epsilon
 
                 comments = ";" + " ".join(nb_params.meta['comment'])
-                itp_path.write(f"{a1} {a2} 1 {nb1:3.8F} {nb2:3.8F} {comments}\n")
+                itp_file.write(f"{a1} {a2} 1 {nb1:3.8F} {nb2:3.8F} {comments}\n")
 
 def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), header=()):
     """
@@ -122,12 +127,13 @@ def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), 
     if not system.molecules:
         raise ValueError("No molecule in the system. Nothing to write.")
 
+    include_string = ""
     # First we write the atomtypes and nonbondparams directive
     if itp_paths:
-        write_nonbond_params(system, C6C12, itp_paths[0])
-        write_atomtypes(system, C6C12, itp_paths[1])
-        include_string = "\n".join('#include "{}.itp"'.format(path) for path in itp_paths[:2])
-
+        write_atomtypes(system, itp_paths[0], C6C12)
+        write_nonbond_params(system, itp_paths[1], C6C12)
+        include_string = "\n".join('#include "{}"'.format(path) for path in itp_paths[:2])
+        include_string += "\n"
     # Write the ITP files for the molecule types, and prepare writing the
     # [ molecules ] section of the top file.
     # * We write one ITP file for each different moltype in the system, the

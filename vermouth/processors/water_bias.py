@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .processors.processor import Processor
+from .processor import Processor
 from ..graph_utils import make_residue_graph
 from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size
+from ..gmx.topology import NonbondParam
+
+def _in_region(resid, regions):
+    for start, stop in regions:
+        if start <= resid <= stop:
+            return True
+    return False
 
 class ComputeWaterBias(Processor):
     """
@@ -38,28 +45,32 @@ class ComputeWaterBias(Processor):
     """
 
     def __init__(self,
-                 water_bias,
                  auto_bias,
-                 idr_regions,
-                 prefix=""):
+                 water_bias,
+                 idr_regions):
         """
 
 
         Parameters
         ----------
+        auto_bias: bool
+            apply the automatic secondary structure
+            dependent water biasing
         water_bias: dict[str, float]
             a dict of secondary structure codes and
             epsilon value for the water bias in kJ/mol
-        auto_bias: bool
         idr_regions:
             regions defining the IDRs
         prefix: str
             prefix of the Go virtual-site atomtypes
+        system: :class:vermouth.System
+            the system of the molecules is used for
+            storing the nonbonded parameters
         """
         self.water_bias = water_bias
         self.auto_bias = auto_bias
         self.idr_regions = idr_regions
-        self.prefix = prefix
+        self.system = None
 
     def assign_residue_water_bias(self, molecule, res_graph):
         """
@@ -75,32 +86,59 @@ class ComputeWaterBias(Processor):
         res_graph: :class:vermouth.Molecule
             the residue graph of the molecule
         """
-        bias_params = {}
-        for res_node in self.res_graph.nodes:
-            resid = self.res_graph.nodes[res_node]['resid']
-            chain = self.res_graph.nodes[res_node]['chain']
-            resname = self.res_gaph.nodes[res_node]['resname']
+        for res_node in res_graph.nodes:
+            resid = res_graph.nodes[res_node]['resid']
+            chain = res_graph.nodes[res_node]['chain']
+            resname = res_graph.nodes[res_node]['resname']
 
-            if self.selector(res_graph, res_node):
+            if _in_region(resid, self.idr_regions):
                 eps = self.water_bias.get('idr', 0.0)
             elif self.auto_bias:
-                sec_struc = self.res_graph.nodes[res_node]['sec_struc']
+                sec_struc = res_graph.nodes[res_node]['cgsecstruct']
                 eps = self.water_bias.get(sec_struc, 0.0)
             else:
                 continue
 
-            vs_go_node = get_go_type_from_attributes(res_graph.nodes[res_node],
-                                                     resid=resid,
-                                                     chain=chain,
-                                                     prefix=self.prefix)
+            if eps == 0.0:
+                continue
+
+            vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
+                                                          resid=resid,
+                                                          chain=chain,
+                                                          prefix=molecule.meta.get('moltype')))
 
             # what is the blocks bb-type
-            bb_type = molecule.force_field.blocks[resname]['BB']['atype']
+            bb_type = molecule.force_field.blocks[resname].nodes['BB']['atype']
             size = _get_bead_size(bb_type)
-            sigma = molecule.force_field.variables['bead_sizes'][size]
-            bias_params[frozenset([molecule.force_field.water_name, vs_go_node])] = (sigma, eps)
+            # bead sizes are defined in the force-field file as
+            # regular, small and tiny
+            sigma = float(molecule.force_field.variables[size])
+            # update interaction parameters
+            atoms = (molecule.force_field.variables['water_type'], vs_go_node)
+            water_bias = NonbondParam(atoms=atoms,
+                                      sigma=sigma,
+                                      epsilon=eps,
+                                      meta={"comment": ["water bias", sec_struc]})
+            self.system.gmx_topology_params["nonbond_params"].append(water_bias)
 
-        return bias_params
+    def run_molecule(self, molecule):
+        """
+        Assign water bias for a single molecule
+        """
+        if not self.system:
+            raise IOError('This processor requires a system.')
+
+        if not molecule.meta.get('moltype'):
+            raise ValueError('The molecule does not have a moltype name.')
+
+        if hasattr(molecule, 'res_graph'):
+            res_graph = molecule.res_graph
+        else:
+            res_graph = make_residue_graph(molecule)
+
+        self.assign_residue_water_bias(molecule, res_graph)
+
+        return molecule
 
     def run_system(self, system):
         """
@@ -110,15 +148,10 @@ class ComputeWaterBias(Processor):
 
         Parameters
         ----------
-        molecule: :class:`vermouth.Molecule`
+        system: :class:`vermouth.System`
         """
-        if self.idr_regions or self.auto:
+        if self.idr_regions or self.auto_bias:
+            self.system = system
             for molecule in system.molecules:
-                if hasattr(molecule.res_graph):
-                    res_graph = molecule.res_graph
-                else:
-                    make_residue_graph(molecule)
-
-                bias_params = self.determine_residue_water_bias(self, res_graph)
-                system.gmx_topology_params["nonbond_params"].update(bias_params)
+                self.run_molecule(molecule)
         return system
