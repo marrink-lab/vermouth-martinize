@@ -69,7 +69,7 @@ from vermouth.tests.gmx.test_itp import dummy_molecule
          '#endif'], False
         ),
         ))
-def test_no_header(tmp_path, dummy_molecule, atomtypes, expected, C6C12):
+def test_atomtypes(tmp_path, dummy_molecule, atomtypes, expected, C6C12):
     """
     Test that the atomtypes directive is properly written.
     """
