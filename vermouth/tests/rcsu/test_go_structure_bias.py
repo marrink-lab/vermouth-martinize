@@ -43,6 +43,12 @@ def test_compute_go_interaction(test_molecule):
          2.0,
          0,
          [("mol_0_1", "mol_0_4", 1.5)]),
+        # add symmetric contact good 
+        ([(1, 'A', 4, 'A'), (4, 'A', 1, 'A')],
+         0.3,
+         2.0,
+         0,
+         [("mol_0_1", "mol_0_4", 1.5)]),
         # single contact bad -> cshort 
         ([(1, 'A', 3, 'A')],
          1.5,
