@@ -15,6 +15,7 @@
 """
 Test the writing of TOP file.
 """
+import os
 import textwrap
 import pytest
 import vermouth
@@ -156,6 +157,7 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
     molecule itp files are seperately checked in
     gmx itp module or in the previous tests.
     """
+    os.chdir(tmp_path)
     system = vermouth.System()
     system.molecules.append(dummy_molecule)
     dummy_molecule.meta['moltype'] = "molecule_0"
