@@ -122,13 +122,14 @@ class ComputeStructuralGoBias(Processor):
         # we use this later for identifying the residues from the
         # contact map
         for resnode in self.res_graph.nodes:
-            chain = self.res_graph.nodes[resnode].get('chain', None)
+            chain_key = self.res_graph.nodes[resnode].get('chain', None)
             # in vermouth within a molecule all resid are unique
             # when merging multiple chains we store the old resid
             # the go model always references the input resid i.e.
             # the _old_resid
-            resid = self.res_graph.nodes[resnode].get('_old_resid')
-            self.__chain_id_to_resnode[(chain, resid)] = resnode
+            resid_key = self.res_graph.nodes[resnode].get('_old_resid')
+            self.__chain_id_to_resnode[(chain_key, resid_key)] = resnode
+
         return self.__chain_id_to_resnode[(chain, resid)]
 
     def contact_selector(self, molecule):
@@ -217,7 +218,7 @@ class ComputeStructuralGoBias(Processor):
             contact_bias = NonbondParam(atoms=(atype_a, atype_b),
                                         sigma=sigma,
                                         epsilon=self.go_eps,
-                                        meta={"comment": ["go bond {resid_a} {resid_b}"]})
+                                        meta={"comment": ["go bond"]})
             self.system.gmx_topology_params["nonbond_params"].append(contact_bias)
 
     def run_molecule(self, molecule):
