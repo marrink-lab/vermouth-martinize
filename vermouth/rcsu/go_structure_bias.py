@@ -184,6 +184,8 @@ class ComputeStructuralGoBias(Processor):
                                                                resid=resIDB,
                                                                chain=chainB,
                                                                prefix=self.moltype))
+                    if (atype_b, atype_a, dist) in contact_matrix:
+                        continue
                     # generate backbone backbone exclusions
                     # perhaps one day can be it's own function
                     excl = Interaction(atoms=(bb_node_A, bb_node_B), parameters=[], meta={"group": "Go model exclusion"})
@@ -218,7 +220,7 @@ class ComputeStructuralGoBias(Processor):
             contact_bias = NonbondParam(atoms=(atype_a, atype_b),
                                         sigma=sigma,
                                         epsilon=self.go_eps,
-                                        meta={"comment": ["go bond"]})
+                                        meta={"comment": [f"go bond {dist}"]})
             self.system.gmx_topology_params["nonbond_params"].append(contact_bias)
 
     def run_molecule(self, molecule):

@@ -549,7 +549,7 @@ def entry():
         "-go-eps",
         dest="go_eps",
         type=float,
-        default=0.0,
+        default=9.414,
         help=("The strength of the Go model structural bias in kJ/mol."),
     )
     go_group.add_argument(

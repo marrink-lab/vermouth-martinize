@@ -36,15 +36,27 @@ def read_go_map(file_path):
         lines = _file.readlines()
 
     contacts = []
+    OV=0
+    rCSU=0
     for line in lines:
         tokens = line.strip().split()
         if len(tokens) == 0:
             continue
 
         if tokens[0] == "R" and len(tokens) == 18:
-            contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
+            # this is a bad place to filter but follows
+            # the old script
+            if tokens[11] == "1":
+                # this is a OV contact we take it
+                contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
+                OV+=1
+            if tokens[11] == "0" and tokens[14] == "1":
+                # this is a rCSU contact we take it
+                contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
+                rCSU+=1
 
     if len(contacts) == 0:
         raise IOError("You contact map is empty. Are you sure it has the right formatting?")
 
+    print(len(contacts), OV, rCSU)
     return contacts
