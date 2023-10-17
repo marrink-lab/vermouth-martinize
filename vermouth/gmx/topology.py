@@ -130,13 +130,18 @@ def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), 
     if not system.molecules:
         raise ValueError("No molecule in the system. Nothing to write.")
 
+    itp_paths = itp_paths[::-1]
     include_string = ""
-    # First we write the atomtypes and nonbondparams directive
-    if itp_paths:
-        write_atomtypes(system, itp_paths[0], C6C12)
-        write_nonbond_params(system, itp_paths[1], C6C12)
-        include_string = "\n".join('#include "{}"'.format(path) for path in itp_paths[:2])
-        include_string += "\n"
+    # First we write the atomtypes directive
+    if "atomtypes" in system.gmx_topology_params:
+        _path = itp_paths.pop()
+        write_atomtypes(system, _path, C6C12)
+        include_string += f'\n #include "{_path}"'
+    # Next we write the nonbond_params directive
+    if "nonbond_params" in system.gmx_topology_params:
+        _path = itp_paths.pop()
+        write_nonbond_params(system, _path, C6C12)
+        include_string += f'\n #include "{_path}"\n'
     # Write the ITP files for the molecule types, and prepare writing the
     # [ molecules ] section of the top file.
     # * We write one ITP file for each different moltype in the system, the
