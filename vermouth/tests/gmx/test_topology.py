@@ -15,6 +15,7 @@
 """
 Test the writing of TOP file.
 """
+import textwrap
 import pytest
 import vermouth
 from vermouth.file_writer import DeferredFileWriter
@@ -147,3 +148,56 @@ def test_nonbond_params(tmp_path, nbparams, expected, C6C12):
     with open(str(outpath)) as infile:
         for line, ref_line in zip(infile.readlines(), expected):
             assert line == ref_line
+
+def test_toplevel_topology(tmp_path, dummy_molecule):
+    """
+    Make sure the toplevel topology file
+    is correctly written. Note that the individual
+    molecule itp files are seperately checked in
+    gmx itp module or in the previous tests.
+    """
+    system = vermouth.System()
+    system.molecules.append(dummy_molecule)
+    dummy_molecule.meta['moltype'] = "molecule_0"
+    # "node": 0, "sigma": 0.43, "epsilon": 2.3, "meta": {}}
+    system.gmx_topology_params['atomtypes'].append(Atomtype(node=0,
+                                                   molecule=dummy_molecule,
+                                                   sigma=0.43,
+                                                   meta={},
+                                                   epsilon=2.3))
+    system.gmx_topology_params['nonbond_params'].append(NonbondParam(atoms=("A", "B"),
+                                                                     sigma=0.43,
+                                                                     epsilon=2.3,
+                                                                     meta={}))
+    outpath = tmp_path / 'out.itp'
+    atompath = tmp_path / 'atomtypes.itp'
+    nbpath = tmp_path / 'nonbond_params.itp'
+    write_gmx_topology(system,
+                       outpath,
+                       header=['first header comment', 'second header comment'],
+                       defines=('random', ),
+                       itp_paths=[atompath, nbpath],
+                       # at this level C6C12 doesn't matter; it gets
+                       # checked in previous texts
+                       C6C12=False)
+    DeferredFileWriter().write()
+
+    reference =f"""#define random
+#include "martini.itp"
+
+#include "{tmp_path}/atomtypes.itp"
+#include "{tmp_path}/nonbond_params.itp"
+#include "molecule_0.itp"
+
+[ system ]
+Title of the system
+
+[ molecules ]
+molecule_0    1
+"""
+    ref_lines = textwrap.dedent(reference).splitlines()
+    with open(str(outpath)) as infile:
+        for line, ref_line in zip(infile.readlines(), ref_lines):
+            print('l', line.strip())
+            print('lr', ref_line.strip())
+            assert line.strip() == ref_line
