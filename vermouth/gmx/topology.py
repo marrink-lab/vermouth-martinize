@@ -122,6 +122,12 @@ def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), 
     system: :class:vermouth.System
     top_path: pathlib.Path
         path for topology file
+    itp_paths: list[pathlib.Path]
+        list of paths for writing the topology parameters
+        like atomtypes. 
+    C6C12: bool
+        write non-bonded interaction parameters using LJ
+        C6C12 form
     defines: tuple(str)
         define statments to include in the topology
     header: tuple(str)
