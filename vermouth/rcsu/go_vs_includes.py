@@ -136,8 +136,8 @@ class VirtualSideCreator(Processor):
                     parameters=['1'],
                     meta={'go_vs': True, 'group': 'Virtual go site'},
                 ))
-            vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
-            self.system.gmx_topology_params['atomtypes'].append(vs_params)
+                vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
+                self.system.gmx_topology_params['atomtypes'].append(vs_params)
 
         molecule.add_nodes_from(virtual_site_nodes)
 
