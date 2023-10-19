@@ -1029,7 +1029,7 @@ def entry():
         # if the go model hasn't been used we need to create virtual
         # sites for the biasing
         if not args.go:
-            vermouth.rcsu.go_vs_includes.VirtualSideCreator().run_system(system)
+            vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
             itp_paths = ["virtual_sites_atomtypes.itp", "virtual_sites_nonbond_params.itp"]
         # now we add a bias by defining specific virtual-site water interactions
         vermouth.processors.ComputeWaterBias(args.water_bias,
