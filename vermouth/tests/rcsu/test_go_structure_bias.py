@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 import networkx as nx
 import vermouth
-from vermouth.rcsu.go_vs_includes import VirtualSideCreator
+from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
 from vermouth.tests.test_water_bias import create_sys_all_attrs
 from vermouth.tests.test_apply_rubber_band import test_molecule
 from vermouth.rcsu.go_structure_bias import ComputeStructuralGoBias
@@ -124,7 +124,7 @@ def test_contact_selector(test_molecule,
                                          "atype": atypes})
 
     # generate the virtual sites
-    VirtualSideCreator().run_system(system)
+    VirtualSiteCreator().run_system(system)
     # initialize the Go processor
     go_processor = ComputeStructuralGoBias(contact_map=cmap,
                                            cutoff_short=cshort,

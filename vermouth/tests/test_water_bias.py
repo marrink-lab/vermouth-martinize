@@ -18,7 +18,7 @@ Test for the water bias processor.
 import pytest
 import networkx as nx
 import vermouth
-from vermouth.rcsu.go_vs_includes import VirtualSideCreator
+from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
 from vermouth.system import System
 from vermouth.forcefield import ForceField
 from vermouth.processors.water_bias import ComputeWaterBias
@@ -143,7 +143,7 @@ def test_assign_residue_water_bias(test_molecule,
                                          "atype": atypes})
 
     # generate the virtual sites
-    VirtualSideCreator().run_system(system)
+    VirtualSiteCreator().run_system(system)
 
     processor = ComputeWaterBias(water_bias=water_bias, 
                                  auto_bias=True, 
