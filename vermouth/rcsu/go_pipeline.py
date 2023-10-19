@@ -38,8 +38,6 @@ class GoProcessorPipline(Processor):
         # with the proper Go-model for multimers
         vermouth.MergeAllMolecules().run_system(system)
         molecule = system.molecules[0]
-#        res_graph = vermouth.graph_utils.make_residue_graph(molecule)
-#        molecule.res_graph = res_graph
         molecule.meta['moltype'] = moltype
 
     def run_system(self, system, **kwargs):

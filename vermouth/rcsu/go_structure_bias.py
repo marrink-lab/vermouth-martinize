@@ -94,7 +94,7 @@ class ComputeStructuralGoBias(Processor):
         self.res_graph = None
         self.system = None
         self.__chain_id_to_resnode = {}
-        self.magic_number = 1.12246204830
+        self.magic_number = 2**(1/6)
 
     # do not overwrite when subclassing
     def _chain_id_to_resnode(self, chain, resid):
