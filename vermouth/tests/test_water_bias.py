@@ -18,8 +18,7 @@ Test for the water bias processor.
 import pytest
 from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
 from vermouth.processors.water_bias import ComputeWaterBias
-from vermouth.tests.test_apply_rubber_band import test_molecule
-from vermouth.tests.helper_functions import create_sys_all_attrs
+from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
 
 @pytest.mark.parametrize('secstruc, water_bias, idr_regions, expected',
         ((
