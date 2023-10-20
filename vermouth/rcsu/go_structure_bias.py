@@ -151,6 +151,8 @@ class ComputeStructuralGoBias(Processor):
         """
         # distance_matrix of elegible pairs as tuple(node, node, dist)
         contact_matrix = []
+        # distance_matrix of elegible symmetrical pairs as tuple(node, node, dist)
+        symmetrical_matrix = []
         # find all pairs of residues that are within bonded distance of
         # self.res_dist
         connected_pairs = dict(nx.all_pairs_shortest_path_length(self.res_graph,
@@ -184,15 +186,21 @@ class ComputeStructuralGoBias(Processor):
                                                                resid=resIDB,
                                                                chain=chainB,
                                                                prefix=self.moltype))
+                    # Check if symmetric contact has already been processed before
+                    # and if so, we append the contact to the final symmetric contact matrix
+                    # and add the exclusions. Else, we add to the full valid contact_matrix
+                    # and continue searching.
                     if (atype_b, atype_a, dist) in contact_matrix:
-                        continue
-                    # generate backbone backbone exclusions
-                    # perhaps one day can be it's own function
-                    excl = Interaction(atoms=(bb_node_A, bb_node_B), parameters=[], meta={"group": "Go model exclusion"})
-                    molecule.interactions['exclusions'].append(excl)
+                        # generate backbone backbone exclusions
+                        # perhaps one day can be it's own function
+                        excl = Interaction(atoms=(bb_node_A, bb_node_B),
+                                           parameters=[], meta={"group": "Go model exclusion"})
+                        molecule.interactions['exclusions'].append(excl)
+                        symmetrical_matrix.append((atype_a, atype_b, dist))
+                    else:
+                        contact_matrix.append((atype_a, atype_b, dist))
 
-                    contact_matrix.append((atype_a, atype_b, dist))
-        return contact_matrix
+        return symmetrical_matrix
 
     def compute_go_interaction(self, contacts):
         """
