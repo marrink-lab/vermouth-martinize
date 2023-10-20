@@ -37,46 +37,70 @@ def test_compute_go_interaction(test_molecule):
         assert nb_params.epsilon == 2.1
 
 @pytest.mark.parametrize('cmap, cshort, clong, rdist, expected',(
-        # single contact good 
+        # single assymetric contact bad
         ([(1, 'A', 4, 'A')],
          0.3,
          2.0,
          0,
-         [("mol_0_1", "mol_0_4", 1.5)]),
-        # add symmetric contact good 
+         []),
+        # single symmetric contact good
         ([(1, 'A', 4, 'A'), (4, 'A', 1, 'A')],
          0.3,
          2.0,
          0,
-         [("mol_0_1", "mol_0_4", 1.5)]),
-        # single contact bad -> cshort 
+         [("mol_0_4", "mol_0_1", 1.5)]),
+        # single symmetric contact bad -> cshort
+        ([(3, 'A', 1, 'A'),(1, 'A', 3, 'A')],
+         1.5,
+         2.0,
+         0,
+         []),
+        # single symmetric contact bad -> clong
+        ([(4, 'A', 1, 'A'), (1, 'A', 4, 'A')],
+         0.5,
+         0.8,
+         0,
+         []),
+        # single symmetric contact bad -> rdist
+        ([(4, 'A', 1, 'A'), (1, 'A', 4, 'A')],
+         0.3,
+         2.0,
+         5,
+         []),
+        # single contact bad -> cshort & assym
         ([(1, 'A', 3, 'A')],
          1.5,
          2.0,
          0,
          []),
-        # single contact bad -> clong 
+        # single contact bad -> clong & assym
         ([(1, 'A', 4, 'A')],
          0.5,
          0.8,
          0,
          []),
-        # single contact bad -> rdist 
+        # single contact bad -> rdist & assym
         ([(1, 'A', 4, 'A')],
          0.3,
          2.0,
          5,
          []),
-        # two contacts good 
-        ([(1, 'A', 3, 'A'), (1, 'A', 4, 'A')],
+        # two symmetric contacts good
+        ([(3, 'A', 1, 'A'), (4, 'A', 1, 'A'),(1, 'A', 3, 'A'), (1, 'A', 4, 'A')],
          0.3,
          2.0,
          1,
          [("mol_0_1", "mol_0_3", 1.0),
           ("mol_0_1", "mol_0_4", 1.5),
          ]),
-        # one good one bad rdist 
-        ([(1, 'A', 4, 'A'), (1, 'A', 2, 'A')],
+        # one symmetric contacts good, one assymetric contact bad
+        ([(3, 'A', 1, 'A'), (4, 'A', 1, 'A'),(1, 'A', 3, 'A')],
+         0.3,
+         2.0,
+         1,
+         [("mol_0_1", "mol_0_3", 1.0)]),
+        # one good one bad rdist
+        ([(4, 'A', 1, 'A'), (2, 'A', 1, 'A'), (1, 'A', 4, 'A'), (1, 'A', 2, 'A')],
          0.3,
          2.0,
          2,
