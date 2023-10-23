@@ -177,11 +177,11 @@ class ComputeStructuralGoBias(Processor):
                     # find the go virtual-sites for this residue
                     # probably can be done smarter but mehhhh
                     atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
-                                                               resid=resIDA,
+                                                               _old_resid=resIDA,
                                                                chain=chainA,
                                                                prefix=self.moltype))
                     atype_b = next(get_go_type_from_attributes(self.res_graph.nodes[resB]['graph'],
-                                                               resid=resIDB,
+                                                               _old_resid=resIDB,
                                                                chain=chainB,
                                                                prefix=self.moltype))
                     if (atype_b, atype_a, dist) in contact_matrix:
