@@ -334,6 +334,6 @@ def test_mod_resid_not_correct(caplog, node_data, edge_data, expected):
     annotate_modifications(mol, [], mutation)
     
     if expected:        
-        assert 'GLY with resid 1 not found. No modification made.' in str(caplog.records[0].getMessage())
+        assert '"GLY1" not found.' in str(caplog.records[0].getMessage())
     else:
         assert caplog.records == []
