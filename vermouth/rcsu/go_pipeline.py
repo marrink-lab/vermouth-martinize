@@ -18,7 +18,7 @@ import networkx as nx
 import inspect
 import vermouth
 from ..processors.processor import Processor
-from .go_vs_includes import VirtualSideCreator
+from .go_vs_includes import VirtualSiteCreator
 from .go_structure_bias import ComputeStructuralGoBias
 from ..processors import SetMoleculeMeta
 
@@ -39,8 +39,6 @@ class GoProcessorPipline(Processor):
         # with the proper Go-model for multimers
         vermouth.MergeAllMolecules().run_system(system)
         molecule = system.molecules[0]
-#        res_graph = vermouth.graph_utils.make_residue_graph(molecule)
-#        molecule.res_graph = res_graph
         molecule.meta['moltype'] = moltype
 
     def run_system(self, system, **kwargs):
@@ -53,5 +51,5 @@ class GoProcessorPipline(Processor):
         return system
 
 GoPipeline = GoProcessorPipline([SetMoleculeMeta,
-                                 VirtualSideCreator,
+                                 VirtualSiteCreator,
                                  ComputeStructuralGoBias])

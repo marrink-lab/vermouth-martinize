@@ -24,7 +24,7 @@ from ..log_helpers import StyleAdapter, get_logger
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
-class VirtualSideCreator(Processor):
+class VirtualSiteCreator(Processor):
     """
     Create virtual-sites for the Martini Go model implementation. 
     This processor also updates the gmx

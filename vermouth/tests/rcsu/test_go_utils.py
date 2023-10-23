@@ -43,7 +43,7 @@ def test_get_bead_size(atype, size):
         # two regions false
         ([(101, 120), (180, 210)], 15, False),
     ))
-def test_get_bead_size(regions, resid, result):
+def test_in_region(regions, resid, result):
     assert result == _in_resid_region(resid, regions)
 
 
