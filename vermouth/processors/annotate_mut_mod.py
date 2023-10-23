@@ -226,10 +226,9 @@ def annotate_modifications(molecule, modifications, mutations):
                     for node_idx in res['graph']:
                         molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
             if mod_found == False:
-                LOGGER.warning('{} with resid {} not found. '
-                                 'No modification made.'
-                                 ''.format(resspec['resname'], resspec['resid']))
-    
+                LOGGER.warning('Mutation "{}" not found. '
+                               'Check target resid!'
+                               ''.format(_format_resname(resspec)))
 
 class AnnotateMutMod(Processor):
     """

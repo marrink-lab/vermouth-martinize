@@ -17,8 +17,6 @@ Contains unittests for vermouth.processors.annotate_mut_mod.
 
 import networkx as nx
 import pytest
-from contextlib import nullcontext as does_not_raise
-import logging
 from vermouth.molecule import Molecule
 from vermouth.forcefield import ForceField
 from vermouth.processors.annotate_mut_mod import (
@@ -291,8 +289,8 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol.add_nodes_from(enumerate(node_data))
     mol.add_edges_from(edge_data)
-    modification = [({'resname': 'cter', 'resid': 3}, 'C-ter'), 
-                    ({'resname': 'nter', 'resid': 1}, 'N-ter')]
+    modification = [({'resname': 'cter'}, 'C-ter'), 
+                    ({'resname': 'nter'}, 'N-ter')]
 
     annotate_modifications(mol, modification, [])
 
