@@ -14,6 +14,7 @@
 """
 Wrapper of Processors defining the GoPipline.
 """
+import networkx as nx
 import inspect
 import vermouth
 from ..processors.processor import Processor
