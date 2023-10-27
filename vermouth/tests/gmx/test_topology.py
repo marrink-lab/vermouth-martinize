@@ -108,6 +108,13 @@ def test_atomtypes(tmp_path, dummy_molecule, atomtypes, expected, C6C12):
         ["[ nonbond_params ]\n", 
          "A B 1 0.43000000 2.30000000 \n",
          "A C 1 0.47000000 2.50000000 \n"], False),
+        # self interaction
+        (
+        [{"atoms": ("A",), "sigma": 0.43, "epsilon": 2.3, "meta": {}},
+         {"atoms": ("A", "C"), "sigma": 0.47, "epsilon": 2.5, "meta": {}}],
+        ["[ nonbond_params ]\n", 
+         "A A 1 0.43000000 2.30000000 \n",
+         "A C 1 0.47000000 2.50000000 \n"], False),
         (
         [{"atoms": ("A", "B"), "sigma": 0.43, "epsilon": 2.3, "meta": {"comment": ["comment"]}}],
         ["[ nonbond_params ]\n", 
