@@ -93,10 +93,10 @@ def compute_force_constants(distance_matrix, lower_bound, upper_bound,
     constants = compute_decay(distance_matrix, lower_bound, decay_factor, decay_power)
     np.fill_diagonal(constants, 0)
     constants *= base_constant
-
     constants[constants < minimum_force] = 0
     constants[constants > base_constant] = 0
     constants[distance_matrix > upper_bound] = 0
+    constants[distance_matrix < lower_bound] = 0    
     return constants
 
 
