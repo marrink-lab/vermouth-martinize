@@ -93,7 +93,9 @@ def compute_force_constants(distance_matrix, lower_bound, upper_bound,
     constants = compute_decay(distance_matrix, lower_bound, decay_factor, decay_power)
     np.fill_diagonal(constants, 0)
     constants *= base_constant
+
     constants[constants < minimum_force] = 0
+    constants[constants > base_constant] = 0
     constants[distance_matrix > upper_bound] = 0
     return constants
 
@@ -339,7 +341,7 @@ def apply_rubber_band(molecule, selector,
         to_key = idx_to_node[selection[to_idx]]
         force_constant = constants[from_idx, to_idx]
         length = distance_matrix[from_idx, to_idx]
-        if (force_constant > minimum_force) and (force_constant < base_constant):
+        if (force_constant > minimum_force):
             molecule.add_interaction(
                 type_='bonds',
                 atoms=(from_key, to_key),
