@@ -339,7 +339,7 @@ def apply_rubber_band(molecule, selector,
         to_key = idx_to_node[selection[to_idx]]
         force_constant = constants[from_idx, to_idx]
         length = distance_matrix[from_idx, to_idx]
-        if force_constant > minimum_force:
+        if (force_constant > minimum_force) and (force_constant < base_constant):
             molecule.add_interaction(
                 type_='bonds',
                 atoms=(from_key, to_key),
