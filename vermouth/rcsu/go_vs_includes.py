@@ -45,8 +45,7 @@ class VirtualSiteCreator(Processor):
         Assign molecule type names to the molecules in a system.
     :func:`add_virtual_sites`
     """
-    def __init__(self, sections=()):
-        self.sections = sections
+    def __init__(self):
         self.system = None
 
     def run_molecule(self, molecule):
@@ -59,13 +58,6 @@ class VirtualSiteCreator(Processor):
 
         self.add_virtual_sites(molecule, prefix=moltype)
 
-        includes = molecule.meta.get('post_section_lines', {})
-        for section in self.sections:
-            section_includes = includes.get(section, [])
-            section_includes.append('#include "{moltype}_{section}_VirtGoSites.itp"'
-                                    .format(moltype=moltype, section=section))
-            includes[section] = section_includes
-        molecule.meta['post_section_lines'] = includes
         return molecule
 
     def run_system(self, system):
