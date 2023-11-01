@@ -145,8 +145,7 @@ class ComputeWaterBias(Processor):
         ----------
         system: :class:`vermouth.System`
         """
-        if self.idr_regions or self.auto_bias:
-            self.system = system
-            for molecule in system.molecules:
-                self.run_molecule(molecule)
-        return system
+        if not (self.idr_regions or self.auto_bias):
+            return system
+        self.system = system
+        super().run_system(system)
