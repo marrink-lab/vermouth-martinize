@@ -250,5 +250,4 @@ class ComputeStructuralGoBias(Processor):
             The system to process. Is modified in-place.
         """
         self.system = system
-        for molecule in system.molecules:
-            self.run_molecule(molecule)
+        super().run_system(system)
