@@ -16,6 +16,7 @@
 Test for the water bias processor.
 """
 import pytest
+import vermouth
 from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
 from vermouth.processors.water_bias import ComputeWaterBias
 from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
@@ -89,3 +90,32 @@ def test_assign_residue_water_bias(test_molecule,
                 water_sig = sizes[bb_node]
                 assert water_eps == nb_params.epsilon
                 assert water_sig == nb_params.sigma
+
+def test_no_moltype_error(test_molecule):
+    """
+    Test that various high level IOErrors are
+    properly raised.
+    """
+    # set up processor
+    processor = ComputeWaterBias(water_bias={"C": 3.1},
+                                 auto_bias=True,
+                                 idr_regions=None)
+    # no moltype set
+    system = vermouth.System()
+    system.molecules.append(test_molecule)
+    with pytest.raises(ValueError):
+        processor.run_system(system)
+
+def test_no_moltype_error(test_molecule):
+    """
+    Test that various high level IOErrors are
+    properly raised.
+    """
+    # set up processor
+    processor = ComputeWaterBias(water_bias={"C": 3.1},
+                                 auto_bias=True,
+                                 idr_regions=None)
+    test_molecule.meta['moltype'] = "random"
+    # no system
+    with pytest.raises(IOError):
+        processor.run_molecule(test_molecule)
