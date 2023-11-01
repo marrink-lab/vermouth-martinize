@@ -543,19 +543,31 @@ def test_bail_out_on_nan(caplog, test_molecule):
                           ([1, 2, 0, 0, 500, 400, np.array([[  0,500,500,  0],
                                                             [500,  0,500,500],
                                                             [500,500,  0,500],
-                                                            [  0,500,500,500]])], # no decays, return the base constant within the bounds
+                                                            [  0,500,500,  0]])], # no decays, return the base constant within the bounds
                            [1, 2, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0]])], # all forces less than the minumum force
                            [1, 0.5, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
-                                                            [  0,  0,  0,  0],
-                                                            [  0,  0,  0,  0],
-                                                            [  0,  0,  0,  0]])], # all distances larger than the upper bound
+                                                              [  0,  0,  0,  0],
+                                                              [  0,  0,  0,  0],
+                                                              [  0,  0,  0,  0]])], # all distances larger than the upper bound
                            [4, 2, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0]])], # all distances less than the lower bound
+                           [1, 3, 0.1, 0, 500, 400, np.array([[  0.        , 452.41870902, 452.41870902, 452.41870902],
+                                                              [452.41870902,   0.        , 452.41870902, 452.41870902],
+                                                              [452.41870902, 452.41870902,   0.        , 452.41870902],
+                                                              [452.41870902, 452.41870902, 452.41870902,   0.        ]])], # with a decay factor
+                           [1, 3, 0, 2, 500, 400, np.array([[  0,500,500,500],
+                                                            [500,  0,500,500],
+                                                            [500,500,  0,500],
+                                                            [500,500,500,  0]])], # with a decay factor
+                           [1, 3, 0.1, 2, 500, 400, np.array([[  0.        , 500.        , 452.41870902,   0.        ],
+                                                              [500.        ,   0.        , 500.        , 452.41870902],
+                                                              [452.41870902, 500.        ,   0.        , 500.        ],
+                                                              [  0.        , 452.41870902, 500.        ,   0.        ]])], # with a complex decay
                           )
                         )
 def test_compute_force_constants(lower_bound, upper_bound, decay_factor, decay_power, base_constant, minimum_force, expected_output):
@@ -571,4 +583,4 @@ def test_compute_force_constants(lower_bound, upper_bound, decay_factor, decay_p
                                                                            minimum_force)
 
     # Assert the result against the expected output
-    assert result.all() == expected_output.all()
+    assert result == pytest.approx(expected_output)
