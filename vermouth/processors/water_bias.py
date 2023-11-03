@@ -57,7 +57,7 @@ class ComputeWaterBias(Processor):
             regions defining the IDRs
         prefix: str
             prefix of the Go virtual-site atomtypes
-        system: :class:`vermouth.System`
+        system: vermouth.system.System
             the system of the molecules is used for
             storing the nonbonded parameters
         """
