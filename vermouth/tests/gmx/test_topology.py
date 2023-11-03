@@ -20,7 +20,7 @@ import textwrap
 import pytest
 import vermouth
 from vermouth.file_writer import DeferredFileWriter
-from vermouth.gmx.topology import (convert_sigma_epsilon,
+from vermouth.gmx.topology import (sigma_epsilon_to_C6_C12,
                                    write_atomtypes,
                                    write_nonbond_params,
                                    write_gmx_topology,

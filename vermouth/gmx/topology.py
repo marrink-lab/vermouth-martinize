@@ -58,7 +58,7 @@ def write_atomtypes(system, itp_path, C6C12=False):
                 mass = atomtype.molecule.nodes[atomtype.node]['mass']
 
                 if C6C12:
-                    nb1, nb2 = convert_sigma_epsilon(atomtype.sigma, atomtype.epsilon)
+                    nb1, nb2 = sigma_epsilon_to_C6_C12(atomtype.sigma, atomtype.epsilon)
                 else:
                     nb1, nb2 = atomtype.sigma, atomtype.epsilon
 
@@ -96,7 +96,7 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                     a2 = nb_params.atoms[0]
 
                 if C6C12:
-                    nb1, nb2 = convert_sigma_epsilon(nb_params.sigma, nb_params.epsilon)
+                    nb1, nb2 = sigma_epsilon_to_C6_C12(nb_params.sigma, nb_params.epsilon)
                 else:
                     nb1, nb2 = nb_params.sigma, nb_params.epsilon
 
