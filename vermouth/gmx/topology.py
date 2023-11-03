@@ -25,7 +25,7 @@ def _group_by_conditionals(interactions):
         )
     return interaction_grouped
 
-def convert_sigma_epsilon(sigma, epsilon):
+def sigma_epsilon_to_C6_C12(sigma, epsilon):
     """
     Convert the LJ potential from sigma epsilon
     form to C6 C12 form.

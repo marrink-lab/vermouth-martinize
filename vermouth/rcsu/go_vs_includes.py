@@ -63,8 +63,7 @@ class VirtualSiteCreator(Processor):
     def run_system(self, system):
         self.system = system
         LOGGER.info("Adding Virtual Sites to backbone beads.", type="step")
-        for molecule in system.molecules:
-            self.run_molecule(molecule)
+        super().run_system(system)
 
     def add_virtual_sites(self, molecule, prefix, backbone='BB', atomname='CA', charge=0):
         """

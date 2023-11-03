@@ -22,8 +22,8 @@ class ComputeWaterBias(Processor):
     Processor which computes the water  bias for
     the Martini Go and Martini IDP model.
 
-    The water bias streght is defined per secondary
-    structure element in `water_bias` and assinged if
+    The water bias strength is defined per secondary
+    structure element in `water_bias` and assigned if
     `auto_bias` is set to True. Using the `idr_regions`
     argument the water_bias can be changed for
     intrinsically disordered regions (IDRs). The IDR
@@ -57,7 +57,7 @@ class ComputeWaterBias(Processor):
             regions defining the IDRs
         prefix: str
             prefix of the Go virtual-site atomtypes
-        system: :class:vermouth.System
+        system: :class:`vermouth.System`
             the system of the molecules is used for
             storing the nonbonded parameters
         """
@@ -71,7 +71,7 @@ class ComputeWaterBias(Processor):
         Assign the residue water bias for all residues
         with a secondary structure element or that are
         defined by the region selector. Region selectors
-        superceed the auto assignement.
+        supercede the auto assignment.
 
         Parameters
         ----------
