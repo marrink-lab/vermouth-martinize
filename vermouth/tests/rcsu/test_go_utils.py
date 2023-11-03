@@ -54,3 +54,10 @@ def test_get_go_type_from_attributes(mol):
     mol.add_node(vs_node, atype="prefix_0", chain="A", resid=5)
     found_atype = next(get_go_type_from_attributes(mol, prefix="prefix", chain="A", resid=5))
     assert found_atype == "prefix_0"
+
+@hypothesis.settings(suppress_health_check=[hypothesis.HealthCheck.too_slow])
+@hypothesis.given(random_molecule())
+def test_error_get_go_type_from_attributes(mol):
+    vs_node = len(mol.nodes)
+    with pytest.raises(ValueError):
+        next(get_go_type_from_attributes(mol, prefix="prefix", chain="A", resid=5))
