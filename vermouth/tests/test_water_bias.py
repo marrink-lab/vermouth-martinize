@@ -106,7 +106,7 @@ def test_no_moltype_error(test_molecule):
     with pytest.raises(ValueError):
         processor.run_system(system)
 
-def test_no_moltype_error(test_molecule):
+def test_no_system_error(test_molecule):
     """
     Test that various high level IOErrors are
     properly raised.
