@@ -29,6 +29,12 @@ from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
         [],
         {0: "H", 3: "H", 5: "H", 6: "H"}
         ),
+        # test skip unassigned node
+        ({1: None, 2: "H", 3: "H", 4: "H"},
+        {"H": 2.1},
+        [],
+        {5: "H", 6: "H"}
+        ),
         # only auto-bias two sec struct
         ({1: "H", 2: "H", 3: "C", 4: "C"},
         {"H": 2.1, "C": 3.1},
@@ -119,3 +125,13 @@ def test_no_system_error(test_molecule):
     # no system
     with pytest.raises(IOError):
         processor.run_molecule(test_molecule)
+
+def test_clean_return(test_molecule):
+    # set up processor
+    processor = ComputeWaterBias(water_bias={"C": 3.1},
+                                 auto_bias=None,
+                                 idr_regions=None)
+    test_molecule.meta['moltype'] = "random"
+    system = vermouth.System()
+    system.molecules.append(test_molecule)
+    assert processor.run_system(system) == system
