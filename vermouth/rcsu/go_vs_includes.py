@@ -26,8 +26,8 @@ LOGGER = StyleAdapter(get_logger(__name__))
 
 class VirtualSiteCreator(Processor):
     """
-    Create virtual-sites for the Martini Go model implementation. 
-    This processor also updates the gmx
+    Create virtual-sites for the Martini Go model implementation or
+    the specific water biasing options.
 
     See :mod:`vermouth.processors.go_vs_includes` for more details.
 

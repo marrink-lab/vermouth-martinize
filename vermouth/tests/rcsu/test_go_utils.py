@@ -59,5 +59,5 @@ def test_get_go_type_from_attributes(mol):
 @hypothesis.given(random_molecule())
 def test_error_get_go_type_from_attributes(mol):
     vs_node = len(mol.nodes)
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         next(get_go_type_from_attributes(mol, prefix="prefix", chain="A", resid=5))

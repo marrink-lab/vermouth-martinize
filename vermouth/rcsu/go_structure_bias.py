@@ -62,9 +62,9 @@ class ComputeStructuralGoBias(Processor):
             list of contacts defined as by the chain
             identifier and residue index
         cutoff_short: float
-            distances smaller than this are ignored
+            distances in nm smaller than this are ignored
         cutoff_long: float
-            distances larger than this are ignored
+            distances in nm larger than this are ignored
         go_eps: float
             epsilon value of the structural bias in
             kJ/mol
@@ -94,7 +94,7 @@ class ComputeStructuralGoBias(Processor):
         self.res_graph = None
         self.system = None
         self.__chain_id_to_resnode = {}
-        self.magic_number = 2**(1/6)
+        self.conversion_factor = 2**(1/6)
 
     # do not overwrite when subclassing
     def _chain_id_to_resnode(self, chain, resid):
@@ -176,8 +176,6 @@ class ComputeStructuralGoBias(Processor):
                 # verify that the distance between BB-beads satisfies the
                 # cut-off criteria
                 if self.cutoff_long > dist > self.cutoff_short:
-                    # find the go virtual-sites for this residue
-                    # probably can be done smarter but mehhhh
                     atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
                                                                _old_resid=resIDA,
                                                                chain=chainA,
@@ -220,9 +218,7 @@ class ComputeStructuralGoBias(Processor):
         """
         go_inters = {}
         for atype_a, atype_b, dist in contacts:
-            # compute the LJ sigma paramter for this contact
-            # 1.12246204830 is a magic number by Sebastian
-            sigma = dist / self.magic_number
+            sigma = dist / self.conversion_factor
             # find the go virtual-sites for this residue
             # probably can be done smarter but mehhhh
             contact_bias = NonbondParam(atoms=(atype_a, atype_b),

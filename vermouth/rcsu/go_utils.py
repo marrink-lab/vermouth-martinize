@@ -47,7 +47,7 @@ def get_go_type_from_attributes(molecule, prefix, **kwargs):
     else:
         resid = kwargs['resid']
         chain = kwargs['chain']
-        raise ValueError(f"Could not find GoVs with resid {resid} in chain {chain}.")
+        raise KeyError(f"Could not find GoVs with resid {resid} in chain {chain}.")
 
 def _in_resid_region(resid, regions):
     """
