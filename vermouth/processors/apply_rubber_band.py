@@ -89,6 +89,14 @@ def compute_force_constants(distance_matrix, lower_bound, upper_bound,
 
     The force constant can be modified with a decay function, and it can be
     bounded with a minimum threshold, or a distance upper and lower bonds.
+    
+    If decay_factor = decay_power = 0 all forces applied are = base_constant
+    
+    Forces applied to distances above upper_bound are removed.
+    Forces below minimum_force are removed.
+    
+    If decay_factor or decay_power != 0, forces below lower_bound are greater 
+    than base_constant, in which case they are set back to = base_constant    
     """
     constants = compute_decay(distance_matrix, lower_bound, decay_factor, decay_power)
     np.fill_diagonal(constants, 0)
