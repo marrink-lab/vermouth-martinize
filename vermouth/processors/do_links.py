@@ -25,7 +25,24 @@ from .processor import Processor
 
 
 def _atoms_match(node1, node2):
-    return attributes_match(node1, node2, ignore_keys=('order', 'replace'))
+    # node1 is molecule, node2 is link
+    # modifications are named as tuples, e.g. `('C-ter',)`, since mappings can
+    # deal with multiple modifications at the same time. Here we build a flat
+    # list of relevant modification names, and require that /all/ of these match
+    # the link['modifications']
+    mods = []
+    for mod in node1.get('modifications', []):
+        mods.extend(mod.name)
+    # Case 1: link does not restrict modifications: always match
+    # Case 2: link specifies modifications, but molecule node has none: don't match
+    # Case 3: both have modifications: match iff all molecule mods match link mods
+    # For case 3 we need to do a little jiggery-pokery to leverage attributes_match.
+    # This probably means that that functions need to be cut up into smaller
+    # pieces.
+    mods_match = ('modifications' not in node2 or  # Case 1
+                  (mods and  # Case 2
+                   all(attributes_match({'_': modname}, {'_': node2['modifications']}) for modname in mods)))  # Case 3
+    return mods_match and attributes_match(node1, node2, ignore_keys=('order', 'replace', 'modifications'))
 
 
 def _is_valid_non_edges(molecule, link, rev_raw_match):

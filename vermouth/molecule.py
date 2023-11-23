@@ -1350,7 +1350,7 @@ def attributes_match(attributes, template_attributes, ignore_keys=()):
 
     Returns ``True`` if the attributes from the link match the ones from the
     molecule; returns ``False`` otherwise. The attributes from a link match
-    with those of a molecule is all the individual attribute from the link
+    with those of a molecule if all the individual attribute from the link
     match the corresponding ones in the molecule. In the simplest case, these
     attribute match if their values are equal. If the value of the link
     attribute is an instance of :class:`LinkPredicate`, then the attributes
