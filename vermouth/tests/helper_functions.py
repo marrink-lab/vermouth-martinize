@@ -151,6 +151,31 @@ def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs):
     system.molecules.append(molecule)
     return system
 
+def is_equal(floats_a, floats_b, precision=1e-3):
+    '''
+    Convenience comparisson of two floats within specified precision.
+    '''
+    return all((abs(a-b) < precision) for a, b in zip(floats_a, floats_b))
+
+
+def parse_gofiles(file, atomtypes=False):
+    '''
+    Parser of go_nbparams.itp & go_atomtypes.itp files into an easy to assert dictionary.
+    '''
+    with open(file) as my_file:
+        tt = my_file.readlines()
+    vals = {}
+    for line in tt[1:]:
+        if atomtypes:
+            ## Key is atomname str, value is atomdef str
+            vals[line.split()[0]]=' '.join(line.split()[1:])
+        else:
+            ## Key is tuple with nb pair, value is tuple with nb sigma and eps
+            tup = tuple(sorted((line.split()[0],  
+                                line.split()[1])))
+            vals[tup]=tuple((float(line.split()[3]), float(line.split()[4])))
+    return vals
+
 @pytest.fixture
 def test_molecule(scope='function'):
     """

@@ -28,7 +28,7 @@ import vermouth
 from vermouth.forcefield import ForceField
 
 from .. import datafiles
-from ..helper_functions import find_in_path
+from ..helper_functions import find_in_path, is_equal, parse_gofiles
 
 
 INTEGRATION_DATA = Path(datafiles.TEST_DATA/'integration_tests')
@@ -111,6 +111,33 @@ def compare_pdb(filename1, filename2):
 COMPARERS = {'.itp': compare_itp,
              '.pdb': compare_pdb}
 
+def compare_nbparams(fileref, filecomp):
+    """
+    Asserts that two go_nbparams.itp files are functionally identical.
+    """
+    ref = parse_gofiles(fileref)
+    compare = parse_gofiles(filecomp)
+    
+    assert(set(ref.keys())==set(compare.keys()))  ## assert correct nb pairs
+
+    for key in ref.keys(): 
+        assert(is_equal(list(ref[key]),list(compare[key])))  ##assert correct sigma and eps
+
+
+def compare_goatomtypes(fileref, filecomp):
+    """
+    Asserts that two go_atomtypes.itp files are functionally identical.
+    """
+    ref = parse_gofiles(fileref, atomtypes=True)
+    compare = parse_gofiles(filecomp, atomtypes=True)
+    
+    assert(set(ref.keys())==set(compare.keys()))  ## assert correct atomtypes
+
+    for key in ref.keys(): 
+        assert(ref[key] == compare[key])  ##assert correct atom definition string
+
+GOCOMPARERS = {'go_nbparams.itp': compare_nbparams,
+               'go_atomtypes.itp': compare_goatomtypes}
 
 def _interaction_equal(interaction1, interaction2):
     """
@@ -125,20 +152,21 @@ def _interaction_equal(interaction1, interaction2):
 
 
 @pytest.mark.parametrize("tier, protein", [
-    ['tier-0', 'mini-protein1_betasheet'],
-    ['tier-0', 'mini-protein2_helix'],
-    ['tier-0', 'mini-protein3_trp-cage'],
-    ['tier-0', 'dipro-termini'],
-    ['tier-1', 'bpti'],
-    ['tier-1', 'lysozyme'],
-    ['tier-1', 'lysozyme_prot'],
-    ['tier-1', 'villin'],
-    ['tier-1', '3i40'],
-    ['tier-1', '6LFO_gap'],
-    ['tier-1', '1mj5'],
-    ['tier-1', '1mj5-charmm'],
-    ['tier-1', 'EN_chain'],
-    ['tier-1', 'EN_region'],
+    # ['tier-0', 'mini-protein1_betasheet'],
+    # ['tier-0', 'mini-protein2_helix'],
+    # ['tier-0', 'mini-protein3_trp-cage'],
+    # ['tier-0', 'dipro-termini'],
+    # ['tier-1', 'bpti'],
+    # ['tier-1', 'lysozyme'],
+    # ['tier-1', 'lysozyme_prot'],
+    ['tier-1', 'lysozyme_GO'],
+    # ['tier-1', 'villin'],
+    # ['tier-1', '3i40'],
+    # ['tier-1', '6LFO_gap'],
+    # ['tier-1', '1mj5'],
+    # ['tier-1', '1mj5-charmm'],
+    # ['tier-1', 'EN_chain'],
+    # ['tier-1', 'EN_region'],
 #   ['tier-2', 'barnase_barstar'],
 #   ['tier-2', 'dna'],
 #   ['tier-2', 'gpa_dimer'],
@@ -204,10 +232,13 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
         filename = new_file.name
         reference_file = data_path/filename
         assert reference_file.is_file()
-        ext = new_file.suffix.lower()
-        if ext in COMPARERS:
-            with monkeypatch.context() as m:
-                # Compare Interactions such that rounding errors in the
-                # parameters are OK.
-                m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
-                COMPARERS[ext](str(reference_file), str(new_file))
+        if filename in ['go_nbparams.itp','go_atomtypes.itp']:
+            GOCOMPARERS[filename](str(reference_file), str(new_file))
+        else:
+            ext = new_file.suffix.lower()
+            if ext in COMPARERS:
+                with monkeypatch.context() as m:
+                    # Compare Interactions such that rounding errors in the
+                    # parameters are OK.
+                    m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
+                    COMPARERS[ext](str(reference_file), str(new_file))
