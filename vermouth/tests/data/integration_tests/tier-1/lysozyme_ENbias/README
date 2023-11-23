@@ -7,5 +7,5 @@
 ### TEST: 
 
 # -ff martini 3001
-# -scfix and GO
+# -scfix, EN and BB-W bias
 # adding specific cys bridge as CONECT records

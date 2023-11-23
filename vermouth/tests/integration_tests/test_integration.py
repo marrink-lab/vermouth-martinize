@@ -137,7 +137,9 @@ def compare_goatomtypes(fileref, filecomp):
         assert(ref[key] == compare[key])  ##assert correct atom definition string
 
 GOCOMPARERS = {'go_nbparams.itp': compare_nbparams,
-               'go_atomtypes.itp': compare_goatomtypes}
+               'virtual_sites_nonbond_params.itp': compare_nbparams,
+               'go_atomtypes.itp': compare_goatomtypes,
+               'virtual_sites_atomtypes.itp': compare_goatomtypes}
 
 def _interaction_equal(interaction1, interaction2):
     """
@@ -152,21 +154,23 @@ def _interaction_equal(interaction1, interaction2):
 
 
 @pytest.mark.parametrize("tier, protein", [
-    # ['tier-0', 'mini-protein1_betasheet'],
-    # ['tier-0', 'mini-protein2_helix'],
-    # ['tier-0', 'mini-protein3_trp-cage'],
-    # ['tier-0', 'dipro-termini'],
-    # ['tier-1', 'bpti'],
-    # ['tier-1', 'lysozyme'],
-    # ['tier-1', 'lysozyme_prot'],
+    ['tier-0', 'mini-protein1_betasheet'],
+    ['tier-0', 'mini-protein2_helix'],
+    ['tier-0', 'mini-protein3_trp-cage'],
+    ['tier-0', 'dipro-termini'],
+    ['tier-1', 'bpti'],
+    ['tier-1', 'lysozyme'],
+    ['tier-1', 'lysozyme_prot'],
     ['tier-1', 'lysozyme_GO'],
-    # ['tier-1', 'villin'],
-    # ['tier-1', '3i40'],
-    # ['tier-1', '6LFO_gap'],
-    # ['tier-1', '1mj5'],
-    # ['tier-1', '1mj5-charmm'],
-    # ['tier-1', 'EN_chain'],
-    # ['tier-1', 'EN_region'],
+    ['tier-1', 'lysozyme_GObias'],
+    ['tier-1', 'lysozyme_ENbias'],
+    ['tier-1', 'villin'],
+    ['tier-1', '3i40'],
+    ['tier-1', '6LFO_gap'],
+    ['tier-1', '1mj5'],
+    ['tier-1', '1mj5-charmm'],
+    ['tier-1', 'EN_chain'],
+    ['tier-1', 'EN_region'],
 #   ['tier-2', 'barnase_barstar'],
 #   ['tier-2', 'dna'],
 #   ['tier-2', 'gpa_dimer'],
@@ -232,7 +236,9 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
         filename = new_file.name
         reference_file = data_path/filename
         assert reference_file.is_file()
-        if filename in ['go_nbparams.itp','go_atomtypes.itp']:
+        if filename in ['go_nbparams.itp','go_atomtypes.itp',
+                        'virtual_sites_nonbond_params.itp','virtual_sites_atomtypes.itp']:
+            ## compare the extra go/vs model files
             GOCOMPARERS[filename](str(reference_file), str(new_file))
         else:
             ext = new_file.suffix.lower()
