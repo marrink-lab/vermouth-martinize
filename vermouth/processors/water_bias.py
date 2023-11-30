@@ -75,9 +75,9 @@ class ComputeWaterBias(Processor):
 
         Parameters
         ----------
-        molecule: :class:vermouth.Molecule
+        molecule: :class:vermouth.molecule.Molecule
             the molecule
-        res_graph: :class:vermouth.Molecule
+        res_graph: :class:vermouth.molecule.Molecule
             the residue graph of the molecule
         """
         for res_node in res_graph.nodes:
