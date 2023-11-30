@@ -532,16 +532,10 @@ def entry():
     go_group = parser.add_argument_group("Virtual site based GoMartini")
     go_group.add_argument(
         "-go",
-        action="store_true",
-        default=False,
-        help="Apply the Martini Go model as structural bias and/or water bias.",
-    )
-    go_group.add_argument(
-        "-go-map",
-        dest="go_map",
+        dest="go",
         required=False,
         type=Path,
-        default=False,
+        default=None,
         help="Contact map to be used for the Martini Go model."
              "Currently, only one format is supported. See docs.",
     )
@@ -951,7 +945,7 @@ def entry():
     # Generate the Go model if required
     if args.go:
         LOGGER.info("Reading Go model contact map.", type="step")
-        go_map = read_go_map(args.go_map)
+        go_map = read_go_map(args.go)
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
                               moltype=args.govs_moltype,
