@@ -521,7 +521,9 @@ def entry():
         "-dssp",
         nargs="?",
         const=True,
-        help="DSSP executable for determining structure",
+        help="DSSP executable for determining structure. If this flag is given"
+             "but no executable is specified, the mdtraj library will be used"
+             "to compute the secondary structure, if it can be imported.",
     )
     secstruct_exclusion.add_argument(
         "-ss",

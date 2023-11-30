@@ -27,13 +27,14 @@ import vermouth
 from vermouth.file_writer import DeferredFileWriter
 from vermouth.forcefield import get_native_force_field
 from vermouth.dssp import dssp
-from vermouth.dssp.dssp import DSSPError
+from vermouth.dssp.dssp import DSSPError, run_mdtraj
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
     PDB_PROTEIN,
     DSSP_OUTPUT,
     DSSP_SS_OUTPUT,
     PDB_ALA5_CG,
+    PDB_ALA5,
 )
 
 DSSP_EXECUTABLE = os.environ.get("VERMOUTH_TEST_DSSP", "dssp")
@@ -447,6 +448,24 @@ def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
     if matches:
         # Make sure it's a valid PDB file. Mostly anyway.
         list(read_pdb(matches[0]))
+
+
+@pytest.mark.parametrize('ss_struct, expected', (
+    (list('ABCDE'), list('ABCDE')),
+    (list('AB DE'), list('ABCDE')),
+    ([list('ABCDE'), list('FGHIJ')], list('ABCDEFGHIJ')),
+    ([list('ABC E'), list('F HIJ')], list('ABCCEFCHIJ')),
+))
+def test_mdtraj(monkeypatch, ss_struct, expected):
+    # We don't want to test mdtraj.compute_dssp, so mock it.
+    compute_dssp = lambda *_, **__: np.array(ss_struct)
+    monkeypatch.setattr(vermouth.dssp.dssp.mdtraj, "compute_dssp", compute_dssp)
+    system = vermouth.System()
+    for molecule in read_pdb(str(PDB_ALA5)):
+        system.add_molecule(molecule)
+
+    found = run_mdtraj(system)
+    assert found == expected
 
 
 def test_cterm_atomnames():
