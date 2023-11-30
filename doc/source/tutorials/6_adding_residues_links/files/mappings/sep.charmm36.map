@@ -1,0 +1,30 @@
+[ molecule ]
+SEP
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+BB SC1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+ 1     N  BB
+ 2    HN  BB
+ 3    CA  BB
+ 4    HA  !BB
+ 5    CB  BB SC1
+ 6   HB1  !SC1
+ 7   HB2  !SC1
+ 8    OG  SC1
+ 9     C  BB
+10     O  BB
+11     P  SC1
+12    O1  SC1
+13    O2  SC1
+14    O3  SC1

@@ -1,2 +1,0 @@
-Atomistic protein in solution
-=============================
