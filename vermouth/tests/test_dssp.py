@@ -20,6 +20,7 @@ import os
 import glob
 import itertools
 
+import networkx as nx
 import numpy as np
 import pytest
 
@@ -27,7 +28,7 @@ import vermouth
 from vermouth.file_writer import DeferredFileWriter
 from vermouth.forcefield import get_native_force_field
 from vermouth.dssp import dssp
-from vermouth.dssp.dssp import DSSPError, run_mdtraj
+from vermouth.dssp.dssp import DSSPError, AnnotateDSSP
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
     PDB_PROTEIN,
@@ -453,8 +454,8 @@ def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
 @pytest.mark.parametrize('ss_struct, expected', (
     (list('ABCDE'), list('ABCDE')),
     (list('AB DE'), list('ABCDE')),
-    ([list('ABCDE'), list('FGHIJ')], list('ABCDEFGHIJ')),
-    ([list('ABC E'), list('F HIJ')], list('ABCCEFCHIJ')),
+    ([['A'], ['B'], ['C'], ['F'], ['G']], list('ABCFG')),
+    ([['A'], [' '], ['E'], ['F'], [' ']], list('ACEFC')),
 ))
 def test_mdtraj(monkeypatch, ss_struct, expected):
     # We don't want to test mdtraj.compute_dssp, so mock it.
@@ -464,7 +465,15 @@ def test_mdtraj(monkeypatch, ss_struct, expected):
     for molecule in read_pdb(str(PDB_ALA5)):
         system.add_molecule(molecule)
 
-    found = run_mdtraj(system)
+    processor = AnnotateDSSP(executable=None)
+    processor.run_system(system)
+
+    found = []
+    for mol in system.molecules:
+        residues = mol.iter_residues()
+        for residue in residues:
+            found.append(mol.nodes[residue[0]]['secstruct'])
+
     assert found == expected
 
 
