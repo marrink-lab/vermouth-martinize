@@ -34,14 +34,16 @@ def _atoms_match(node1, node2):
     for mod in node1.get('modifications', []):
         mods.extend(mod.name)
     # Case 1: link does not restrict modifications: always match
-    # Case 2: link specifies modifications, but molecule node has none: don't match
-    # Case 3: both have modifications: match iff all molecule mods match link mods
-    # For case 3 we need to do a little jiggery-pokery to leverage attributes_match.
+    # Case 2: link specifies empty modifications and molecule has none: match
+    # Case 3: link specifies modifications, but molecule node has none: don't match
+    # Case 4: both have modifications: match iff all molecule mods match link mods
+    # For case 4 we need to do a little jiggery-pokery to leverage attributes_match.
     # This probably means that that functions need to be cut up into smaller
     # pieces.
     mods_match = ('modifications' not in node2 or  # Case 1
-                  (mods and  # Case 2
-                   all(attributes_match({'_': modname}, {'_': node2['modifications']}) for modname in mods)))  # Case 3
+                  (not node2['modifications'] and not mods) or  # Case 2
+                  (node2['modifications'] and mods and  # Case 3
+                   all(attributes_match({'_': modname}, {'_': node2['modifications']}) for modname in mods)))  # Case 4
     return mods_match and attributes_match(node1, node2, ignore_keys=('order', 'replace', 'modifications'))
 
 

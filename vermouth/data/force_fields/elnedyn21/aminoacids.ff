@@ -575,19 +575,19 @@ collagen
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}, "modifications": null}
+BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}, "modifications": []}
 
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}, "modifications": null}
+BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}, "modifications": []}
 [ features ]
 collagen
 
 [ link ]
 resname "PRO"
 [ atoms ]
-BB {"cgsecstruct": "2", "replace": {"atype": "Na"}, "modifications": null}
+BB {"cgsecstruct": "2", "replace": {"atype": "Na"}, "modifications": []}
 
 ;; Setup the bonds.
 [ link ]
