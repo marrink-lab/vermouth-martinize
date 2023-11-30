@@ -621,45 +621,45 @@ BB -BB
 [ link ]
 resname $protein_resnames
 [ atoms ]
-BB {"cgsecstruct": "T|3|E", "replace": {"atype": "Nda"}}
+BB {"cgsecstruct": "T|3|E", "replace": {"atype": "Nda"}, "modifications": null}
 
 [ link ]
 resname $protein_resnames
 [ atoms ]
-BB {"cgsecstruct": "2", "replace": {"atype": "Na"}}
+BB {"cgsecstruct": "2", "replace": {"atype": "Na"}, "modifications": null}
 
 [ link ]
 resname $protein_resnames
 [ atoms ]
-BB {"cgsecstruct": "1", "replace": {"atype": "Nd"}}
+BB {"cgsecstruct": "1", "replace": {"atype": "Nd"}, "modifications": null}
 
 [ link ]
 resname $protein_resnames
 [ features ]
 collagen
 [ atoms ]
-BB {"cgsecstruct": "H|F", "replace": {"atype": "N0"}}
+BB {"cgsecstruct": "H|F", "replace": {"atype": "N0"}, "modifications": null}
 
 ;; Fix bead types for ALA and PRO.
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "S", "replace": {"atype": "P4"}}
+BB {"cgsecstruct": "S", "replace": {"atype": "P4"}, "modifications": null}
 
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}}
+BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}, "modifications": null}
 
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}}
+BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}, "modifications": null}
 
 [ link ]
 resname "PRO"
 [ atoms ]
-BB {"cgsecstruct": "2", "replace": {"atype": "Na"}}
+BB {"cgsecstruct": "2", "replace": {"atype": "Na"}, "modifications": null}
 
 ;; Setup the bonds. We only have the bonds assuming everything is coil.
 ;; We always select the lowest force constant when the two residues involved
