@@ -477,7 +477,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             assert len(atoms) == len(interaction.atoms)
             interaction = interaction._replace(atoms=atoms)
             applied_interactions[interaction_type][tuple(atoms)].append(modification)
-            graph_out.add_interaction(interaction_type, **interaction._asdict())
+            graph_out.add_or_replace_interaction(interaction_type, **interaction._asdict())
 
     # Some jank needed here, since modification node indices are integers
     mod_atom_name_to_out = {}

@@ -71,6 +71,11 @@ The documentation of the vermouth python library will come soon.
   year={2022}}
 ```
 
+## Documentation
+
+More complete documentation, including API documentation can be found at
+https://vermouth-martinize.readthedocs.io/
+
 ## License
 
 Martinize2 and vermouth are distributed under the Apache 2.0 license.
