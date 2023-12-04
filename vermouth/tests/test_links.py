@@ -18,7 +18,8 @@ import numpy as np
 import pytest
 
 from vermouth.processors import do_links, DoLinks
-from vermouth.molecule import Molecule, Link
+from vermouth.molecule import Molecule, Link, Modification, Choice
+from vermouth.processors.do_links import _atoms_match
 import vermouth.forcefield
 
 
@@ -278,3 +279,30 @@ def test_link_processor(mol_nodes, mol_edges, link_nodes, link_edges,
     out = DoLinks().run_molecule(mol)
     assert dict(out.nodes(data=True)) == dict(expected_nodes)
     assert set(out.edges(data=False)) == set(expected_edges)
+
+
+def modification(*names):
+    mod = Modification(name=tuple(names))
+    return mod
+
+
+@pytest.mark.parametrize('mol_node, link_node, expected', (
+    [{}, {}, True],  # No restrictions, match
+    [{'modifications': [modification('A')]}, {}, True],  # No restrictions, match
+    [{}, {'modifications': []}, True],  # No link modifications, no mol modifications, match
+    [{}, {'modifications': None}, True],  # No link modifications, no mol modifications, match
+    [{'modifications': []}, {'modifications': []}, True],  # No link modifications, no mol modifications, match
+    [{'modifications': []}, {'modifications': None}, True],  # No link modifications, no mol modifications, match
+    [{}, {'modifications': ['A']}, False],   # Link modifications, but no mol modifications, don't match
+    [{'modifications': []}, {'modifications': 'A'}, False],  # Link modifications, but no mol modifications, don't match
+    [{'modifications': [modification('A')]}, {'modifications': 'A'}, True],  # Link modifications and matching mol mods, match
+    [{'modifications': [modification('A')]}, {'modifications': 'B'}, False],  # Link modifications but no matching mol mods, don't match
+    [{'modifications': [modification('A', 'B')]}, {'modifications': 'B'}, False],  # Link modifications but no not all mol mods match, don't match
+    [{'modifications': [modification('A'), modification('B')]}, {'modifications': 'B'}, False],  # Link modifications but no not all mol mods match, don't match
+    [{'modifications': [modification('A')]}, {'modifications': Choice(['A', 'B'])}, True],  # Link modifications and matching mol mods, match
+    [{'modifications': [modification('A', 'B')]}, {'modifications': ['A', 'B']}, True],  # Link modifications and matching mol mods, match
+    [{'modifications': [modification('A'), modification('B')]}, {'modifications': ['A', 'B']}, True],  # Link modifications and matching mol mods, match
+))
+def test_modification_matching(mol_node, link_node, expected):
+    found = _atoms_match(mol_node, link_node)
+    assert found == expected

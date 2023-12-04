@@ -33,18 +33,24 @@ def _atoms_match(node1, node2):
     mods = []
     for mod in node1.get('modifications', []):
         mods.extend(mod.name)
-    # Case 1: link does not restrict modifications: always match
-    # Case 2: link specifies empty modifications and molecule has none: match
-    # Case 3: link specifies modifications, but molecule node has none: don't match
-    # Case 4: both have modifications: match iff all molecule mods match link mods
-    # For case 4 we need to do a little jiggery-pokery to leverage attributes_match.
-    # This probably means that that functions need to be cut up into smaller
-    # pieces.
+
+                  # No modifications specified by link: always match
     mods_match = ('modifications' not in node2 or  # Case 1
+                  # empty modifications in link and no modifications in molecule: match
                   (not node2['modifications'] and not mods) or  # Case 2
+                  # Else, if both specify modifications, then...
                   (node2['modifications'] and mods and  # Case 3
-                   all(attributes_match({'_': modname}, {'_': node2['modifications']}) for modname in mods)))  # Case 4
-    return mods_match and attributes_match(node1, node2, ignore_keys=('order', 'replace', 'modifications'))
+                   # link modifications must be a list, and molecule mods must
+                   # match links mods exactly
+                   ((isinstance(node2['modifications'], list) and sorted(mods) == sorted(node2['modifications'])) or
+                    # Or link mods are a simple string or a Choice, and all
+                    # molecule modifications must be accounted for
+                    # Here we need to do a little jiggery-pokery to leverage
+                    # attributes_match. This probably means that that function
+                    # needs to be cut up into smaller pieces.
+                    all(attributes_match({'_': modname}, {'_': node2['modifications']}) for modname in mods))))
+
+    return bool(mods_match and attributes_match(node1, node2, ignore_keys=('order', 'replace', 'modifications')))
 
 
 def _is_valid_non_edges(molecule, link, rev_raw_match):
