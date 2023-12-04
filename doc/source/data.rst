@@ -63,7 +63,7 @@ method. The approach where links only affect the parameters where they depend on
 the local structure makes it easier to reason about how the final topology is
 constructed, and the performance is better.
 
-Besides nodes, edges and interactions links also describe non-edges, patterns
+Besides nodes, edges, and interactions, links also describe non-edges, patterns
 and removed interactions. Non-edges and patterns are used when matching the link
 to a molecule. Where there is a non-edge in the link there cannot be an edge in
 the molecule, and the atoms involved do not need to be present in the molecule.
@@ -83,7 +83,9 @@ atoms/particles that should already be described by the block and atoms that are
 only described by the modification.
 
 A modification can add or remove nodes, change node attributes, and add, change,
-or remove interactions; much like a `Link`_.
+or remove interactions; much like a `Link`_. Note that a modification *must* always
+add at least one node. Otherwise there will be no unidentified nodes to be picked
+up by the processor.
 
 Modifications can be defined through :ref:`.ff files <file_formats:.ff file format>`.
 See also: :ref:`Identify modifications <martinize2_workflow:Identify modifications>`.
@@ -100,11 +102,6 @@ Note that this is only a subset of a force field in the MD sense: a VerMoUTH
 :class:`force field <vermouth.forcefield.ForceField>` does not include e.g.
 non-bonded parameters (only the particle types are included), or functional
 forms.
-
-The ``universal`` force field deserves special mention. If not overridden with
-the ``-from`` flag this force field is used. This force field does not define
-any MD parameters, but this is fine. Instead, this force field defines only atom
-names and the associated connections.
 
 Mapping
 -------

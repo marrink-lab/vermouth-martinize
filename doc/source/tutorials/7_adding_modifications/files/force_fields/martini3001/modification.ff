@@ -1,0 +1,10 @@
+[ modification ]
+SER-PO4
+[ atoms ]
+BB {"PTM_atom": false}
+SC1 {"PTM_atom": false, "resname": "SER", "replace": {"atype": "Q5n", "charge": -1}}
+[ edges ]
+BB SC1
+[ bonds ]
+BB SC1 1 0.33 5000
+
