@@ -276,7 +276,7 @@ Links and Modifications
 Something to keep in mind is that Links get applied after Modifications (at the time of writing). This can mean that
 your Link overwrites, for example, terminal parameters. For this reason, you can filter nodes where Links get applied
 much like you can limit Links by atom names or secondary structure. In particular, you can add a ``"modifications"``
-attribute to links nodes. This follows the following rules::
+attribute to links nodes. This follows the following rules:
 
 1. Links that don't specify modifications simply match.
 2. Links that specify empty modifications (``"modifications": []`` or ``null``) only match atoms that have no
