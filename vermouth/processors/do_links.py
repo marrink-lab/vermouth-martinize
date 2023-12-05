@@ -35,11 +35,11 @@ def _atoms_match(node1, node2):
         mods.extend(mod.name)
 
                   # No modifications specified by link: always match
-    mods_match = ('modifications' not in node2 or  # Case 1
+    mods_match = ('modifications' not in node2 or
                   # empty modifications in link and no modifications in molecule: match
-                  (not node2['modifications'] and not mods) or  # Case 2
+                  (not node2['modifications'] and not mods) or
                   # Else, if both specify modifications, then...
-                  (node2['modifications'] and mods and  # Case 3
+                  (node2['modifications'] and mods and
                    # link modifications must be a list, and molecule mods must
                    # match links mods exactly
                    ((isinstance(node2['modifications'], list) and sorted(mods) == sorted(node2['modifications'])) or
