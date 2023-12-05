@@ -23,8 +23,8 @@ def read_go_map(file_path):
     contacts to have 18 columns and the first column to be 
     a capital R.
 
-    Paraemters
-    ---------
+    Parameters
+    ----------
     file_path: :cls:pathlib.Path
         path to the contact map file
 
