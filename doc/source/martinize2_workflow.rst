@@ -277,7 +277,7 @@ There can be any number of post processing steps. For example to add an elastic
 network, or to generate Go virtual sites. We will not describe their function
 here in detail. Instead, see for example
 :class:`~vermouth.processors.apply_rubber_band.ApplyRubberBand` and
-:class:`~vermouth.processors.go_vs_includes.GoVirtIncludes`.
+:class:`~vermouth.processors.rcsu.go_vs_includes.VirtualSiteCreator`.
 
 Relevant CLI options: ``-elastic``, ``-ef``, ``-el``, ``-eu``, ``-ermd``,
 ``-ea``, ``-ep``, ``-em``, ``-eb``, ``-eunit``, ``-govs-include``,
