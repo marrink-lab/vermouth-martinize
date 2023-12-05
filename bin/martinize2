@@ -776,22 +776,22 @@ def entry():
 
     if args.list_blocks:
         print("The following Blocks are known to force field {}:".format(args.from_ff))
-        print(", ".join(known_force_fields[args.from_ff].blocks))
+        print(", ".join(sorted(known_force_fields[args.from_ff].blocks)))
         print(
             "The following Modifications are known to force field {}:".format(
                 args.from_ff
             )
         )
-        print(", ".join(known_force_fields[args.from_ff].modifications))
+        print(", ".join(sorted(known_force_fields[args.from_ff].modifications)))
         print()
         print("The following Blocks are known to force field {}:".format(args.to_ff))
-        print(", ".join(known_force_fields[args.to_ff].blocks))
+        print(", ".join(sorted(known_force_fields[args.to_ff].blocks)))
         print(
             "The following Modifications are known to force field {}:".format(
                 args.to_ff
             )
         )
-        print(", ".join(known_force_fields[args.to_ff].modifications))
+        print(", ".join(sorted(known_force_fields[args.to_ff].modifications)))
         parser.exit()
 
     if args.elastic and args.go:

@@ -47,7 +47,7 @@ the equivalence criteria.
 Subgraph isomorphism
 ++++++++++++++++++++
 A subgraph isomorphism is a :ref:`graph_algorithms:graph isomorphism`, but
-without the constraint that :math:`|H| = |G|`. Instead, :math:`|H| <= |G|` if
+without the constraint that :math:`|H| = |G|`. Instead, :math:`|H| \le |G|` if
 :math:`H` is subgraph isomorphic to :math:`G`.
 
 Induced subgraph isomorphism
