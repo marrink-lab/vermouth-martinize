@@ -143,7 +143,7 @@ class ComputeWaterBias(Processor):
 
         Parameters
         ----------
-        system: :class:`vermouth.System`
+        system: :class:`vermouth.system.System`
         """
         if not (self.idr_regions or self.auto_bias):
             return system
