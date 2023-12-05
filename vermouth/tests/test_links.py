@@ -291,6 +291,8 @@ def modification(*names):
     [{'modifications': [modification('A')]}, {}, True],  # No restrictions, match
     [{}, {'modifications': []}, True],  # No link modifications, no mol modifications, match
     [{}, {'modifications': None}, True],  # No link modifications, no mol modifications, match
+    [{'modifications': [modification('A')]}, {'modifications': None}, False],  # No mods allowed, no match
+    [{'modifications': [modification('A')]}, {'modifications': []}, False],  # No mods allowed, no match
     [{'modifications': []}, {'modifications': []}, True],  # No link modifications, no mol modifications, match
     [{'modifications': []}, {'modifications': None}, True],  # No link modifications, no mol modifications, match
     [{}, {'modifications': ['A']}, False],   # Link modifications, but no mol modifications, don't match
@@ -301,7 +303,13 @@ def modification(*names):
     [{'modifications': [modification('A'), modification('B')]}, {'modifications': 'B'}, False],  # Link modifications but no not all mol mods match, don't match
     [{'modifications': [modification('A')]}, {'modifications': Choice(['A', 'B'])}, True],  # Link modifications and matching mol mods, match
     [{'modifications': [modification('A', 'B')]}, {'modifications': ['A', 'B']}, True],  # Link modifications and matching mol mods, match
+    [{'modifications': [modification('A', 'B')]}, {'modifications': ['B', 'A']}, True],  # Link modifications and matching mol mods, match
     [{'modifications': [modification('A'), modification('B')]}, {'modifications': ['A', 'B']}, True],  # Link modifications and matching mol mods, match
+    [{'modifications': [modification('A'), modification('B')]}, {'modifications': 'A'}, False],  # Unmatched mod, no match
+    [{'modifications': [modification('A'), modification('A')]}, {'modifications': 'A'}, True],  # Multiple mods, all matched
+    [{'modifications': [modification('A'), modification('B')]}, {'modifications': Choice(['A', 'B'])}, True],  # Choice
+    [{'modifications': [modification('A'), modification('A')]}, {'modifications': Choice(['A', 'B'])}, True],  # Choice
+    [{'modifications': [modification('C'), modification('A')]}, {'modifications': Choice(['A', 'B'])}, False],  # Unmatched choice
 ))
 def test_modification_matching(mol_node, link_node, expected):
     found = _atoms_match(mol_node, link_node)
