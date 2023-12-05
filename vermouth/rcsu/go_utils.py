@@ -23,7 +23,7 @@ def get_go_type_from_attributes(molecule, prefix, **kwargs):
 
     Parameters
     ----------
-    molecule: :class:vermouth.Molecule
+    molecule: :class:`vermouth.molecule.Molecule`
     prefix: str
         the atom-type prefix of the Go virtual side
     kwargs:

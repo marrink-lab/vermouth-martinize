@@ -29,7 +29,7 @@ class VirtualSiteCreator(Processor):
     Create virtual-sites for the Martini Go model implementation or
     the specific water biasing options.
 
-    See :mod:`vermouth.processors.go_vs_includes` for more details.
+    See :mod:`vermouth.rcsu` for more details.
 
     Every molecule must have a moltype name under the "moltype" key of the
     molecule meta.

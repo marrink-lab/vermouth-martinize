@@ -75,10 +75,10 @@ class ComputeStructuralGoBias(Processor):
             into account disulfide bridges for example
         moltype: str
             name of the molecule to treat
-        res_graph: :class:vermouth.Molecule
+        res_graph: :class:`vermouth.molecule.Molecule`
             residue graph of the molecule; if None it
-            get's generated automatically
-        system: :class:vermouth.System
+            gets generated automatically
+        system: :class:`vermouth.system.System`
             the system
         magic_number: float
             magic number for Go contacts from the old
@@ -142,11 +142,11 @@ class ComputeStructuralGoBias(Processor):
 
         Parameters
         ----------
-        molecule: :class:vermouth.Molecule
+        molecule: :class:`vermouth.molecule.Molecule`
 
         Returns
         -------
-        list[(abc.hashable, abc.hashable, float)]
+        list[(collections.abc.Hashable, collections.abc.Hashable, float)]
             list of node keys and distance
         """
         # distance_matrix of elegible pairs as tuple(node, node, dist)

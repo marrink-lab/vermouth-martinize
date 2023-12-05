@@ -23,14 +23,14 @@ def read_go_map(file_path):
     contacts to have 18 columns and the first column to be 
     a capital R.
 
-    Paraemters
-    ---------
-    file_path: :cls:pathlib.Path
+    Parameters
+    ----------
+    file_path: :class:`pathlib.Path`
         path to the contact map file
 
     Returns
     -------
-    list(tuple(4))
+    list(tuple)
         contact as chain id, res id, chain id, res id
     """
     with open(file_path, "r", encoding='UTF-8') as _file:
