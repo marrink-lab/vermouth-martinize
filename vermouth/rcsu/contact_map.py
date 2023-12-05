@@ -19,8 +19,9 @@ Read RCSU Go model contact maps.
 def read_go_map(file_path):
     """
     Read a RCSU contact map from the c code as published in
-    doi:zzzz. The format requires all contacts to have 18
-    columns and the first column to be a capital R.
+    doi:10.5281/zenodo.3817447. The format requires all 
+    contacts to have 18 columns and the first column to be 
+    a capital R.
 
     Paraemters
     ---------
