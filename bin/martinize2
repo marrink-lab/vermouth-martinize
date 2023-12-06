@@ -590,7 +590,7 @@ def entry():
         type=lambda s: s.split(":"),
         default=[],
         help=("Define the strength of the water bias by secondary structure type. "
-              "For example, use H:3.6, C:2.1 to bias helixes and coils. "
+              "For example, use `H:3.6 C:2.1` to bias helixes and coils. "
               "Using the idr option (e.g. idr:2.1) intrinsically disordered regions "
               "are biased seperately."),
     )
