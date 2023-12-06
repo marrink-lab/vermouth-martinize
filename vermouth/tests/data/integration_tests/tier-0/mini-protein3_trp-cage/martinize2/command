@@ -3,6 +3,6 @@ martinize2
 -x cg.pdb
 -o topol.top
 -ff elnedyn22
--dssp dssp
+-dssp 
 -eu 0.7
 -ef 800.0

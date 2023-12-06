@@ -43,6 +43,9 @@ the following command:
 Note that vermouth and Martinize2, in particular development versions, may contain bugs that cause it to produce
 incorrect topologies. Check the produced output carefully!
 
+Martinize2 and vermouth have [mdtraj][mdtraj] as optional dependency as an 
+alternative to dssp.
+
 The behavior of the `pip` command can vary depending of the specificity of your
 python installation. See the [documentation on installing a python
 package][pipdoc] to learn more.
@@ -108,6 +111,7 @@ academic paper is left to our sole discretion.
 [Martini tutorials]: http://cgmartini.nl/index.php/tutorials-general-introduction-gmx5
 [Gromacs]: http://www.gromacs.org
 [pypi_vermouth]: https://pypi.org/project/vermouth/
+[mdtraj]: https://www.mdtraj.org/
 [pipdoc]: https://packaging.python.org/tutorials/installing-packages/#installing-packages
 [license]: https://github.com/marrink-lab/vermouth-martinize/blob/master/LICENSE
 [github]: https://github.com/marrink-lab/vermouth-martinize
