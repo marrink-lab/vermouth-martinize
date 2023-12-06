@@ -571,7 +571,7 @@ def entry():
         dest="go_res_dist",
         type=int,
         default=3,
-        help=("Minimum graph distance (similar seqeuence distance) below which"
+        help=("Minimum graph distance (similar sequence distance) below which"
               "contacts are removed. "),
     )
 
