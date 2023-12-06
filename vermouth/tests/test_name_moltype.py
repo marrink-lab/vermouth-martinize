@@ -138,7 +138,7 @@ def test_name_moltype(mols_and_moltypes, deduplicate):
 
 
 @pytest.mark.parametrize('deduplicate', (True, False))
-def test_martinize2_moltypes(tmpdir, deduplicate):
+def test_martinize2_moltypes(tmp_path, deduplicate):
     """
     Run martinize2 and make sure the ITP file produced have the expected names.
     """
@@ -160,8 +160,8 @@ def test_martinize2_moltypes(tmpdir, deduplicate):
         n_outputs = 4
     expected = ['molecule_{}.itp'.format(i) for i in range(n_outputs)]
 
-    proc = subprocess.run(command, cwd=str(tmpdir), timeout=90, check=False)
+    proc = subprocess.run(command, cwd=tmp_path, timeout=90, check=False)
     assert proc.returncode == 0
 
-    itp_files = sorted(os.path.basename(fname) for fname in glob(str(tmpdir / '*.itp')))
+    itp_files = sorted(os.path.basename(fname) for fname in tmp_path.glob('*.itp'))
     assert itp_files == expected

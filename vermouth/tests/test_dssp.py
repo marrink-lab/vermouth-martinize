@@ -20,6 +20,7 @@ import os
 import glob
 import itertools
 
+import networkx as nx
 import numpy as np
 import pytest
 
@@ -27,13 +28,14 @@ import vermouth
 from vermouth.file_writer import DeferredFileWriter
 from vermouth.forcefield import get_native_force_field
 from vermouth.dssp import dssp
-from vermouth.dssp.dssp import DSSPError
+from vermouth.dssp.dssp import DSSPError, AnnotateDSSP
 from vermouth.pdb.pdb import read_pdb
 from vermouth.tests.datafiles import (
     PDB_PROTEIN,
     DSSP_OUTPUT,
     DSSP_SS_OUTPUT,
     PDB_ALA5_CG,
+    PDB_ALA5,
 )
 
 DSSP_EXECUTABLE = os.environ.get("VERMOUTH_TEST_DSSP", "dssp")
@@ -360,7 +362,7 @@ def test_read_dssp2(input_file, expected):
 
 
 @pytest.mark.parametrize("savefile", [True, False])
-def test_run_dssp(savefile, tmpdir):
+def test_run_dssp(savefile, tmp_path):
     """
     Test that :func:`vermouth.molecule.dssp.dssp.run_dssp` runs as expected and
     generate a save file only if requested.
@@ -369,17 +371,17 @@ def test_run_dssp(savefile, tmpdir):
     # saving the DSSP output to file, and once with savefile set t False so we
     # do not generate the file. The "savefile" argument is set by
     # pytest.mark.parametrize.
-    # The "tmpdir" argument is set by pytest and is the path to a temporary
+    # The "tmp_path" argument is set by pytest and is the path to a temporary
     # directory that exists only for one iteration of the test.
     if savefile:
-        path = tmpdir.join("dssp_output")
+        path = tmp_path
     else:
         path = None
     system = vermouth.System()
     for molecule in read_pdb(str(PDB_PROTEIN)):
         system.add_molecule(molecule)
     secondary_structure = dssp.run_dssp(
-        system, executable=DSSP_EXECUTABLE, savefile=path
+        system, executable=DSSP_EXECUTABLE, savedir=path
     )
 
     # Make sure we produced the expected sequence of secondary structures
@@ -393,9 +395,11 @@ def test_run_dssp(savefile, tmpdir):
     if savefile:
         DeferredFileWriter().write()
         assert path.exists()
-        with open(str(path), encoding="utf-8") as genfile, open(
-            str(DSSP_OUTPUT), encoding="utf-8"
-        ) as reffile:
+        foundfile = list(path.glob('chain_*.ssd'))
+        assert len(foundfile) == 1
+        foundfile = foundfile[0]
+
+        with open(foundfile, encoding="utf-8") as genfile, open(str(DSSP_OUTPUT), encoding="utf-8") as reffile:
             # DSSP 3 is outputs mostly the same thing as DSSP2, though there
             # are some differences in non significant whitespaces, and an extra
             # field header. We need to normalize these differences to be able
@@ -410,7 +414,7 @@ def test_run_dssp(savefile, tmpdir):
             assert gen == ref
     else:
         # Is the directory empty?
-        assert not os.listdir(str(tmpdir))
+        assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize(
@@ -423,7 +427,7 @@ def test_run_dssp(savefile, tmpdir):
         (PDB_ALA5_CG, 30, True),  # WARNING
     ],
 )
-def test_run_dssp_input_file(tmpdir, caplog, pdb, loglevel, expected):
+def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
     """
     Test that the DSSP input file is preserved (only) in the right conditions
     """
@@ -431,20 +435,46 @@ def test_run_dssp_input_file(tmpdir, caplog, pdb, loglevel, expected):
     system = vermouth.System()
     for molecule in read_pdb(str(pdb)):
         system.add_molecule(molecule)
-    with tmpdir.as_cwd():
-        try:
-            dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
-        except DSSPError:
-            pass
-        if expected:
-            target = 1
-        else:
-            target = 0
-        matches = glob.glob("dssp_in*.pdb")
-        assert len(matches) == target, matches
-        if matches:
-            # Make sure it's a valid PDB file. Mostly anyway.
-            list(read_pdb(matches[0]))
+    os.chdir(tmp_path)
+    try:
+        dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
+    except DSSPError:
+        pass
+    if expected:
+        target = 1
+    else:
+        target = 0
+    matches = glob.glob("dssp_in*.pdb")
+    assert len(matches) == target, matches
+    if matches:
+        # Make sure it's a valid PDB file. Mostly anyway.
+        list(read_pdb(matches[0]))
+
+
+@pytest.mark.parametrize('ss_struct, expected', (
+    (list('ABCDE'), list('ABCDE')),
+    (list('AB DE'), list('ABCDE')),
+    ([['A'], ['B'], ['C'], ['F'], ['G']], list('ABCFG')),
+    ([['A'], [' '], ['E'], ['F'], [' ']], list('ACEFC')),
+))
+def test_mdtraj(monkeypatch, ss_struct, expected):
+    # We don't want to test mdtraj.compute_dssp, so mock it.
+    compute_dssp = lambda *_, **__: np.array(ss_struct)
+    monkeypatch.setattr(vermouth.dssp.dssp.mdtraj, "compute_dssp", compute_dssp)
+    system = vermouth.System()
+    for molecule in read_pdb(str(PDB_ALA5)):
+        system.add_molecule(molecule)
+
+    processor = AnnotateDSSP(executable=None)
+    processor.run_system(system)
+
+    found = []
+    for mol in system.molecules:
+        residues = mol.iter_residues()
+        for residue in residues:
+            found.append(mol.nodes[residue[0]]['secstruct'])
+
+    assert found == expected
 
 
 def test_cterm_atomnames():

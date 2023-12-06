@@ -406,12 +406,13 @@ def test_read_mapping_file_multiple(reference_multi):
 
 
 @pytest.fixture(scope='session')
-def ref_mapping_directory(tmpdir_factory):
+def ref_mapping_directory(tmp_path_factory):
     """
     Build a file tree with mapping files.
     """
-    basedir = tmpdir_factory.mktemp('data')
-    mapdir = basedir.mkdir('mappings')
+    basedir = tmp_path_factory.mktemp('data')
+    mapdir = basedir / 'mappings'
+    mapdir.mkdir()
 
     template = textwrap.dedent("""
         [ molecule ]
@@ -436,7 +437,7 @@ def ref_mapping_directory(tmpdir_factory):
     iterate_on = itertools.product(force_fields_from, force_fields_to, range(3))
     for idx, (from_ff, to_ff, _) in enumerate(iterate_on):
         mapfile = mapdir / 'file{}.map'.format(idx)
-        with open(str(mapfile), 'w') as outfile:
+        with open(mapfile, 'w') as outfile:
             outfile.write(template.format(idx, from_ff, to_ff))
 
         mapping = {
@@ -495,20 +496,22 @@ def test_read_mapping_directory_not_dir():
         vermouth.map_input.read_mapping_directory('not a directory', {})
 
 
-def test_read_mapping_directory_error(tmpdir):
+def test_read_mapping_directory_error(tmp_path):
     """
     Test that :func:`vermouth.map_input.read_mapping_directory` raises an
     exception when a file could not be read.
     """
-    mapdir = Path(str(tmpdir.mkdir('mappings')))
-    with open(str(mapdir / 'valid.backmap'), 'w') as outfile:
+    mapdir = tmp_path / 'mappings'
+    mapdir.mkdir()
+
+    with open(mapdir / 'valid.backmap', 'w') as outfile:
         outfile.write(textwrap.dedent("""
             [ molecule ]
             valid
             [ atoms ]
             0 A B
         """))
-    with open(str(mapdir / 'not_valid.map'), 'w') as outfile:
+    with open(mapdir / 'not_valid.map', 'w') as outfile:
         outfile.write('invalid content')
     with pytest.raises(IOError):
         vermouth.map_input.read_mapping_directory(mapdir, {})
