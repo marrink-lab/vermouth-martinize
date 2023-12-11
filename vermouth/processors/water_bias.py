@@ -32,7 +32,8 @@ class ComputeWaterBias(Processor):
     This Processor updates the system.gmx_topology_params
     attribute.
 
-    ** Subclassing **
+    Subclassing
+    -----------
     If the procedure by which to assign the water bias is
     to be changed this processor is best subclassed and the
     assign_residue_water_bias method overwritten.
@@ -94,7 +95,7 @@ class ComputeWaterBias(Processor):
             else:
                 continue
 
-            if eps == 0.0:
+            if abs(eps) <= 1e-12:
                 continue
 
             vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],

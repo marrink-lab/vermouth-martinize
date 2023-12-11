@@ -43,11 +43,8 @@ def read_go_map(file_path):
             if tokens[0] == "R" and len(tokens) == 18:
                 # this is a bad place to filter but follows
                 # the old script
-                if tokens[11] == "1":
-                    # this is a OV contact we take it
-                    contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
-                if tokens[11] == "0" and tokens[14] == "1":
-                    # this is a rCSU contact we take it
+                if tokens[11] == "1" or (tokens[11] == "0" and tokens[14] == "1"):
+                    # this is a OV or rCSU contact we take it
                     contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
 
         if len(contacts) == 0:

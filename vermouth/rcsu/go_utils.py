@@ -36,9 +36,9 @@ def get_go_type_from_attributes(molecule, prefix, **kwargs):
 
     Raises
     ------
-    IOError
+    KeyError
         If no node can be found that matches attributes
-        and prefix an IOError is raised.
+        and prefix an KeyError is raised.
     """
     for node in molecule.nodes:
         attrs = molecule.nodes[node]
@@ -57,7 +57,7 @@ def _in_resid_region(resid, regions):
     ----------
     resid: int
         the resid of a molecule
-    regions: list[tuple(int)]
+    regions: list[tuple(int, int)]
         a list of the intervals
 
     Returns

@@ -35,13 +35,14 @@ class ComputeStructuralGoBias(Processor):
     be written out using the `vermouth.gmx.write_topology`
     function.
 
-    ** Subclassing **
+    Subclassing
+    -----------
     In order to customize the Go-model structural bias
     it is recommended to subclass this function and
-    overwrite the .contact_selector method and/or
-    the .compute_bias method. This subclassed Processor
-    then has to be added to the into the /bin/martinize2
-    pipline in place of the StructuralBiasWriter or as
+    overwrite the ``contact_selector`` method and/or
+    the ``compute_bias`` method. This subclassed Processor
+    then has to be added to the into the martinize2
+    pipeline in place of the StructuralBiasWriter or as
     replacement in the GoPipeline.
     """
     def __init__(self,

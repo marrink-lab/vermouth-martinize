@@ -54,7 +54,7 @@ class VirtualSiteCreator(Processor):
             raise ValueError('The molecule does not have a moltype name.')
 
         if not self.system:
-            raise IOError('This processor requires a system.')
+            raise ValueError('This processor requires a system.')
 
         self.add_virtual_sites(molecule, prefix=moltype)
 
@@ -132,7 +132,5 @@ class VirtualSiteCreator(Processor):
 
         molecule.add_nodes_from(virtual_site_nodes)
 
-        if 'virtual_sitesn' not in molecule.interactions:
-            molecule.interactions['virtual_sitesn'] = []
 
         molecule.interactions['virtual_sitesn'] += virtual_sites
