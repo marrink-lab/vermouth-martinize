@@ -93,7 +93,7 @@ def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs):
 
     Parameters
     ----------
-    molecule: :class:vermouth.Molecule
+    molecule: :class:`vermouth.molecule.Molecule`
     moltype: str
         sets meta['moltype']
     secstruc: dict[int, str]
@@ -107,7 +107,7 @@ def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs):
 
     Returns
     -------
-    :class:vermouth.System
+    :class:`vermouth.system.System`
     """
     # set mol meta
     molecule.meta['moltype'] = moltype

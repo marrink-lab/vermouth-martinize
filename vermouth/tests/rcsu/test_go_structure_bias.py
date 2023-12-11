@@ -21,7 +21,7 @@ def test_compute_go_interaction(test_molecule):
 
 
     system = vermouth.System()
-    system.molecules.append(test_molecule)
+    system.add_molecule(test_molecule)
     go_processor = ComputeStructuralGoBias(contact_map=None,
                                            cutoff_short=None,
                                            cutoff_long=None,

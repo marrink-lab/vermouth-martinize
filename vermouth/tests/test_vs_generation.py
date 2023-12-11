@@ -34,7 +34,7 @@ def test_no_moltype_error(test_molecule):
 
 def test_no_system_error(test_molecule):
     """
-    Test that various high level IOErrors are
+    Test that various high level errors are
     properly raised.
     """
     # set up processor
@@ -49,5 +49,5 @@ def test_return_no_nodes():
     processor = VirtualSiteCreator()
     mol.meta['moltype'] = "random"
     system = vermouth.System()
-    system.molecules.append(mol)
+    system.add_molecule(mol)
     assert processor.run_system(system) is None

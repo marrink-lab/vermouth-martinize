@@ -99,7 +99,7 @@ def test_assign_residue_water_bias(test_molecule,
 
 def test_no_moltype_error(test_molecule):
     """
-    Test that various high level IOErrors are
+    Test that various high level errors are
     properly raised.
     """
     # set up processor
@@ -108,13 +108,13 @@ def test_no_moltype_error(test_molecule):
                                  idr_regions=None)
     # no moltype set
     system = vermouth.System()
-    system.molecules.append(test_molecule)
+    system.add_molecule(test_molecule)
     with pytest.raises(ValueError):
         processor.run_system(system)
 
 def test_no_system_error(test_molecule):
     """
-    Test that various high level IOErrors are
+    Test that various high level errors are
     properly raised.
     """
     # set up processor
@@ -133,5 +133,5 @@ def test_clean_return(test_molecule):
                                  idr_regions=None)
     test_molecule.meta['moltype'] = "random"
     system = vermouth.System()
-    system.molecules.append(test_molecule)
+    system.add_molecule(test_molecule)
     assert processor.run_system(system) == system
