@@ -15,9 +15,7 @@ def test_compute_go_interaction(test_molecule):
                 ("atom_a", "atom_c", 4.1),
                 ("atom_q", "atom_p", 0.0)]
     denom = 2**(1/6.)
-    expected = {("atom_a", "atom_b"): 2.3/denom,
-                ("atom_a", "atom_c"): 4.1/denom,
-                ("atom_q", "atom_p"): 0/denom}
+    expected = {(k1, k2): v/denom for k1, k2, v in contacts}
 
 
     system = vermouth.System()
@@ -33,7 +31,7 @@ def test_compute_go_interaction(test_molecule):
     go_processor.compute_go_interaction(contacts)
     for nb_params in system.gmx_topology_params['nonbond_params']:
         assert nb_params.atoms in expected
-        assert np.isclose(nb_params.sigma, expected[nb_params.atoms])
+        assert pytest.approx(expected[nb_params.atoms]) == nb_params.sigma
         assert nb_params.epsilon == 2.1
 
 @pytest.mark.parametrize('cmap, cshort, clong, rdist, expected',(

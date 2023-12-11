@@ -131,10 +131,10 @@ def compare_goatomtypes(fileref, filecomp):
     ref = parse_gofiles(fileref, atomtypes=True)
     compare = parse_gofiles(filecomp, atomtypes=True)
     
-    assert(set(ref.keys())==set(compare.keys()))  ## assert correct atomtypes
+    assert set(ref.keys()) == set(compare.keys())  # assert correct atomtypes
 
     for key in ref.keys(): 
-        assert(ref[key] == compare[key])  ##assert correct atom definition string
+        assert ref[key] == compare[key]  #assert correct atom definition string
 
 GOCOMPARERS = {'go_nbparams.itp': compare_nbparams,
                'virtual_sites_nonbond_params.itp': compare_nbparams,
@@ -236,9 +236,8 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
         filename = new_file.name
         reference_file = data_path/filename
         assert reference_file.is_file()
-        if filename in ['go_nbparams.itp','go_atomtypes.itp',
-                        'virtual_sites_nonbond_params.itp','virtual_sites_atomtypes.itp']:
-            ## compare the extra go/vs model files
+        if filename in GOCOMPARERS:
+            # compare the extra go/vs model files
             GOCOMPARERS[filename](str(reference_file), str(new_file))
         else:
             ext = new_file.suffix.lower()

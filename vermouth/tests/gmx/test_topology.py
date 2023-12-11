@@ -207,6 +207,4 @@ molecule_0    1
     ref_lines = textwrap.dedent(reference).splitlines()
     with open(str(outpath)) as infile:
         for line, ref_line in zip(infile, ref_lines):
-            print('l', line.strip())
-            print('lr', ref_line.strip())
             assert line.strip() == ref_line

@@ -21,14 +21,14 @@ from vermouth.tests.helper_functions import test_molecule
 
 def test_no_moltype_error(test_molecule):
     """
-    Test that various high level IOErrors are
+    Test that various high level errors are
     properly raised.
     """
     # set up processor
     processor = VirtualSiteCreator()
     # no moltype set
     system = vermouth.System()
-    system.molecules.append(test_molecule)
+    system.add_molecule(test_molecule)
     with pytest.raises(ValueError):
         processor.run_system(system)
 
