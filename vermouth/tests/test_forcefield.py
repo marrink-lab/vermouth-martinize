@@ -99,14 +99,15 @@ def test_has_feature_false(force_field_with_features):
     assert not force_field_with_features.has_feature('absent')
 
 
-def test_create_ff_from_dir_name(tmpdir):
+def test_create_ff_from_dir_name(tmp_path):
     """
     Creates a force field from a directory AND a name, assure that the correct
     name is used.
 
     The name provided with the 'name' argument should be used.
     """
-    directory = tmpdir.mkdir('dirname')
+    directory = tmp_path / 'dirname'
+    directory.mkdir()
     name = 'the_name'
     ff = vermouth.forcefield.ForceField(
         directory=str(directory),
@@ -126,13 +127,15 @@ def test_create_ff_from_name():
 
 
 @pytest.mark.parametrize('path_type', (str, pathlib.Path))
-def test_create_ff_from_dir(tmpdir, path_type):
+def test_create_ff_from_dir(tmp_path, path_type):
     """
     Creates a force field from a directory, assure that the name is correct.
     """
     ff_name = 'name'
-    # Depending on the version of python, the type of tmpdir may differ.
-    directory = path_type(str(tmpdir.mkdir(ff_name)))
+    # Depending on the version of python, the type of tmp_path may differ.
+    directory = tmp_path / ff_name
+    directory.mkdir()
+    directory = path_type(directory)
     ff = vermouth.forcefield.ForceField(directory=directory)
     assert ff.name == ff_name
 

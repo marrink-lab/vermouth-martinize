@@ -54,19 +54,19 @@ def dummy_molecule():
     return molecule
 
 
-def test_no_header(tmpdir, dummy_molecule):
+def test_no_header(tmp_path, dummy_molecule):
     """
     Test that no header is written if none is provided.
     """
-    outpath = tmpdir / 'out.itp'
-    with open(str(outpath), 'w') as outfile:
+    outpath = tmp_path / 'out.itp'
+    with open(outpath, 'w') as outfile:
         write_molecule_itp(dummy_molecule, outfile)
 
-    with open(str(outpath)) as infile:
+    with open(outpath) as infile:
         assert next(infile) == '[ moleculetype ]\n'
 
 
-def test_header(tmpdir, dummy_molecule):
+def test_header(tmp_path, dummy_molecule):
     """
     Test that the header is written.
     """
@@ -79,11 +79,11 @@ def test_header(tmpdir, dummy_molecule):
         '; It contains more than one line.\n',
         '\n',
     )
-    outpath = tmpdir / 'out.itp'
-    with open(str(outpath), 'w') as outfile:
+    outpath = tmp_path / 'out.itp'
+    with open(outpath, 'w') as outfile:
         write_molecule_itp(dummy_molecule, outfile, header=header)
 
-    with open(str(outpath)) as infile:
+    with open(outpath) as infile:
         for line, expected_line in zip(infile, expected):
             assert line == expected_line
 

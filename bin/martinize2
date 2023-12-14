@@ -191,6 +191,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     vermouth.LocateChargeDummies().run_system(system)
     return system
 
+
 def _cys_argument(value):
     """
     Convert and validate the value of the cys option for argparse.
@@ -433,8 +434,10 @@ def entry():
     secstruct_exclusion.add_argument(
         "-dssp",
         nargs="?",
-        const="dssp",
-        help="DSSP executable for determining structure",
+        const=True,
+        help="DSSP executable for determining structure. If this flag is given"
+             "but no executable is specified, the mdtraj library will be used"
+             "to compute the secondary structure, if it can be imported.",
     )
     secstruct_exclusion.add_argument(
         "-ss",
@@ -869,8 +872,10 @@ def entry():
         LOGGER.debug("Read molecule {}.", molecule, type="step")
 
     target_ff = known_force_fields[args.to_ff]
-    if args.dssp is not None:
-        AnnotateDSSP(executable=args.dssp, savedir=".").run_system(system)
+    if args.dssp:
+        if not isinstance(args.dssp, str):
+            args.dssp = None
+        AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
         AnnotateResidues(

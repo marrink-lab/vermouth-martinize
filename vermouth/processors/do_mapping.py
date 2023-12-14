@@ -557,6 +557,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
     # Transferring the meta maybe should be a copy, or a deep copy...
     # If it breaks we look at this line.
     graph_out = Molecule(force_field=to_ff, meta=molecule.meta)
+    graph_out.citations.update(molecule.citations)
     mappings = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
     block_matches = []
     for mapping in mappings:
