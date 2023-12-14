@@ -151,11 +151,6 @@ def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs):
     system.molecules.append(molecule)
     return system
 
-def is_equal(floats_a, floats_b, precision=1e-3):
-    '''
-    Convenience comparisson of two floats within specified precision.
-    '''
-    return all((abs(a-b) < precision) for a, b in zip(floats_a, floats_b))
 
 
 def parse_gofiles(file, atomtypes=False):
