@@ -270,3 +270,18 @@ Which will produce the exact same topology.
 If you *do* need to add a residue that can be used in any kind of protein
 please take a look at how the Martini 3 force field is implemented, and deals
 with e.g. the secondary structure dependence.
+
+Links and Modifications
++++++++++++++++++++++++
+Something to keep in mind is that Links get applied after Modifications (at the time of writing). This can mean that
+your Link overwrites, for example, terminal parameters. For this reason, you can filter nodes where Links get applied
+much like you can limit Links by atom names or secondary structure. In particular, you can add a ``"modifications"``
+attribute to links nodes. This follows the following rules:
+
+1. Links that don't specify modifications simply match.
+2. Links that specify empty modifications (``"modifications": []`` or ``null``) only match atoms that have no
+   modifications.
+3. Links that specify a list of modifications (``"modifications": ["C-ter", "ASP-HD2"]``) only match atoms that carry
+   that exact set of modifications.
+4. Links that specify a string or Choice of modifications (``"modifications": "C-ter"`` or ``"C-ter|COOH-ter"``) only
+   match atoms where *all* the atoms modifications match.
