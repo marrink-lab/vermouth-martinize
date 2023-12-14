@@ -110,7 +110,13 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                     comments = ""
                 itp_file.write(f"{a1} {a2} 1 {nb1:3.8F} {nb2:3.8F} {comments}\n")
 
-def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), header=()):
+def write_gmx_topology(system,
+                       top_path,
+                       itp_paths={"nonbond_params": "extra_nbparams.itp",
+                                  "atomtypes": "extra_atomtypes.itp"},
+                       C6C12=False,
+                       defines=(),
+                       header=()):
     """
     Writes a Gromacs .top file for the specified system. Gromacs topology
     files are defined by directives for example `[ atomtypes ]`. However,
@@ -126,9 +132,10 @@ def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), 
     system: vermouth.system.System
     top_path: pathlib.Path
         path for topology file
-    itp_paths: list[pathlib.Path]
+    itp_paths: dict[str, pathlib.Path]
         list of paths for writing the topology parameters
-        like atomtypes.
+        like atomtypes with the key being the name of the
+        directive.
     C6C12: bool
         write non-bonded interaction parameters using LJ
         C6C12 form
@@ -144,12 +151,12 @@ def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), 
     include_string = ""
     # First we write the atomtypes directive
     if "atomtypes" in system.gmx_topology_params:
-        _path = itp_paths.pop()
+        _path = itp_paths['atomtypes']
         write_atomtypes(system, _path, C6C12)
         include_string += f'\n #include "{_path}"'
     # Next we write the nonbond_params directive
     if "nonbond_params" in system.gmx_topology_params:
-        _path = itp_paths.pop()
+        _path = itp_paths['nonbond_params']
         write_nonbond_params(system, _path, C6C12)
         include_string += f'\n #include "{_path}"\n'
     # Write the ITP files for the molecule types, and prepare writing the

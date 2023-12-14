@@ -961,7 +961,8 @@ def entry():
                               res_dist=args.go_res_dist,)
 
         defines = ("GO_VIRT",)
-        itp_paths = ["go_atomtypes.itp", "go_nbparams.itp"]
+        itp_paths = {"atomtypes": "go_atomtypes.itp",
+                     "nonbond_params": "go_nbparams.itp"}
     else:
         # don't write non-bonded interactions
         itp_paths = []
@@ -1029,7 +1030,8 @@ def entry():
         # sites for the biasing
         if not args.go:
             vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
-            itp_paths = ["virtual_sites_atomtypes.itp", "virtual_sites_nonbond_params.itp"]
+            itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
+                         "nonbond_params": "virtual_sites_nonbond_params.itp"}
         # now we add a bias by defining specific virtual-site water interactions
         vermouth.processors.ComputeWaterBias(args.water_bias,
                                              { s:float(eps) for s, eps in args.water_bias_eps},
