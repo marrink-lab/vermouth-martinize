@@ -182,7 +182,7 @@ def write_gmx_topology(system, top_path, itp_paths=[], C6C12=False, defines=(), 
             with deferred_open("{}.itp".format(moltype), "w") as outfile:
                 # here we format and merge all citations
                 header[-1] = header[-1] + "\n"
-                header.append("Pleas cite the following papers:")
+                header.append("Please cite the following papers:")
                 for citation in molecule.citations:
                     cite_string = citation_formatter(
                         molecule.force_field.citations[citation]
