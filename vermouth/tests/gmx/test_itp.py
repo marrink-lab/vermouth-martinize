@@ -41,7 +41,11 @@ def dummy_molecule():
             'charge_group': 1, 'charge': 0, 'mass': 72
         }),
         (1, {
-            'atype': 'A', 'resid': 1, 'resname': 'X', 'atomname': 'A',
+            'atype': 'B', 'resid': 1, 'resname': 'X', 'atomname': 'B',
+            'charge_group': 1, 'charge': 0, 'mass': 72
+        }),
+        (2, {
+            'atype': 'C', 'resid': 1, 'resname': 'X', 'atomname': 'C',
             'charge_group': 1, 'charge': 0, 'mass': 72
         }),
     ))

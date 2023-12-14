@@ -26,6 +26,7 @@ from vermouth.processors.apply_rubber_band import (same_chain,
                                                    make_same_region_criterion,
                                                    are_connected,
                                                    build_connectivity_matrix)
+from vermouth.tests.helper_functions import test_molecule
 
 # pylint: disable=redefined-outer-name
 
@@ -259,58 +260,6 @@ def test_make_same_region_criterion(regions, left, right, nodes, edges, chain, r
     nx.set_node_attributes(graph, resid, "resid")
     same_region = make_same_region_criterion(regions)
     assert same_region(graph=graph, left=left, right=right) == outcome
-
-@pytest.fixture
-def test_molecule(scope='function'):
-    """
-    Molecule with the following connectivity and atom-naming:
-
-    SC2:   2           8
-           |           |
-    SC1:   1   4       7
-           |   |       |
-    BB:    0 - 3 - 5 - 6
-           -------------
-    resid: 1   2   3   4  column wise
-    """
-
-    force_field = vermouth.forcefield.ForceField("test")
-    molecule = vermouth.molecule.Molecule(force_field=force_field)
-    molecule.meta['test'] = True
-    # The node keys should not be in a sorted order as it would mask any issue
-    # due to the keys being accidentally sorted.
-    molecule.add_node(2, atomname='SC2',
-                      position=np.array([0., 1.0, 0.0]), resid=1)
-    molecule.add_node(0, atomname='BB',
-                      position=np.array([0., 0., 0.]), resid=1)
-    molecule.add_node(1, atomname='SC1',
-                      position=np.array([0., 0.5, 0.0]), resid=1)
-
-    molecule.add_node(3, atomname='BB', position=np.array(
-        [0.5, 0.0, 0.0]), resid=2)
-    molecule.add_node(4, atomname='SC1', position=np.array(
-        [0.5, 0.5, 0.0]), resid=2)
-
-    molecule.add_node(5, atomname='BB', position=np.array(
-        [1.0, 0.0, 0.0]), resid=3)
-
-    molecule.add_node(6, atomname='BB', position=np.array(
-        [1.5, 0.0, 0.0]), resid=4)
-    molecule.add_node(7, atomname='SC1', position=np.array(
-        [1.5, 0.5, 0.0]), resid=4)
-    molecule.add_node(8, atomname='SC2', position=np.array(
-        [1.5, 1.0, 0.0]), resid=4)
-
-    molecule.add_edge(0, 1)
-    molecule.add_edge(0, 2)
-    molecule.add_edge(0, 3)
-    molecule.add_edge(3, 4)
-    molecule.add_edge(3, 5)
-    molecule.add_edge(5, 6)
-    molecule.add_edge(6, 7)
-    molecule.add_edge(7, 8)
-
-    return molecule
 
 
 @pytest.mark.parametrize('chain_attribute, atom_names, res_min_dist, outcome',

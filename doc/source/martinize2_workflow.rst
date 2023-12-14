@@ -279,11 +279,11 @@ There can be any number of post processing steps. For example to add an elastic
 network, or to generate Go virtual sites. We will not describe their function
 here in detail. Instead, see for example
 :class:`~vermouth.processors.apply_rubber_band.ApplyRubberBand` and
-:class:`~vermouth.processors.go_vs_includes.GoVirtIncludes`.
+:class:`~vermouth.rcsu.go_vs_includes.VirtualSiteCreator`.
 
 Relevant CLI options: ``-elastic``, ``-ef``, ``-el``, ``-eu``, ``-ermd``,
-``-ea``, ``-ep``, ``-em``, ``-eb``, ``-eunit``, ``-govs-include``,
-``-govs-moltype``
+``-ea``, ``-ep``, ``-em``, ``-eb``, ``-eunit``, ``-go``,
+``-go-eps``, ``-go-moltype``, ``-go-low``, ``-go-up``, ``-go-res-dist`` 
 
 6) Write output
 ===============
