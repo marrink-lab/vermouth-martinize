@@ -28,7 +28,7 @@ import vermouth
 from vermouth.forcefield import ForceField
 
 from .. import datafiles
-from ..helper_functions import find_in_path, is_equal, parse_gofiles
+from ..helper_functions import find_in_path, parse_gofiles
 
 
 INTEGRATION_DATA = Path(datafiles.TEST_DATA/'integration_tests')
