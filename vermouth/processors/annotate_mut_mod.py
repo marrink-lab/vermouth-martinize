@@ -210,13 +210,15 @@ def annotate_modifications(molecule, modifications, mutations):
                     (mutations, 'mutation', molecule.force_field.blocks)]
 
     residue_graph = make_residue_graph(molecule)
+    # Get the name of the chain in the molecule that we're looking at
     residue = {key: residue_graph.nodes[0].get(key)
                for key in 'chain resid resname insertion_code'.split()}
     chain = residue['chain']
 
     for mutmod, key, library in associations:
         for resspec, mod in mutmod:
-            if resspec.get('chain') == chain:
+            # Ie. the target residue is chain specific
+            if (resspec.get('chain') is not None) and (resspec.get('chain') == chain):
                 mod_found = False
                 for res_idx in residue_graph:
                     if residue_matches(resspec, residue_graph, res_idx):
@@ -234,6 +236,22 @@ def annotate_modifications(molecule, modifications, mutations):
                     LOGGER.warning('Mutation "{}" not found. '
                                    'Check target resid!'
                                    ''.format(_format_resname(resspec)))
+            # If instead we're targeting all residues in the chain
+            elif resspec.get(chain) == None:
+                for res_idx in residue_graph:
+                    if residue_matches(resspec, residue_graph, res_idx):
+                        mod_found = True
+                        if mod != 'none' and mod not in library:
+                            raise NameError('{} is not known as a {} for '
+                                            'force field {}'
+                                            ''.format(mod, key, molecule.force_field.name))
+                        res = residue_graph.nodes[res_idx]
+                        LOGGER.debug('Annotating {} with {} {}',
+                                     _format_resname(res), key, mod)
+                        for node_idx in res['graph']:
+                            molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
+
+
 
 class AnnotateMutMod(Processor):
     """
@@ -265,7 +283,6 @@ class AnnotateMutMod(Processor):
         annotate_modifications(molecule, self.modifications, self.mutations)
         return molecule
     def run_system(self, system):
-        print(self.mutations)
         mols = []
         for molecule in system.molecules:
             mols.append(self.run_molecule(molecule))
