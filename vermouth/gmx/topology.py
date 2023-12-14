@@ -46,9 +46,13 @@ def write_atomtypes(system, itp_path, C6C12=False):
         itp_file.write("[ atomtypes ]\n")
         grouped_types = _group_by_conditionals(system.gmx_topology_params['atomtypes'])
         for (conditional, group), interactions_in_group in grouped_types:
+            # conditionals are things like #ifdef; for more details on how this
+            # works see the molecule_itp_writer
             if conditional:
                 conditional_key = conditional_keys[conditional[1]]
                 itp_file.write('{} {}\n'.format(conditional_key, conditional[0]))
+            # groups are collections of interactions that are written bunched
+            # together and indicated by a comment line
             if group:
                 itp_file.write('; {}\n'.format(group))
 
