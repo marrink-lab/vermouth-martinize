@@ -121,7 +121,7 @@ def compare_nbparams(fileref, filecomp):
     assert set(ref.keys()) == set(compare.keys())  # assert correct nb pairs
 
     for key in ref.keys(): 
-        assert(is_equal(list(ref[key]),list(compare[key])))  ##assert correct sigma and eps
+        assert compare[key] == pytest.approx(ref[key])  # assert correct sigma and eps
 
 
 def compare_goatomtypes(fileref, filecomp):
