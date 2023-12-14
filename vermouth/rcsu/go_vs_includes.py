@@ -34,11 +34,6 @@ class VirtualSiteCreator(Processor):
     Every molecule must have a moltype name under the "moltype" key of the
     molecule meta.
 
-    Parameters
-    ----------
-    sections: collections.abc.Iterable[str], optional
-        The sections to which to add an include statement.
-
     See Also
     --------
     :class:`~vermouth.processors.name_moltype.NameMolType`
