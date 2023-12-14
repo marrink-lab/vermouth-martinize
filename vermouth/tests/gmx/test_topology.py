@@ -185,7 +185,7 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
                        outpath,
                        header=['first header comment', 'second header comment'],
                        defines=('random', ),
-                       itp_paths=[atompath, nbpath],
+                       itp_paths={"atomtypes": atompath, "nonbond_params": nbpath},
                        # at this level C6C12 doesn't matter; it gets
                        # checked in previous texts
                        C6C12=False)
