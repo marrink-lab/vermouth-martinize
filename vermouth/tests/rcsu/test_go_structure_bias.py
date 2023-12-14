@@ -7,7 +7,7 @@ import networkx as nx
 import vermouth
 from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
 from vermouth.tests.test_water_bias import create_sys_all_attrs
-from vermouth.tests.test_apply_rubber_band import test_molecule
+from vermouth.tests.helper_functions import test_molecule
 from vermouth.rcsu.go_structure_bias import ComputeStructuralGoBias
 
 def test_compute_go_interaction(test_molecule):
