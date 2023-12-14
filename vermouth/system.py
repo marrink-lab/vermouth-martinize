@@ -16,7 +16,7 @@
 """
 Provides a class to describe a system.
 """
-
+from collections import defaultdict
 
 class System:
     """
@@ -31,6 +31,7 @@ class System:
         self.molecules = []
         self._force_field = None
         self.force_field = force_field
+        self.gmx_topology_params = defaultdict(list)
 
     @property
     def force_field(self):

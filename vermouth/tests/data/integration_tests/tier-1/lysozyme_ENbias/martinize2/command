@@ -1,0 +1,12 @@
+martinize2 
+-f ../aa.pdb 
+-ff martini3001 
+-x cg.pdb 
+-o topol.top 
+-ignore HOH 
+-ss CBCCHHHHHHHHHHTTCTTBTTBCHHHHHHHHHHHHTTBTTCEEECTTSCEEETTTTEETTTTCBCSCCTTCCCTTCSBGGGGGSSSCHHHHHHHHHHHHTSSGGGGSHHHHHHTTTSCGGGGGTTCCC 
+-elastic 
+-ef 700
+-eu 0.85
+-water-bias
+-water-bias-eps E:-.5 C:1.0 H:-1.0

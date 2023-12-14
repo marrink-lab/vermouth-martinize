@@ -49,7 +49,10 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings,
 )
+from vermouth.rcsu.contact_map import read_go_map
+from vermouth.rcsu.go_pipeline import GoPipeline
 from vermouth.citation_parser import citation_formatter
+from vermouth.gmx.topology import write_gmx_topology
 
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
 # not work as intended. Investigation required.
@@ -187,95 +190,6 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     LOGGER.info("Placing the charge dummies.", type="step")
     vermouth.LocateChargeDummies().run_system(system)
     return system
-
-
-def write_gmx_topology(system, top_path, defines=(), header=()):
-    """
-    Writes a Gromacs .top file for the specified system.
-    """
-    if not system.molecules:
-        raise ValueError("No molecule in the system. Nothing to write.")
-
-    # Write the ITP files for the molecule types, and prepare writing the
-    # [ molecules ] section of the top file.
-    # * We write one ITP file for each different moltype in the system, the
-    #   moltype being defined by the name provided under the "moltype" meta of
-    #   the molecules. If more than one molecule share the same moltype, we use
-    #   the first one to write the ITP file.
-    moltype_written = set()
-    # * We keep track of the length of the longer moltype name, to align the
-    #   [ molecules ] section.
-    max_name_length = 0
-    # * We keep track of groups of successive molecules with the same moltypes.
-    moltype_count = []  # items will be [moltype, number of molecules]
-
-    # Iterate over groups of successive molecules with the same moltypes. We
-    # shall *NOT* sort the molecules before hand, as groups of successive
-    # molecules with the same moltype can be interupted by other moltypes, and
-    # we want to reflect these interuptions in the [ molecules ] section of the
-    # top file.
-    molecule_groups = itertools.groupby(
-        system.molecules, key=lambda x: x.meta["moltype"]
-    )
-    for moltype, molecules in molecule_groups:
-        molecule = next(molecules)
-        if moltype not in moltype_written:
-            # A given moltype can appear more than once in the sequence of
-            # molecules, without being uninterupted by other moltypes. Even in
-            # that case, we want to write the ITP only once.
-            with deferred_open("{}.itp".format(moltype), "w") as outfile:
-                # here we format and merge all citations
-                header[-1] = header[-1] + "\n"
-                header.append("Please cite the following papers:")
-                for citation in molecule.citations:
-                    cite_string = citation_formatter(
-                        molecule.force_field.citations[citation]
-                    )
-                    LOGGER.info("Please cite: " + cite_string)
-                    header.append(cite_string)
-                vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
-            this_moltype_len = len(molecule.meta["moltype"])
-            if this_moltype_len > max_name_length:
-                max_name_length = this_moltype_len
-            moltype_written.add(moltype)
-        # We already removed one element from the "molecules" generator, do not
-        # forget to count it in the number of molecules in that group.
-        moltype_count.append([moltype, 1 + len(list(molecules))])
-
-    # Write the top file
-    template = textwrap.dedent(
-        """\
-        {defines}
-        #include "martini.itp"
-        {includes}
-
-        [ system ]
-        Title of the system
-
-        [ molecules ]
-        {molecules}
-    """
-    )
-    include_string = "\n".join(
-        '#include "{}.itp"'.format(molecule_type) for molecule_type, _ in moltype_count
-    )
-    molecule_string = "\n".join(
-        "{mtype:<{length}}    {num}".format(
-            mtype=mtype, num=num, length=max_name_length
-        )
-        for mtype, num in moltype_count
-    )
-    define_string = "\n".join("#define {}".format(define) for define in defines)
-    with deferred_open(str(top_path), "w") as outfile:
-        outfile.write(
-            textwrap.dedent(
-                template.format(
-                    includes=include_string,
-                    molecules=molecule_string,
-                    defines=define_string,
-                )
-            )
-        )
 
 
 def _cys_argument(value):
@@ -620,16 +534,82 @@ def entry():
     )
     go_group = parser.add_argument_group("Virtual site based GoMartini")
     go_group.add_argument(
-        "-govs-includes",
-        action="store_true",
-        default=False,
-        help="Write include statements to use Vitrual Site Go Martini.",
+        "-go",
+        dest="go",
+        required=False,
+        type=Path,
+        default=None,
+        help="Contact map to be used for the Martini Go model."
+             "Currently, only one format is supported. See docs.",
     )
     go_group.add_argument(
-        "-govs-moltype",
+        "-go-eps",
+        dest="go_eps",
+        type=float,
+        default=9.414,
+        help=("The strength of the Go model structural bias in kJ/mol."),
+    )
+    go_group.add_argument(
+        "-go-moltype",
+        dest="govs_moltype",
         default="molecule_0",
         help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
     )
+    go_group.add_argument(
+        "-go-low",
+        dest="go_low",
+        type=float,
+        default=0.3,
+        help=("Minimum distance (nm) below which contacts are removed."),
+    )
+    go_group.add_argument(
+        "-go-up",
+        dest="go_up",
+        type=float,
+        default=1.1,
+        help=("Maximum distance (nm) above which contacts are removed."),
+    )
+    go_group.add_argument(
+        "-go-res-dist",
+        dest="go_res_dist",
+        type=int,
+        default=3,
+        help=("Minimum graph distance (similar sequence distance) below which"
+              "contacts are removed. "),
+    )
+
+    water_group = parser.add_argument_group("Apply water bias.")
+    water_group.add_argument(
+        "-water-bias",
+        dest="water_bias",
+        action="store_true",
+        default=False,
+        help=("Automatically apply water bias to different secondary structure elements."),
+    )
+    water_group.add_argument(
+        "-water-bias-eps",
+        dest="water_bias_eps",
+        nargs='+',
+        type=lambda s: s.split(":"),
+        default=[],
+        help=("Define the strength of the water bias by secondary structure type. "
+              "For example, use `H:3.6 C:2.1` to bias helixes and coils. "
+              "Using the idr option (e.g. idr:2.1) intrinsically disordered regions "
+              "are biased seperately."),
+    )
+    water_group.add_argument(
+        "-id-regions",
+        dest="water_idrs",
+        type=lambda s: s.split(":"),
+        default=[],
+        nargs='+',
+        help=("Intrinsically disordered regions specified by resid."
+              "These parts are biased differently when applying a water bias."
+              "format: <start_resid_1>:<end_resid_1> <start_resid_2>:<end_resid_2>..."
+             ),
+    )
+
+
     prot_group = parser.add_argument_group("Protein description")
     prot_group.add_argument(
         "-scfix",
@@ -817,7 +797,7 @@ def entry():
         print(", ".join(sorted(known_force_fields[args.to_ff].modifications)))
         parser.exit()
 
-    if args.elastic and args.govs_includes:
+    if args.elastic and args.go:
         parser.error(
             "A rubber band elastic network and GoMartini are not "
             "compatible. The -elastic and -govs-include flags cannot "
@@ -967,24 +947,25 @@ def entry():
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
-    if args.govs_includes:
-        # The way Virtual Site GoMartini works has to be in sync with
-        # Sebastian's create_goVirt.py script, until the method is fully
-        # implemented in vermouth. One call of martinize2 must create a single
-        # molecule, regardless of the number of fragments in the input.
-        # The molecule type name is provided as an input with the -govs-moltype
-        # flag to be consistent with the name provided to Sebastian's script.
-        # The name cannot be guessed because a system may need to be composed
-        # from multiple calls to martinize2 and create_goVirt.py.
-        LOGGER.info("Adding includes for Virtual Site Go Martini.", type="step")
-        LOGGER.info(
-            "The output topology will require files generated by " '"create_goVirt.py".'
-        )
-        vermouth.MergeAllMolecules().run_system(system)
-        vermouth.SetMoleculeMeta(moltype=args.govs_moltype).run_system(system)
-        vermouth.GoVirtIncludes().run_system(system)
+    # Generate the Go model if required
+    if args.go:
+        LOGGER.info("Reading Go model contact map.", type="step")
+        go_map = read_go_map(args.go)
+        LOGGER.info("Generating the Go model.", type="step")
+        GoPipeline.run_system(system,
+                              moltype=args.govs_moltype,
+                              contact_map=go_map,
+                              cutoff_short=args.go_low,
+                              cutoff_long=args.go_up,
+                              go_eps=args.go_eps,
+                              res_dist=args.go_res_dist,)
+
         defines = ("GO_VIRT",)
+        itp_paths = {"atomtypes": "go_atomtypes.itp",
+                     "nonbond_params": "go_nbparams.itp"}
     else:
+        # don't write non-bonded interactions
+        itp_paths = []
         # Merge chains if required.
         if args.merge_chains:
             for chain_set in args.merge_chains:
@@ -1043,6 +1024,20 @@ def entry():
         )
         rubber_band_processor.run_system(system)
 
+    # If required add some water bias
+    if args.water_bias:
+        # if the go model hasn't been used we need to create virtual
+        # sites for the biasing
+        if not args.go:
+            vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
+            itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
+                         "nonbond_params": "virtual_sites_nonbond_params.itp"}
+        # now we add a bias by defining specific virtual-site water interactions
+        vermouth.processors.ComputeWaterBias(args.water_bias,
+                                             { s:float(eps) for s, eps in args.water_bias_eps},
+                                             [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                            ).run_system(system)
+
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
         for molecule in system.molecules:
@@ -1052,7 +1047,7 @@ def entry():
     # The Martini Go model assumes that we do not mess with the order of
     # particles in any way especially the virtual sites needed for the Go
     # model, thus we skip the sorting here altogether.
-    if not args.govs_includes:
+    if not args.go:
         LOGGER.info("Sorting atomids", type="step")
         vermouth.SortMoleculeAtoms().run_system(system)
 
@@ -1087,7 +1082,12 @@ def entry():
         ]
 
     if args.top_path is not None:
-        write_gmx_topology(system, args.top_path, defines=defines, header=header)
+        write_gmx_topology(system,
+                           args.top_path,
+                           itp_paths=itp_paths,
+                           C6C12=False,
+                           defines=defines,
+                           header=header)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
