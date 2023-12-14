@@ -41,7 +41,7 @@ def test_no_system_error(test_molecule):
     processor = VirtualSiteCreator()
     test_molecule.meta['moltype'] = "random"
     # no system
-    with pytest.raises(IOError):
+    with pytest.raises(ValueError):
         processor.run_molecule(test_molecule)
 
 def test_return_no_nodes():
