@@ -12,5 +12,5 @@ python_files = "test_*.py"
 
 [tool.coverage.run]
 branch = true
-omit = ["vermouth/tests/*", "vermouth/redistributed/*"]
-
+omit = ["vermouth/tests/*", "vermouth/redistributed/*", '*/bin/pytest']
+source_pkgs = ["vermouth"]
