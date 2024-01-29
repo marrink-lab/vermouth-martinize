@@ -9,3 +9,8 @@ requires = [
 addopts = "--import-mode=importlib"
 testpaths = ["vermouth/tests"]
 python_files = "test_*.py"
+
+[tool.coverage.run]
+branch = true
+omit = ["vermouth/tests/*", "vermouth/redistributed/*"]
+
