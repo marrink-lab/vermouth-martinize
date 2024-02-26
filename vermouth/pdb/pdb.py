@@ -463,8 +463,6 @@ class PDBParser(LineParser):
         """
         Get the AA sequences of the chains in the molecules
         """
-        #I think this should give a list of the individual chains.
-        #Ie. if we have two molecules, chains = ['A', 'B']
         chains = list(list(np.unique(list(mol.nodes[idx]['chain'] for idx in mol)))
                       for mol in self.molecules)
 
