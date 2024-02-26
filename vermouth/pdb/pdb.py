@@ -62,6 +62,7 @@ class PDBParser(LineParser):
         self.modelidx = modelidx
         self._skipahead = False
         self.cryst = {}
+        self._seqres = []
 
     def dispatch(self, line):
         """
@@ -130,7 +131,20 @@ class PDBParser(LineParser):
     dbref1 = _skip
     dbref2 = _skip
     seqadv = _skip
-    seqres = _skip
+
+    def seqres(self, line, lineno=0):
+        """
+        Parse a SEQRES record. Store for processing later.
+
+        Parameters
+        ----------
+        line: str
+            The line to parse.
+
+        """
+        self._seqres.append(line)
+
+    # seqres = _seqres
     modres = _skip
 
     # HETEROGEN SECTION
@@ -370,6 +384,7 @@ class PDBParser(LineParser):
         # TODO: cross reference number of molecules with CMPND records
         self._finish_molecule()
         self.do_conect()
+        self.do_seqres()
         return self.molecules
 
     def do_conect(self):
@@ -443,6 +458,55 @@ class PDBParser(LineParser):
                             mol2.nodes[atomidx]['position'])
             mol.add_edge(atomidx0, atomidx, distance=dist)
 
+    def do_seqres(self):
+        """
+        Get the AA sequences of the chains in the molecules
+        """
+        #I think this should give a list of the individual chains.
+        #Ie. if we have two molecules, chains = ['A', 'B']
+        chains = list(list(np.unique(list(mol.nodes[idx]['chain'] for idx in mol)))
+                      for mol in self.molecules)
+
+        properties = {a: [] for a in [x for xs in chains for x in xs]}
+
+        for line in self._seqres:
+            chain = line[11]
+            resnames = line[19:].split()
+            #some varient of this can check we have protein seqres and not
+            #seqres for nucleotides
+            # try:
+            #     assert list(set(len(i) for i in resnames)) == 3
+            # except AssertionError:
+            #     #we don't really need to worry about this
+            #     #we just need to not use it any further
+            #     pass
+            properties[chain].append(resnames)
+
+        # this to make a flat list for each chain in the file
+        for chain in properties.keys():
+            properties[chain] = [x for xs in properties[chain] for x in xs]
+        self._check_seqres(properties)
+
+    def _check_seqres(self, properties):
+        for mol in self.molecules:
+            resids = np.array([mol.nodes[idx]['resid'] for idx in mol],dtype = int)
+            resnames = np.array([mol.nodes[idx]['resname'] for idx in mol])
+            un_resnames = resnames[np.unique(resids, return_index=True)[1]]
+
+            chain = list(set([mol.nodes[idx]['chain'] for idx in mol]))[0]
+
+            #TODO:use these strings to find which residues are missing
+            # ie. present_res is a substring of seqres_str, so should be able
+            # to say which residues are missing by comparison if string lengths
+            # are not equal
+            seqres_str = ''.join(properties[chain])
+            present_str = ''.join(un_resnames)
+
+            if list(un_resnames) != properties[chain]:
+                #TODO make this message better
+                LOGGER.warning("SEQRES data suggests missing residues in chain {}",
+                                     chain,
+                                     type='pdb-alternate')
 
 def read_pdb(file_name, exclude=('SOL',), ignh=False, modelidx=1):
     """
