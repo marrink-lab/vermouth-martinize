@@ -384,7 +384,8 @@ class PDBParser(LineParser):
         # TODO: cross reference number of molecules with CMPND records
         self._finish_molecule()
         self.do_conect()
-        self.do_seqres()
+        if len(self._seqres) > 0:
+            self.do_seqres()
         return self.molecules
 
     def do_conect(self):
@@ -495,15 +496,10 @@ class PDBParser(LineParser):
 
             chain = list(set([mol.nodes[idx]['chain'] for idx in mol]))[0]
 
-            #TODO:use these strings to find which residues are missing
-            # ie. present_res is a substring of seqres_str, so should be able
-            # to say which residues are missing by comparison if string lengths
-            # are not equal
-            seqres_str = ''.join(properties[chain])
-            present_str = ''.join(un_resnames)
-
             if list(un_resnames) != properties[chain]:
-                #TODO make this message better
+                #TODO:  make this message better
+                #       eg. do some sequence alignment to find what's
+                #       exactly missing.
                 LOGGER.warning("SEQRES data suggests missing residues in chain {}",
                                      chain,
                                      type='pdb-alternate')
