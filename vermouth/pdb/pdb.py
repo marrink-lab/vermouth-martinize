@@ -24,6 +24,7 @@ from ..molecule import Molecule
 from ..utils import first_alpha, distance, format_atom_string
 from ..parser_utils import LineParser
 from ..truncating_formatter import TruncFormatter
+from .nwalign import seqalign
 from ..log_helpers import StyleAdapter, get_logger
 
 LOGGER = StyleAdapter(get_logger(__name__))
@@ -473,6 +474,7 @@ class PDBParser(LineParser):
             resnames = line[19:].split()
             #some varient of this can check we have protein seqres and not
             #seqres for nucleotides
+            #not much use atm but could be helpful for when we have nucleotides here
             # try:
             #     assert list(set(len(i) for i in resnames)) == 3
             # except AssertionError:
@@ -487,6 +489,7 @@ class PDBParser(LineParser):
         self._check_seqres(properties)
 
     def _check_seqres(self, properties):
+        LOGGER.info("Checking pdb SEQRES entry for missing residues", type="step")
         for mol in self.molecules:
             resids = np.array([mol.nodes[idx]['resid'] for idx in mol],dtype = int)
             resnames = np.array([mol.nodes[idx]['resname'] for idx in mol])
@@ -494,13 +497,7 @@ class PDBParser(LineParser):
 
             chain = list(set([mol.nodes[idx]['chain'] for idx in mol]))[0]
 
-            if list(un_resnames) != properties[chain]:
-                #TODO:  make this message better
-                #       eg. do some sequence alignment to find what's
-                #       exactly missing.
-                LOGGER.warning("SEQRES data suggests missing residues in chain {}",
-                                     chain,
-                                     type='pdb-alternate')
+            seqalign(un_resnames, properties[chain], chain)
 
 def read_pdb(file_name, exclude=('SOL',), ignh=False, modelidx=1):
     """
