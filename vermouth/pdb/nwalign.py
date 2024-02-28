@@ -57,7 +57,11 @@ def OLA_codes(res_list):
     convert continuous string of three letter AA codes into list of single letters
     '''
     n = 3
-    return ''.join([THREE_LETTER_AA[i] for i in res_list])
+    try:
+        return ''.join([THREE_LETTER_AA[i] for i in res_list])
+    except KeyError:
+        LOGGER.warning("Unrecognised residues in protein")
+        return None
 
 def traceback_alignment(traceback_array, seq1, seq2, up_arrow= 1,
                         left_arrow=2, up_left_arrow=3, stop=0):
@@ -225,14 +229,15 @@ def seqalign(pdb, seqres, chain):
     seq1_OLA = OLA_codes(pdb)
     seq2_OLA = OLA_codes(seqres)
 
-    scoring_array, traceback_array = nw(seq1_OLA, seq2_OLA, 1, -1, -1)
-    pdb_aligned, alignment_indicator, seqres_aligned = traceback_alignment(traceback_array, seq1_OLA, seq2_OLA)
-    # print(f"PDB   : {pdb_aligned}\n        {''.join(list(alignment_indicator.astype(int).astype(str)))}\n"
-    #       f"SEQRES: {seqres_aligned}")
-    if len(np.unique(alignment_indicator)) > 0:
-        alignment_check = res_matching(alignment_indicator)
-        if alignment_check is not None:
-            for i, j in zip(alignment_check[0], alignment_check[1]):
-                LOGGER.warning("SEQRES data suggests residues {}:{} in chain {} are missing",
-                               i+1, j+1, chain,
-                               type="pdb-alternate")
+    if (seq1_OLA is not None) & (seq2_OLA is not None):
+        scoring_array, traceback_array = nw(seq1_OLA, seq2_OLA, 1, -1, -1)
+        pdb_aligned, alignment_indicator, seqres_aligned = traceback_alignment(traceback_array, seq1_OLA, seq2_OLA)
+        # print(f"PDB   : {pdb_aligned}\n        {''.join(list(alignment_indicator.astype(int).astype(str)))}\n"
+        #       f"SEQRES: {seqres_aligned}")
+        if len(np.unique(alignment_indicator)) > 0:
+            alignment_check = res_matching(alignment_indicator)
+            if alignment_check is not None:
+                for i, j in zip(alignment_check[0], alignment_check[1]):
+                    LOGGER.warning("SEQRES data suggests residues {}:{} in chain {} are missing",
+                                   i+1, j+1, chain,
+                                   type="pdb-alternate")

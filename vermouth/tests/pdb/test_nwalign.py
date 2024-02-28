@@ -21,9 +21,12 @@ import numpy as np
 import pytest
 from vermouth.pdb.nwalign import *
 
-
-def test_OLA():
-    assert OLA_codes(['ALA', 'GLY', 'PHE']) == 'AGF'
+@pytest.mark.parametrize('input_list, output',(
+        (['ALA', 'GLY', 'PHE'], 'AGF'),
+        (['ALA', 'GLY', 'UNK'], None)
+))
+def test_OLA(input_list, output):
+    assert OLA_codes(input_list) == output
 
 @pytest.mark.parametrize('alignment_indicator, output', (
         (np.array([1, 1, 1, 1, 1, 1, 1, 1, 1]), None),
