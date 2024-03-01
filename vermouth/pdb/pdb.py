@@ -24,7 +24,6 @@ from ..molecule import Molecule
 from ..utils import first_alpha, distance, format_atom_string
 from ..parser_utils import LineParser
 from ..truncating_formatter import TruncFormatter
-from .nwalign import seqalign
 from ..log_helpers import StyleAdapter, get_logger
 
 LOGGER = StyleAdapter(get_logger(__name__))
@@ -488,16 +487,30 @@ class PDBParser(LineParser):
             properties[chain] = [x for xs in properties[chain] for x in xs]
         self._check_seqres(properties)
 
+
     def _check_seqres(self, properties):
+        '''
+        In future this could just be done by parsing REMARK 465.
+        '''
         LOGGER.info("Checking pdb SEQRES entry for missing residues", type="step")
         for mol in self.molecules:
             resids = np.array([mol.nodes[idx]['resid'] for idx in mol],dtype = int)
-            resnames = np.array([mol.nodes[idx]['resname'] for idx in mol])
-            un_resnames = resnames[np.unique(resids, return_index=True)[1]]
-
             chain = list(set([mol.nodes[idx]['chain'] for idx in mol]))[0]
 
-            seqalign(un_resnames, properties[chain], chain)
+            missing_res_nos = np.setdiff1d(np.arange(len(properties[chain]))+1,
+                                       np.unique(resids)[np.unique(resids) < len(properties[chain])+1])
+
+            #find consecutive sequences of missing residues
+            nums = sorted(set(missing_res_nos))
+            gaps = [[s, e] for s, e in zip(nums, nums[1:]) if s + 1 < e]
+            edges = iter(nums[:1] + sum(gaps, []) + nums[-1:])
+            series = list(zip(edges, edges))
+
+            for ser in series:
+                LOGGER.warning("SEQRES data suggests residues {}:{} in chain {} are missing",
+                                   ser[0], ser[1], chain,
+                                   type="pdb-alternate")
+                #TODO: something useful with the residues found missing.
 
 def read_pdb(file_name, exclude=('SOL',), ignh=False, modelidx=1):
     """
