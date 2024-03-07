@@ -904,7 +904,7 @@ def parse_mapping_file(filepath, force_fields):
     list[Mapping]
         A list of all mappings described in the file.
     """
-    with open(filepath) as map_in:
+    with open(filepath, encoding='UTF-8') as map_in:
         director = MappingDirector(force_fields)
         mappings = list(director.parse(map_in))
     return mappings

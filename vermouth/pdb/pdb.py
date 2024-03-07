@@ -468,7 +468,7 @@ def read_pdb(file_name, exclude=('SOL',), ignh=False, modelidx=1):
         molecules.
     """
     parser = PDBParser(exclude, ignh, modelidx)
-    with open(str(file_name)) as file_handle:
+    with open(str(file_name), encoding='UTF-8') as file_handle:
         mols = list(parser.parse(file_handle))
     LOGGER.info('Read {} molecules from PDB file {}', len(mols), file_name)
     return mols
@@ -622,5 +622,5 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
         # a local variable, which means it won't be looked up from the global
         # namespace any more.
         from builtins import open
-    with open(path, 'w') as out:
+    with open(path, 'w', encoding='UTF-8') as out:
         out.write(write_pdb_string(system, conect, omit_charges, nan_missing_pos))

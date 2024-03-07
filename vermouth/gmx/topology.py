@@ -185,7 +185,7 @@ def write_gmx_topology(system,
             # A given moltype can appear more than once in the sequence of
             # molecules, without being uninterupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
-            with deferred_open("{}.itp".format(moltype), "w") as outfile:
+            with deferred_open("{}.itp".format(moltype), "w", encoding='UTF-8') as outfile:
                 # here we format and merge all citations
                 header[-1] = header[-1] + "\n"
                 header.append("Please cite the following papers:")

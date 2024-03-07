@@ -79,6 +79,6 @@ class Quoter(Processor):
         -------
         None
         """
-        with open(self._quote_file) as handle:
+        with open(self._quote_file, encoding='UTF-8') as handle:
             all_quotes = list(read_quote_file(handle))
         LOGGER.info(random.choice(all_quotes))
