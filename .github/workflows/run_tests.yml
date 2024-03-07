@@ -53,7 +53,11 @@ jobs:
         pip install -r requirements-tests.txt
         
     - name: Run pytest with codecoverage
-      run:  pytest vermouth --cov=vermouth --cov-report=xml --hypothesis-show-statistics
+      run: |
+        coverage run $(which pytest) -vv --hypothesis-show-statistics
+        coverage report
+        coverage xml 
+
     - if: ${{ matrix.WITH_CODECOV }}
       name: Upload coverage codecov   
       uses: codecov/codecov-action@v3 

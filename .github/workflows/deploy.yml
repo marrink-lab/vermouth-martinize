@@ -52,7 +52,7 @@ jobs:
         
     - name: Run pytest with codecoverage
       run: |
-        coverage run --source=vermouth $(which pytest) -vv vermouth --hypothesis-show-statistics
+        coverage run $(which pytest) -vv --hypothesis-show-statistics
         coverage report --omit='*/bin/pytest'
         
     - if: ${{ matrix.WITH_CODECOV }}
