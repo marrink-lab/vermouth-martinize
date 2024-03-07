@@ -422,7 +422,8 @@ def convert_dssp_to_martini(sequence):
     # This should not cause further issues, since '..' doesn't map to anything
     wildcard_sequence = '.' + wildcard_sequence + '.'
     for pattern, replacement in patterns.items():
-        wildcard_sequence = wildcard_sequence.replace(pattern, replacement)
+        while pattern in wildcard_sequence:  # EXPENSIVE! :'(
+            wildcard_sequence = wildcard_sequence.replace(pattern, replacement)
     # And remove the flanking dots again
     wildcard_sequence = wildcard_sequence[1:-1]
     result = ''.join(
