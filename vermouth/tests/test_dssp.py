@@ -680,3 +680,18 @@ def test_cterm_atomnames():
     vermouth.processors.CanonicalizeModifications().run_system(system)
     dssp_out = dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
     assert dssp_out == list("CC")
+
+
+@pytest.mark.parametrize('sequence, expected', [
+    ('H', '3'),
+    ('HH', '33'),
+    ('CHH', 'C33'),
+    ('HHHHHH', '113322'),
+    ('EHHHHHHC', 'E113322C'),
+    ('HHHHHHHHH', '1111H2222'),
+    ('CHHHHHHHHHC', 'C1111H2222C'),
+    ('CHHHHEHHHHC', 'C3333E3333C'),
+])
+def test_convert_dssp_to_martini(sequence, expected):
+    found = dssp.convert_dssp_to_martini(sequence)
+    assert expected == found
