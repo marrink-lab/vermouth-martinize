@@ -437,7 +437,7 @@ def ref_mapping_directory(tmp_path_factory):
     iterate_on = itertools.product(force_fields_from, force_fields_to, range(3))
     for idx, (from_ff, to_ff, _) in enumerate(iterate_on):
         mapfile = mapdir / 'file{}.map'.format(idx)
-        with open(mapfile, 'w') as outfile:
+        with open(mapfile, 'w', encoding='UTF-8') as outfile:
             outfile.write(template.format(idx, from_ff, to_ff))
 
         mapping = {
@@ -504,14 +504,14 @@ def test_read_mapping_directory_error(tmp_path):
     mapdir = tmp_path / 'mappings'
     mapdir.mkdir()
 
-    with open(mapdir / 'valid.backmap', 'w') as outfile:
+    with open(mapdir / 'valid.backmap', 'w', encoding='UTF-8') as outfile:
         outfile.write(textwrap.dedent("""
             [ molecule ]
             valid
             [ atoms ]
             0 A B
         """))
-    with open(mapdir / 'not_valid.map', 'w') as outfile:
+    with open(mapdir / 'not_valid.map', 'w', encoding='UTF-8') as outfile:
         outfile.write('invalid content')
     with pytest.raises(IOError):
         vermouth.map_input.read_mapping_directory(mapdir, {})

@@ -57,7 +57,7 @@ from vermouth.rcsu.contact_map import read_go_map
         )))
 def test_go_map(tmp_path, lines, contacts):
     # write the go contact map file
-    with open(tmp_path / "go_file.txt", "w") as in_file:
+    with open(tmp_path / "go_file.txt", "w", encoding='UTF-8') as in_file:
         in_file.write(lines)
 
     # read go map
@@ -71,7 +71,7 @@ def test_go_error(tmp_path):
           No valid contacts in this file.
           """
     # write the go contact map file
-    with open(tmp_path / "go_file.txt", "w") as in_file:
+    with open(tmp_path / "go_file.txt", "w", encoding='UTF-8') as in_file:
         in_file.write(lines)
 
     with pytest.raises(IOError):

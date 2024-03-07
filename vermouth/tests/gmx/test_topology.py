@@ -86,7 +86,7 @@ def test_atomtypes(tmp_path, dummy_molecule, atomtypes, expected, C6C12):
     write_atomtypes(dummy_sys, outpath, C6C12=C6C12)
     DeferredFileWriter().write()
 
-    with open(str(outpath)) as infile:
+    with open(str(outpath), encoding='UTF-8') as infile:
         for line, ref_line in zip(infile, expected):
             assert line == ref_line
 
@@ -153,7 +153,7 @@ def test_nonbond_params(tmp_path, nbparams, expected, C6C12):
     write_nonbond_params(dummy_sys, outpath, C6C12=C6C12)
     DeferredFileWriter().write()
 
-    with open(str(outpath)) as infile:
+    with open(str(outpath), encoding='UTF-8') as infile:
         for line, ref_line in zip(infile, expected):
             assert line == ref_line
 
@@ -194,8 +194,8 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
     reference =f"""#define random
 #include "martini.itp"
 
-#include "{tmp_path}/atomtypes.itp"
-#include "{tmp_path}/nonbond_params.itp"
+#include "{tmp_path/'atomtypes.itp'}"
+#include "{tmp_path/'nonbond_params.itp'}"
 #include "molecule_0.itp"
 
 [ system ]
@@ -205,6 +205,6 @@ Title of the system
 molecule_0    1
 """
     ref_lines = textwrap.dedent(reference).splitlines()
-    with open(str(outpath)) as infile:
+    with open(str(outpath), encoding='UTF-8') as infile:
         for line, ref_line in zip(infile, ref_lines):
             assert line.strip() == ref_line
