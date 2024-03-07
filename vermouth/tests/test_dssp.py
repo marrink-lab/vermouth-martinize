@@ -686,8 +686,10 @@ def test_cterm_atomnames():
     ('H', '3'),
     ('HH', '33'),
     ('CHH', 'C33'),
+    ('HHHHHH', '113322'),
+    ('EHHHHHHC', 'E113322C'),
     ('HHHHHHHHH', '1111H2222'),
-    ()
+    ('CHHHHHHHHHC', 'C1111H2222C'),
 ])
 def test_convert_dssp_to_martini(sequence, expected):
     found = dssp.convert_dssp_to_martini(sequence)
