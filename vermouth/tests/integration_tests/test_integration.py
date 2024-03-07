@@ -224,7 +224,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
 
     # check if strdout has citations in string
     for citation in citations:
-        assert citation in proc.stderr
+        assert proc.stderr and citation in proc.stderr
 
     files = list(tmp_path.iterdir())
 
