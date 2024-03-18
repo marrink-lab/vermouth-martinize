@@ -18,3 +18,5 @@ htmlcov
 doc/build
 doc/source/api
 doc/source/.doctrees
+
+.idea/
