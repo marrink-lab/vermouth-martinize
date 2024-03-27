@@ -732,7 +732,8 @@ class Molecule(nx.Graph):
                 self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:
-                self.add_edge(correspondence[node1], correspondence[node2])
+                attrs = molecule.edges[(node1, node2)]
+                self.add_edge(correspondence[node1], correspondence[node2], **attrs)
         # merge the citation sets
         self.citations.update(molecule.citations)
         # Merge the log entries
@@ -1227,8 +1228,9 @@ class Block(Molecule):
                     interaction.parameters,
                     meta=interaction.meta
                 )
-        for edge in self.edges:
-            mol.add_edge(*(name_to_idx[node] for node in edge))
+        for nodea, nodeb, attrs in self.edges(data=True):
+            edge = (nodea, nodeb)
+            mol.add_edge(*(name_to_idx[node] for node in edge), **attrs)
 
         try:
             mol.nrexcl = self.nrexcl
