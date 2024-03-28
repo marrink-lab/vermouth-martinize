@@ -1262,6 +1262,8 @@ def test_to_molecule():
     """
     test_block = vermouth.molecule.Block()
     test_block.add_edges_from([('A', 'B'), ('B', 'C')])
+    # make sure edge attributes are also propagated
+    test_block.edges[('A', 'B')]['attr'] = 1
     test_block.interactions["bonds"] = [
                 Interaction(atoms=('A', 'B'),
                             parameters=['a', '0.2', '200'],
@@ -1278,6 +1280,7 @@ def test_to_molecule():
                  Interaction(atoms=(1, 2),
                              parameters=['a', '0.1', '300'],
                              meta={'b': 1}),]
+    assert test_molecule.edges[(0, 1)]['attr'] == 1
     assert ref_bonds == test_molecule.interactions['bonds']
 
 
@@ -1334,3 +1337,41 @@ def test_remove_interaction(atoms, bonds, interactions, removed, expected):
         molecule.remove_interaction(**removed)
 
     assert molecule.interactions == expected
+
+
+def test_merge_molecule():
+    """
+    Test if the merge molecule function gives
+    expected results.
+    """
+    test_block = vermouth.molecule.Block()
+    test_block.add_edges_from([('A', 'B'), ('B', 'C')])
+    # make sure edge attributes are also propagated
+    test_block.edges[('A', 'B')]['attr'] = 1
+    test_block.interactions["bonds"] = [
+                Interaction(atoms=('A', 'B'),
+                            parameters=['a', '0.2', '200'],
+                            meta={'a': 0}),
+                Interaction(atoms=('B', 'C'),
+                            parameters=['a', '0.1', '300'],
+                            meta={'b': 1}),]
+
+    test_molecule = test_block.to_molecule()
+    test_molecule.merge_molecule(test_block)
+
+    ref_bonds = [Interaction(atoms=(0, 1),
+                             parameters=['a', '0.2', '200'],
+                             meta={'a': 0}),
+                 Interaction(atoms=(1, 2),
+                             parameters=['a', '0.1', '300'],
+                             meta={'b': 1}),
+                 Interaction(atoms=(3, 4),
+                             parameters=['a', '0.2', '200'],
+                             meta={'a': 0}),
+                 Interaction(atoms=(4, 5),
+                             parameters=['a', '0.1', '300'],
+                             meta={'b': 1})]
+
+    assert test_molecule.edges[(0, 1)]['attr'] == 1
+    assert test_molecule.edges[(3, 4)]['attr'] == 1
+    assert ref_bonds == test_molecule.interactions['bonds']
