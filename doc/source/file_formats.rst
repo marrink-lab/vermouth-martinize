@@ -35,7 +35,7 @@ consisting of named sections and subsections, each indicated with a
 tag between square brackets. Tags are divided into top-level and
 sub-level section names.
 
-Force fields and topologies
+Force field file (.ff)
 ---------------------------
 
 The top-level tags for the force field and the topologies are macros,
@@ -281,95 +281,164 @@ Interactions
 Interactions are added or changed under the same interaction
 subsections as used for moleculetype. How are interactions removed?
 
-Mappings
-~~~~~~~~
-
+Mapping Files (.map & .mapping)
+-----------------------------------------------
 A mapping specifies the conversion from one force field description to
 another. If the transformation is from a higher resolution force field
 to a lower resolution, e.g., from the canonical description to
-Martini, the process is typically called 'forward mapping'. From a
-lower resolution to a higher one is called 'reverse mapping',
-'backward mapping' or 'backmapping'. While forward mapping is
-straightforward, the reverse process requires the addition of details,
-which is typically more difficult, especially if the difference
-between the force field resolutions is larger. The backmapping from
-united atom to all-atom is rather trivial, while the mapping from a
-Cooke lipid model to atomistic is pretty much impossible, and better
-achieved by mapping to and from the intermediate Martini model.
+Martini, the process is typically called 'forward mapping'.
 
-The mapping files use the structure developed for the program backward, given below:
+The vermouth library currently utilizes two mapping formats. The ``.map``
+format, which was originally developed for the backward program, is
+used to describe how two :ref:`blocks <data:block>` correspond to each
+other. The second format (``.mapping``) is exclusively used in the
+context of :ref:`modifications <data:modification>` and is an extension
+to the first format.
 
-| [ molecule ]
-| [ from ]
-| [ to ]
-| [ martini1 ]
-| [ mapping ]
-| [ atoms ]
-| [ modifiers2 ]
+File Structure (.map)
+~~~~~~~~~~~~~~~~~~~~~
 
-The structure has one top-level section molecule, followed directly by
-the name of the molecule. Thereafter subsections from and to are
-mandatory, specifying the higher-resolution and lower resolution force
-field of the mapping. Next is a subsection bearing the name of the
-lower resolution force field (martini in the example above), with
-contents listing the particles in the order of the corresponding
-moleculetype block. The mapping lists the higher-resolution force
-fields (which is redundant and should be removed). This is followed by
-the actual mapping consisting of an atoms subsection and optional
-geometric modifier subsections assign, out, cis, trans, and chiral.
+The file is structured into sections, each beginning with a directive
+enclosed in square brackets (``[]``).
 
-Atoms
-^^^^^
+Allowed Directives
+^^^^^^^^^^^^^^^^^^
+The format recognizes the following directives:
 
-Only the atoms subsection is used for forward mapping. The contents of
-this section lists the atoms according to the higher resolution force
-field in the same order as specified in the corresponding
-moleculetypes. Each atom consists of a number, the atom name and a
-series of low-resolution particle names. The latter together specify
-the weighing in the mapping, both forward and backward, but are
-easiest interpreted as specifying the position of the higher
-resolution atom by the weighted average of the lower resolution
-particles as given.
-  
-Geometric modifiers
-^^^^^^^^^^^^^^^^^^^
+- ``[molecule]``
+    - This directive is immediately followed by a single line containing
+      an alphanumeric string specifying the residue name. This name
+      denotes the residue under consideration.
+    - ``mandatory``
 
-The geometric modifiers assign, out, cis, trans, and chiral allow
-specifying more complex geometric operations for (re)sculpting the
-higher resolution structure, specifically adding chemical
-knowledge. These subsections and their content only apply to
-backmapping and are processed in the order given. They may be given
-before an atoms subsection, in which case they have access to the
-lower resolution positions, allowing to introduce dummy or control
-positions for sculpting. This is particularly useful to redefine names
-to generalize a mapping.
+- ``[from]``
+    - The directive is followed by a single line containing an
+      alphanumeric string corresponding to name of the origin
+      (i.e. higher resolution) force field.
+    - ``mandatory``
 
-All geometric modifiers specify a target particle and the control
-particles to use to generate the target particle position. If the
-target particle does not exist, it is created, otherwise its position
-is updated. Except for the assign modifier, the first control particle
-is the anchor to which the target particle is connected and the other
-control particles are called the base particles.
+- ``[to]``
+    - The directive is followed by a single line containing an
+      alphanumeric string corresponding to the name of the target
+      (i.e. higher resolution) force field.
+    - ``mandatory``
 
-The assign modifier sets the position of the target particle to the
-weighted mean of the positions of the control particles.
+- ``[martini]``
+    - The directive is followed by any number of lines. Each line must
+      contain space separated bead names.
+    - ``mandatory``
+- ``[atoms]``
+    - This directive introduces a section that can span multiple lines.
+      Each line within this section must adhere to the following
+      format:
 
-The out modifier sets the position of the target particle as the
-inverse of the resultant vector of the base particles with respect to
-the anchor, scaled to bond length.  The trans modifier sets the
-position of the target particle such that it has a trans configuration
-with respect to the anchor and the base particles, in the order given.
-
-The cis modifier sets the position of the target particle such that it
-has a cis configuration with respect to the anchor and the base
-particles, in the order given.
-
-The chiral modifier allows sculpting chiral geometries in two ways,
-using two base particles or more. When two base particles are given,
-the target particle is positioned at the anchor with the sum of the
-cross product of the base vectors and half the sum of the base vector,
-normalized to bond length. When more base particles are given, the
-target particle is positioned at the anchor using the sum of all cross
-products of neighboring base atoms.
+      - An integer specifying the atom number.
+      - An alphanumeric string corresponding to an atom name in the
+        origin force field.
+      - Any number of bead names. These beads must have been previously
+        listed under the ``[martini]`` directive.
+    - ``mandatory``
+- ``[chiral]``
+    - Contains chirality specifications used for the original backwards
+      program.
+    - ``ignored``
+- ``[trans]``
+    - Contains geometry specifications used for the original backwards
+      program.
+    - ``ignored``
+- ``[out]``
+    - Contains geometry specifications used in the original backwards
+      program.
+    - ``ignored``
 
 
+Example
+^^^^^^^
+
+.. code-block:: plaintext
+
+    [ molecule ]
+    ALA ALA
+    [ martini ]
+    BB SC1
+    [ atoms ]
+     1     N    BB
+     2    HN    BB
+     3    CA    BB
+     5    CB    SC1
+     9     C    BB
+    10     O    BB
+
+
+File Structure (.mapping)
+~~~~~~~~~~~~~~~~~~~~~
+.. _mapping-file-format:
+The file is structured into sections, each beginning with a directive
+enclosed in square brackets (``[]``).
+
+Allowed Directives
+------------------
+
+- ``[modification]``
+    - Marks the beginning of a modification block.
+      This directive does not require any following content.
+    - ``mandatory``
+
+- ``[from]``
+    - Followed by the name of the origin force-field (e.g., amber).
+    - ``mandatory``
+
+- ``[to]``
+    - Followed by the name of the target force-field (e.g., martini3001).
+    - ``mandatory``
+
+- ``[from blocks]`` and ``[to blocks]``
+    - Each followed by an alphanumeric string describing a block name
+      that needs to be modified by the modification at hand.
+    - ``mandatory``
+
+- ``[from nodes]``
+    - Lists all nodes present in the modification description.
+    - ``mandatory``
+
+- ``[from edges]``
+    - Contains all edges between the to-be-modified block and the
+      modification.
+    - ``mandatory``
+
+- ``[mapping]``
+    - Contains pairs of atom names and bead names, describing the
+      actual mapping between the high-resolution and coarse-grained
+      representations of the modification.
+
+Example File
+^^^^^^^^^^^^
+
+Below is an example of a ``.mapping`` file:
+
+.. code-block:: plaintext
+
+    [modification]
+    [from]
+    amber
+    [to]
+    martini3001
+
+    [from blocks]
+    C-ter
+    [to blocks]
+    C-ter
+
+    [from nodes]
+    N
+    HN
+
+    [from edges]
+    HN N
+    N CA
+
+    [mapping]
+    CA BB
+    C  BB
+    O  BB
+    OXT BB
