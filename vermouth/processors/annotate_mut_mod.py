@@ -210,10 +210,12 @@ def annotate_modifications(molecule, modifications, mutations):
                     (mutations, 'mutation', molecule.force_field.blocks)]
 
     residue_graph = make_residue_graph(molecule)
-    for res_idx in residue_graph:
-        for mutmod, key, library in associations:
-            for resspec, mod in mutmod:
+    for mutmod, key, library in associations:
+        for resspec, mod in mutmod:
+            mod_found = False
+            for res_idx in residue_graph:
                 if residue_matches(resspec, residue_graph, res_idx):
+                    mod_found = True
                     if mod != 'none' and mod not in library:
                         raise NameError('{} is not known as a {} for '
                                         'force field {}'
@@ -223,7 +225,10 @@ def annotate_modifications(molecule, modifications, mutations):
                                  _format_resname(res), key, mod)
                     for node_idx in res['graph']:
                         molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
-
+            if mod_found == False:
+                LOGGER.warning('Mutation "{}" not found. '
+                               'Check target resid!'
+                               ''.format(_format_resname(resspec)))
 
 class AnnotateMutMod(Processor):
     """

@@ -183,7 +183,7 @@ def get_attrs(node, attrs):
 def partition_graph(graph, partitions):
     """
     Create a new graph based on `graph`, where nodes are aggregated based on
-    `partitions`, similar to :func:`~networkx.algorithms.minors.quotient_graph`,
+    `partitions`, similar to the networkx `quotient_graph`,
     except that it only accepts pre-made partitions, and edges are not given
     a 'weight' attribute. Much fast than the quotient_graph, since it creates
     edges based on existing edges rather than trying all possible combinations.

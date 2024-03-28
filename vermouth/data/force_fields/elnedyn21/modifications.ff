@@ -22,3 +22,13 @@ BB {"replace": {"atype": "P5", "charge": 0}}
 NH2-ter
 [ atoms ]
 BB {"replace": {"atype": "P5", "charge": 0}}
+
+[ modification ]
+LYS-LSN
+[ atoms ]
+SC2 {"resname": "LYS", "replace": {"atype": "P1", "charge": 0}}
+
+[ modification ]
+LYS-HZ3
+[ atoms ]
+SC2 {"replace": {"resname": "LYS"}}

@@ -36,12 +36,12 @@ def test_is_singleton():
     ('a.txt', ['a.txt', '#a.txt.1#'], ['#a.txt.2#', '#a.txt.1#']),
     ('a.txt', ['a.txt', '#a.txt.2#'], ['#a.txt.1#', '#a.txt.2#']),
 ])
-def test_backup(tmpdir, monkeypatch, name, existing_files, expected):
+def test_backup(tmp_path, monkeypatch, name, existing_files, expected):
     """
     Ensure the DeferredFileWriter backs up existing files correctly, and at the
     correct moment
     """
-    monkeypatch.chdir(tmpdir)
+    monkeypatch.chdir(tmp_path)
     for idx, file in enumerate(existing_files):
         with open(file, 'w') as handle:
             handle.write(str(idx))
@@ -61,11 +61,11 @@ def test_backup(tmpdir, monkeypatch, name, existing_files, expected):
             assert file.read() == str(idx)
 
 
-def test_deferred_writing(tmpdir, monkeypatch):
+def test_deferred_writing(tmp_path, monkeypatch):
     """
     Ensure the DeferredFileWriter writes changes to files at the correct moment
     """
-    monkeypatch.chdir(tmpdir)
+    monkeypatch.chdir(tmp_path)
 
     file_name = Path('my_file.txt')
     writer = DeferredFileWriter()
@@ -75,14 +75,14 @@ def test_deferred_writing(tmpdir, monkeypatch):
     assert not file_name.exists()
     os.chdir('..')
     writer.write()
-    os.chdir(str(tmpdir))
+    os.chdir(tmp_path)
     assert file_name.exists()
     assert file_name.read_text() == 'hello'
 
 
-def test_binary_writing(tmpdir, monkeypatch):
+def test_binary_writing(tmp_path, monkeypatch):
     """Ensure the DeferredFileWriter can write and append to binary files"""
-    monkeypatch.chdir(tmpdir)
+    monkeypatch.chdir(tmp_path)
     file_name = Path('my_file.txt')
     writer = DeferredFileWriter()
     assert not file_name.exists()
@@ -92,7 +92,7 @@ def test_binary_writing(tmpdir, monkeypatch):
     assert not file_name.exists()
     os.chdir('..')
     writer.write()
-    os.chdir(str(tmpdir))
+    os.chdir(tmp_path)
     assert file_name.exists()
     assert file_name.read_text() == 'Hello'
 
@@ -104,9 +104,9 @@ def test_binary_writing(tmpdir, monkeypatch):
     assert file_name.read_text() == 'Hello world!'
 
 
-def test_rw_plus(tmpdir, monkeypatch):
+def test_rw_plus(tmp_path, monkeypatch):
     """Ensure the DeferredFileWriter can deal with mode r+"""
-    monkeypatch.chdir(tmpdir)
+    monkeypatch.chdir(tmp_path)
     path = Path('file.txt')
     path.write_text('123')
     writer = DeferredFileWriter()
@@ -134,9 +134,9 @@ def test_mode_errors(mode, exception):
         writer.open('somefile.txt', mode)
 
 
-def test_append(tmpdir, monkeypatch):
+def test_append(tmp_path, monkeypatch):
     """Ensure the DeferredFileWriter can append"""
-    monkeypatch.chdir(tmpdir)
+    monkeypatch.chdir(tmp_path)
     path = Path('file.txt')
     path.write_text('123')
 
@@ -151,34 +151,34 @@ def test_append(tmpdir, monkeypatch):
     assert path.read_text() == '123abc'
 
 
-def test_closing(tmpdir, monkeypatch):
+def test_closing(tmp_path, monkeypatch):
     """
     Ensure the DeferredFileWriter's close method doesn't prompt writing and
     removes any temporary files.
     """
-    monkeypatch.chdir(tmpdir)
-    tmpdir = Path(str(tmpdir))
+    monkeypatch.chdir(tmp_path)
+    tmp_path = tmp_path
     writer = DeferredFileWriter()
-    monkeypatch.setattr(writer, '_tmpdir', str(tmpdir))
+    monkeypatch.setattr(writer, '_tmpdir', str(tmp_path))
 
-    assert not [p.name for p in tmpdir.iterdir()]
+    assert not [p.name for p in tmp_path.iterdir()]
 
     with writer.open('file.txt', 'w') as file:
         file.write('abc')
 
     writer.write()
 
-    assert [p.name for p in tmpdir.iterdir()] == ['file.txt']
+    assert [p.name for p in tmp_path.iterdir()] == ['file.txt']
 
     with writer.open('file2.txt', 'w') as file:
         file.write('abc')
 
     writer.close()
-    assert [p.name for p in tmpdir.iterdir()] == ['file.txt']
+    assert [p.name for p in tmp_path.iterdir()] == ['file.txt']
 
 
-def test_reopen(tmpdir, monkeypatch):
-    monkeypatch.chdir(tmpdir)
+def test_reopen(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     path = Path('file.txt')
     writer = DeferredFileWriter()
 

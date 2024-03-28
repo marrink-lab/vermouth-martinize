@@ -18,10 +18,13 @@ molecule based on it's element.
 
 
 from .processor import Processor
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 # TODO: make the masses part of the forcefield
-ATOM_MASSES = {'H': 1, 'C': 12, 'N': 14, 'O': 16, 'S': 32, 'P': 31, 'M': 0}
-
+ATOM_MASSES = {'H': 1, 'C': 12, 'N': 14, 'O': 16, 'S': 32, 'P': 31}
+DEFAULT_MASS = 30
 
 def attach_mass(molecule, attribute='mass'):
     """
@@ -36,7 +39,11 @@ def attach_mass(molecule, attribute='mass'):
         The attribute the mass is assigned to.
     """
     for node in molecule.nodes.values():
-        node[attribute] = ATOM_MASSES[node['element']]
+        element = node['element']
+        if element not in ATOM_MASSES:
+            LOGGER.info("Cannot find a mass for element {}. We assume it's some"
+                        " metal, and will set its mass to {} amu.", element, DEFAULT_MASS)
+        node[attribute] = ATOM_MASSES.get(node['element'], DEFAULT_MASS)
 
 
 class AttachMass(Processor):

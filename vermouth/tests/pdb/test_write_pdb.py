@@ -56,7 +56,7 @@ def dummy_system():
         {'atomname': 'E', 'resname': 'A', 'resid': 4, },
         {'atomname': 'F', 'resname': 'B', 'resid': 4, },
         {'atomname': 'G', 'resname': 'B', 'resid': 4, },
-        {'atomname': 'H', 'resname': 'B', 'resid': 4, },
+        {'atomname': 'H', 'resname': 'B', 'resid': 4, 'insertion_code': 'A'},
     )
     edges = [(0, 1), (2, 3), (4, 5), (5, 6), (5, 7)]
     graph = nx.Graph()
@@ -100,8 +100,8 @@ TER       6      A       3
 ATOM      7 E    A       4      10.000  20.000 -30.000  1.00  0.00          E   
 ATOM      8 F    B       4      10.000  20.000 -30.000  1.00  0.00          F   
 ATOM      9 G    B       4      10.000  20.000 -30.000  1.00  0.00          G   
-ATOM     10 H    B       4      10.000  20.000 -30.000  1.00  0.00          H   
-TER      11      B       4 
+ATOM     10 H    B       4A     10.000  20.000 -30.000  1.00  0.00          H   
+TER      11      B       4A
 CONECT    1    2
 CONECT    4    5
 CONECT    7    8
@@ -141,8 +141,8 @@ TER       6      A       3
 ATOM      7 E    A       4      10.000  20.000 -30.000  1.00  0.00          E   
 ATOM      8 F    B       4      10.000  20.000 -30.000  1.00  0.00          F   
 ATOM      9 G    B       4      10.000  20.000 -30.000  1.00  0.00          G   
-ATOM     10 H    B       4      10.000  20.000 -30.000  1.00  0.00          H   
-TER      11      B       4 
+ATOM     10 H    B       4A     10.000  20.000 -30.000  1.00  0.00          H   
+TER      11      B       4A
 END
 '''
     assert pdb_found.strip() == expected.strip()

@@ -114,6 +114,8 @@ def _old_atomname_match(node1, node2):
     node2 = node2.copy()
     node1['_name'] = name1
     node2['_name'] = name2
+    if 'order' in node2 and 'order' not in node1:
+        node1['order'] = node2['order']
     del node1['atomname']
     del node2['atomname']
     return node_matcher(node1, node2)
@@ -403,6 +405,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     mol_to_mod, modification, references = match
     LOGGER.info('Applying modification mapping {}', modification.name, type='general')
     graph_out.citations.update(modification.citations)
+
     mod_to_mol = defaultdict(dict)
     for mol_idx, mod_idxs in mol_to_mod.items():
         for mod_idx in mod_idxs:
@@ -474,7 +477,16 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             assert len(atoms) == len(interaction.atoms)
             interaction = interaction._replace(atoms=atoms)
             applied_interactions[interaction_type][tuple(atoms)].append(modification)
-            graph_out.add_interaction(interaction_type, **interaction._asdict())
+            graph_out.add_or_replace_interaction(interaction_type, **interaction._asdict())
+
+    # Some jank needed here, since modification node indices are integers
+    mod_atom_name_to_out = {}
+    for mod_idx in modification.nodes:
+        name = modification.nodes[mod_idx]['atomname']
+        mod_atom_name_to_out[name] = mod_to_out[mod_idx]
+    for loglevel, entries in modification.log_entries.items():
+        for entry in entries:
+            graph_out.log_entries[loglevel][entry] += [mod_atom_name_to_out]
     return dict(applied_interactions), new_references
 
 
@@ -545,6 +557,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
     # Transferring the meta maybe should be a copy, or a deep copy...
     # If it breaks we look at this line.
     graph_out = Molecule(force_field=to_ff, meta=molecule.meta)
+    graph_out.citations.update(molecule.citations)
     mappings = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
     block_matches = []
     for mapping in mappings:

@@ -36,26 +36,35 @@ from vermouth.dssp.dssp import (
     AnnotateMartiniSecondaryStructures,
     AnnotateResidues,
 )
-from vermouth.log_helpers import (StyleAdapter, BipolarFormatter,
-                                  CountingHandler, TypeAdapter,
-                                  ignore_warnings_and_count,)
+from vermouth.log_helpers import (
+    StyleAdapter,
+    BipolarFormatter,
+    CountingHandler,
+    TypeAdapter,
+    ignore_warnings_and_count,
+)
 from vermouth import selectors
 from vermouth.map_input import (
     read_mapping_directory,
     generate_all_self_mappings,
-    combine_mappings
+    combine_mappings,
 )
+from vermouth.rcsu.contact_map import read_go_map
+from vermouth.rcsu.go_pipeline import GoPipeline
 from vermouth.citation_parser import citation_formatter
+from vermouth.gmx.topology import write_gmx_topology
 
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
 # not work as intended. Investigation required.
 
-LOGGER = TypeAdapter(logging.getLogger('vermouth'))
+LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
-PRETTY_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {type} - {message}',
-                                     style='{')
-DETAILED_FORMATTER = logging.Formatter(fmt='{levelname:>8} - {type} - {name} - {message}',
-                                       style='{')
+PRETTY_FORMATTER = logging.Formatter(
+    fmt="{levelname:>8} - {type} - {message}", style="{"
+)
+DETAILED_FORMATTER = logging.Formatter(
+    fmt="{levelname:>8} - {type} - {name} - {message}", style="{"
+)
 
 COUNTER = CountingHandler()
 
@@ -63,17 +72,16 @@ COUNTER = CountingHandler()
 COUNTER.setLevel(logging.WARNING)
 
 CONSOLE_HANDLER = logging.StreamHandler()
-FORMATTER = BipolarFormatter(DETAILED_FORMATTER,
-                             PRETTY_FORMATTER,
-                             logging.DEBUG,
-                             logger=LOGGER)
+FORMATTER = BipolarFormatter(
+    DETAILED_FORMATTER, PRETTY_FORMATTER, logging.DEBUG, logger=LOGGER
+)
 CONSOLE_HANDLER.setFormatter(FORMATTER)
 LOGGER.addHandler(CONSOLE_HANDLER)
 LOGGER.addHandler(COUNTER)
 
 LOGGER = StyleAdapter(LOGGER)
 
-VERSION = 'martinize with vermouth {}'.format(vermouth.__version__)
+VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 
 
 def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
@@ -86,25 +94,37 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
     """
     system = vermouth.System()
     file_extension = path.suffix.upper()[1:]  # We do not keep the dot
-    if file_extension in ['PDB', 'ENT']:
-        vermouth.PDBInput(str(path), exclude=ignore_resnames, ignh=ignh,
-                          modelidx=modelidx).run_system(system)
-    elif file_extension in ['GRO']:
-        vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(system)
+    if file_extension in ["PDB", "ENT"]:
+        vermouth.PDBInput(
+            str(path), exclude=ignore_resnames, ignh=ignh, modelidx=modelidx
+        ).run_system(system)
+    elif file_extension in ["GRO"]:
+        vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(
+            system
+        )
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
 
 
-def pdb_to_universal(system, delete_unknown=False, force_field=None,
-                     modifications=None, mutations=None,
-                     bonds_from_name=True, bonds_from_dist=True, bonds_fudge=1,
-                     write_graph=None, write_repair=None, write_canon=None):
+def pdb_to_universal(
+    system,
+    delete_unknown=False,
+    force_field=None,
+    modifications=None,
+    mutations=None,
+    bonds_from_name=True,
+    bonds_from_dist=True,
+    bonds_fudge=1,
+    write_graph=None,
+    write_repair=None,
+    write_canon=None,
+):
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
     if force_field is None:
-        force_field = vermouth.forcefield.get_native_force_field('charmm')
+        force_field = vermouth.forcefield.get_native_force_field("charmm")
     if modifications is None:
         modifications = []
     if mutations is None:
@@ -112,31 +132,41 @@ def pdb_to_universal(system, delete_unknown=False, force_field=None,
     canonicalized = system.copy()
     canonicalized.force_field = force_field
 
-    LOGGER.info('Guessing the bonds.', type='step')
-    vermouth.MakeBonds(allow_name=bonds_from_name,
-                       allow_dist=bonds_from_dist,
-                       fudge=bonds_fudge).run_system(canonicalized)
+    LOGGER.info("Guessing the bonds.", type="step")
+    vermouth.MakeBonds(
+        allow_name=bonds_from_name, allow_dist=bonds_from_dist, fudge=bonds_fudge
+    ).run_system(canonicalized)
     vermouth.MergeNucleicStrands().run_system(canonicalized)
     if write_graph is not None:
-        vermouth.pdb.write_pdb(canonicalized, str(write_graph), omit_charges=True,
-                               defer_writing=False)
+        vermouth.pdb.write_pdb(
+            canonicalized, str(write_graph), omit_charges=True, defer_writing=False
+        )
 
-    LOGGER.debug('Annotating required mutations and modifications.', type='step')
+    LOGGER.debug("Annotating required mutations and modifications.", type="step")
     vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
-    LOGGER.info('Repairing the graph.', type='step')
-    vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(canonicalized)
+    LOGGER.info("Repairing the graph.", type="step")
+    vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(
+        canonicalized
+    )
     if write_repair is not None:
-        vermouth.pdb.write_pdb(canonicalized, str(write_repair),
-                               omit_charges=True, nan_missing_pos=True, 
-                               defer_writing=False)
-    LOGGER.info('Dealing with modifications.', type='step')
+        vermouth.pdb.write_pdb(
+            canonicalized,
+            str(write_repair),
+            omit_charges=True,
+            nan_missing_pos=True,
+            defer_writing=False,
+        )
+    LOGGER.info("Dealing with modifications.", type="step")
     vermouth.CanonicalizeModifications().run_system(canonicalized)
     if write_canon is not None:
-        vermouth.pdb.write_pdb(canonicalized, str(write_canon),
-                               omit_charges=True, nan_missing_pos=True,
-                               defer_writing=False)
-    vermouth.AttachMass(attribute='mass').run_system(canonicalized)
-    vermouth.SortMoleculeAtoms().run_system(canonicalized) # was system
+        vermouth.pdb.write_pdb(
+            canonicalized,
+            str(write_canon),
+            omit_charges=True,
+            nan_missing_pos=True,
+            defer_writing=False,
+        )
+    vermouth.AttachMass(attribute="mass").run_system(canonicalized)
     return canonicalized
 
 
@@ -144,105 +174,22 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     """
     Convert a system from one force field to an other at lower resolution.
     """
-    LOGGER.info('Creating the graph at the target resolution.', type='step')
-    vermouth.DoMapping(mappings=mappings,
-                       to_ff=to_ff,
-                       delete_unknown=delete_unknown,
-                       attribute_keep=('cgsecstruct', 'chain'),
-                       attribute_must=('resname',),
-                       attribute_stash=('resid',)).run_system(system)
-    LOGGER.info('Averaging the coordinates.', type='step')
+    LOGGER.info("Creating the graph at the target resolution.", type="step")
+    vermouth.DoMapping(
+        mappings=mappings,
+        to_ff=to_ff,
+        delete_unknown=delete_unknown,
+        attribute_keep=("cgsecstruct", "chain"),
+        attribute_must=("resname",),
+        attribute_stash=("resid",),
+    ).run_system(system)
+    LOGGER.info("Averaging the coordinates.", type="step")
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
-    LOGGER.info('Applying the links.', type='step')
+    LOGGER.info("Applying the links.", type="step")
     vermouth.DoLinks().run_system(system)
-    LOGGER.info('Placing the charge dummies.', type='step')
+    LOGGER.info("Placing the charge dummies.", type="step")
     vermouth.LocateChargeDummies().run_system(system)
     return system
-
-
-def write_gmx_topology(system, top_path, defines=(), header=()):
-    """
-    Writes a Gromacs .top file for the specified system.
-    """
-    if not system.molecules:
-        raise ValueError('No molecule in the system. Nothing to write.')
-
-    # Write the ITP files for the molecule types, and prepare writing the
-    # [ molecules ] section of the top file.
-    # * We write one ITP file for each different moltype in the system, the
-    #   moltype being defined by the name provided under the "moltype" meta of
-    #   the molecules. If more than one molecule share the same moltype, we use
-    #   the first one to write the ITP file.
-    moltype_written = set()
-    # * We keep track of the length of the longer moltype name, to align the
-    #   [ molecules ] section.
-    max_name_length = 0
-    # * We keep track of groups of successive molecules with the same moltypes.
-    moltype_count = []  # items will be [moltype, number of molecules]
-
-    # Iterate over groups of successive molecules with the same moltypes. We
-    # shall *NOT* sort the molecules before hand, as groups of successive
-    # molecules with the same moltype can be interupted by other moltypes, and
-    # we want to reflect these interuptions in the [ molecules ] section of the
-    # top file.
-    molecule_groups = itertools.groupby(system.molecules, key=lambda x: x.meta['moltype'])
-    for moltype, molecules in molecule_groups:
-        molecule = next(molecules)
-        if moltype not in moltype_written:
-            # A given moltype can appear more than once in the sequence of
-            # molecules, without being uninterupted by other moltypes. Even in
-            # that case, we want to write the ITP only once.
-            with deferred_open('{}.itp'.format(moltype), 'w') as outfile:
-                # here we format and merge all citations
-                header[-1] = header[-1]+"\n"
-                header.append("Pleas cite the following papers:")
-                for citation in molecule.citations:
-                    cite_string =  citation_formatter(molecule.force_field.citations[citation])
-                    LOGGER.info("Please cite: " + cite_string)
-                    header.append(cite_string)
-                vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
-            this_moltype_len = len(molecule.meta['moltype'])
-            if this_moltype_len > max_name_length:
-                max_name_length = this_moltype_len
-            moltype_written.add(moltype)
-        # We already removed one element from the "molecules" generator, do not
-        # forget to count it in the number of molecules in that group.
-        moltype_count.append([moltype, 1 + len(list(molecules))])
-
-    # Write the top file
-    template = textwrap.dedent("""\
-        {defines}
-        #include "martini.itp"
-        {includes}
-
-        [ system ]
-        Title of the system
-
-        [ molecules ]
-        {molecules}
-    """)
-    include_string = '\n'.join(
-        '#include "{}.itp"'.format(molecule_type)
-        for molecule_type, _ in moltype_count
-    )
-    molecule_string = '\n'.join(
-        '{mtype:<{length}}    {num}'
-        .format(mtype=mtype, num=num, length=max_name_length)
-        for mtype, num in moltype_count
-    )
-    define_string = '\n'.join(
-        '#define {}'.format(define) for define in defines
-    )
-    with deferred_open(str(top_path), 'w') as outfile:
-        outfile.write(
-            textwrap.dedent(
-                template.format(
-                    includes=include_string,
-                    molecules=molecule_string,
-                    defines=define_string,
-                )
-            )
-        )
 
 
 def _cys_argument(value):
@@ -271,12 +218,14 @@ def _cys_argument(value):
         result = float(value)
     except ValueError:
         lowered = value.lower()
-        if lowered in ('auto', 'none'):
+        if lowered in ("auto", "none"):
             return lowered
         raise argparse.ArgumentError(
-            argument='-cys',
-            message=('The value of the "cys" option must be "auto", "none", '
-                     'or a distance in nanometers.'),
+            argument="-cys",
+            message=(
+                'The value of the "cys" option must be "auto", "none", '
+                "or a distance in nanometers."
+            ),
         )
     else:
         return result
@@ -309,13 +258,15 @@ def maxwarn(value):
     ------
     argparse.ArgumentTypeError
     """
-    msg = ("Values for the -maxwarn option must be the name of a "
-           "warning type, a number, or following the format "
-           "'<warning-type>:<count>' where <warning-type> is the name "
-           "of the warning type to ignore, and <count> is the number of "
-           "warning of that type to ignore. "
-           "'{value}' is not a valid value.".format(value=value))
-    splitted = value.split(':')
+    msg = (
+        "Values for the -maxwarn option must be the name of a "
+        "warning type, a number, or following the format "
+        "'<warning-type>:<count>' where <warning-type> is the name "
+        "of the warning type to ignore, and <count> is the number of "
+        "warning of that type to ignore. "
+        "'{value}' is not a valid value.".format(value=value)
+    )
+    splitted = value.split(":")
     if len(splitted) == 1:
         try:
             count = int(value)
@@ -334,6 +285,7 @@ def maxwarn(value):
             return (splitted[0], count)
     raise argparse.ArgumentTypeError(msg)
 
+
 def entry():
     """
     Parses commandline arguments and performs the logic.
@@ -341,183 +293,443 @@ def entry():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument('-V', '--version', action='version', version=VERSION)
+    parser.add_argument("-V", "--version", action="version", version=VERSION)
 
-    file_group = parser.add_argument_group('Input and output files')
-    file_group.add_argument('-f', dest='inpath', required=False, type=Path,
-                            help='Input file (PDB|GRO)')
-    file_group.add_argument('-x', dest='outpath', required=False, type=Path,
-                            help='Output coarse grained structure (PDB)')
-    file_group.add_argument('-o', dest='top_path', type=Path,
-                            help='Output topology (TOP)')
-    file_group.add_argument('-sep', dest='keep_duplicate_itp',
-                            action='store_true', default=False,
-                            help='Write separate topologies for identical chains')
-    file_group.add_argument('-merge', dest='merge_chains',
-                            type=lambda x: x.split(','), action='append',
-                            help='Merge chains: e.g. -merge A,B,C (+)')
-    file_group.add_argument('-resid', dest='resid_handling',
-                            type=str, default='mol',
-                            help="How to handle resid. Choice of mol or input.\n"
-                                 "mol: resids are numbered from 1 to n for each molecule\n"
-                                 "input: resids are the same as in the input pdb")
-    file_group.add_argument('-ignore', dest='ignore_res', nargs='+',
-                            default=[], action='append', type=lambda x: x.split(','),
-                            help='Ignore residues with that name: e.g. '
-                            '-ignore HOH,LIG (+)')
-    file_group.add_argument('-ignh', dest='ignore_h', default=False,
-                            action='store_true',
-                            help='Ignore all Hydrogen atoms in the input file')
-    file_group.add_argument('-model', dest='modelidx', default=None, type=int,
-                            help='Which MODEL to select. Only meaningful for'
-                            ' PDB files.')
-    file_group.add_argument('-bonds-from', dest='bonds_from',
-                            choices=['name', 'distance', 'none', 'both'],
-                            default='both',
-                            help="How to determine connectivity in the input. "
-                            "If 'none', only bonds from the input file (CONECT)"
-                            " will be used.")
-    file_group.add_argument('-bonds-fudge', dest='bonds_fudge', type=float,
-                            default=1.2, help='Factor with which Van der Waals'
-                            ' radii should be scaled when determining bonds '
-                            'based on distances.')
+    file_group = parser.add_argument_group("Input and output files")
+    file_group.add_argument(
+        "-f", dest="inpath", required=False, type=Path, help="Input file (PDB|GRO)"
+    )
+    file_group.add_argument(
+        "-x",
+        dest="outpath",
+        required=False,
+        type=Path,
+        help="Output coarse grained structure (PDB)",
+    )
+    file_group.add_argument(
+        "-o", dest="top_path", type=Path, help="Output topology (TOP)"
+    )
+    file_group.add_argument(
+        "-sep",
+        dest="keep_duplicate_itp",
+        action="store_true",
+        default=False,
+        help="Write separate topologies for identical chains",
+    )
+    file_group.add_argument(
+        "-merge",
+        dest="merge_chains",
+        type=lambda x: x.split(","),
+        action="append",
+        help="Merge chains: e.g. -merge A,B,C (+)",
+    )
+    file_group.add_argument(
+        "-resid",
+        dest="resid_handling",
+        type=str,
+        default="mol",
+        help="How to handle resid. Choice of mol or input.\n"
+        "mol: resids are numbered from 1 to n for each molecule\n"
+        "input: resids are the same as in the input pdb",
+    )
+    file_group.add_argument(
+        "-ignore",
+        dest="ignore_res",
+        nargs="+",
+        default=[],
+        action="append",
+        type=lambda x: x.split(","),
+        help="Ignore residues with that name: e.g. " "-ignore HOH,LIG (+)",
+    )
+    file_group.add_argument(
+        "-ignh",
+        dest="ignore_h",
+        default=False,
+        action="store_true",
+        help="Ignore all Hydrogen atoms in the input file",
+    )
+    file_group.add_argument(
+        "-model",
+        dest="modelidx",
+        default=None,
+        type=int,
+        help="Which MODEL to select. Only meaningful for" " PDB files.",
+    )
+    file_group.add_argument(
+        "-bonds-from",
+        dest="bonds_from",
+        choices=["name", "distance", "none", "both"],
+        default="both",
+        help="How to determine connectivity in the input. "
+        "If 'none', only bonds from the input file (CONECT)"
+        " will be used.",
+    )
+    file_group.add_argument(
+        "-bonds-fudge",
+        dest="bonds_fudge",
+        type=float,
+        default=1.2,
+        help="Factor with which Van der Waals"
+        " radii should be scaled when determining bonds "
+        "based on distances.",
+    )
 
-    ff_group = parser.add_argument_group('Force field selection')
-    ff_group.add_argument('-ff', dest='to_ff', default='martini3001',
-                          help='Which forcefield to use')
-    ff_group.add_argument('-from', dest='from_ff', default='charmm',
-                          help='Force field of the original structure.')
-    ff_group.add_argument('-ff-dir', dest='extra_ff_dir', action='append',
-                          type=Path, default=[],
-                          help='Additional repository for custom force fields.')
-    ff_group.add_argument('-map-dir', dest='extra_map_dir', action='append',
-                          type=Path, default=[],
-                          help='Additional repository for mapping files.')
-    ff_group.add_argument('-list-ff', action='store_true', dest='list_ff',
-                          help='List all known force fields, and exit.')
-    ff_group.add_argument('-list-blocks', action='store_true', dest='list_blocks',
-                          help='List all Blocks and Modifications known to the'
-                          ' force field, and exit.')
+    ff_group = parser.add_argument_group("Force field selection")
+    ff_group.add_argument(
+        "-ff", dest="to_ff", default="martini3001", help="Which forcefield to use"
+    )
+    ff_group.add_argument(
+        "-from",
+        dest="from_ff",
+        default="charmm",
+        help="Force field of the original structure.",
+    )
+    ff_group.add_argument(
+        "-ff-dir",
+        dest="extra_ff_dir",
+        action="append",
+        type=Path,
+        default=[],
+        help="Additional repository for custom force fields.",
+    )
+    ff_group.add_argument(
+        "-map-dir",
+        dest="extra_map_dir",
+        action="append",
+        type=Path,
+        default=[],
+        help="Additional repository for mapping files.",
+    )
+    ff_group.add_argument(
+        "-list-ff",
+        action="store_true",
+        dest="list_ff",
+        help="List all known force fields, and exit.",
+    )
+    ff_group.add_argument(
+        "-list-blocks",
+        action="store_true",
+        dest="list_blocks",
+        help="List all Blocks and Modifications known to the" " force field, and exit.",
+    )
 
-    posres_group = parser.add_argument_group('Position restraints')
-    posres_group.add_argument('-p', dest='posres', type=str.lower,
-                              choices=('none', 'all', 'backbone'), default='none',
-                              help='Output position restraints (none/all/backbone)')
-    posres_group.add_argument('-pf', dest='posres_fc', type=float, default=1000,
-                              help='Position restraints force constant in kJ/mol/nm^2')
-    secstruct_group = parser.add_argument_group('Secondary structure handling')
+    posres_group = parser.add_argument_group("Position restraints")
+    posres_group.add_argument(
+        "-p",
+        dest="posres",
+        type=str.lower,
+        choices=("none", "all", "backbone"),
+        default="none",
+        help="Output position restraints (none/all/backbone)",
+    )
+    posres_group.add_argument(
+        "-pf",
+        dest="posres_fc",
+        type=float,
+        default=1000,
+        help="Position restraints force constant in kJ/mol/nm^2",
+    )
+    secstruct_group = parser.add_argument_group("Secondary structure handling")
     secstruct_exclusion = secstruct_group.add_mutually_exclusive_group()
-    secstruct_exclusion.add_argument('-dssp', nargs='?', const='dssp',
-                                     help='DSSP executable for determining structure')
-    secstruct_exclusion.add_argument('-ss', dest='ss', type=str.upper,
-                                     metavar='SEQUENCE',
-                                     help=('Manually set the secondary '
-                                           'structure of the proteins.'))
-    secstruct_exclusion.add_argument('-collagen', action='store_true', default=False,
-                                     help='Use collagen parameters')
-    secstruct_group.add_argument('-ed', dest='extdih', action='store_true', default=False,
-                                 help=('Use dihedrals for extended regions '
-                                       'rather than elastic bonds'))
+    secstruct_exclusion.add_argument(
+        "-dssp",
+        nargs="?",
+        const=True,
+        help="DSSP executable for determining structure. If this flag is given"
+             "but no executable is specified, the mdtraj library will be used"
+             "to compute the secondary structure, if it can be imported.",
+    )
+    secstruct_exclusion.add_argument(
+        "-ss",
+        dest="ss",
+        type=str.upper,
+        metavar="SEQUENCE",
+        help=("Manually set the secondary " "structure of the proteins."),
+    )
+    secstruct_exclusion.add_argument(
+        "-collagen", action="store_true", default=False, help="Use collagen parameters"
+    )
+    secstruct_group.add_argument(
+        "-ed",
+        dest="extdih",
+        action="store_true",
+        default=False,
+        help=("Use dihedrals for extended regions " "rather than elastic bonds"),
+    )
 
-    rb_group = parser.add_argument_group('Protein elastic network')
-    rb_group.add_argument('-elastic', action='store_true', default=False,
-                          help='Write elastic bonds')
-    rb_group.add_argument('-ef', dest='rb_force_constant', type=float, default=500,
-                          help='Elastic bond force constant Fc in kJ/mol/nm^2')
-    rb_group.add_argument('-el', dest='rb_lower_bound', type=float, default=0,
-                          help='Elastic bond lower cutoff: F = Fc if rij < lo')
-    rb_group.add_argument('-eu', dest='rb_upper_bound', type=float, default=0.9,
-                          help='Elastic bond upper cutoff: F = 0  if rij > up')
-    rb_group.add_argument('-ermd', dest='res_min_dist', type=int,
-                          help=('The minimum separation between two residues to have an RB '
-                                'the default value is set by the force-field.'),
-                          default=None)
-    rb_group.add_argument('-ea', dest='rb_decay_factor', type=float, default=0,
-                          help='Elastic bond decay factor a')
-    rb_group.add_argument('-ep', dest='rb_decay_power', type=float, default=1,
-                          help='Elastic bond decay power p')
-    rb_group.add_argument('-em', dest='rb_minimum_force', type=float, default=0,
-                          help='Remove elastic bonds with force constant lower than this')
-    rb_group.add_argument('-eb', dest='rb_selection',
-                          type=lambda x: x.split(','), default=None,
-                          help='Comma separated list of bead names for elastic bonds')
-    rb_group.add_argument('-eunit', dest='rb_unit', default='molecule',
-                          choices=['chain', 'molecule', 'all'],
-                          help=('Establish what is the structural unit for the '
-                                'elastic network. Bonds are only created within'
-                                ' a unit.'))
-    rb_group.add_argument('-region', dest='rb_region', default='molecule',
-                          help=('Apply rubber bands only within the specified regions. '
-                                'The format is <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...'
-                                'Start and end resids are included'))
-    go_group = parser.add_argument_group('Virtual site based GoMartini')
-    go_group.add_argument('-govs-includes', action='store_true', default=False,
-                          help='Write include statements to use Vitrual Site Go Martini.')
-    go_group.add_argument('-govs-moltype', default='molecule_0',
-                          help=('Set the name of the molecule when using '
-                                'Virtual Sites GoMartini.'))
-    prot_group = parser.add_argument_group('Protein description')
-    prot_group.add_argument('-scfix', dest='scfix',
-                            action='store_true', default=False,
-                            help='Apply side chain corrections.')
-    prot_group.add_argument('-cys', dest='cystein_bridge',
-                            type=_cys_argument,
-                            default='none', help='Cystein bonds')
-    prot_group.add_argument('-mutate', dest='mutations', action='append',
-                            type=lambda s: s.split(':'), default=[],
-                            help='Mutate a residue. Desired mutation is '
-                            'specified as, e.g. A-PHE45:ALA. The format is '
-                            '<chain>-<resname><resid>:<new resname>. Elements '
-                            'of the specification can be omitted as required.')
-    prot_group.add_argument('-modify', dest='modifications', action='append',
-                            type=lambda s: s.split(':'), default=[],
-                            help='Add a modification to a residue. Desired '
-                            'modification is specified as, e.g. A-ASP45:ASP0. '
-                            'The format is <chain>-<resname><resid>:<modification>.'
-                            ' Elements of the specification can be omitted as '
-                            'required.')
-    prot_group.add_argument('-nter', dest='modifications', action='append',
-                            type=lambda s: ['nter', s], default=[],
-                            help='Shorthand for patching N-termini. An '
-                            'N-terminus is defined as a residue which is '
-                            'connected to 1 other residue, and has the highest '
-                            'resid.')
-    prot_group.add_argument('-cter', dest='modifications', action='append',
-                            type=lambda s: ['cter', s], default=[],
-                            help='Shorthand for patching C-termini. A '
-                            'C-terminus is defined as a residue which is '
-                            'connected to 1 other residue, and has the lowest '
-                            'resid.')
+    rb_group = parser.add_argument_group("Protein elastic network")
+    rb_group.add_argument(
+        "-elastic", action="store_true", default=False, help="Write elastic bonds"
+    )
+    rb_group.add_argument(
+        "-ef",
+        dest="rb_force_constant",
+        type=float,
+        default=500,
+        help="Elastic bond force constant Fc in kJ/mol/nm^2",
+    )
+    rb_group.add_argument(
+        "-el",
+        dest="rb_lower_bound",
+        type=float,
+        default=0,
+        help="Elastic bond lower cutoff: F = Fc if rij < lo",
+    )
+    rb_group.add_argument(
+        "-eu",
+        dest="rb_upper_bound",
+        type=float,
+        default=0.9,
+        help="Elastic bond upper cutoff: F = 0  if rij > up",
+    )
+    rb_group.add_argument(
+        "-ermd",
+        dest="res_min_dist",
+        type=int,
+        help=(
+            "The minimum separation between two residues to have an RB "
+            "the default value is set by the force-field."
+        ),
+        default=None,
+    )
+    rb_group.add_argument(
+        "-ea",
+        dest="rb_decay_factor",
+        type=float,
+        default=0,
+        help="Elastic bond decay factor a",
+    )
+    rb_group.add_argument(
+        "-ep",
+        dest="rb_decay_power",
+        type=float,
+        default=1,
+        help="Elastic bond decay power p",
+    )
+    rb_group.add_argument(
+        "-em",
+        dest="rb_minimum_force",
+        type=float,
+        default=0,
+        help="Remove elastic bonds with force constant lower than this",
+    )
+    rb_group.add_argument(
+        "-eb",
+        dest="rb_selection",
+        type=lambda x: x.split(","),
+        default=None,
+        help="Comma separated list of bead names for elastic bonds",
+    )
+    rb_group.add_argument(
+        "-eunit",
+        dest="rb_unit",
+        default="molecule",
+        help=(
+            "Establish what is the structural unit for the "
+            "elastic network. Bonds are only created within"
+            " a unit. Options are molecule, chain, all, or a"
+            "specified region defined by resids, with following"
+            "format: <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>..."
+        ),
+    )
+    go_group = parser.add_argument_group("Virtual site based GoMartini")
+    go_group.add_argument(
+        "-go",
+        dest="go",
+        required=False,
+        type=Path,
+        default=None,
+        help="Contact map to be used for the Martini Go model."
+             "Currently, only one format is supported. See docs.",
+    )
+    go_group.add_argument(
+        "-go-eps",
+        dest="go_eps",
+        type=float,
+        default=9.414,
+        help=("The strength of the Go model structural bias in kJ/mol."),
+    )
+    go_group.add_argument(
+        "-go-moltype",
+        dest="govs_moltype",
+        default="molecule_0",
+        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
+    )
+    go_group.add_argument(
+        "-go-low",
+        dest="go_low",
+        type=float,
+        default=0.3,
+        help=("Minimum distance (nm) below which contacts are removed."),
+    )
+    go_group.add_argument(
+        "-go-up",
+        dest="go_up",
+        type=float,
+        default=1.1,
+        help=("Maximum distance (nm) above which contacts are removed."),
+    )
+    go_group.add_argument(
+        "-go-res-dist",
+        dest="go_res_dist",
+        type=int,
+        default=3,
+        help=("Minimum graph distance (similar sequence distance) below which"
+              "contacts are removed. "),
+    )
+
+    water_group = parser.add_argument_group("Apply water bias.")
+    water_group.add_argument(
+        "-water-bias",
+        dest="water_bias",
+        action="store_true",
+        default=False,
+        help=("Automatically apply water bias to different secondary structure elements."),
+    )
+    water_group.add_argument(
+        "-water-bias-eps",
+        dest="water_bias_eps",
+        nargs='+',
+        type=lambda s: s.split(":"),
+        default=[],
+        help=("Define the strength of the water bias by secondary structure type. "
+              "For example, use `H:3.6 C:2.1` to bias helixes and coils. "
+              "Using the idr option (e.g. idr:2.1) intrinsically disordered regions "
+              "are biased seperately."),
+    )
+    water_group.add_argument(
+        "-id-regions",
+        dest="water_idrs",
+        type=lambda s: s.split(":"),
+        default=[],
+        nargs='+',
+        help=("Intrinsically disordered regions specified by resid."
+              "These parts are biased differently when applying a water bias."
+              "format: <start_resid_1>:<end_resid_1> <start_resid_2>:<end_resid_2>..."
+             ),
+    )
+
+
+    prot_group = parser.add_argument_group("Protein description")
+    prot_group.add_argument(
+        "-scfix",
+        dest="scfix",
+        action="store_true",
+        default=False,
+        help="Apply side chain corrections.",
+    )
+    prot_group.add_argument(
+        "-cys",
+        dest="cystein_bridge",
+        type=_cys_argument,
+        default="none",
+        help="Cystein bonds",
+    )
+    prot_group.add_argument(
+        "-mutate",
+        dest="mutations",
+        action="append",
+        type=lambda s: s.split(":"),
+        default=[],
+        help="Mutate a residue. Desired mutation is "
+        "specified as, e.g. A-PHE45:ALA. The format is "
+        "<chain>-<resname><resid>:<new resname>. Elements "
+        "of the specification can be omitted as required.",
+    )
+    prot_group.add_argument(
+        "-modify",
+        dest="modifications",
+        action="append",
+        type=lambda s: s.split(":"),
+        default=[],
+        help="Add a modification to a residue. Desired "
+        "modification is specified as, e.g. A-ASP45:ASP0. "
+        "The format is <chain>-<resname><resid>:<modification>."
+        " Elements of the specification can be omitted as "
+        "required.",
+    )
+    prot_group.add_argument(
+        "-nter",
+        dest="modifications",
+        action="append",
+        type=lambda s: ["nter", s],
+        default=[],
+        help="Shorthand for patching N-termini. An "
+        "N-terminus is defined as a residue which is "
+        "connected to 1 other residue, and has the highest "
+        "resid.",
+    )
+    prot_group.add_argument(
+        "-cter",
+        dest="modifications",
+        action="append",
+        type=lambda s: ["cter", s],
+        default=[],
+        help="Shorthand for patching C-termini. A "
+        "C-terminus is defined as a residue which is "
+        "connected to 1 other residue, and has the lowest "
+        "resid.",
+    )
     # Unfortunately there's no action=extend_const. append_const *almost* does
     # what we need, but it makes the resulting list too deep:
     # [[['cter', 'COOH-ter'], ['nter', 'NH2-ter']], ['ASP3', 'ASP0']]
-    prot_group.add_argument('-nt', dest='neutral_termini',
-                            action='store_true', default=False,
-                            help='Set neutral termini (charged is default). '
-                            'Alias for "-nter NH2-ter -cter COOH-ter"')
+    prot_group.add_argument(
+        "-nt",
+        dest="neutral_termini",
+        action="store_true",
+        default=False,
+        help="Set neutral termini (charged is default). "
+        'Alias for "-nter NH2-ter -cter COOH-ter"',
+    )
 
-    debug_group = parser.add_argument_group('Debugging options')
-    debug_group.add_argument('-write-graph', type=Path, default=None,
-                             help='Write the graph as PDB after the MakeBonds step.')
-    debug_group.add_argument('-write-repair', type=Path, default=None,
-                             help=('Write the graph as PDB after the '
-                                   'RepairGraph step. The resulting file may '
-                                   'contain "nan" coordinates making it '
-                                   'unreadable by most softwares.'))
-    debug_group.add_argument('-write-canon', type=Path, default=None,
-                             help=('Write the graph as PDB after the '
-                                   'CanonicalizeModifications step. The '
-                                   'resulting file may contain "nan" '
-                                   'coordinates making it unreadable by most '
-                                   'software.'))
-    debug_group.add_argument('-v', dest='verbosity', action='count',
-                             help='Enable debug logging output. Can be given '
-                                  'multiple times.', default=0)
-    debug_group.add_argument('-maxwarn', dest='maxwarn', type=maxwarn,
-                             action='append', nargs='+', default=[],
-                             help='The maximum number of allowed warnings. If '
-                             'more warnings are encountered no output files are'
-                             ' written.')
+    debug_group = parser.add_argument_group("Debugging options")
+    debug_group.add_argument(
+        "-write-graph",
+        type=Path,
+        default=None,
+        help="Write the graph as PDB after the MakeBonds step.",
+    )
+    debug_group.add_argument(
+        "-write-repair",
+        type=Path,
+        default=None,
+        help=(
+            "Write the graph as PDB after the "
+            "RepairGraph step. The resulting file may "
+            'contain "nan" coordinates making it '
+            "unreadable by most softwares."
+        ),
+    )
+    debug_group.add_argument(
+        "-write-canon",
+        type=Path,
+        default=None,
+        help=(
+            "Write the graph as PDB after the "
+            "CanonicalizeModifications step. The "
+            'resulting file may contain "nan" '
+            "coordinates making it unreadable by most "
+            "software."
+        ),
+    )
+    debug_group.add_argument(
+        "-v",
+        dest="verbosity",
+        action="count",
+        help="Enable debug logging output. Can be given " "multiple times.",
+        default=0,
+    )
+    debug_group.add_argument(
+        "-maxwarn",
+        dest="maxwarn",
+        type=maxwarn,
+        action="append",
+        nargs="+",
+        default=[],
+        help="The maximum number of allowed warnings. If "
+        "more warnings are encountered no output files are"
+        " written.",
+    )
 
     args = parser.parse_args()
 
@@ -525,10 +737,11 @@ def entry():
     LOGGER.setLevel(loglevels[args.verbosity])
 
     known_force_fields = vermouth.forcefield.find_force_fields(
-        Path(DATA_PATH) / 'force_fields'
+        Path(DATA_PATH) / "force_fields"
     )
-    known_mappings = read_mapping_directory(Path(DATA_PATH) / 'mappings',
-                                            known_force_fields)
+    known_mappings = read_mapping_directory(
+        Path(DATA_PATH) / "mappings", known_force_fields
+    )
 
     # Add user force fields and mappings
     for directory in args.extra_ff_dir:
@@ -539,17 +752,16 @@ def entry():
             raise ValueError(msg.format(directory))
     for directory in args.extra_map_dir:
         try:
-            partial_mapping = read_mapping_directory(directory,
-                                                     known_force_fields)
+            partial_mapping = read_mapping_directory(directory, known_force_fields)
         except NotADirectoryError:
             msg = '"{}" given to the -map-dir option should be a directory.'
             raise ValueError(msg.format(directory))
         combine_mappings(known_mappings, partial_mapping)
 
     if args.list_ff:
-        print('The following force fields are known:')
+        print("The following force fields are known:")
         for idx, ff_name in enumerate(reversed(list(known_force_fields)), 1):
-            print('{:3d}. {}'.format(idx, ff_name))
+            print("{:3d}. {}".format(idx, ff_name))
         parser.exit()
 
     # Build self mappings
@@ -561,44 +773,56 @@ def entry():
         raise ValueError('Unknown force field "{}".'.format(args.to_ff))
     if args.from_ff not in known_force_fields:
         raise ValueError('Unknown force field "{}".'.format(args.from_ff))
-    #if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
+    # if from_ff not in known_mappings or args.to_ff not in known_mappings[from_ff]:
     #    raise ValueError('No mapping known to go from "{}" to "{}".'
     #                     .format(from_ff, args.to_ff))
 
     if args.list_blocks:
-        print('The following Blocks are known to force field {}:'.format(args.from_ff))
-        print(', '.join(known_force_fields[args.from_ff].blocks))
-        print('The following Modifications are known to force field {}:'.format(args.from_ff))
-        print(', '.join(known_force_fields[args.from_ff].modifications))
+        print("The following Blocks are known to force field {}:".format(args.from_ff))
+        print(", ".join(sorted(known_force_fields[args.from_ff].blocks)))
+        print(
+            "The following Modifications are known to force field {}:".format(
+                args.from_ff
+            )
+        )
+        print(", ".join(sorted(known_force_fields[args.from_ff].modifications)))
         print()
-        print('The following Blocks are known to force field {}:'.format(args.to_ff))
-        print(', '.join(known_force_fields[args.to_ff].blocks))
-        print('The following Modifications are known to force field {}:'.format(args.to_ff))
-        print(', '.join(known_force_fields[args.to_ff].modifications))
+        print("The following Blocks are known to force field {}:".format(args.to_ff))
+        print(", ".join(sorted(known_force_fields[args.to_ff].blocks)))
+        print(
+            "The following Modifications are known to force field {}:".format(
+                args.to_ff
+            )
+        )
+        print(", ".join(sorted(known_force_fields[args.to_ff].modifications)))
         parser.exit()
 
-    if args.elastic and args.govs_includes:
-        parser.error('A rubber band elastic network and GoMartini are not '
-                     'compatible. The -elastic and -govs-include flags cannot '
-                     'be used together.')
+    if args.elastic and args.go:
+        parser.error(
+            "A rubber band elastic network and GoMartini are not "
+            "compatible. The -elastic and -govs-include flags cannot "
+            "be used together."
+        )
 
-    if args.to_ff.startswith('elnedyn'):
+    if args.to_ff.startswith("elnedyn"):
         # FIXME: This type of thing should be added to the FF itself.
-        LOGGER.info('The forcefield {} must always be used with an elastic '
-                    'network. Enabling it now.', args.to_ff)
+        LOGGER.info(
+            "The forcefield {} must always be used with an elastic "
+            "network. Enabling it now.",
+            args.to_ff,
+        )
         args.elastic = True
 
     file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
-    if file_extension in ['GRO'] and args.modelidx is not None:
+    if file_extension in ["GRO"] and args.modelidx is not None:
         parser.error("GRO files don't know the concept of models.")
     if args.modelidx is None:
         # Set a sane default value. Can't do this using argparse machinery,
         # since we need to be able to check whether the flag was given.
         args.modelidx = 1
 
-    bonds_from_name = args.bonds_from in ('name', 'both')
-    bonds_from_dist = args.bonds_from in ('distance', 'both')
-
+    bonds_from_name = args.bonds_from in ("name", "both")
+    bonds_from_dist = args.bonds_from in ("distance", "both")
 
     # args.ignore_res is a pretty deep list: given "-ignore HOH CU,LIG -ignore LIG2"
     # it'll contain [[['HOH'], ['CU', 'LIG']], [['LIG2']]]
@@ -607,24 +831,28 @@ def entry():
         ignore_res.update(*grp)
 
     if args.neutral_termini:
-        args.modifications.append(['cter', 'COOH-ter'])
-        args.modifications.append(['nter', 'NH2-ter'])
+        args.modifications.append(["cter", "COOH-ter"])
+        args.modifications.append(["nter", "NH2-ter"])
     else:
         if args.modifications:
             resspecs, mods = zip(*args.modifications)
         else:
             resspecs, mods = [], []
-        if not any('cter' in resspec for resspec in resspecs):
-            args.modifications.append(['cter', 'C-ter'])
-        if not any('nter' in resspec for resspec in resspecs):
-            args.modifications.append(['nter', 'N-ter'])
+        if not any("cter" in resspec for resspec in resspecs):
+            args.modifications.append(["cter", "C-ter"])
+        if not any("nter" in resspec for resspec in resspecs):
+            args.modifications.append(["nter", "N-ter"])
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
     # input structure to be a clean universal system.
     # For now at least, we silently delete molecules with unknown blocks.
-    system = read_system(args.inpath, ignore_resnames=ignore_res,
-                         ignh=args.ignore_h, modelidx=args.modelidx)
+    system = read_system(
+        args.inpath,
+        ignore_resnames=ignore_res,
+        ignh=args.ignore_h,
+        modelidx=args.modelidx,
+    )
     system = pdb_to_universal(
         system,
         delete_unknown=True,
@@ -639,45 +867,66 @@ def entry():
         write_canon=args.write_canon,
     )
 
-    LOGGER.info('Read input.', type='step')
+    LOGGER.info("Read input.", type="step")
     for molecule in system.molecules:
-        LOGGER.debug("Read molecule {}.", molecule, type='step')
+        LOGGER.debug("Read molecule {}.", molecule, type="step")
 
     target_ff = known_force_fields[args.to_ff]
-    if args.dssp is not None:
+    if args.dssp:
+        if not isinstance(args.dssp, str):
+            args.dssp = None
         AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
-        AnnotateResidues(attribute='secstruct', sequence=args.ss,
-                         molecule_selector=selectors.is_protein).run_system(system)
+        AnnotateResidues(
+            attribute="secstruct",
+            sequence=args.ss,
+            molecule_selector=selectors.is_protein,
+        ).run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.collagen:
-        if not target_ff.has_feature('collagen'):
-            LOGGER.warning('The force field "{}" does not have specific '
-                           'parameters for collagen (-collagen).',
-                           target_ff.name, type='missing-feature')
-        AnnotateResidues(attribute='cgsecstruct', sequence='F',
-                         molecule_selector=selectors.is_protein).run_system(system)
-    if args.extdih and not target_ff.has_feature('extdih'):
-        LOGGER.warning('The force field "{}" does not define dihedral '
-                       'angles for extended regions of proteins (-extdih).',
-                       target_ff.name, type='missing-feature')
+        if not target_ff.has_feature("collagen"):
+            LOGGER.warning(
+                'The force field "{}" does not have specific '
+                "parameters for collagen (-collagen).",
+                target_ff.name,
+                type="missing-feature",
+            )
+        AnnotateResidues(
+            attribute="cgsecstruct",
+            sequence="F",
+            molecule_selector=selectors.is_protein,
+        ).run_system(system)
+    if args.extdih and not target_ff.has_feature("extdih"):
+        LOGGER.warning(
+            'The force field "{}" does not define dihedral '
+            "angles for extended regions of proteins (-extdih).",
+            target_ff.name,
+            type="missing-feature",
+        )
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
-    if args.scfix and not target_ff.has_feature('scfix'):
-        LOGGER.warning('The force field "{}" does not define angle and '
-                       'torsion for the side chain corrections (-scfix).',
-                       target_ff.name, type='missing-feature')
+    if args.scfix and not target_ff.has_feature("scfix"):
+        LOGGER.warning(
+            'The force field "{}" does not define angle and '
+            "torsion for the side chain corrections (-scfix).",
+            target_ff.name,
+            type="missing-feature",
+        )
     vermouth.SetMoleculeMeta(scfix=args.scfix).run_system(system)
 
-    ss_sequence = list(itertools.chain(*(
-        dssp.sequence_from_residues(molecule, 'secstruct')
-        for molecule in system.molecules
-        if selectors.is_protein(molecule)
-    )))
+    ss_sequence = list(
+        itertools.chain(
+            *(
+                dssp.sequence_from_residues(molecule, "secstruct")
+                for molecule in system.molecules
+                if selectors.is_protein(molecule)
+            )
+        )
+    )
 
-    if args.cystein_bridge == 'none':
+    if args.cystein_bridge == "none":
         vermouth.RemoveCysteinBridgeEdges().run_system(system)
-    elif args.cystein_bridge != 'auto':
+    elif args.cystein_bridge != "auto":
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
     # Run martinize on the system.
@@ -689,30 +938,34 @@ def entry():
     )
 
     # Apply position restraints if required.
-    if args.posres != 'none':
-        LOGGER.info('Applying position restraints.', type='step')
-        node_selectors = {'all': selectors.select_all,
-                          'backbone': selectors.select_backbone}
+    if args.posres != "none":
+        LOGGER.info("Applying position restraints.", type="step")
+        node_selectors = {
+            "all": selectors.select_all,
+            "backbone": selectors.select_backbone,
+        }
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
-    if args.govs_includes:
-        # The way Virtual Site GoMartini works has to be in sync with
-        # Sebastian's create_goVirt.py script, until the method is fully
-        # implemented in vermouth. One call of martinize2 must create a single
-        # molecule, regardless of the number of fragments in the input.
-        # The molecule type name is provided as an input with the -govs-moltype
-        # flag to be consistent with the name provided to Sebastian's script.
-        # The name cannot be guessed because a system may need to be composed
-        # from multiple calls to martinize2 and create_goVirt.py.
-        LOGGER.info('Adding includes for Virtual Site Go Martini.', type='step')
-        LOGGER.info('The output topology will require files generated by '
-                    '"create_goVirt.py".')
-        vermouth.MergeAllMolecules().run_system(system)
-        vermouth.SetMoleculeMeta(moltype=args.govs_moltype).run_system(system)
-        vermouth.GoVirtIncludes().run_system(system)
-        defines = ('GO_VIRT',)
+    # Generate the Go model if required
+    if args.go:
+        LOGGER.info("Reading Go model contact map.", type="step")
+        go_map = read_go_map(args.go)
+        LOGGER.info("Generating the Go model.", type="step")
+        GoPipeline.run_system(system,
+                              moltype=args.govs_moltype,
+                              contact_map=go_map,
+                              cutoff_short=args.go_low,
+                              cutoff_long=args.go_up,
+                              go_eps=args.go_eps,
+                              res_dist=args.go_res_dist,)
+
+        defines = ("GO_VIRT",)
+        itp_paths = {"atomtypes": "go_atomtypes.itp",
+                     "nonbond_params": "go_nbparams.itp"}
     else:
+        # don't write non-bonded interactions
+        itp_paths = []
         # Merge chains if required.
         if args.merge_chains:
             for chain_set in args.merge_chains:
@@ -722,32 +975,38 @@ def entry():
 
     # Apply a rubber band elastic network is required.
     if args.elastic:
-        LOGGER.info('Setting the rubber bands.', type='step')
-        if args.rb_unit == 'molecule':
+        LOGGER.info("Setting the rubber bands.", type="step")
+        if args.rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
-        elif args.rb_unit == 'all':
+        elif args.rb_unit == "all":
             vermouth.MergeAllMolecules().run_system(system)
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
-        elif args.rb_unit == 'chain':
+        elif args.rb_unit == "chain":
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
         else:
-            message = 'Unknown value for -eunit: "{}".'.format(args.rb_unit)
-            LOGGER.critical(message)
-            raise ValueError(message)
-        if args.rb_region == 'molecule':
-            domain_criterion = vermouth.processors.apply_rubber_band.always_true
-        else:
-            regions = [tuple([int(i) for i in apair.split(':')]) for apair in args.rb_region.split(',')]
+            regions = [
+                tuple([int(i) for i in apair.split(":")])
+                for apair in args.rb_unit.split(",")
+            ]
             if any(len(region) != 2 for region in regions):
-                message = 'Unknown value for -region: "{}".'.format(args.rb_region)
+                message = (
+                    'Faulty resid interval for elastic network unit: "{}".'.format(
+                        args.rb_unit
+                    )
+                )
                 LOGGER.critical(message)
                 raise ValueError(message)
             else:
-                domain_criterion = vermouth.processors.apply_rubber_band.make_same_region_criterion(regions)
+                domain_criterion = (
+                    vermouth.processors.apply_rubber_band.make_same_region_criterion(
+                        regions
+                    )
+                )
+
         if args.rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
-                attribute='atomname',
+                attribute="atomname",
                 values=args.rb_selection,
             )
         else:
@@ -765,15 +1024,41 @@ def entry():
         )
         rubber_band_processor.run_system(system)
 
+    # If required add some water bias
+    if args.water_bias:
+        # if the go model hasn't been used we need to create virtual
+        # sites for the biasing
+        if not args.go:
+            vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
+            itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
+                         "nonbond_params": "virtual_sites_nonbond_params.itp"}
+        # now we add a bias by defining specific virtual-site water interactions
+        vermouth.processors.ComputeWaterBias(args.water_bias,
+                                             { s:float(eps) for s, eps in args.water_bias_eps},
+                                             [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                            ).run_system(system)
+
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
         for molecule in system.molecules:
             old_resids = nx.get_node_attributes(molecule, "_old_resid")
             nx.set_node_attributes(molecule, old_resids, "resid")
 
-    LOGGER.info('Writing output.', type='step')
+    # The Martini Go model assumes that we do not mess with the order of
+    # particles in any way especially the virtual sites needed for the Go
+    # model, thus we skip the sorting here altogether.
+    if not args.go:
+        LOGGER.info("Sorting atomids", type="step")
+        vermouth.SortMoleculeAtoms().run_system(system)
+
+    LOGGER.info("Writing output.", type="step")
     for molecule in system.molecules:
-        LOGGER.debug("Writing molecule {}.", molecule, type='step')
+        LOGGER.debug("Writing molecule {}.", molecule, type="step")
+        for loglevel, entries in molecule.log_entries.items():
+            for entry, fmt_args in entries.items():
+                for fmt_arg in fmt_args:
+                    fmt_arg = {str(k): molecule.nodes[v] for k, v in fmt_arg.items()}
+                    LOGGER.log(loglevel, entry, **fmt_arg, type="model")
 
     # Write the topology if requested
     # grompp has a limit in the number of character it can read per line
@@ -781,23 +1066,28 @@ def entry():
     # The command line can be longer than this limit and therefore
     # prevent grompp from reading the topology.
     gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
-    command = ' '.join(sys.argv)
+    command = " ".join(sys.argv)
     if len(command) > gromacs_char_limit:
-        command = command[:gromacs_char_limit] + ' ...'
+        command = command[:gromacs_char_limit] + " ..."
     header = [
-        'This file was generated using the following command:',
+        "This file was generated using the following command:",
         command,
         VERSION,
     ]
     if None not in ss_sequence:
         header += [
-            'The following sequence of secondary structure ',
-            'was used for the full system:',
-            ''.join(ss_sequence),
+            "The following sequence of secondary structure ",
+            "was used for the full system:",
+            "".join(ss_sequence),
         ]
 
     if args.top_path is not None:
-        write_gmx_topology(system, args.top_path, defines=defines, header=header)
+        write_gmx_topology(system,
+                           args.top_path,
+                           itp_paths=itp_paths,
+                           C6C12=False,
+                           defines=defines,
+                           header=header)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
@@ -807,15 +1097,18 @@ def entry():
 
     leftover_warnings = ignore_warnings_and_count(COUNTER, args.maxwarn)
     if leftover_warnings:
-        LOGGER.error('{} warnings were encountered after accounting for the '
-                     '-maxwarn flag. No output files will be '
-                     'written. Consider fixing the warnings, or if you are sure'
-                     ' they are harmless, use the -maxwarn flag.', leftover_warnings)
+        LOGGER.error(
+            "{} warnings were encountered after accounting for the "
+            "-maxwarn flag. No output files will be "
+            "written. Consider fixing the warnings, or if you are sure"
+            " they are harmless, use the -maxwarn flag.",
+            leftover_warnings,
+        )
         sys.exit(2)
     else:
         DeferredFileWriter().write()
         vermouth.Quoter().run_system(system)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     entry()

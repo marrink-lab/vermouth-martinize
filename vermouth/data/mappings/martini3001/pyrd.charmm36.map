@@ -1,0 +1,27 @@
+; PYAZ
+[ molecule ]
+PYRD
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 NN R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C4 R3
+2 C5 R2
+3 C6 R2
+4 N1 NN
+5 N2 NN
+6 C3 R3
+7 H4 R3
+8 H5 R2
+9 H6 R2
+10 H3 R3

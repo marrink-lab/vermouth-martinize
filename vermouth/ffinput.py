@@ -24,6 +24,7 @@ is done in the same way an ITP file describes a molecule.
 
 import collections
 import copy
+import logging
 import numbers
 import json
 from .molecule import (
@@ -180,7 +181,7 @@ class FFDirector(SectionLineParser):
             self.current_modification.citations.update(self.citations)
             self.force_field.modifications[self.current_modification.name] = self.current_modification
 
-    def get_context(self, context_type):
+    def get_context(self, context_type=''):
         possible_contexts = {
             'block': self.current_block,
             'link': self.current_link,
@@ -221,6 +222,44 @@ class FFDirector(SectionLineParser):
     def _block_atoms(self, line, lineno=0):
         tokens = collections.deque(_tokenize(line))
         _parse_block_atom(tokens, self.current_block)
+        
+    @SectionLineParser.section_parser('moleculetype', 'meta')
+    def _parse_block_meta(self, line, lineno=0):
+        """
+        Parse the meta section and update the object current_block with meta information. 
+        Allow the dictionnary value to be None (in case of flag), string, int or float. 
+        
+        Example :
+            [meta]
+            flag1
+            key value
+            key2 value1 0.37 
+        
+            will give :
+                {   
+                    'flag1' : None, 
+                    'key': 'value', 
+                    'key2': ['value1' , '0.37']
+                }
+        
+        Parameters
+        ----------
+        line: str
+        lineno: str
+        """
+        
+        split_line = line.split()
+        key = split_line[0]
+        
+        # depend of the number of value(s) 
+        if len(split_line[1:]) == 0 : 
+            value = None
+        elif len(split_line[1:]) == 1 : 
+            value = split_line[1]
+        else: 
+            value = split_line[1:]
+        
+        self.current_block.meta[key] = value
 
     @SectionLineParser.section_parser('moleculetype', 'edges',
                                       negate=False, context_type='block')
@@ -384,7 +423,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'patterns')
     @SectionLineParser.section_parser('moleculetype', 'features')
     @SectionLineParser.section_parser('moleculetype', 'non-edge')
-    @SectionLineParser.section_parser('modifications', 'non-edge')
+    @SectionLineParser.section_parser('modification', 'non-edge')
     def _invalid_out_of_link(self, line, lineno=0):
         raise IOError('The "{}" section is only valid in links.'
                       .format(self.section[-1]))
@@ -409,7 +448,7 @@ class FFDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         _parse_link_atom(tokens, self.current_modification,
                          defaults={'PTM_atom': False},
-                         treat_prefix=False)
+                         treat_prefix=True)
 
     @SectionLineParser.section_parser('link', 'patterns', context_type='link')
     @SectionLineParser.section_parser('modification', 'patterns', context_type='modification')
@@ -437,6 +476,23 @@ class FFDirector(SectionLineParser):
         # parses force-field wide citations
         cite_keys = line.split()
         self.citations.update(cite_keys)
+
+    @SectionLineParser.section_parser('moleculetype', 'debug', context_type='block')
+    @SectionLineParser.section_parser('link', 'debug', context_type='link')
+    @SectionLineParser.section_parser('modification', 'debug', context_type='modification')
+    @SectionLineParser.section_parser('moleculetype', 'info', context_type='block')
+    @SectionLineParser.section_parser('link', 'info', context_type='link')
+    @SectionLineParser.section_parser('modification', 'info', context_type='modification')
+    @SectionLineParser.section_parser('moleculetype', 'warning', context_type='block')
+    @SectionLineParser.section_parser('link', 'warning', context_type='link')
+    @SectionLineParser.section_parser('modification', 'warning', context_type='modification')
+    @SectionLineParser.section_parser('moleculetype', 'error', context_type='block')
+    @SectionLineParser.section_parser('link', 'error', context_type='link')
+    @SectionLineParser.section_parser('modification', 'error', context_type='modification')
+    def _parse_log_entry(self, line, lineno=0, context_type=''):
+        loglevel = logging.getLevelName(self.section[-1].upper())
+        self.get_context(context_type).log_entries[loglevel][line] = []
+
 
 def _some_atoms_left(tokens, atoms, natoms):
     """
@@ -806,9 +862,8 @@ def _base_parser(tokens, context, context_type, section, natoms=None, delete=Fal
     # * interactions create nodes
     if context_type == 'block':
         treated_atoms = _treat_block_interaction_atoms(atoms, context, section)
-    elif context_type in ('link', 'modifications'):
+    elif context_type in ('link', 'modification'):
         treated_atoms = _treat_link_interaction_atoms(atoms, context, section)
-
 
     # Getting the atoms consumed the "--" delimiter if any. So what is left
     # are the interaction parameters or the meta attributes.

@@ -26,6 +26,7 @@ from vermouth.processors.apply_rubber_band import (same_chain,
                                                    make_same_region_criterion,
                                                    are_connected,
                                                    build_connectivity_matrix)
+from vermouth.tests.helper_functions import test_molecule
 
 # pylint: disable=redefined-outer-name
 
@@ -260,58 +261,6 @@ def test_make_same_region_criterion(regions, left, right, nodes, edges, chain, r
     same_region = make_same_region_criterion(regions)
     assert same_region(graph=graph, left=left, right=right) == outcome
 
-@pytest.fixture
-def test_molecule():
-    """
-    Molecule with the following connectivity and atom-naming:
-
-    SC2:   2           8
-           |           |
-    SC1:   1   4       7
-           |   |       |
-    BB:    0 - 3 - 5 - 6
-           -------------
-    resid: 1   2   3   4  column wise
-    """
-
-    force_field = vermouth.forcefield.ForceField("test")
-    molecule = vermouth.molecule.Molecule(force_field=force_field)
-    molecule.meta['test'] = True
-    # The node keys should not be in a sorted order as it would mask any issue
-    # due to the keys being accidentally sorted.
-    molecule.add_node(2, atomname='SC2',
-                      position=np.array([0., 1.0, 0.0]), resid=1)
-    molecule.add_node(0, atomname='BB',
-                      position=np.array([0., 0., 0.]), resid=1)
-    molecule.add_node(1, atomname='SC1',
-                      position=np.array([0., 0.5, 0.0]), resid=1)
-
-    molecule.add_node(3, atomname='BB', position=np.array(
-        [0.5, 0.0, 0.0]), resid=2)
-    molecule.add_node(4, atomname='SC1', position=np.array(
-        [0.5, 0.5, 0.0]), resid=2)
-
-    molecule.add_node(5, atomname='BB', position=np.array(
-        [1.0, 0.0, 0.0]), resid=3)
-
-    molecule.add_node(6, atomname='BB', position=np.array(
-        [1.5, 0.0, 0.0]), resid=4)
-    molecule.add_node(7, atomname='SC1', position=np.array(
-        [1.5, 0.5, 0.0]), resid=4)
-    molecule.add_node(8, atomname='SC2', position=np.array(
-        [1.5, 1.0, 0.0]), resid=4)
-
-    molecule.add_edge(0, 1)
-    molecule.add_edge(0, 2)
-    molecule.add_edge(0, 3)
-    molecule.add_edge(3, 4)
-    molecule.add_edge(3, 5)
-    molecule.add_edge(5, 6)
-    molecule.add_edge(6, 7)
-    molecule.add_edge(7, 8)
-
-    return molecule
-
 
 @pytest.mark.parametrize('chain_attribute, atom_names, res_min_dist, outcome',
                          (({0: 'A', 1: 'A', 2: 'A',
@@ -478,3 +427,109 @@ def test_apply_rubber_bands_same_regions(test_molecule, regions, chain_attribute
         res_min_dist=res_min_dist)
     process.run_molecule(test_molecule)
     assert test_molecule.interactions['bonds'] == outcome
+
+def test_skip_no_matches(test_molecule):
+    """
+    Tests that when no node matches the EN selectors, the molecule is simply skipped.
+    """
+    selector = functools.partial(
+        selectors.proto_select_attribute_in,
+        attribute='matches_none',
+        values=['BB', 'SC1'])
+
+    domain_criterion = vermouth.processors.apply_rubber_band.always_true
+
+    process = vermouth.processors.apply_rubber_band.ApplyRubberBand(
+        selector=selector,
+        lower_bound=0.0,
+        upper_bound=10.,
+        decay_factor=0,
+        decay_power=0.,
+        base_constant=1000,
+        minimum_force=1,
+        bond_type=6,
+        domain_criterion=domain_criterion,
+        res_min_dist=3)
+    process.run_molecule(test_molecule)
+    assert test_molecule.interactions['bonds'] == []
+
+def test_bail_out_on_nan(caplog, test_molecule):
+    """
+    Test the the EN processor bails out when nan coordinate
+    is found.
+    """
+    test_molecule.nodes[0]['position'] = np.array([np.nan, np.nan, np.nan])
+    test_molecule.moltype = "testmol"
+    selector = functools.partial(
+        selectors.proto_select_attribute_in,
+        attribute='atomname',
+        values=['BB'])
+
+    domain_criterion = vermouth.processors.apply_rubber_band.always_true
+
+    process = vermouth.processors.apply_rubber_band.ApplyRubberBand(
+        selector=selector,
+        lower_bound=0.0,
+        upper_bound=10.,
+        decay_factor=0,
+        decay_power=0.,
+        base_constant=1000,
+        minimum_force=1,
+        bond_type=6,
+        domain_criterion=domain_criterion,
+        res_min_dist=3)
+    process.run_molecule(test_molecule)
+
+    required_warning = ("Found nan coordinates in molecule testmol. "
+                        "Will not generate an EN for it. ")
+    record = caplog.records[0]
+    assert record.getMessage() == required_warning
+    assert len(caplog.records) == 1
+    assert test_molecule.interactions['bonds'] == []
+
+
+@pytest.mark.parametrize('lower_bound, upper_bound, decay_factor, decay_power, base_constant, minimum_force, expected_output', 
+                          ([1, 2, 0, 0, 500, 400, np.array([[  0,500,500,  0],
+                                                            [500,  0,500,500],
+                                                            [500,500,  0,500],
+                                                            [  0,500,500,  0]])], # no decays, return the base constant within the bounds
+                           [1, 2, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
+                                                            [  0,  0,  0,  0],
+                                                            [  0,  0,  0,  0],
+                                                            [  0,  0,  0,  0]])], # all forces less than the minumum force
+                           [1, 0.5, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
+                                                              [  0,  0,  0,  0],
+                                                              [  0,  0,  0,  0],
+                                                              [  0,  0,  0,  0]])], # all distances larger than the upper bound
+                           [4, 2, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
+                                                            [  0,  0,  0,  0],
+                                                            [  0,  0,  0,  0],
+                                                            [  0,  0,  0,  0]])], # all distances less than the lower bound
+                           [1, 3, 0.1, 0, 500, 400, np.array([[  0.        , 452.41870902, 452.41870902, 452.41870902],
+                                                              [452.41870902,   0.        , 452.41870902, 452.41870902],
+                                                              [452.41870902, 452.41870902,   0.        , 452.41870902],
+                                                              [452.41870902, 452.41870902, 452.41870902,   0.        ]])], # with a decay factor
+                           [1, 3, 0, 2, 500, 400, np.array([[  0,500,500,500],
+                                                            [500,  0,500,500],
+                                                            [500,500,  0,500],
+                                                            [500,500,500,  0]])], # with a decay factor
+                           [1, 3, 0.1, 2, 500, 400, np.array([[  0.        , 500.        , 452.41870902,   0.        ],
+                                                              [500.        ,   0.        , 500.        , 452.41870902],
+                                                              [452.41870902, 500.        ,   0.        , 500.        ],
+                                                              [  0.        , 452.41870902, 500.        ,   0.        ]])], # with a complex decay
+                          )
+                        )
+def test_compute_force_constants(lower_bound, upper_bound, decay_factor, decay_power, base_constant, minimum_force, expected_output):
+    # Define the constant distance_matrix for the test cases
+    distance_matrix = np.array([[0, 1, 2, 3],
+                                [1, 0, 1, 2],
+                                [2, 1, 0, 1],
+                                [3, 2, 1, 0]])
+
+    # Call the compute_force_constants function with the constant distance_matrix and varied parameters
+    result = vermouth.processors.apply_rubber_band.compute_force_constants(distance_matrix, lower_bound, upper_bound, 
+                                                                           decay_factor, decay_power, base_constant, 
+                                                                           minimum_force)
+
+    # Assert the result against the expected output
+    assert result == pytest.approx(expected_output)

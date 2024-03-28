@@ -1,0 +1,31 @@
+; This file was generated using the following command:
+; /homes/peterkroon/virtualenvs/martinize2/bin/martinize2 -f ../aa.pdb -x cg.pdb -o topol.top -ff martini3001 -nt
+; martinize with vermouth 0.7.4.dev121
+
+; Pleas cite the following papers:
+; Souza, P C T; Alessandri, R; Barnoud, J; Thallmair, S; Faustino, I; Grünewald, F; Patmanidis, I; Abdizadeh, H; Bruininks, B M H; Wassenaar, T A; Kroon, P C; Melcr, J; Nieto, V; Corradi, V; Khan, H M; Domański, J; Javanainen, M; Martinez-Seara, H; Reuter, N; Best, R B; Vattulainen, I; Monticelli, L; Periole, X; Tieleman, D P; de Vries, A H; Marrink, S J;  Nature Methods 2021; 10.1038/s41592-021-01098-3
+
+[ moleculetype ]
+molecule_0 1
+
+[ atoms ]
+1 P6  1 PRO BB  1   0 
+2 SC3 1 PRO SC1 2 0.0 
+3 P6  2 PRO BB  3   0 
+4 SC3 2 PRO SC1 4 0.0 
+
+[ bonds ]
+; Backbone bonds
+1 3 1 0.350 4000
+
+; Side chain bonds
+1 2 1 0.330 7500
+3 4 1 0.330 7500
+
+[ angles ]
+; BBS angles regular martini
+1 3 4 2 100 25
+
+; First SBB regular martini
+2 1 3 2 100 25
+

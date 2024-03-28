@@ -1,0 +1,29 @@
+[ molecule ]
+GLN
+
+[from]
+gromos
+
+[to]
+martini22
+
+[ martini ]
+BB SC1
+
+[ mapping ]
+gromos
+
+[ atoms ]
+    1     N    BB
+    2     H    BB
+    3    CA    BB
+    4    CB   SC1 BB BB
+    5    CG   SC1 SC1 BB
+    6    CD   SC1 
+    7   OE1   SC1
+    8   NE2   SC1
+    9  HE21   SC1
+   10  HE22   SC1
+   11     C    BB
+   12     O    BB
+

@@ -161,25 +161,25 @@ DIFFERENCE_USE_CASE = (
 
 
 @pytest.fixture(params=[True, False])
-def gro_reference(request, tmpdir_factory):
+def gro_reference(request, tmp_path_factory):
     """
     Generate a GRO file and the corresponding molecule.
     """
-    filename = tmpdir_factory.mktemp("data").join("tmp.gro")
-    with open(str(filename), 'w') as outfile:
+    filename = tmp_path_factory.mktemp("data") / "tmp.gro"
+    with open(filename, 'w') as outfile:
         write_ref_gro(outfile, velocities=request.param, box='10.0 11.1 12.2')
     molecule = build_ref_molecule(velocities=request.param)
     return filename, molecule
 
 
 @pytest.fixture(params=[43, 45])
-def gro_wrong_length(request, gro_reference, tmpdir_factory):  # pylint: disable=redefined-outer-name
+def gro_wrong_length(request, gro_reference, tmp_path_factory):  # pylint: disable=redefined-outer-name
     """
     Generate a GRO file with a wrong number of atoms on line 2.
     """
     path_in, _ = gro_reference
-    path_out = tmpdir_factory.mktemp("data").join("wrong.gro")
-    with open(str(path_in)) as infile, open(str(path_out), 'w') as outfile:
+    path_out = tmp_path_factory.mktemp("data") / "wrong.gro"
+    with open(path_in) as infile, open(path_out, 'w') as outfile:
         outfile.write(next(infile))
         outfile.write('{}\n'.format(request.param))
         for line in infile:
@@ -523,7 +523,7 @@ def test_filter_molecule_order(gro_reference):  # pylint: disable=redefined-oute
     _, molecule = gro_reference
     filter_molecule(molecule, exclude=('SOL', ), ignh=True)
     keys = list(molecule.nodes)
-    assert  sorted(keys) == keys
+    assert sorted(keys) == keys
 
 
 @pytest.mark.parametrize('exclude', (
@@ -540,7 +540,7 @@ def test_read_gro(gro_reference, exclude, ignh):  # pylint: disable=redefined-ou
     molecule = gro.read_gro(filename, exclude=exclude, ignh=ignh)
     pprint(list(molecule.nodes.items()))
     assert_molecule_equal(molecule, reference)
-
+    assert all(molecule.box == np.array([10.0, 11.1, 12.2]))
 
 def test_read_gro_wrong_atom_number(gro_wrong_length):  # pylint: disable=redefined-outer-name
     """
@@ -551,14 +551,14 @@ def test_read_gro_wrong_atom_number(gro_wrong_length):  # pylint: disable=redefi
         gro.read_gro(gro_wrong_length)
 
 
-def test_write_gro(gro_reference, tmpdir):
+def test_write_gro(gro_reference, tmp_path):
     """
     Test writing GRO file.
     """
     filename, molecule = gro_reference
     system = vermouth.System()
     system.molecules.append(molecule)
-    outname = tmpdir / 'out_test.gro'
+    outname = tmp_path / 'out_test.gro'
     gro.write_gro(
         system,
         outname,
@@ -566,5 +566,5 @@ def test_write_gro(gro_reference, tmpdir):
         title='Just a title',
     )
     DeferredFileWriter().write()
-    with open(str(filename)) as ref, open(str(outname)) as out:
+    with open(filename) as ref, open(outname) as out:
         assert out.read() == ref.read()

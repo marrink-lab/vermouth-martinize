@@ -13,8 +13,8 @@
 ; limitations under the License.
 
 [ macros ]
-protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASP0|GLU|GLU0|THR|SER|LYS|LYS0|ARG|ARG0|HIS|HISH|PHE|TYR|TRP"
-protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASP0|GLU|GLU0|THR|SER|LYS|LYS0|ARG|ARG0|HIS|HISH|PHE|TYR|TRP"
+protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|GLU|THR|SER|LYS|ARG|HSE|HSP|HSD|PHE|TYR|TRP"
+protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|GLU|THR|SER|LYS|ARG|HSE|HSP|HSD|PHE|TYR|TRP"
 
 [ variables ]
 elastic_network_bond_type 6
@@ -309,13 +309,13 @@ LYS                1
 
 [ moleculetype ]
 ; molname       nrexcl
-LYS0               1
+LSN               1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
- 1   P5    1     LYS     BB     1      0    
- 2   C3    1     LYS     SC1    2      0    
- 3   P1    1     LYS     SC2    3      0    
+ 1   P5    1     LSN     BB     1      0    
+ 2   C3    1     LSN     SC1    2      0    
+ 3   P1    1     LSN     SC2    3      0    
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -381,14 +381,14 @@ ARG0               1
 
 [ moleculetype ]
 ;molname       nrexcl
-HIS                1
+HSE                1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   P5     1     HIS     BB     1      0    
-2   SC4    1     HIS     SC1    2    0    ; three side chains in triangle
-3   SP1    1     HIS     SC2    3    0    ; configuration, mimicking
-4   SP1    1     HIS     SC3    4    0    ; ring structure
+1   P5     1     HSE    BB     1      0    
+2   SC4    1     HSE    SC1    2    0    ; three side chains in triangle
+3   SP1    1     HSE    SC2    3    0    ; configuration, mimicking
+4   SP1    1     HSE    SC3    4    0    ; ring structure
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -411,18 +411,53 @@ HIS                1
 ;  i     j    k    l   funct   angle  force.c.
    1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
 
+
+[ moleculetype ]
+;molname       nrexcl
+HSD                1
+
+[ atoms ]
+;id type resnr residu atom cgnr   charge
+1   P5     1     HSD   BB     1      0    
+2   SC4    1     HSD   SC1    2    0    ; three side chains in triangle
+3   SP1    1     HSD   SC2    3    0    ; configuration, mimicking
+4   SP1    1     HSD   SC3    4    0    ; ring structure
+
+[bonds]
+#meta {"group": "Side chain bonds"}
+;  i     j   funct   length  force.c.
+   1     2    1       0.32     7500 
+
+[constraints]
+;  i     j   funct   length  
+   2     3    1       0.27    
+   2     4    1       0.27   
+   3     4    1       0.27  
+
+[angles]
+#meta {"group": "Side chain angles"}
+;  i     j    k     funct   angle  force.c.
+    1     2    3       2   150.000   50.0  
+    1     2    4       2   150.000   50.0 
+
+[dihedrals]
+;  i     j    k    l   funct   angle  force.c.
+   1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
+
+
+
 ;;; HISTIDINE, charged.
 
 [ moleculetype ]
 ;molname       nrexcl
-HISH               1
+HSP               1
 
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
-1   P5     1     HIS     BB     1    0    
-2   SC4    1     HIS     SC1    2    0    ; three side chains in triangle
-3   SP1    1     HIS     SC2    3    0    ; configuration, mimicking
-4   SQd    1     HIS     SC3    4   1.0   ; ring structure
+1   P5     1     HSP    BB     1    0    
+2   SC4    1     HSP    SC1    2    0    ; three side chains in triangle
+3   SP1    1     HSP    SC2    3    0    ; configuration, mimicking
+4   SQd    1     HSP    SC3    4   1.0   ; ring structure
 
 [bonds]
 #meta {"group": "Side chain bonds"}
@@ -586,45 +621,45 @@ BB -BB
 [ link ]
 resname $protein_resnames
 [ atoms ]
-BB {"cgsecstruct": "T|3|E", "replace": {"atype": "Nda"}}
+BB {"cgsecstruct": "T|3|E", "replace": {"atype": "Nda"}, "modifications": null}
 
 [ link ]
 resname $protein_resnames
 [ atoms ]
-BB {"cgsecstruct": "2", "replace": {"atype": "Na"}}
+BB {"cgsecstruct": "2", "replace": {"atype": "Na"}, "modifications": null}
 
 [ link ]
 resname $protein_resnames
 [ atoms ]
-BB {"cgsecstruct": "1", "replace": {"atype": "Nd"}}
+BB {"cgsecstruct": "1", "replace": {"atype": "Nd"}, "modifications": null}
 
 [ link ]
 resname $protein_resnames
 [ features ]
 collagen
 [ atoms ]
-BB {"cgsecstruct": "H|F", "replace": {"atype": "N0"}}
+BB {"cgsecstruct": "H|F", "replace": {"atype": "N0"}, "modifications": null}
 
 ;; Fix bead types for ALA and PRO.
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "S", "replace": {"atype": "P4"}}
+BB {"cgsecstruct": "S", "replace": {"atype": "P4"}, "modifications": null}
 
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}}
+BB {"cgsecstruct": "T|3|2|1|E", "replace": {"atype": "N0"}, "modifications": null}
 
 [ link ]
 resname "ALA|PRO|HYP"
 [ atoms ]
-BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}}
+BB {"cgsecstruct": "H|F", "replace": {"atype": "C5"}, "modifications": null}
 
 [ link ]
 resname "PRO"
 [ atoms ]
-BB {"cgsecstruct": "2", "replace": {"atype": "Na"}}
+BB {"cgsecstruct": "2", "replace": {"atype": "Na"}, "modifications": null}
 
 ;; Setup the bonds. We only have the bonds assuming everything is coil.
 ;; We always select the lowest force constant when the two residues involved
@@ -848,4 +883,3 @@ resname "CYS"
 SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
-

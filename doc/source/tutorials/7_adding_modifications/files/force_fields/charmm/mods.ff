@@ -1,0 +1,15 @@
+[ modification ]
+SER-phos
+[ atoms ]
+O1 {"element": "O", "PTM_atom": true}
+O2 {"element": "O", "PTM_atom": true}
+O3 {"element": "O", "PTM_atom": true}
+P  {"element": "P", "PTM_atom": true}
+OG {"element": "O"}
+HG1 {"element": "H", "replace": {"atomname": null}}
+[ edges ]
+OG P
+OG HG1
+P O1
+P O2
+P O3

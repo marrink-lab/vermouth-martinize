@@ -270,7 +270,7 @@ def test_annotate_mutmod_processor(example_mol, modifications, mutations, expect
         [(0, 1), (1, 2)],
         {1: ['N-ter'], 3: ['C-ter']}
     ),
-(
+    (
         [
             {'resname': 'XXX', 'resid': 1},
             {'resname': 'ALA', 'resid': 2},
@@ -289,7 +289,8 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol.add_nodes_from(enumerate(node_data))
     mol.add_edges_from(edge_data)
-    modification = [({'resname': 'cter'}, 'C-ter'), ({'resname': 'nter'}, 'N-ter')]
+    modification = [({'resname': 'cter'}, 'C-ter'), 
+                    ({'resname': 'nter'}, 'N-ter')]
 
     annotate_modifications(mol, modification, [])
 
@@ -300,3 +301,39 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
             found[node['resid']] = node['modification']
 
     assert found == expected
+
+@pytest.mark.parametrize('node_data, edge_data, expected', [
+    (
+        [
+            {'resname': 'GLY', 'resid': 1},
+            {'resname': 'ALA', 'resid': 2},
+            {'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        False
+    ),
+    (
+        [
+            {'resname': 'ALA', 'resid': 1},
+            {'resname': 'ALA', 'resid': 2},
+            {'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        True
+    )])
+def test_mod_resid_not_correct(caplog, node_data, edge_data, expected):
+    """
+    Tests that the modification is found in the expected residue.
+    """
+    mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
+    mol.add_nodes_from(enumerate(node_data))
+    mol.add_edges_from(edge_data)
+    mutation = [({'resname': 'GLY', 'resid': 1}, 'MET')]
+    
+    caplog.clear()
+    annotate_modifications(mol, [], mutation)
+    
+    if expected:        
+        assert '"GLY1" not found.' in str(caplog.records[0].getMessage())
+    else:
+        assert caplog.records == []

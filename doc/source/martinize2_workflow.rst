@@ -46,7 +46,7 @@ We take into account the following PDB records: ``MODEL`` and ``ENDMDL`` to
 determine which model to parse; ``ATOM`` and ``HETATM``; ``TER``, which can be
 used to separate molecules; ``CONECT``, which is used to add edges; and ``END``.
 
-Will issue a ``pdb-alternate`` warning if any atoms in the PDB file have an
+We issue a ``pdb-alternate`` warning if any atoms in the PDB file have an
 alternate conformation that is not 'A', since those will always be ignored.
 
 Relevant CLI options: ``-f``; ``-model``; ``-ignore``; ``-ignh``.
@@ -67,28 +67,28 @@ same name, nor when there is no :ref:`data:Block` corresponding to the residue
 [#]_. Note that this will only ever create edges *within* residues.
 
 Edges will be added based on distance when they are close enough together,
-except for a few exceptions (below). Atoms will be considered close enough based
+except for a few exceptions (see below). Atoms will be considered close enough based
 on their element (taken from either the PDB file directly, or deduced from atom
 name [#]_). The distance threshold is multiplied by ``-bonds-fudge`` to allow
 for conformations that are slightly out-of-equilibrium. Edges will not be added
 from distances in two cases: 1) if edges could be added based on atom names no
 edges will be added between atoms that are not bonded in the reference
-:ref:`data:Block`. 2) No edges will be added between residues if one of the
-atoms involved is a hydrogen atom. Edges added this way are logged as debug
-output.
+:ref:`data:Block`. 2) If the edge would connect 2 residues, and at least one of
+the atoms involved is a hydrogen atom. Edges added based on distance are logged
+as debug output.
 
 If your input structure is far from equilibrium and adding edges based on
 distance is likely to produce erroneous results, make sure to provide ``CONECT``
 records describing at least the edges between residues, and between atoms
 involved in modifications, such as termini and PTMs.
 
-Will issue a ``general`` warning when it is requested to add edges based on atom
+We issue a ``general`` warning when it is requested to add edges based on atom
 names, but this cannot be done for some reason. This commonly happens when your
 input structure is a homo multimer without ``TER`` record and identical residue
 numbers and chain identifiers across the monomers. In this case martinize2
 cannot distinguish the atom "N", residue ALA1, chain "A" from the atom "N",
-residue ALA1, chain "A" in the next monomer. The easiest solution is to place
-strategic ``TER`` records in your PDB file.
+residue ALA1, chain "A" in the next monomer. The easiest solution in this case
+is to place strategic ``TER`` records in your PDB file.
 
 Relevant CLI options: ``-bond-from``; ``-bonds-fudge``
 
@@ -96,7 +96,7 @@ Relevant CLI options: ``-bond-from``; ``-bonds-fudge``
 .. [#] The method for deriving the element from an atom name is extremely
    simplistic: the first letter is used. This will go wrong for two-letter
    elements such as 'Fe', 'Cl', and 'Cu'. In those cases, make sure your PDB
-   file specified the correct element. See also:
+   file specifies the correct element. See also:
    :func:`~vermouth.graph_utils.add_element_attr`
 
 Annotate mutations and modifications
@@ -110,8 +110,8 @@ PTMs and termini. This is done in part by
 The ``-mutate`` option can be used to change the residue name of one or more
 residues. For example, you can specify ``-mutate PHE42:ALA`` to mutate all
 residues with residue name "PHE" and residue number 42 to "ALA". Or change all
-"HSE" residues to "HIS": ``-mutate HSE:HIS``. Mutations can be specified in a
-similar way.
+"HSE" residues to "HIS": ``-mutate HSE:HIS``. Modifications can be specified in
+a similar way.
 
 The specifications ``nter`` and ``cter`` can be used to quickly refer to all N-
 and C-terminal residues respectively [#]_. In addition, the CLI options
@@ -127,8 +127,9 @@ Relevant CLI options: ``-mutate``, ``-modify``, ``-nter``, ``-cter``, ``-nt``
 
 .. [#] N- and C-termini are defined as residues with 1 neighbour and having a
    higher or lower residue number than the neighbour, respectively. Note that
-   this does not include zwitterionic amino acids!
-   This also means that if your protein has a chain break you'll end up with
+   this definition also includes termini for non-proteins, but it does not
+   include zwitterionic amino acids!
+   This also means that if your polymer has a chain break you'll end up with
    more termini than you would otherwise expect.
 
 2) Repair the input graph
@@ -140,7 +141,7 @@ modifications such as PTMs.
 Repair graph
 ------------
 The first step is to complete the graph so that it contains all atoms described
-by the reference :ref:`data:Block`, and that all atoms have the correct names.
+by the reference :ref:`data:Block`, and so that all atoms have the correct names.
 These blocks are taken from the input force field based on residue names (taking
 any mutations and modifications into account).
 :class:`~vermouth.processors.repair_graph.RepairGraph` takes care of all this.
@@ -161,18 +162,19 @@ found. This sorting also speeds up the calculation significantly, so if you're
 working with a system containing large residues consider correcting some of the
 atom names.
 
-Will issue an ``unknown-residue`` warning if no Block can be retrieved for a
+We issue an ``unknown-residue`` warning if no :ref:`data:Block` can be retrieved for a
 given residue name. In this case the entire molecule will be removed from the
 system.
 
 Identify modifications
 ----------------------
-Secondly, all modifications are identified. `Repair graph`_ will also tag all
+Secondly, all modifications are identified. `Repair graph`_ also tags all
 atoms it did not recognise, and those are processed by
 :class:`~vermouth.processors.canonicalize_modifications.CanonicalizeModifications`.
 
-This is done by finding the solution where all unknown atoms are covered by the
-atoms of exactly one :ref:`data:Modification`, where the modification must be an
+Modifications are identified by finding the solution where all tagged atoms are
+covered by the atoms of exactly one :ref:`data:Modification`, where the
+modification must be an
 :ref:`induced subgraph <graph_algorithms:Induced subgraph isomorphism>` of the
 molecule. Every modification must contain at least one "anchoring" atom, which
 is an atom that is also described by a :ref:`data:Block`. Unknown atoms are
@@ -182,7 +184,7 @@ equal if their atom name is equal. Because modifications must be
 input structure there can be no missing atoms!
 
 After this step all atoms will have correct atom names, and any residues that
-are include modifications will be labelled. This information is later used
+include modifications will be labelled. This information is later used
 during the :ref:`resolution transformation <martinize2_workflow:3) Resolution transformation>`
 
 An ``unknown-input`` warning will be issued if a modification cannot be
@@ -199,7 +201,7 @@ The resolution transformation is done by
 your molecules at the target resolution, based on the available mappings. These
 mappings are read from the ``.map`` and ``.mapping`` files available in the
 library [#]_. See also :ref:`file_formats:File formats`. In essence these
-mappings describe how molecular fragments (atoms and bonds) correspond to a
+mappings describe how molecular fragments (nodes and edges) correspond to a
 block in the target force field. We find all the ways these mappings can fit
 onto the input molecule, and add the corresponding blocks and modifications to
 the resulting molecule.
@@ -217,7 +219,7 @@ particles they map to in the output force field will also be connected.
 Interactions across separate blocks will be added in the next step.
 
 The processor will do some sanity checking on the resulting molecule, and issue
-an ``unmapped-atom`` warning if there are modifications in the input molecule
+an ``unmapped-atom`` warning if there are atoms in the input molecule
 for which no mapping can be found. In addition, this warning will also be issued
 if there are any non-hydrogen atoms that are not mapped to the output molecule.
 A more serious ``inconsistent-data`` warning will be issued for the following
@@ -277,11 +279,11 @@ There can be any number of post processing steps. For example to add an elastic
 network, or to generate Go virtual sites. We will not describe their function
 here in detail. Instead, see for example
 :class:`~vermouth.processors.apply_rubber_band.ApplyRubberBand` and
-:class:`~vermouth.processors.go_vs_includes.GoVirtIncludes`.
+:class:`~vermouth.rcsu.go_vs_includes.VirtualSiteCreator`.
 
 Relevant CLI options: ``-elastic``, ``-ef``, ``-el``, ``-eu``, ``-ermd``,
-``-ea``, ``-ep``, ``-em``, ``-eb``, ``-eunit``, ``-govs-include``,
-``-govs-moltype``
+``-ea``, ``-ep``, ``-em``, ``-eb``, ``-eunit``, ``-go``,
+``-go-eps``, ``-go-moltype``, ``-go-low``, ``-go-up``, ``-go-res-dist`` 
 
 6) Write output
 ===============

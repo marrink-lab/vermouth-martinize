@@ -25,7 +25,32 @@ from .processor import Processor
 
 
 def _atoms_match(node1, node2):
-    return attributes_match(node1, node2, ignore_keys=('order', 'replace'))
+    # node1 is molecule, node2 is link
+    # modifications are named as tuples, e.g. `('C-ter',)`, since mappings can
+    # deal with multiple modifications at the same time. Here we build a flat
+    # list of relevant modification names, and require that /all/ of these match
+    # the link['modifications']
+    mods = []
+    for mod in node1.get('modifications', []):
+        mods.extend(mod.name)
+
+                  # No modifications specified by link: always match
+    mods_match = ('modifications' not in node2 or
+                  # empty modifications in link and no modifications in molecule: match
+                  (not node2['modifications'] and not mods) or
+                  # Else, if both specify modifications, then...
+                  (node2['modifications'] and mods and
+                   # link modifications must be a list, and molecule mods must
+                   # match links mods exactly
+                   ((isinstance(node2['modifications'], list) and sorted(mods) == sorted(node2['modifications'])) or
+                    # Or link mods are a simple string or a Choice, and all
+                    # molecule modifications must be accounted for
+                    # Here we need to do a little jiggery-pokery to leverage
+                    # attributes_match. This probably means that that function
+                    # needs to be cut up into smaller pieces.
+                    all(attributes_match({'_': modname}, {'_': node2['modifications']}) for modname in mods))))
+
+    return bool(mods_match and attributes_match(node1, node2, ignore_keys=('order', 'replace', 'modifications')))
 
 
 def _is_valid_non_edges(molecule, link, rev_raw_match):
@@ -291,6 +316,11 @@ class DoLinks(Processor):
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
                         molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
+
+                for loglevel, entries in link.log_entries.items():
+                    for entry, fmt_args in entries.items():
+                        fmt_args = fmt_args + [match]
+                        molecule.log_entries[loglevel][entry] += fmt_args
 
             molecule.remove_nodes_from(_nodes_to_remove)
         return molecule

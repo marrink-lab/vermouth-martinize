@@ -7,5 +7,5 @@ martinize2
 -cys auto
 -ea 0.8
 -ep 2
--modify A-ASP50:ASP0
+-modify A-ASP50:ASP-HD2
 -ignore HOH

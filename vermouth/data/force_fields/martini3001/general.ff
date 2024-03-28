@@ -14,3 +14,7 @@
 
 [ variables ]
 center_weight "mass"
+regular "0.47"
+small "0.41"
+tiny "0.34"
+water_type "W"

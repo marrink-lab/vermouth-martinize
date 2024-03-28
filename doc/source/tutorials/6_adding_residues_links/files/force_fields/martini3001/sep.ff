@@ -1,0 +1,35 @@
+;[ macros ]
+;protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP|SEP"
+;protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP|SEP"
+;prot_default_bb_type P2
+;stiff_fc 1000000
+
+;;; PHOSPHOSERINE
+[ moleculetype ]
+SEP 1
+
+[ warning ]
+THESE PARAMETERS ARE FOR DEMONSTRATION PURPOSES ONLY. DO NOT USE.
+
+[ atoms ]
+; id type resnr residue atom cgnr charge
+ 1   P2   1     SEP     BB   1     0
+ 2   Q5n  1     SEP     SC1  1    -1
+
+[ bonds ]
+BB SC1 1 0.33 5000
+
+[ link ]
+[ warning ]
+THESE PARAMETERS ARE FOR DEMONSTRATION PURPOSES ONLY. DO NOT USE.
+[ atoms ]
+-BB {"resname": "ALA"}
+BB {"resname": "SEP"}
+SC1 {"resname": "SEP"}
++BB {"resname": "ALA"}
+[ bonds ]
+BB +BB 1 0.35 4000 
+BB -BB 1 0.35 4000 
+[ angles ]
+-BB BB +BB 10 100 20
+-BB BB SC1 2 100 25

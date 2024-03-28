@@ -33,14 +33,19 @@ LOGGER = StyleAdapter(get_logger(__name__))
 
 # Find the data directory once.
 try:
-    import pkg_resources
+    from importlib.resources import files, as_file
+    import atexit
+    from contextlib import ExitStack
 except ImportError:
-    import os
-    DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-    del os
+    from pathlib import Path
+    DATA_PATH = Path(__file__).parent / 'data'
+    del Path
 else:
-    DATA_PATH = pkg_resources.resource_filename('vermouth', 'data')
-    del pkg_resources
+    ref = files('vermouth') / 'data'
+    file_manager = ExitStack()
+    atexit.register(file_manager.close)
+    DATA_PATH = file_manager.enter_context(as_file(ref))
+    del files, as_file, atexit, ExitStack
 
 del pbr
 

@@ -3,7 +3,8 @@
 [![Build Status](https://github.com/marrink-lab/vermouth-martinize/actions/workflows/run_tests.yml/badge.svg)](https://github.com/marrink-lab/vermouth-martinize/actions)
 [![codecov](https://codecov.io/gh/marrink-lab/vermouth-martinize/branch/master/graph/badge.svg)](https://codecov.io/gh/marrink-lab/vermouth-martinize)
 [![Documentation Status](https://readthedocs.org/projects/vermouth-martinize/badge/?version=latest)](https://vermouth-martinize.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/327071500.svg)]()
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7361701.svg)](https://doi.org/10.5281/zenodo.7361701)
+[![arXiv](https://img.shields.io/badge/arXiv-2105.05890-b31b1b.svg)](http://arxiv.org/abs/2212.01191)
 
 Martinize2 is a rewrite of [Martinize]. It is aimed at producing
 coarse-grained structures and topologies from an atomistic structure. Martinize
@@ -42,6 +43,9 @@ the following command:
 Note that vermouth and Martinize2, in particular development versions, may contain bugs that cause it to produce
 incorrect topologies. Check the produced output carefully!
 
+Martinize2 and vermouth have [mdtraj][mdtraj] as optional dependency as an 
+alternative to dssp.
+
 The behavior of the `pip` command can vary depending of the specificity of your
 python installation. See the [documentation on installing a python
 package][pipdoc] to learn more.
@@ -59,6 +63,21 @@ tutorials]; in most cases, replacing calls to `martinize.py` by calls to
 `martinize2` should produce similar results.
 
 The documentation of the vermouth python library will come soon.
+
+## Citation
+```
+@article{kroon2022martinize2,
+  title={Martinize2 and Vermouth: Unified Framework for Topology Generation},
+  author={Kroon, Peter C and Gr{\"u}newald, Fabian and Barnoud, Jonathan and van Tilburg, Marco 
+          and Souza, Paulo CT and Wassenaar, Tsjerk A and Marrink, Siewert-Jan},
+  journal={arXiv preprint arXiv:2212.01191},
+  year={2022}}
+```
+
+## Documentation
+
+More complete documentation, including API documentation can be found at
+https://vermouth-martinize.readthedocs.io/
 
 ## License
 
@@ -92,6 +111,7 @@ academic paper is left to our sole discretion.
 [Martini tutorials]: http://cgmartini.nl/index.php/tutorials-general-introduction-gmx5
 [Gromacs]: http://www.gromacs.org
 [pypi_vermouth]: https://pypi.org/project/vermouth/
+[mdtraj]: https://www.mdtraj.org/
 [pipdoc]: https://packaging.python.org/tutorials/installing-packages/#installing-packages
 [license]: https://github.com/marrink-lab/vermouth-martinize/blob/master/LICENSE
 [github]: https://github.com/marrink-lab/vermouth-martinize

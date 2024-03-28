@@ -81,6 +81,26 @@ class TestBlock:
                                       'other': 'plop'}
 
     @staticmethod
+    def test_meta():
+        lines = """
+        [ moleculetype ]
+        XXX 1
+        [ meta ]
+        flag
+        key1 0.15 ;test
+        key2 value1 value2
+        """
+        lines = textwrap.dedent(lines).splitlines()
+        ff = vermouth.forcefield.ForceField(name='test_ff')
+        vermouth.ffinput.read_ff(lines, ff)
+        block = ff.blocks['XXX']
+        assert len(block.meta) == 3
+        assert block.meta['flag'] == None 
+        assert block.meta['key1'] == '0.15' 
+        assert block.meta['key2'] ==  ['value1', 'value2']
+        
+        
+    @staticmethod
     def test_fixed_number_interaction():
         """
         Define an interaction for which the number of atoms required is known.
@@ -1061,7 +1081,7 @@ class TestModification:
         """
         lines = """
         [ modification ]
-        [modification]
+        [ modification ]
         """
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
@@ -1079,12 +1099,15 @@ class TestModification:
         CA{"element": "C"}  ; the space between the name and the attributes is optionnal
         C {"element": "C"}
         O {"element": "O"}
+        H {"element": "H", "PTM_atom": true}
         OXT {"element": "O", "PTM_atom": true, "replace": {"atomname": null}}
-
+        [ bonds ]
+        O  H  1  0.12  1000
         [ edges ]
         CA C
         C O
         C OXT
+        O H
         """
         lines = textwrap.dedent(lines).splitlines()
         ff = vermouth.forcefield.ForceField(name='test_ff')
@@ -1093,19 +1116,26 @@ class TestModification:
 
         assert modification.name == 'C-ter'
         assert tuple(modification.nodes(data=True)) == (
-            ('CA', {'element': 'C', 'PTM_atom': False, 'atomname': 'CA'}),
-            ('C', {'element': 'C', 'PTM_atom': False, 'atomname': 'C'}),
-            ('O', {'element': 'O', 'PTM_atom': False, 'atomname': 'O'}),
+            ('CA', {'element': 'C', 'PTM_atom': False, 'atomname': 'CA', 'order': 0}),
+            ('C', {'element': 'C', 'PTM_atom': False, 'atomname': 'C', 'order': 0}),
+            ('O', {'element': 'O', 'PTM_atom': False, 'atomname': 'O', 'order': 0}),
+            ('H', {'element': 'H', 'PTM_atom': True, 'atomname': 'H', 'order': 0}),
             ('OXT', {
                 'element': 'O',
                 'PTM_atom': True,
                 'atomname': 'OXT',
+                'order': 0,
                 'replace': {'atomname': None}
             }),
         )
+        assert modification.interactions['bonds'] == [vermouth.molecule.Interaction(atoms=['O', 'H'],
+                                                                                    parameters=['1', '0.12', '1000'],
+                                                                                    meta={},)]
+
         assert set(frozenset(edge) for edge in modification.edges) == {
             frozenset(('CA', 'C')),
             frozenset(('C', 'O')),
+            frozenset(('H', 'O')),
             frozenset(('C', 'OXT')),
         }
 

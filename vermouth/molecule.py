@@ -357,7 +357,11 @@ class Molecule(nx.Graph):
         super().__init__(*args, **kwargs)
         self.interactions = defaultdict(list)
         self.citations = set()
+        # {loglevel: {entry: [fmt_args]}}
+        self.log_entries = defaultdict(lambda: defaultdict(list))
         self.max_node = None
+        # box of the system the molecule is in
+        self.box = None
 
     def __eq__(self, other):
         return (
@@ -428,6 +432,10 @@ class Molecule(nx.Graph):
             node_attr = self.nodes[node]
             yield node, node_attr
 
+    @property
+    def sorted_nodes(self):
+        yield from sorted(self.nodes, key=lambda n_idx: self.nodes[n_idx].get('atomid', np.inf))
+
     def copy(self):
         """
         Creates a copy of the molecule.
@@ -438,6 +446,8 @@ class Molecule(nx.Graph):
         """
         new = self.subgraph(self.nodes)
         new.name = self.name
+        new.citations = self.citations.copy()
+        new.log_entries = copy.deepcopy(self.log_entries)
         return new
 
     def subgraph(self, nodes):
@@ -589,13 +599,15 @@ class Molecule(nx.Graph):
         """
         idx = 0
         for idx, interaction in enumerate(self.interactions[type_]):
-            if interaction.atoms == atoms and interaction.meta.get('version', 0):
+            if interaction.atoms == atoms and interaction.meta.get('version', 0) == version:
                 break
         else:  # no break
             msg = ("Can't find interaction of type {} between atoms {} "
                    "and with version {}")
             raise KeyError(msg.format(type_, atoms, version))
         del self.interactions[type_][idx]
+        if not self.interactions[type_]:
+            del self.interactions[type_]
 
     def remove_matching_interaction(self, type_, template_interaction):
         """
@@ -717,13 +729,18 @@ class Molecule(nx.Graph):
         for name, interactions in molecule.interactions.items():
             for interaction in interactions:
                 atoms = tuple(correspondence[atom] for atom in interaction.atoms)
-                #print(atoms, interaction.meta)
                 self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:
                 self.add_edge(correspondence[node1], correspondence[node2])
         # merge the citation sets
         self.citations.update(molecule.citations)
+        # Merge the log entries
+        for loglevel, entries in molecule.log_entries.items():
+            for entry, fmt_args in entries.items():
+                # Renumber any existing formatting maps
+                fmt_args = [{name: correspondence[old] for (name, old) in fmt_arg.items()} for fmt_arg in fmt_args]
+                self.log_entries[loglevel][entry] += fmt_args + [correspondence]
 
         return correspondence
 
@@ -1189,6 +1206,7 @@ class Block(Molecule):
         name_to_idx = {}
         mol = Molecule(force_field=force_field)
         mol.citations = self.citations
+        mol.log_entries = copy.deepcopy(self.log_entries)
 
         for idx, node in enumerate(self.nodes, start=atom_offset):
             name_to_idx[node] = idx
@@ -1332,7 +1350,7 @@ def attributes_match(attributes, template_attributes, ignore_keys=()):
 
     Returns ``True`` if the attributes from the link match the ones from the
     molecule; returns ``False`` otherwise. The attributes from a link match
-    with those of a molecule is all the individual attribute from the link
+    with those of a molecule if all the individual attribute from the link
     match the corresponding ones in the molecule. In the simplest case, these
     attribute match if their values are equal. If the value of the link
     attribute is an instance of :class:`LinkPredicate`, then the attributes

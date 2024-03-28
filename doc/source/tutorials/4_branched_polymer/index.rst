@@ -1,2 +1,0 @@
-PAMAM: a hyperbranched polymer
-==============================

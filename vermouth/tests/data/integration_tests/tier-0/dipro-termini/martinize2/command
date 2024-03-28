@@ -1,0 +1,6 @@
+martinize2
+-f ../aa.pdb
+-x cg.pdb
+-o topol.top
+-ff martini3001
+-nt
