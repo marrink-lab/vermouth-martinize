@@ -155,6 +155,7 @@ Allowed sub-directives: Moleculetype
     - Each line in the atoms section describes one particle,
       corresponding to a node in the molecular graph. The description
       comprises the following fields:
+
         * atom number
         * atom type
         * residue index
