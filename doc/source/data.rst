@@ -71,7 +71,7 @@ Patterns provide a concise way where either one of multiple conditions must be
 met. For example two neighbouring 'BB' beads, where one must have a helical
 secondary structure, and the other should be a coil.
 
-Links can be defined through :ref:`.ff files <file_formats:.Force field file (.ff)>`.
+Links can be defined through :ref:`.ff files <file_formats:Force field file (.ff)>`.
 See also: :ref:`Apply Links <martinize2_workflow:4) Apply Links>`.
 
 Modification
