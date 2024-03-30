@@ -42,7 +42,7 @@ The top-level directives for the force field and the topologies are
 macros, variables, citations, moleculetypes, links, and modifications.
 
 Allowed major directives
-^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~
 The format recognizes the following directives:
 
 - ``[ macros ]``
@@ -149,7 +149,7 @@ The format recognizes the following directives:
 
 
 Allowed sub-directives: Moleculetype
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - ``[ atoms ]``
     - ``mandatory``
     - Each line in the atoms section describes one particle,
@@ -241,7 +241,7 @@ Allowed sub-directives: Moleculetype
         BB SC1 SC2 SC3 9    0  2  3 {"version": 3}
 
 Allowed sub-directives: Link
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - ``[ atoms ]``
     - ``optional``
     - The atoms directive is optional within links. It can be given to
@@ -331,7 +331,7 @@ Allowed sub-directives: Link
 
 
 Allowed sub-directives: Modifications
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - ``[ atoms ]``
     - ``mandatory``
     - The atoms subsection under a modification lists both anchors and
