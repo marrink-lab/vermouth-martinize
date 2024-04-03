@@ -270,13 +270,15 @@ Allowed sub-directives: Link
       same residue a prefix has to be provided that specifies the order
       relative to a given residue. The following prefixes are allowed:
 
-        * +, ++, +++ : 	first, second, third following residue
-        * -, --, --- : 	first, second, third previous residue
-        * >, >>, >>> :  residue with larger resid but unspecified
-                        difference between the residues
-        * <, <<, <<< :  residue with smaller resid but unspecified
-                        difference between the residues
-        * *          :  other residue
+      .. code-block::
+
+          * +, ++, +++ : first, second, third following residue
+          * -, --, --- : first, second, third previous residue
+          * >, >>, >>> : residue with larger resid but unspecified
+                         difference between the residues
+          * <, <<, <<< : residue with smaller resid but unspecified
+                         difference between the residues
+          * *          : other residue
 
       Thus, +CA in amino acids refers to the C-alpha atom in the
       C-terminal connected neighbor, while >SG in the construction of
@@ -285,6 +287,7 @@ Allowed sub-directives: Link
 
       These prefixes can also be used in the atoms and pattern
       subsections.
+
     - For example, to specify a bond between the backbone bead of a
       given amino acid and the next one, we write:
       .. code-block:: 
