@@ -352,7 +352,7 @@ Allowed sub-directives: Modifications
       link sub directive.
 
 Special meta data
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 The ff file format employs some special syntaxes that can be used to
 affect the order in which interactions are displayed, comment them,
 or group them.
