@@ -340,7 +340,7 @@ Allowed sub-directives: Modifications
       added need to set the "PTM_atom" attribute to True and require
       a valid "element" attribute. Atoms for which the "PTM_atom" 
       attribute is absent (or False) must already be described by the 
-      relevant :ref:`block <data.Block>` with the same atomname. 
+      relevant :ref:`block <data:block>` with the same atomname. 
       The "replace" attribute may be set to a (nested) JSON dict, listing
       the atom attributes to be changed and the new values corresponding
       to the modification. Such changes can also be applied to atoms
@@ -412,7 +412,7 @@ The format recognizes the following directives:
 - ``[molecule]``
     - This directive is immediately followed by a single line containing
       an alphanumeric string specifying the residue name. This name
-      denotes the residue under consideration. A :ref:`block <data.Block>`
+      denotes the residue under consideration. A :ref:`block <data:block>`
       with this name must be defined in both the ``[from]`` and ``[to]`` force fields.
     - ``mandatory``
 
