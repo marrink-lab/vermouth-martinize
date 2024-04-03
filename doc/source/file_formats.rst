@@ -443,6 +443,7 @@ The format recognizes the following directives:
         origin force field.
       - Any number of bead names. These beads must have been previously
         listed under the ``[martini]`` directive.
+    - All atoms described by the referenced block should be described.
     - ``mandatory``
 
 - ``[chiral]``
