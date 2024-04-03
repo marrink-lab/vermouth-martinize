@@ -337,12 +337,14 @@ Allowed sub-directives: Modifications
     - The atoms subsection under a modification lists both anchors and
       atoms to be added to anchors or changed. Entries consist of an
       atom name followed by an attributes statement. Atoms that are
-      added need to set the "PTM_atom" attribute to true and require
-      a valid "element" attribute. The "replace" attribute may be set
-      to a (nested) JSON dict, listing the atom attributes to be
-      changed and the new values corresponding to the modification.
-      Such changes can also be applied to atoms already present in the
-      molecular graph, i.e., the 'non-PTM atoms'.`
+      added need to set the "PTM_atom" attribute to True and require
+      a valid "element" attribute. Atoms for which the "PTM_atom" 
+      attribute is absent (or False) must already be described by the 
+      relevant :ref:`block <data.Block>` with the same atomname. 
+      The "replace" attribute may be set to a (nested) JSON dict, listing
+      the atom attributes to be changed and the new values corresponding
+      to the modification. Such changes can also be applied to atoms
+      already present in the molecular graph, i.e., the 'non-PTM atoms'.`
 - ``[ interaction_name ]``
     - ``optional``
     - A modification may list any number of interactions to be added, if a
