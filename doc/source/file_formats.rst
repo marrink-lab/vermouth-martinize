@@ -174,10 +174,12 @@ Allowed sub-directives: Moleculetype
 
 - ``[ edges ]``
     - ``optional``
-    - Edges will be added to the molecular graph when required through
-      interactions, but they can also be added explicitly by listing
-      them under the edges subsections, specifying each edge to be
-      added by the corresponding atom names.
+    - Edges will be added to the molecular graph when required based on
+      the interactions directive, but they can also be added explicitly
+      by listing them under the edges subsections. An edge is specified
+      by the corresponding atom names. Note that these edges do not
+      result in any interactions, but they rather complete the molecular
+      graph.
     - An example is shown below:
       .. code-block:: 
 
