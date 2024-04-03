@@ -50,7 +50,7 @@ The format recognizes the following directives:
     - The macros section has no further subsections and lists
       substitution patterns to be applied throughout the file being
       read.
-    - Macro values are substituted using the name with a preceding $.
+    - Macro values are substituted using the name with a preceding ``$``.
       This is similar to the use of variables in shell scripting and
       makes it easy to write generalizations and to use and change
       default values.
@@ -130,7 +130,7 @@ The format recognizes the following directives:
       structural properties of protein backbone in the Martini
       force field.
     - An example of this feature is is shown below, where the link only
-      applies to residues with the resname ALA and the secondary
+      applies to atoms with the resname ALA and the secondary
       structure assignment coil.
       .. code-block:: 
 
@@ -294,7 +294,7 @@ Allowed sub-directives: Link
       and atoms sub directive.
     - To overwrite this default pattern one can list patterns of atoms
       to which the link applies. Each line in the subsection describes
-      a pattern. One of the patterns must apply for the link to match.
+      a pattern. At least one of the patterns must apply for the link to match.
       A pattern consists of atom identifiers. Each atom identifier
       consists of a name which may be preceded by a prefix indicating
       the relative position in terms of residues.
@@ -345,7 +345,7 @@ Allowed sub-directives: Modifications
       molecular graph, i.e., the 'non-PTM atoms'.`
 - ``[ interaction_name ]``
     - ``optional``
-    - A link may list any number of interactions to be added, if a
+    - A modification may list any number of interactions to be added, if a
       modification applies. The syntax is the same as for the
       link sub directive.
 
@@ -410,7 +410,8 @@ The format recognizes the following directives:
 - ``[molecule]``
     - This directive is immediately followed by a single line containing
       an alphanumeric string specifying the residue name. This name
-      denotes the residue under consideration.
+      denotes the residue under consideration. A :ref:`block <data.Block>`
+      with this name must be defined in both the ``[from]`` and ``[to]`` force fields.
     - ``mandatory``
 
 - ``[from]``
@@ -429,6 +430,7 @@ The format recognizes the following directives:
     - The directive is followed by any number of lines. Each line must
       contain space separated bead names.
     - ``mandatory``
+
 - ``[atoms]``
     - This directive introduces a section that can span multiple lines.
       Each line within this section must adhere to the following
@@ -440,14 +442,17 @@ The format recognizes the following directives:
       - Any number of bead names. These beads must have been previously
         listed under the ``[martini]`` directive.
     - ``mandatory``
+
 - ``[chiral]``
     - Contains chirality specifications used for the original backwards
       program.
     - ``ignored``
+
 - ``[trans]``
     - Contains geometry specifications used for the original backwards
       program.
     - ``ignored``
+
 - ``[out]``
     - Contains geometry specifications used in the original backwards
       program.
@@ -494,18 +499,20 @@ Allowed directives .mapping
     - ``mandatory``
 
 - ``[from blocks]`` and ``[to blocks]``
-    - Each followed by an alphanumeric string describing a block name
-      that needs to be modified by the modification at hand.
+    - Each followed by the name of the modification in the respective
+      force fields
     - ``mandatory``
 
 - ``[from nodes]``
-    - Lists all nodes present in the modification description.
-    - ``mandatory``
+    - Lists all nodes that should be part of the mapping that are not
+      yet described by ``[from block]``
+    - ``optional``
 
 - ``[from edges]``
-    - Contains all edges between the to-be-modified block and the
-      modification.
-    - ``mandatory``
+    - Contains all edges that are part of the mapped fragment that are
+      not described by ``[from block]``. In particular, all edges concerning
+      nodes in ``[from nodes]`` must be listed here.
+    - ``optional``
 
 - ``[mapping]``
     - Contains pairs of atom names and bead names, describing the
