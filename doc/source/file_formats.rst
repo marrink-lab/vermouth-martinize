@@ -272,7 +272,11 @@ Allowed sub-directives: Link
 
         * +, ++, +++ : 	first, second, third following residue
         * -, --, --- : 	first, second, third previous residue
-        * > :		other residue (not in order)
+        * >, >>, >>> :  residue with larger resid but unspecified
+                        difference between the residues
+        * <, <<, <<< :  residue with smaller resid but unspecified
+                        difference between the residues
+        * *          :  other residue
 
       Thus, +CA in amino acids refers to the C-alpha atom in the
       C-terminal connected neighbor, while >SG in the construction of
