@@ -71,7 +71,7 @@ Patterns provide a concise way where either one of multiple conditions must be
 met. For example two neighbouring 'BB' beads, where one must have a helical
 secondary structure, and the other should be a coil.
 
-Links can be defined through :ref:`.ff files <file_formats:.ff file format>`.
+Links can be defined through :ref:`.ff files <file_formats:Force field file (.ff)>`.
 See also: :ref:`Apply Links <martinize2_workflow:4) Apply Links>`.
 
 Modification
@@ -87,7 +87,7 @@ or remove interactions; much like a `Link`_. Note that a modification *must* alw
 add at least one node. Otherwise there will be no unidentified nodes to be picked
 up by the processor.
 
-Modifications can be defined through :ref:`.ff files <file_formats:.ff file format>`.
+Modifications can be defined through :ref:`.ff files <file_formats:Force field file (.ff)>`.
 See also: :ref:`Identify modifications <martinize2_workflow:Identify modifications>`.
 
 Force Field
@@ -109,7 +109,7 @@ A :class:`~vermouth.map_parser.Mapping` describes how molecular fragments can
 be transformed from one force field to another.
 
 Mappings can be provided through [backward]_ style ``.map`` files, or the more
-powerful (but verbose) :ref:`.mapping <file_formats:.mapping file format>` format.
+powerful (but verbose) :ref:`.mapping <file_formats:Mapping files (.map & .mapping)>` format.
 See also: :ref:`Resolution transformation <martinize2_workflow:3) Resolution transformation>`.
 
 .. [backward] T.A. Wassenaar, K. Pluhackova, R.A. Böckmann, S.J. Marrink, D.P. Tieleman, Going Backward: A Flexible Geometric Approach to Reverse Transformation from Coarse Grained to Atomistic Models, J. Chem. Theory Comput. 10 (2014) 676–690. doi:10.1021/ct400617g.
