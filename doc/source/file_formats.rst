@@ -79,11 +79,13 @@ The format recognizes the following directives:
 
 - ``[ citations ]``
 
-    - ``optional``; but note that martinize2 expects some citations
-      to be present.
+    - ``optional``
     - The citations section lists the citations to be used for the
       force field. Citations are named and refer to an entry in the
       bibtex file `citations.bib` in the force field directory.
+    - Note that martinize2 automatically adds some citations via
+      processors. Thus it expects them to be present in the citations
+      file.
     - Citations can also be specified for moleculetypes, links, and
       modifications, in a citation subsection.
     - An example of this is:
@@ -91,6 +93,16 @@ The format recognizes the following directives:
 
         [ citations ]
         Martini3
+    - If you want to add a citation to a specific molecule, the
+      citation directive can be added as subsection to the
+      moleculetype directive:
+      .. code-block:: 
+
+        [ moleculetype ]
+        ALA 3
+        [ citations ]
+        mol_specific_citation
+
 
 - ``[ moleculetype ]``
     - ``optional``
