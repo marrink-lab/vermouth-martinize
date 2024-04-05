@@ -236,12 +236,11 @@ def annotate_modifications(molecule, modifications, mutations):
             # Ie. the target residue is chain specific
             if (resspec.get('chain') is not None) and (resspec.get('chain') == chain):
                 mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
-                if mod_found == False:
-                    LOGGER.warning('Mutation "{}" not found. '
-                                   'Check target resid!'
-                                   ''.format(_format_resname(resspec)))
-            # If instead we're targeting all residues in the chain
-            elif resspec.get(chain) == None:
+                if not mod_found:
+                    LOGGER.warning('Residue specified by "{}" for mutation "{}" not found. ',
+                                   _format_resname(resspec), mod)
+            # If instead we're targeting residues in any chain
+            elif resspec.get(chain) is None:
                 _resiter(mod, residue_graph, resspec, library, key, molecule)
 
 class AnnotateMutMod(Processor):
