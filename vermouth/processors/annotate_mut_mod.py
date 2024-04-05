@@ -177,6 +177,24 @@ def _format_resname(res):
     return out
 
 def _resiter(mod, residue_graph, resspec, library, key, molecule):
+    """
+    Iterate over residues to find a specific modification
+
+    Parameters
+    ----------
+    mod: str
+        The modification to apply, eg N-ter, C-ter
+    residue_graph: networkx.Graph
+        A graph with one node per residue.
+    resspec: dict
+        Attributes that must be present in the residue node. 'resname' is
+        treated specially as described above.
+    library: dict
+        dictionary of modifications/mutations from the force field
+    key: str
+        from associations
+    molecule: networkx.Graph
+    """
     mod_found = False
     for res_idx in residue_graph:
         if residue_matches(resspec, residue_graph, res_idx):
