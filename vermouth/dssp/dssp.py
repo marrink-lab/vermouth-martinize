@@ -417,8 +417,15 @@ def convert_dssp_to_martini(sequence):
     cg_sequence = ''.join(ss_cg[secstruct] for secstruct in sequence)
     wildcard_sequence = ''.join('H' if secstruct == 'H' else '.'
                                 for secstruct in cg_sequence)
+    # Flank the sequence with dots. Otherwise in a sequence consisting of only
+    # H will not have a start or end. See also issue 566.
+    # This should not cause further issues, since '..' doesn't map to anything
+    wildcard_sequence = '.' + wildcard_sequence + '.'
     for pattern, replacement in patterns.items():
-        wildcard_sequence = wildcard_sequence.replace(pattern, replacement)
+        while pattern in wildcard_sequence:  # EXPENSIVE! :'(
+            wildcard_sequence = wildcard_sequence.replace(pattern, replacement)
+    # And remove the flanking dots again
+    wildcard_sequence = wildcard_sequence[1:-1]
     result = ''.join(
         wildcard if wildcard != '.' else cg
         for wildcard, cg in zip(wildcard_sequence, cg_sequence)
