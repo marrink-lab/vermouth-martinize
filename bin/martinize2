@@ -634,7 +634,9 @@ def entry():
         help="Mutate a residue. Desired mutation is "
         "specified as, e.g. A-PHE45:ALA. The format is "
         "<chain>-<resname><resid>:<new resname>. Elements "
-        "of the specification can be omitted as required.",
+        "of the specification can be omitted as required."
+        "e.g. PHE45:ALA will mutate all PHE with resid 45 to ALA, "
+        "A-PHE:ALA will mutate all PHE on chain A to ALA",
     )
     prot_group.add_argument(
         "-modify",
@@ -646,7 +648,9 @@ def entry():
         "modification is specified as, e.g. A-ASP45:ASP0. "
         "The format is <chain>-<resname><resid>:<modification>."
         " Elements of the specification can be omitted as "
-        "required.",
+        "required. e.g. ASP45:ASP0 will modify all ASP with "
+        "resid 45 to ASP0, A-ASP:ASP0 will modify all ASP on "
+        "chain A to ASP0",
     )
     prot_group.add_argument(
         "-nter",
