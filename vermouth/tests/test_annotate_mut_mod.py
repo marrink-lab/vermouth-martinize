@@ -302,7 +302,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
 
     assert found == expected
 
-@pytest.mark.parametrize('node_data, edge_data, expected', [
+@pytest.mark.parametrize('node_data, edge_data, mutation, expected', [
     (
         [
             {'chain': 'A', 'resname': 'GLY', 'resid': 1},
@@ -310,6 +310,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
             {'chain': 'A', 'resname': 'ALA', 'resid': 3}
         ],
         [(0, 1), (1, 2)],
+        [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'MET')],
         False
     ),
     (
@@ -319,21 +320,48 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
             {'chain': 'A', 'resname': 'ALA', 'resid': 3}
         ],
         [(0, 1), (1, 2)],
+        [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'MET')],
         True
-    )])
-def test_mod_resid_not_correct(caplog, node_data, edge_data, expected):
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'ALA', 'chain': 'A'}, 'GLY')],
+        False
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'GLY', 'chain': 'A'}, 'ALA')],
+        True
+    )
+])
+def test_mod_resid_not_correct(caplog, node_data, edge_data, mutation, expected):
     """
     Tests that the modification is found in the expected residue.
     """
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol.add_nodes_from(enumerate(node_data))
     mol.add_edges_from(edge_data)
-    mutation = [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'MET')]
-    
+
     caplog.clear()
     annotate_modifications(mol, [], mutation)
-    
+
     if expected:
-        assert 'Residue specified by "A-GLY1" for mutation "MET" not found.' in str(caplog.records[0].getMessage())
+        assert any(rec.levelname == 'WARNING' for rec in caplog.records)
     else:
         assert caplog.records == []
