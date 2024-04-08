@@ -28,7 +28,7 @@ import vermouth
 from vermouth.forcefield import ForceField
 
 from .. import datafiles
-from ..helper_functions import find_in_path
+from ..helper_functions import find_in_path, parse_gofiles
 
 
 INTEGRATION_DATA = Path(datafiles.TEST_DATA/'integration_tests')
@@ -111,6 +111,35 @@ def compare_pdb(filename1, filename2):
 COMPARERS = {'.itp': compare_itp,
              '.pdb': compare_pdb}
 
+def compare_nbparams(fileref, filecomp):
+    """
+    Asserts that two go_nbparams.itp files are functionally identical.
+    """
+    ref = parse_gofiles(fileref)
+    compare = parse_gofiles(filecomp)
+    
+    assert set(ref.keys()) == set(compare.keys())  # assert correct nb pairs
+
+    for key in ref.keys(): 
+        assert compare[key] == pytest.approx(ref[key])  # assert correct sigma and eps
+
+
+def compare_goatomtypes(fileref, filecomp):
+    """
+    Asserts that two go_atomtypes.itp files are functionally identical.
+    """
+    ref = parse_gofiles(fileref, atomtypes=True)
+    compare = parse_gofiles(filecomp, atomtypes=True)
+    
+    assert set(ref.keys()) == set(compare.keys())  # assert correct atomtypes
+
+    for key in ref.keys(): 
+        assert ref[key] == compare[key]  #assert correct atom definition string
+
+GOCOMPARERS = {'go_nbparams.itp': compare_nbparams,
+               'virtual_sites_nonbond_params.itp': compare_nbparams,
+               'go_atomtypes.itp': compare_goatomtypes,
+               'virtual_sites_atomtypes.itp': compare_goatomtypes}
 
 def _interaction_equal(interaction1, interaction2):
     """
@@ -132,6 +161,9 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-1', 'bpti'],
     ['tier-1', 'lysozyme'],
     ['tier-1', 'lysozyme_prot'],
+    ['tier-1', 'lysozyme_GO'],
+    ['tier-1', 'lysozyme_GObias'],
+    ['tier-1', 'lysozyme_ENbias'],
     ['tier-1', 'villin'],
     ['tier-1', '3i40'],
     ['tier-1', '6LFO_gap'],
@@ -204,10 +236,14 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
         filename = new_file.name
         reference_file = data_path/filename
         assert reference_file.is_file()
-        ext = new_file.suffix.lower()
-        if ext in COMPARERS:
-            with monkeypatch.context() as m:
-                # Compare Interactions such that rounding errors in the
-                # parameters are OK.
-                m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
-                COMPARERS[ext](str(reference_file), str(new_file))
+        if filename in GOCOMPARERS:
+            # compare the extra go/vs model files
+            GOCOMPARERS[filename](str(reference_file), str(new_file))
+        else:
+            ext = new_file.suffix.lower()
+            if ext in COMPARERS:
+                with monkeypatch.context() as m:
+                    # Compare Interactions such that rounding errors in the
+                    # parameters are OK.
+                    m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
+                    COMPARERS[ext](str(reference_file), str(new_file))

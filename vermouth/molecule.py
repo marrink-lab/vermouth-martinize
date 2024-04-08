@@ -732,7 +732,8 @@ class Molecule(nx.Graph):
                 self.add_interaction(name, atoms, interaction.parameters, interaction.meta)
         for node1, node2 in molecule.edges:
             if correspondence[node1] != correspondence[node2]:
-                self.add_edge(correspondence[node1], correspondence[node2])
+                attrs = molecule.edges[(node1, node2)]
+                self.add_edge(correspondence[node1], correspondence[node2], **attrs)
         # merge the citation sets
         self.citations.update(molecule.citations)
         # Merge the log entries
@@ -1227,8 +1228,9 @@ class Block(Molecule):
                     interaction.parameters,
                     meta=interaction.meta
                 )
-        for edge in self.edges:
-            mol.add_edge(*(name_to_idx[node] for node in edge))
+        for nodea, nodeb, attrs in self.edges(data=True):
+            edge = (nodea, nodeb)
+            mol.add_edge(*(name_to_idx[node] for node in edge), **attrs)
 
         try:
             mol.nrexcl = self.nrexcl
@@ -1350,7 +1352,7 @@ def attributes_match(attributes, template_attributes, ignore_keys=()):
 
     Returns ``True`` if the attributes from the link match the ones from the
     molecule; returns ``False`` otherwise. The attributes from a link match
-    with those of a molecule is all the individual attribute from the link
+    with those of a molecule if all the individual attribute from the link
     match the corresponding ones in the molecule. In the simplest case, these
     attribute match if their values are equal. If the value of the link
     attribute is an instance of :class:`LinkPredicate`, then the attributes
