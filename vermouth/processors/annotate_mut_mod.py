@@ -210,7 +210,6 @@ def _resiter(mod, residue_graph, resspec, library, key, molecule):
                 molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
     return mod_found
 
-
 def annotate_modifications(molecule, modifications, mutations):
     """
     Annotate nodes in molecule with the desired modifications and mutations
@@ -251,8 +250,10 @@ def annotate_modifications(molecule, modifications, mutations):
 
     for mutmod, key, library in associations:
         for resspec, mod in mutmod:
-            # Ie. the target residue is chain specific
-            if (resspec.get('chain') is not None) and (resspec.get('chain') == chain):
+            # Ie. the target residue is chain or residue specific
+            condition0 = ((resspec.get('chain') is not None) and (resspec.get('chain') == chain))
+            condition1 = ((resspec.get('chain') is None) and (resspec.get('resid') is not None))
+            if condition0 or condition1:
                 mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
                 if not mod_found:
                     LOGGER.warning('Residue specified by "{}" for mutation "{}" not found. ',
