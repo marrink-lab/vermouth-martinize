@@ -17,6 +17,7 @@ Contains unittests for vermouth.processors.annotate_mut_mod.
 
 import networkx as nx
 import pytest
+from vermouth.system import System
 from vermouth.molecule import Molecule
 from vermouth.forcefield import ForceField
 from vermouth.processors.annotate_mut_mod import (
@@ -394,18 +395,39 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [(0, 1), (1, 2), (3, 4), (4, 5)],
         [({'resname': 'GLY', 'chain': 'A'}, 'ALA')],
         True
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 1},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 2},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resid': 1, 'resname': 'ASN'}, 'ALA')],
+        False
     )
 ])
 def test_mod_resid_not_correct(caplog, node_data, edge_data, mutation, expected):
     """
     Tests that the modification is found in the expected residue.
     """
+    system = System(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol.add_nodes_from(enumerate(node_data))
     mol.add_edges_from(edge_data)
 
+    mols = nx.connected_components(mol)
+    for nodes in mols:
+        system.add_molecule(mol.subgraph(nodes))
+
+    processor = AnnotateMutMod()
+    processor.mutations = mutation  # Resspecs are already "parsed"
+
     caplog.clear()
-    annotate_modifications(mol, [], mutation)
+    processor.run_system(system)
 
     if expected:
         assert any(rec.levelname == 'WARNING' for rec in caplog.records)
