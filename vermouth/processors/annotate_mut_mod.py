@@ -267,13 +267,6 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
             # If every residue on a particular chain is being targeted, go for all of them without concern
             elif (resspec.get(chain) is None):
                 _resiter(mod, residue_graph, resspec, library, key, molecule)
-            # if all residues on some chain, but not the current chain
-            elif (resspec.get(chain) is not None) and (resspec.get(chain) != chain):
-                resspec_counts.append({'status': True,
-                                       'mutmod': _format_resname(resspec),
-                                       'post': mod,
-                                       'current_chain': chain})
-                extra = True
     #return that everything's fine by default
     if not extra:
         resspec_counts.append({'status': False})
