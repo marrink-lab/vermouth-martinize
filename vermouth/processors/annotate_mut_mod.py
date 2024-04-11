@@ -327,16 +327,12 @@ class AnnotateMutMod(Processor):
                     if l['condition0'] and l['condition1']:
                         LOGGER.warning('Residue specified by "{}" for mutation "{}" not found in chain {}',
                                        l['mutmod'], l['post'], l['current_chain'])
-                    '''
-                    if only condition0 was met, then a chain-wide target has been failed, eg. A-SER:ALA
-                    '''
+                    #if only condition0 was met, then a chain-wide target has been failed, eg. A-SER:ALA
                     elif l['condition0'] and not l['condition1']:
                         LOGGER.warning('Residue specified by "{}" for mutation "{}" not found in chain {}',
                                        l['mutmod'], l['post'], l['current_chain'])
-                    '''
-                    if only condition1 was met, something like SER2:ALA hasn't been found on a particular chain
-                    but because _any is True, it has been found elsewhere.
-                    '''
+                    #if only condition1 was met, something like SER2:ALA hasn't been found on a particular chain
+                    #but because _any is True, it has been found elsewhere.
                     elif l['condition1'] and not l['condition0']:
                         LOGGER.info('Residue specified by "{}" for mutation "{}" not found on chain {}'
                                     ' but found elsewhere',
