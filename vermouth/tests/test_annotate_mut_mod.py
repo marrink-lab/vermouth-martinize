@@ -394,7 +394,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         ],
         [(0, 1), (1, 2), (3, 4), (4, 5)],
         [({'resname': 'GLY', 'chain': 'A'}, 'ALA')],
-        False
+        True
     ),
     (
         [
