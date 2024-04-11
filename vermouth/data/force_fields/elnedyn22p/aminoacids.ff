@@ -687,3 +687,8 @@ SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
 
+; Exclusions between the charged terminii and the charge dummies
+[ link ]
+resname $protein_resnames
+[ exclusions ]
+BB {"atype": "Qd|Qa"} XX {"atomname": "SCP|SCN"}
