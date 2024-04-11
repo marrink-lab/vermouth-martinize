@@ -210,7 +210,7 @@ def _resiter(mod, residue_graph, resspec, library, key, molecule):
                 molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
     return mod_found
 
-def annotate_modifications(molecule, modifications, mutations):
+def annotate_modifications(molecule, modifications, mutations, resspec_counts):
     """
     Annotate nodes in molecule with the desired modifications and mutations
 
@@ -247,7 +247,7 @@ def annotate_modifications(molecule, modifications, mutations):
     residue = {key: residue_graph.nodes[0].get(key)
                for key in 'chain resid resname insertion_code'.split()}
     chain = residue['chain']
-
+    extra = False
     for mutmod, key, library in associations:
         for resspec, mod in mutmod:
             # Ie. the target residue is chain or residue specific
@@ -256,11 +256,25 @@ def annotate_modifications(molecule, modifications, mutations):
             if condition0 or condition1:
                 mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
                 if not mod_found:
-                    LOGGER.warning('Residue specified by "{}" for mutation "{}" not found. ',
-                                   _format_resname(resspec), mod)
-            # If instead we're targeting residues in any chain
-            elif resspec.get(chain) is None:
+                    #if no mod found, return that there's a problem
+                    resspec_counts.append({'status': True,
+                                           'mutmod': _format_resname(resspec),
+                                           'post': mod,
+                                           'current_chain': chain})
+                    extra = True
+            # If every residue on a particular chain is being targeted, go for all of them without concern
+            elif (resspec.get(chain) is None):
                 _resiter(mod, residue_graph, resspec, library, key, molecule)
+            # if all residues on some chain, but not the current chain
+            elif (resspec.get(chain) is not None) and (resspec.get(chain) != chain):
+                resspec_counts.append({'status': True,
+                                       'mutmod': _format_resname(resspec),
+                                       'post': mod,
+                                       'current_chain': chain})
+                extra = True
+    #return that everything's fine by default
+    if not extra:
+        resspec_counts.append({'status': False})
 
 class AnnotateMutMod(Processor):
     """
@@ -277,6 +291,7 @@ class AnnotateMutMod(Processor):
     :func:`annotate_modifications`
     """
     def __init__(self, modifications=None, mutations=None):
+        self.resspec_counts = []
         if not modifications:
             modifications = []
         if not mutations:
@@ -289,8 +304,20 @@ class AnnotateMutMod(Processor):
             self.mutations.append((parse_residue_spec(resspec), val))
 
     def run_molecule(self, molecule):
-        annotate_modifications(molecule, self.modifications, self.mutations)
+        annotate_modifications(molecule, self.modifications, self.mutations, self.resspec_counts)
         return molecule
     def run_system(self, system):
         super().run_system(system)
-
+        _any = any([i['status'] for i in self.resspec_counts])
+        _all = all([i['status'] for i in self.resspec_counts])
+        #if the mut/mod hasn't been found anywhere, raise a warning
+        if _all:
+            LOGGER.warning('Residue specified by "{}" for mutation "{}" not found anywhere',
+                           self.resspec_counts[0]['mutmod'], self.resspec_counts[0]['post'])
+        #if it's been found in some places log it with some info
+        if _any and not _all:
+            for l in self.resspec_counts:
+                if l['status']==True:
+                    LOGGER.info('Residue specified by "{}" for mutation "{}" not found on chain {}'
+                                ' but found elsewhere',
+                                l['mutmod'], l['post'], l['current_chain'])

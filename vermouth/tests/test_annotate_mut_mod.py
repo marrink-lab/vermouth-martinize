@@ -150,7 +150,7 @@ def test_subdict(dict1, dict2, expected):
     )
 ])
 def test_annotate_modifications(example_mol, modifications, mutations, expected_mod, expected_mut):
-    annotate_modifications(example_mol, modifications, mutations)
+    annotate_modifications(example_mol, modifications, mutations,[])
     for node_idx, mods in expected_mod.items():
         assert _subdict(mods, example_mol.nodes[node_idx])
     for node_idx, mods in expected_mut.items():
@@ -167,7 +167,7 @@ def test_single_residue_mol():
     mol.add_edges_from([(0, 1)])
 
     modification = [({'resname': 'A', 'resid': 2}, 'C-ter'),]
-    annotate_modifications(mol, modification, [])
+    annotate_modifications(mol, modification, [],[])
 
     assert mol.nodes[0] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
     assert mol.nodes[1] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
@@ -179,7 +179,7 @@ def test_single_residue_mol():
 ])
 def test_annotate_modifications_error(example_mol, modifications, mutations):
     with pytest.raises(NameError):
-        annotate_modifications(example_mol, modifications, mutations)
+        annotate_modifications(example_mol, modifications, mutations,[])
 
 
 def test_unknown_terminus_match():
@@ -293,7 +293,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
     modification = [({'resname': 'cter'}, 'C-ter'), 
                     ({'resname': 'nter'}, 'N-ter')]
 
-    annotate_modifications(mol, modification, [])
+    annotate_modifications(mol, modification, [],[])
 
     found = {}
     for node_idx in mol:
@@ -394,7 +394,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         ],
         [(0, 1), (1, 2), (3, 4), (4, 5)],
         [({'resname': 'GLY', 'chain': 'A'}, 'ALA')],
-        True
+        False
     ),
     (
         [
