@@ -380,6 +380,19 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
             {'chain': 'B', 'resname': 'ALA', 'resid': 3}
         ],
         [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'ALA')],
+        True
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
         [({'resname': 'ALA', 'resid': 1}, 'GLY')],
         False
     ),
@@ -407,6 +420,19 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         ],
         [(0, 1), (1, 2), (3, 4), (4, 5)],
         [({'resid': 1, 'resname': 'ASN'}, 'ALA')],
+        False
+    ),
+        (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 1},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 2},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'chain':'B', 'resname': 'ASN'}, 'ALA')],
         False
     )
 ])
