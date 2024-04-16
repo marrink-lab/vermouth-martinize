@@ -253,23 +253,19 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
             # Ie. the target residue is chain or residue specific
             condition0 = ((resspec.get('chain') is not None) and (resspec.get('chain') == chain))
             condition1 = ((resspec.get('chain') is None) and (resspec.get('resid') is not None))
-            if condition0 or condition1:
+            #if the whole chain is being targeted
+            condition2 = (resspec.get(chain) == None)
+            if condition0 or condition1 or condition2:
                 mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
                 if not mod_found:
                     #if no mod found, return that there's a problem
-                    resspec_counts.append({'status': True,
-                                           'condition0': condition0,
-                                           'condition1': condition1,
+                    resspec_counts.append({'status': 0,
                                            'mutmod': _format_resname(resspec),
-                                           'post': mod,
-                                           'current_chain': chain})
+                                           'post': mod,})
                     extra = True
-            # If every residue on a particular chain is being targeted, go for all of them without concern
-            elif (resspec.get(chain) is None):
-                _resiter(mod, residue_graph, resspec, library, key, molecule)
     #return that everything's fine by default
     if not extra:
-        resspec_counts.append({'status': False})
+        resspec_counts.append({'status': 1})
 
 class AnnotateMutMod(Processor):
     """
@@ -303,30 +299,7 @@ class AnnotateMutMod(Processor):
         return molecule
     def run_system(self, system):
         super().run_system(system)
-        _any = any([i['status'] for i in self.resspec_counts])
-        _all = all([i['status'] for i in self.resspec_counts])
-        #if the mut/mod hasn't been found anywhere, raise a warning
-        if _all:
-            LOGGER.warning('Residue specified by "{}" for mutation "{}" not found anywhere',
+        _exit = sum([i['status'] for i in self.resspec_counts])
+        if _exit==0:
+            LOGGER.warning('Residue specified by "{}" for mutation "{}" not found',
                            self.resspec_counts[0]['mutmod'], self.resspec_counts[0]['post'])
-        #if it's been found in some places log it appropriately
-        if _any and not _all:
-            for l in self.resspec_counts:
-                if l['status']==True:
-                    '''
-                    if both conditions were met, then a specific target for both chain and resid
-                    has been failed
-                    '''
-                    if l['condition0'] and l['condition1']:
-                        LOGGER.warning('Residue specified by "{}" for mutation "{}" not found in chain {}',
-                                       l['mutmod'], l['post'], l['current_chain'])
-                    #if only condition0 was met, then a chain-wide target has been failed, eg. A-SER:ALA
-                    elif l['condition0'] and not l['condition1']:
-                        LOGGER.warning('Residue specified by "{}" for mutation "{}" not found in chain {}',
-                                       l['mutmod'], l['post'], l['current_chain'])
-                    #if only condition1 was met, something like SER2:ALA hasn't been found on a particular chain
-                    #but because _any is True, it has been found elsewhere.
-                    elif l['condition1'] and not l['condition0']:
-                        LOGGER.info('Residue specified by "{}" for mutation "{}" not found on chain {}'
-                                    ' but found elsewhere',
-                                    l['mutmod'], l['post'], l['current_chain'])
