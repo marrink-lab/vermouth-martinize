@@ -259,13 +259,13 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
                 mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
                 if not mod_found:
                     #if no mod found, return that there's a problem
-                    resspec_counts.append({'status': 0,
+                    resspec_counts.append({'success': False,
                                            'mutmod': _format_resname(resspec),
                                            'post': mod,})
                     extra = True
     #return that everything's fine by default
     if not extra:
-        resspec_counts.append({'status': 1})
+        resspec_counts.append({'success': True})
 
 class AnnotateMutMod(Processor):
     """
@@ -299,7 +299,7 @@ class AnnotateMutMod(Processor):
         return molecule
     def run_system(self, system):
         super().run_system(system)
-        _exit = sum([i['status'] for i in self.resspec_counts])
-        if _exit==0:
+        _exit = sum([i['success'] for i in self.resspec_counts])
+        if _exit == 0:
             LOGGER.warning('Residue specified by "{}" for mutation "{}" not found',
                            self.resspec_counts[0]['mutmod'], self.resspec_counts[0]['post'])
