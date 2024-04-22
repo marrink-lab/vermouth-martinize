@@ -319,7 +319,8 @@ def entry():
     file_group.add_argument(
         "-merge",
         dest="merge_chains",
-        type=lambda x: x.split(","),
+        # type=lambda x: x.split(","),
+        type=str,
         action="append",
         help="Merge chains: e.g. -merge A,B,C (+)",
     )
@@ -968,8 +969,13 @@ def entry():
         itp_paths = []
         # Merge chains if required.
         if args.merge_chains:
-            for chain_set in args.merge_chains:
-                vermouth.MergeChains(chain_set).run_system(system)
+            if args.merge_chains[0] != 'all':
+                input_chain_sets = [i.split(",") for i in args.merge_chains]
+                for chain_set in input_chain_sets:
+                    vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
+            else:
+                vermouth.MergeChains(chains=None, all_chains=True).run_system(system)
+
         vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
         defines = ()
 

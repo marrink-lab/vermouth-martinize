@@ -22,7 +22,7 @@ from ..molecule import Molecule
 from ..processors.processor import Processor
 
 
-def merge_chains(system, chains):
+def merge_chains(system, chains, all_chains):
     """
     Merge molecules with the given chains as a single molecule.
 
@@ -42,8 +42,15 @@ def merge_chains(system, chains):
         The system to modify.
     chains: list[str]
         A container of chain identifier.
+    all_chains:
     """
-    chains = set(chains)
+    if not all_chains:
+        chains = set(chains)
+    else:
+        l = []
+        for molecule in system.molecules:
+            l.append([node.get('chain') for node in molecule.nodes.values()][0])
+        chains = set(l)
     merged = Molecule()
     merged._force_field = system.force_field
     has_merged = False
@@ -65,8 +72,9 @@ def merge_chains(system, chains):
 class MergeChains(Processor):
     name = 'MergeChains'
 
-    def __init__(self, chains):
+    def __init__(self, chains, all_chains):
         self.chains = chains
+        self.all_chains = all_chains
 
     def run_system(self, system):
-        merge_chains(system, self.chains)
+        merge_chains(system, self.chains, self.all_chains)
