@@ -176,8 +176,41 @@ def _format_resname(res):
     out += res.get('insertion_code', '')
     return out
 
+def _resiter(mod, residue_graph, resspec, library, key, molecule):
+    """
+    Iterate over residues to find a specific modification
 
-def annotate_modifications(molecule, modifications, mutations):
+    Parameters
+    ----------
+    mod: str
+        The modification to apply, eg N-ter, C-ter
+    residue_graph: networkx.Graph
+        A graph with one node per residue.
+    resspec: dict
+        Attributes that must be present in the residue node. 'resname' is
+        treated specially as described above.
+    library: dict
+        dictionary of modifications/mutations from the force field
+    key: str
+        from associations
+    molecule: networkx.Graph
+    """
+    mod_found = False
+    for res_idx in residue_graph:
+        if residue_matches(resspec, residue_graph, res_idx):
+            mod_found = True
+            if mod != 'none' and mod not in library:
+                raise NameError('{} is not known as a {} for '
+                                'force field {}'
+                                ''.format(mod, key, molecule.force_field.name))
+            res = residue_graph.nodes[res_idx]
+            LOGGER.debug('Annotating {} with {} {}',
+                         _format_resname(res), key, mod)
+            for node_idx in res['graph']:
+                molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
+    return mod_found
+
+def annotate_modifications(molecule, modifications, mutations, resspec_counts):
     """
     Annotate nodes in molecule with the desired modifications and mutations
 
@@ -194,6 +227,12 @@ def annotate_modifications(molecule, modifications, mutations):
         the attributes a residue has to fulfill. It can contain the elements
         'chain', 'resname' and 'resid'. The second element is the mutation that
         should be applied.
+    resspec_counts: list[dict]
+        List modified in place containing information about whether a
+        modification/mutation has been applied successfully. If the target is
+        found, the dictionary has one entry, {'success': True}. If not,
+        'success' is False and there are additional items to indicate information
+        about the failure.
 
     Raises
     ------
@@ -210,25 +249,23 @@ def annotate_modifications(molecule, modifications, mutations):
                     (mutations, 'mutation', molecule.force_field.blocks)]
 
     residue_graph = make_residue_graph(molecule)
+    # Get the name of the chain in the molecule that we're looking at
+    residue = {key: residue_graph.nodes[0].get(key)
+               for key in 'chain resid resname insertion_code'.split()}
+    chain = residue['chain']
+    extra = False
     for mutmod, key, library in associations:
         for resspec, mod in mutmod:
-            mod_found = False
-            for res_idx in residue_graph:
-                if residue_matches(resspec, residue_graph, res_idx):
-                    mod_found = True
-                    if mod != 'none' and mod not in library:
-                        raise NameError('{} is not known as a {} for '
-                                        'force field {}'
-                                        ''.format(mod, key, molecule.force_field.name))
-                    res = residue_graph.nodes[res_idx]
-                    LOGGER.debug('Annotating {} with {} {}',
-                                 _format_resname(res), key, mod)
-                    for node_idx in res['graph']:
-                        molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
-            if mod_found == False:
-                LOGGER.warning('Mutation "{}" not found. '
-                               'Check target resid!'
-                               ''.format(_format_resname(resspec)))
+            mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
+            if not mod_found:
+                #if no mod found, return that there's a problem
+                resspec_counts.append({'success': False,
+                                       'mutmod': _format_resname(resspec),
+                                       'post': mod,})
+                extra = True
+    #return that everything's fine by default
+    if not extra:
+        resspec_counts.append({'success': True})
 
 class AnnotateMutMod(Processor):
     """
@@ -245,6 +282,7 @@ class AnnotateMutMod(Processor):
     :func:`annotate_modifications`
     """
     def __init__(self, modifications=None, mutations=None):
+        self.resspec_counts = []
         if not modifications:
             modifications = []
         if not mutations:
@@ -257,5 +295,11 @@ class AnnotateMutMod(Processor):
             self.mutations.append((parse_residue_spec(resspec), val))
 
     def run_molecule(self, molecule):
-        annotate_modifications(molecule, self.modifications, self.mutations)
+        annotate_modifications(molecule, self.modifications, self.mutations, self.resspec_counts)
         return molecule
+    def run_system(self, system):
+        super().run_system(system)
+        _exit = sum([i['success'] for i in self.resspec_counts])
+        if _exit == 0:
+            LOGGER.warning('Residue specified by "{}" for mutation "{}" not found',
+                           self.resspec_counts[0]['mutmod'], self.resspec_counts[0]['post'])
