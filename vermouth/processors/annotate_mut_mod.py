@@ -250,19 +250,13 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
     extra = False
     for mutmod, key, library in associations:
         for resspec, mod in mutmod:
-            # Ie. the target residue is chain or residue specific
-            condition0 = ((resspec.get('chain') is not None) and (resspec.get('chain') == chain))
-            condition1 = ((resspec.get('chain') is None) and (resspec.get('resid') is not None))
-            #if the whole chain is being targeted
-            condition2 = (resspec.get(chain) == None)
-            if condition0 or condition1 or condition2:
-                mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
-                if not mod_found:
-                    #if no mod found, return that there's a problem
-                    resspec_counts.append({'success': False,
-                                           'mutmod': _format_resname(resspec),
-                                           'post': mod,})
-                    extra = True
+            mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
+            if not mod_found:
+                #if no mod found, return that there's a problem
+                resspec_counts.append({'success': False,
+                                       'mutmod': _format_resname(resspec),
+                                       'post': mod,})
+                extra = True
     #return that everything's fine by default
     if not extra:
         resspec_counts.append({'success': True})
