@@ -319,10 +319,10 @@ def entry():
     file_group.add_argument(
         "-merge",
         dest="merge_chains",
-        # type=lambda x: x.split(","),
         type=str,
         action="append",
-        help="Merge chains: e.g. -merge A,B,C (+)",
+        help="Merge chains: either a comma separated list of chains to merge e.g. -merge A,B,C (+) or all.\n"
+        "Can be given multiple times for different groups of chains to merge.",
     )
     file_group.add_argument(
         "-resid",
@@ -969,7 +969,7 @@ def entry():
         itp_paths = []
         # Merge chains if required.
         if args.merge_chains:
-            if args.merge_chains[0] != 'all':
+            if args.merge_chains[0] != "all":
                 input_chain_sets = [i.split(",") for i in args.merge_chains]
                 for chain_set in input_chain_sets:
                     vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
