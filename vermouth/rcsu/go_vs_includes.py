@@ -50,6 +50,7 @@ class VirtualSiteCreator(Processor):
 
         if not self.system:
             raise ValueError('This processor requires a system.')
+        molecule.citations.add('M3_GO')
 
         self.add_virtual_sites(molecule, prefix=moltype)
 
