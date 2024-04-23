@@ -227,6 +227,12 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
         the attributes a residue has to fulfill. It can contain the elements
         'chain', 'resname' and 'resid'. The second element is the mutation that
         should be applied.
+    resspec_counts: list[dict]
+        List modified in place containing information about whether a
+        modification/mutation has been applied successfully. If the target is
+        found, the dictionary has one entry, {'success': True}. If not,
+        'success' is False and there are additional items to indicate information
+        about the failure.
 
     Raises
     ------
