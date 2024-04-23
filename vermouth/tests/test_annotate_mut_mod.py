@@ -17,6 +17,7 @@ Contains unittests for vermouth.processors.annotate_mut_mod.
 
 import networkx as nx
 import pytest
+from vermouth.system import System
 from vermouth.molecule import Molecule
 from vermouth.forcefield import ForceField
 from vermouth.processors.annotate_mut_mod import (
@@ -149,7 +150,7 @@ def test_subdict(dict1, dict2, expected):
     )
 ])
 def test_annotate_modifications(example_mol, modifications, mutations, expected_mod, expected_mut):
-    annotate_modifications(example_mol, modifications, mutations)
+    annotate_modifications(example_mol, modifications, mutations,[])
     for node_idx, mods in expected_mod.items():
         assert _subdict(mods, example_mol.nodes[node_idx])
     for node_idx, mods in expected_mut.items():
@@ -166,7 +167,7 @@ def test_single_residue_mol():
     mol.add_edges_from([(0, 1)])
 
     modification = [({'resname': 'A', 'resid': 2}, 'C-ter'),]
-    annotate_modifications(mol, modification, [])
+    annotate_modifications(mol, modification, [],[])
 
     assert mol.nodes[0] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
     assert mol.nodes[1] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
@@ -178,7 +179,7 @@ def test_single_residue_mol():
 ])
 def test_annotate_modifications_error(example_mol, modifications, mutations):
     with pytest.raises(NameError):
-        annotate_modifications(example_mol, modifications, mutations)
+        annotate_modifications(example_mol, modifications, mutations,[])
 
 
 def test_unknown_terminus_match():
@@ -292,7 +293,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
     modification = [({'resname': 'cter'}, 'C-ter'), 
                     ({'resname': 'nter'}, 'N-ter')]
 
-    annotate_modifications(mol, modification, [])
+    annotate_modifications(mol, modification, [],[])
 
     found = {}
     for node_idx in mol:
@@ -302,38 +303,159 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
 
     assert found == expected
 
-@pytest.mark.parametrize('node_data, edge_data, expected', [
+@pytest.mark.parametrize('node_data, edge_data, mutation, expected', [
     (
         [
-            {'resname': 'GLY', 'resid': 1},
-            {'resname': 'ALA', 'resid': 2},
-            {'resname': 'ALA', 'resid': 3}
+            {'chain': 'A', 'resname': 'GLY', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3}
         ],
         [(0, 1), (1, 2)],
+        [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'MET')],
         False
     ),
     (
         [
-            {'resname': 'ALA', 'resid': 1},
-            {'resname': 'ALA', 'resid': 2},
-            {'resname': 'ALA', 'resid': 3}
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3}
         ],
         [(0, 1), (1, 2)],
+        [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'MET')],
         True
-    )])
-def test_mod_resid_not_correct(caplog, node_data, edge_data, expected):
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        [({'resname': 'GLY', 'resid': 1}, 'MET')],
+        True
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2)],
+        [({'resname': 'ALA', 'resid': 1}, 'MET')],
+        False
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'ALA', 'chain': 'A'}, 'GLY')],
+        False
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'GLY', 'resid': 1}, 'ALA')],
+        True
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'ALA')],
+        True
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'ALA', 'resid': 1}, 'GLY')],
+        False
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resname': 'GLY', 'chain': 'A'}, 'ALA')],
+        True
+    ),
+    (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 1},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 2},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'resid': 1, 'resname': 'ASN'}, 'ALA')],
+        False
+    ),
+        (
+        [
+            {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+            {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 1},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 2},
+            {'chain': 'B', 'resname': 'ASN', 'resid': 3}
+        ],
+        [(0, 1), (1, 2), (3, 4), (4, 5)],
+        [({'chain':'B', 'resname': 'ASN'}, 'ALA')],
+        False
+    )
+])
+def test_mod_resid_not_correct(caplog, node_data, edge_data, mutation, expected):
     """
     Tests that the modification is found in the expected residue.
     """
+    system = System(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol.add_nodes_from(enumerate(node_data))
     mol.add_edges_from(edge_data)
-    mutation = [({'resname': 'GLY', 'resid': 1}, 'MET')]
-    
+
+    mols = nx.connected_components(mol)
+    for nodes in mols:
+        system.add_molecule(mol.subgraph(nodes))
+
+    processor = AnnotateMutMod()
+    processor.mutations = mutation  # Resspecs are already "parsed"
+
     caplog.clear()
-    annotate_modifications(mol, [], mutation)
-    
-    if expected:        
-        assert '"GLY1" not found.' in str(caplog.records[0].getMessage())
+    processor.run_system(system)
+
+    if expected:
+        assert any(rec.levelname == 'WARNING' for rec in caplog.records)
     else:
         assert caplog.records == []
