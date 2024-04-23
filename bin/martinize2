@@ -316,13 +316,14 @@ def entry():
         default=False,
         help="Write separate topologies for identical chains",
     )
-    file_group.add_argument(
+    chain_merging = file_group.add_argument(
         "-merge",
         dest="merge_chains",
         type=str,
         action="append",
-        help="Merge chains: either a comma separated list of chains to merge e.g. -merge A,B,C (+) or all.\n"
-        "Can be given multiple times for different groups of chains to merge.",
+        help="Merge chains: either a comma separated list of chains to merge e.g. -merge A,B,C (+), or -merge all\n"
+             "if instead all chains in the input file should be merged.\n"
+             "Can be given multiple times for different groups of chains to merge.",
     )
     file_group.add_argument(
         "-resid",
@@ -973,14 +974,19 @@ def entry():
         itp_paths = []
         # Merge chains if required.
         if args.merge_chains:
+            #if "all" is not in the list of chains to be merged
             if "all" not in args.merge_chains:
                 input_chain_sets = [i.split(",") for i in args.merge_chains]
                 for chain_set in input_chain_sets:
                     vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
+            #if "all" is in the list and is the only argument
             elif "all" in args.merge_chains and len(args.merge_chains) == 1:
-                vermouth.MergeChains(chains=None, all_chains=True).run_system(system)
+                vermouth.MergeChains(chains=[], all_chains=True).run_system(system)
+            #otherwise there are multiple arguments and we need to raise an ArgumentError
             else:
-                LOGGER.warning("Multiple conflicting merging arguments given. Please check input arguments.")
+                raise argparse.ArgumentError(chain_merging,
+                                             message=("Multiple conflicting merging arguments given. "
+                                                      "Either specify -merge all or -merge A,B,C (+)."))
         vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
         defines = ()
 

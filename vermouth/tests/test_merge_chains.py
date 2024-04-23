@@ -51,7 +51,7 @@ from vermouth.tests.datafiles import (
                 {'chain': 'B', 'resname': 'ALA', 'resid': 3}
             ],
             [(0, 1), (1, 2), (3, 4), (4, 5)],
-            {"chains": None, "all_chains": True},
+            {"chains": [], "all_chains": True},
             False
     ),
     (
@@ -59,38 +59,12 @@ from vermouth.tests.datafiles import (
                 {'chain': 'A', 'resname': 'ALA', 'resid': 1},
                 {'chain': 'A', 'resname': 'ALA', 'resid': 2},
                 {'chain': 'A', 'resname': 'ALA', 'resid': 3},
-                {'chain': 'B', 'resname': 'ALA', 'resid': 1},
-                {'chain': 'B', 'resname': 'ALA', 'resid': 2},
-                {'chain': 'B', 'resname': 'ALA', 'resid': 3}
-            ],
-            [(0, 1), (1, 2), (3, 4), (4, 5)],
-            {"chains": ["A", "B"], "all_chains": True},
-            True
-    ),
-    (
-            [
-                {'chain': 'A', 'resname': 'ALA', 'resid': 1},
-                {'chain': 'A', 'resname': 'ALA', 'resid': 2},
-                {'chain': 'A', 'resname': 'ALA', 'resid': 3},
                 {'chain': None, 'resname': 'ALA', 'resid': 1},
                 {'chain': None, 'resname': 'ALA', 'resid': 2},
                 {'chain': None, 'resname': 'ALA', 'resid': 3}
             ],
             [(0, 1), (1, 2), (3, 4), (4, 5)],
-            {"chains": ["A", "B"], "all_chains": True},
-            True
-    ),
-    (
-            [
-                {'chain': 'A', 'resname': 'ALA', 'resid': 1},
-                {'chain': 'A', 'resname': 'ALA', 'resid': 2},
-                {'chain': 'A', 'resname': 'ALA', 'resid': 3},
-                {'chain': None, 'resname': 'ALA', 'resid': 1},
-                {'chain': None, 'resname': 'ALA', 'resid': 2},
-                {'chain': None, 'resname': 'ALA', 'resid': 3}
-            ],
-            [(0, 1), (1, 2), (3, 4), (4, 5)],
-            {"chains": None, "all_chains": True},
+            {"chains": [], "all_chains": True},
             True
     ),
 
@@ -119,3 +93,36 @@ def test_merge(caplog, node_data, edge_data, merger, expected):
         assert any(rec.levelname == 'WARNING' for rec in caplog.records)
     else:
         assert caplog.records == []
+
+def test_too_many_args():
+    """
+    Tests that error is raised when too many arguments are given.
+    """
+    node_data = [
+                {'chain': 'A', 'resname': 'ALA', 'resid': 1},
+                {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+                {'chain': 'A', 'resname': 'ALA', 'resid': 3},
+                {'chain': 'B', 'resname': 'ALA', 'resid': 1},
+                {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+                {'chain': 'B', 'resname': 'ALA', 'resid': 3}
+                ]
+    edge_data = [(0, 1), (1, 2), (3, 4), (4, 5)]
+
+    system = System(force_field=ForceField(FF_UNIVERSAL_TEST))
+    mol = Molecule(force_field=system.force_field)
+    mol.add_nodes_from(enumerate(node_data))
+    mol.add_edges_from(edge_data)
+
+    mols = nx.connected_components(mol)
+    for nodes in mols:
+        system.add_molecule(mol.subgraph(nodes))
+
+    merger = {"chains": ["A", "B"], "all_chains": True}
+
+    processor = MergeChains()
+    processor.chains = merger["chains"]
+    processor.all_chains = merger["all_chains"]
+
+    with pytest.raises(ValueError):
+        processor.run_system(system)
+

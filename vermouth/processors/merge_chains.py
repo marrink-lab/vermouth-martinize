@@ -47,20 +47,17 @@ def merge_chains(system, chains, all_chains):
     all_chains: bool
         If True, all chains will be merged.
     """
-    if not all_chains and len(chains)>0:
+    if not all_chains and len(chains) > 0:
         _chains = set(chains)
-    elif all_chains and chains is None:
+    elif all_chains and len(chains) == 0:
         _chains = set()
         for molecule in system.molecules:
             # Molecules can contain multiple chains
             _chains.update(node.get('chain') for node in molecule.nodes.values())
     else:
-        LOGGER.warning('Conflicting merging arguments have been given. Will abort merging.')
-        return
+        raise ValueError
 
-    try:
-        assert ''.join(list(_chains)).isalnum()
-    except TypeError:
+    if any(not c for c in _chains):
         LOGGER.warning('One or more of your chains does not have a chain identifier in input file.')
 
     merged = Molecule()
@@ -84,7 +81,7 @@ def merge_chains(system, chains, all_chains):
 class MergeChains(Processor):
     name = 'MergeChains'
 
-    def __init__(self, chains=None, all_chains=False):
+    def __init__(self, chains=[], all_chains=False):
         self.chains = chains
         self.all_chains = all_chains
 
