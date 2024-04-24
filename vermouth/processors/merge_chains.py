@@ -55,7 +55,7 @@ def merge_chains(system, chains, all_chains):
             # Molecules can contain multiple chains
             _chains.update(node.get('chain') for node in molecule.nodes.values())
     else:
-        raise ValueError
+        raise ValueError("Can specify specific chains or all chains, but not both")
 
     if any(not c for c in _chains):
         LOGGER.warning('One or more of your chains does not have a chain identifier in input file.')
@@ -81,8 +81,8 @@ def merge_chains(system, chains, all_chains):
 class MergeChains(Processor):
     name = 'MergeChains'
 
-    def __init__(self, chains=[], all_chains=False):
-        self.chains = chains
+    def __init__(self, chains=None, all_chains=False):
+        self.chains = chains or []
         self.all_chains = all_chains
 
     def run_system(self, system):

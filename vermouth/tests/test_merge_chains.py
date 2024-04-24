@@ -82,10 +82,7 @@ def test_merge(caplog, node_data, edge_data, merger, expected):
     for nodes in mols:
         system.add_molecule(mol.subgraph(nodes))
 
-    processor = MergeChains()
-    processor.chains = merger["chains"]
-    processor.all_chains = merger["all_chains"]
-
+    processor = MergeChains(**merger)
     caplog.clear()
     processor.run_system(system)
 
