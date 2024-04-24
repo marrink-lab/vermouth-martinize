@@ -116,9 +116,7 @@ def test_too_many_args():
 
     merger = {"chains": ["A", "B"], "all_chains": True}
 
-    processor = MergeChains()
-    processor.chains = merger["chains"]
-    processor.all_chains = merger["all_chains"]
+    processor = MergeChains(**merger)
 
     with pytest.raises(ValueError):
         processor.run_system(system)
