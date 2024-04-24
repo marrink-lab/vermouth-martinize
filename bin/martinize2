@@ -610,6 +610,13 @@ def entry():
               "format: <start_resid_1>:<end_resid_1> <start_resid_2>:<end_resid_2>..."
              ),
     )
+    water_group.add_argument(
+        "-idr-tune",
+        dest="idr_tune",
+        action="store_true",
+        default=False,
+        help=("Tune the idr regions with specific bonded potentials."),
+    )
 
 
     prot_group = parser.add_argument_group("Protein description")
@@ -1038,6 +1045,10 @@ def entry():
             vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
             itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
                          "nonbond_params": "virtual_sites_nonbond_params.itp"}
+        # apply idr specific bonded potentials
+        if args.idr_tune:
+            vermouth.processors.IDRBonds([(int(start), int(stop)) for start, stop in args.water_idrs]
+                                         ).run_system(system)
         # now we add a bias by defining specific virtual-site water interactions
         vermouth.processors.ComputeWaterBias(args.water_bias,
                                              { s:float(eps) for s, eps in args.water_bias_eps},
