@@ -610,7 +610,7 @@ def entry():
               "format: <start_resid_1>:<end_resid_1> <start_resid_2>:<end_resid_2>..."
              ),
     )
-    water_group.add_argument(
+    idr_tuning = water_group.add_argument(
         "-idr-tune",
         dest="idr_tune",
         action="store_true",
@@ -1045,10 +1045,17 @@ def entry():
             vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
             itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
                          "nonbond_params": "virtual_sites_nonbond_params.itp"}
-        # apply idr specific bonded potentials
-        if args.idr_tune:
+        # apply idr specific bonded potentials if
+        if args.idr_tune and args.to_ff == 'martini3001':
             vermouth.processors.IDRBonds([(int(start), int(stop)) for start, stop in args.water_idrs]
                                          ).run_system(system)
+        else:
+            raise argparse.ArgumentError(idr_tuning,
+                                         message=("Either you are applying water biasing without also adjusting "
+                                                  "bonded parameters for disordered regions, or your target force field "
+                                                  "is not martini3001. IDR bonded parameter tuning is intended to"
+                                                  "complement water biasing in martini3001 and not elsewhere."))
+
         # now we add a bias by defining specific virtual-site water interactions
         vermouth.processors.ComputeWaterBias(args.water_bias,
                                              { s:float(eps) for s, eps in args.water_bias_eps},
