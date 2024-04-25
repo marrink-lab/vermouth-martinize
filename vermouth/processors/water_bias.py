@@ -89,7 +89,7 @@ class ComputeWaterBias(Processor):
 
             if _in_resid_region(_old_resid, self.idr_regions):
                 eps = self.water_bias.get('idr', 0.0)
-                sec_struc = res_graph.nodes[res_node]['cgsecstruct']
+                sec_struc = 'idr'
             elif self.auto_bias:
                 sec_struc = res_graph.nodes[res_node]['cgsecstruct']
                 eps = self.water_bias.get(sec_struc, 0.0)

@@ -40,7 +40,7 @@ class IDRBonds(Processor):
 
     """
 
-    def __init__(self, idr_regions):
+    def __init__(self, idr_regions = None):
         """
         Parameters
         ----------
@@ -56,8 +56,7 @@ class IDRBonds(Processor):
         """
 
         #list of all the Go pairs in the molecule
-        all_go_pairs = np.array([list(i.atoms) for i in self.system.gmx_topology_params["nonbond_params"]])
-
+        all_go_pairs = np.array([list(i.atoms) for i in self.system.gmx_topology_params["nonbond_params"] if 'W' not in list(i.atoms)])
         # list to record which items we don't want. cross = go potential between folded and disordered domain.
         all_cross_pairs = []
 
@@ -309,7 +308,7 @@ class IDRBonds(Processor):
         ----------
         system: :class:`vermouth.system.System`
         """
-        if not (self.idr_regions or self.auto_bias):
+        if not self.idr_regions:
             return system
         self.system = system
         LOGGER.info("Applying extra bonded potentials to IDRs", type="step")
