@@ -444,7 +444,9 @@ def entry():
         dest="ss",
         type=str.upper,
         metavar="SEQUENCE",
-        help=("Manually set the secondary " "structure of the proteins."),
+        help=("Manually set the secondary structure of the proteins. "
+              "Either give a dssp sequence for each residue in your input file "
+              "or a single letter to be repeated for the entire sequence, e.g. -ss C"),
     )
     secstruct_exclusion.add_argument(
         "-collagen", action="store_true", default=False, help="Use collagen parameters"
