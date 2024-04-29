@@ -171,7 +171,7 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-1', '1mj5-charmm'],
     ['tier-1', 'EN_chain'],
     ['tier-1', 'EN_region'],
-    ['tier-1', 'hst5']
+    ['tier-1', 'hst5'],
 #   ['tier-2', 'barnase_barstar'],
 #   ['tier-2', 'dna'],
 #   ['tier-2', 'gpa_dimer'],
