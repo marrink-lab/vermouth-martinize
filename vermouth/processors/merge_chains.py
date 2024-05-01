@@ -20,9 +20,11 @@ Merge molecules by chain.
 
 from ..molecule import Molecule
 from ..processors.processor import Processor
+from ..log_helpers import StyleAdapter, get_logger
+LOGGER = StyleAdapter(get_logger(__name__))
 
 
-def merge_chains(system, chains):
+def merge_chains(system, chains, all_chains):
     """
     Merge molecules with the given chains as a single molecule.
 
@@ -42,15 +44,29 @@ def merge_chains(system, chains):
         The system to modify.
     chains: list[str]
         A container of chain identifier.
+    all_chains: bool
+        If True, all chains will be merged.
     """
-    chains = set(chains)
+    if not all_chains and len(chains) > 0:
+        _chains = set(chains)
+    elif all_chains and len(chains) == 0:
+        _chains = set()
+        for molecule in system.molecules:
+            # Molecules can contain multiple chains
+            _chains.update(node.get('chain') for node in molecule.nodes.values())
+    else:
+        raise ValueError("Can specify specific chains or all chains, but not both")
+
+    if any(not c for c in _chains):
+        LOGGER.warning('One or more of your chains does not have a chain identifier in input file.')
+
     merged = Molecule()
     merged._force_field = system.force_field
     has_merged = False
     new_molecules = []
     for molecule in system.molecules:
         molecule_chains = set(node.get('chain') for node in molecule.nodes.values())
-        if molecule_chains.issubset(chains):
+        if molecule_chains.issubset(_chains):
             if not has_merged:
                 merged.nrexcl = molecule.nrexcl
                 new_molecules.append(merged)
@@ -65,8 +81,9 @@ def merge_chains(system, chains):
 class MergeChains(Processor):
     name = 'MergeChains'
 
-    def __init__(self, chains):
-        self.chains = chains
+    def __init__(self, chains=None, all_chains=False):
+        self.chains = chains or []
+        self.all_chains = all_chains
 
     def run_system(self, system):
-        merge_chains(system, self.chains)
+        merge_chains(system, self.chains, self.all_chains)
