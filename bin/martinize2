@@ -929,6 +929,8 @@ def entry():
         )
     vermouth.SetMoleculeMeta(scfix=args.scfix).run_system(system)
 
+    vermouth.SetMoleculeMeta(idr=args.idr_tune).run_system(system)
+
     ss_sequence = list(
         itertools.chain(
             *(
@@ -1067,13 +1069,12 @@ def entry():
 
     # apply idr specific bonded potentials if required
     if args.idr_tune:
-        if args.to_ff == 'martini3001':
-            vermouth.processors.IDRBonds([(int(start), int(stop)) for start, stop in args.water_idrs]
-                                         ).run_system(system)
-        else:
-            raise argparse.ArgumentError(idr_tuning,
-                                         message=("You are trying to apply IDR biasing to a force field which "
-                                                  "isn't martini3001, which this is not designed for."))
+        vermouth.IDRBonds(idr_regions = [(int(start), int(stop)) for start, stop in args.water_idrs]).run_system(system)
+        vermouth.DoLinks().run_system(system)
+        if not target_ff.has_feature("idr"):
+            LOGGER.warning('Improved IDR potentials are not implemented '
+                           'for this force field',
+                           type="missing-feature")
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":

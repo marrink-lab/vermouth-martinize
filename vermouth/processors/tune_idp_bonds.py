@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2018 University of Groningen
+# Copyright 2024 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,12 +21,32 @@ import functools
 
 from .processor import Processor
 from ..graph_utils import make_residue_graph
-from ..rcsu.go_utils import get_go_type_from_attributes, _get_resid_region, _in_resid_region
+from ..rcsu.go_utils import get_go_type_from_attributes, _in_resid_region
 import numpy as np
-from vermouth import selectors
+from ..selectors import select_backbone
 from ..log_helpers import StyleAdapter, get_logger
-
+from ..dssp import annotate_residues_from_sequence
 LOGGER = StyleAdapter(get_logger(__name__))
+
+
+def make_disorder_string(molecule, idr_regions):
+    """
+    make a string for annotating order and disorder along a molecule
+    """
+
+    order_disorder_seq = []
+
+    for key, node in molecule.nodes.items():
+        if select_backbone(node):
+            _old_resid = node['_old_resid']
+            if _in_resid_region(_old_resid, idr_regions):
+                order_disorder_seq.append("D")  # D for disordered
+            else:
+                order_disorder_seq.append("F")  # F for folded
+
+    order_disorder = ''.join(order_disorder_seq)
+
+    return order_disorder
 
 
 class IDRBonds(Processor):
@@ -76,204 +96,10 @@ class IDRBonds(Processor):
         all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])
         # delete the folded-disordered Go interactions from the list going backwards.
         # otherwise list order gets messed up.
-        for i in all_cross_pairs[::-1]:
+        for i in reversed(all_cross_pairs):
             del self.system.gmx_topology_params["nonbond_params"][i]
 
-    def get_idr_keys(self, molecule):
-        """
-        get the keys of BB and SC1 beads in IDR regions
-        """
 
-        BB = []
-        SC1 = []
-
-        for key, node in molecule.nodes.items():
-            _old_resid = node['_old_resid']
-            if _in_resid_region(_old_resid, self.idr_regions):
-                region = _get_resid_region(_old_resid, self.idr_regions)
-                if selectors.select_backbone(node):
-                    BB.append(np.array([region, key]))
-                    #if the residue is a GLY and doesn't have a sidechain we need to note it
-                    if node.get('resname') == 'GLY':
-                        SC1.append(np.array([region, np.nan]))
-                if node.get('atomname') == 'SC1':
-                    SC1.append(np.array([region, key]))
-        return BB, SC1
-
-    def add_idr_angles(self, molecule, BB, SC1):
-        """
-        add idr specific angles to the idr region
-        """
-        #find how many disordered regions we've been given
-        regions = list(set([i[0] for i in BB]))
-
-        # BB-BB-SC1 angles
-        for region in regions:
-            BB_keys = [i[1] for i in BB if i[0] == region]
-            SC_keys = [i[1] for i in SC1 if i[0] == region]
-
-            window = 2
-            for i in range(len(BB_keys) - window + 1):
-                BB_atoms = BB_keys[i: i + window]
-                SC_atoms = SC_keys[i: i + window]
-                #ie. if we don't have any residues without sidechains
-                if all(~np.isnan(np.array(SC_atoms))):
-                    bbs_atomlist = [BB_atoms[0], BB_atoms[1], SC_atoms[1]]
-                    sbb_atomlist = [SC_atoms[0], BB_atoms[0], BB_atoms[1]]
-
-                    molecule.add_or_replace_interaction('angles',
-                                                        atoms=bbs_atomlist,
-                                                        parameters=['10', '85', '10'],
-                                                        meta={"group": "idp-fix", "comment": "BB-BB-SC1-v1",
-                                                              "version": 1}
-                                                        )
-
-                    molecule.add_or_replace_interaction('angles',
-                                                        atoms=sbb_atomlist,
-                                                        parameters=['10', '85', '10'],
-                                                        meta={"group": "idp-fix", "comment": "SC1-BB-BB-v1",
-                                                              "version": 1}
-                                                        )
-        #SC1-BB-BB(GLY)-BB and BB-BB(GLY)-BB-SC1 dihedrals
-        for region in regions:
-            BB_keys = [i[1] for i in BB if i[0] == region]
-            SC_keys = [i[1] for i in SC1 if i[0] == region]
-
-            inds = np.where(np.isnan(SC_keys) == True)[0]
-
-            for i in inds:
-                sbb_atomlist = [SC_keys[i-1],
-                                 BB_keys[i-1],
-                                 BB_keys[i]]
-
-                bbs_atomlist = [BB_keys[i],
-                                 BB_keys[i+1],
-                                 SC_keys[i+1]]
-                try:
-                    molecule.remove_interaction('angles',
-                                                atoms=sbb_atomlist)
-                except KeyError:
-                    pass
-                try:
-                    molecule.remove_interaction('angles',
-                                                atoms=bbs_atomlist)
-                except KeyError:
-                    pass
-                molecule.add_or_replace_interaction('angles',
-                                                    atoms=bbs_atomlist,
-                                                    parameters=['10', '85', '10', ],
-                                                    meta={"group": "idp-fix", "comment": "BB(GLY)-BB-SC1-v1",
-                                                          "version": 1}
-                                                    )
-
-                molecule.add_or_replace_interaction('angles',
-                                                    atoms=sbb_atomlist,
-                                                    parameters=['10', '85', '10', ],
-                                                    meta={"group": "idp-fix", "comment": "SC1-BB-BB(GLY)-v1",
-                                                          "version": 1}
-                                                    )
-
-    def add_idr_dih(self, molecule, BB, SC1):
-        """
-        add idr specific dihedrals to the idr region
-        """
-
-        #find how many disordered regions we've been given
-        regions = list(set([i[0] for i in BB]))
-
-        # BB-BB-BB-BB dihedrals
-        #make sure we're only applying interactions within regions
-        for region in regions:
-            keys = [i[1] for i in BB if i[0] == region]
-            window = 4
-            for i in range(len(keys) - window + 1):
-                atoms = keys[i: i + window]
-                try:
-                    molecule.remove_interaction('dihedrals',
-                                                atoms=atoms)
-                except KeyError:
-                    pass
-                molecule.add_or_replace_interaction('dihedrals',
-                                                    atoms = atoms,
-                                                    parameters = ['9', '-120', '-1', '1'],
-                                                    meta = {"group": "idp-fix", "comment": "BB-BB-BB-BB-v1", "version":1}
-                                                    )
-                molecule.add_or_replace_interaction('dihedrals',
-                                                    atoms = atoms,
-                                                    parameters = ['9', '-120', '-1', '2'],
-                                                    meta={"group": "idp-fix", "comment": "BB-BB-BB-BB-v2", "version": 2}
-                                                    )
-
-        # SC1-BB-BB-SC1 dihedrals
-        for region in regions:
-            BB_keys = [i[1] for i in BB if i[0] == region]
-            SC_keys = [i[1] for i in SC1 if i[0] == region]
-
-            window = 2
-            for i in range(len(BB_keys) - window + 1):
-                BB_atoms = BB_keys[i: i + window]
-                SC_atoms = SC_keys[i: i + window]
-                #ie. if we don't have any residues without sidechains
-                if all(~np.isnan(np.array(SC_atoms))):
-                    atomlist = [SC_atoms[0], BB_atoms[0], BB_atoms[1], SC_atoms[1]]
-                    try:
-                        molecule.remove_interaction('dihedrals',
-                                                    atoms=atomlist)
-                    except KeyError:
-                        pass
-
-                    molecule.add_or_replace_interaction('dihedrals',
-                                                        atoms=atomlist,
-                                                        parameters=['9', '-130', '-1.5', '1'],
-                                                        meta={"group": "idp-fix", "comment": "SC1-BB-BB-SC1-v1",
-                                                              "version": 1}
-                                                        )
-                    molecule.add_or_replace_interaction('dihedrals',
-                                                        atoms=atomlist,
-                                                        parameters=['9', '100', '-1.5', '2'],
-                                                        meta={"group": "idp-fix", "comment": "SC1-BB-BB-SC1-v2",
-                                                              "version": 2}
-                                                        )
-        #SC1-BB-BB(GLY)-BB and BB-BB(GLY)-BB-SC1 dihedrals
-        for region in regions:
-            BB_keys = [i[1] for i in BB if i[0] == region]
-            SC_keys = [i[1] for i in SC1 if i[0] == region]
-
-            inds = np.where(np.isnan(SC_keys) == True)[0]
-
-            for i in inds:
-                sbbb_atomlist = [SC_keys[i-1],
-                                 BB_keys[i-1],
-                                 BB_keys[i],
-                                 BB_keys[i+1]]
-
-                bbbs_atomlist = [BB_keys[i-1],
-                                 BB_keys[i],
-                                 BB_keys[i+1],
-                                 SC_keys[i+1]]
-
-                try:
-                    molecule.remove_interaction('dihedrals',
-                                                atoms=sbbb_atomlist)
-                except KeyError:
-                    pass
-                try:
-                    molecule.remove_interaction('dihedrals',
-                                            atoms=bbbs_atomlist)
-                except KeyError:
-                    pass
-                molecule.add_or_replace_interaction('dihedrals',
-                                                    atoms=sbbb_atomlist,
-                                                    parameters=['1', '115', '-4.5', '1'],
-                                                    meta={"group": "idp-fix", "comment": "SC1-BB-BB(GLY)-BB-v1",
-                                                          "version": 1}
-                                                    )
-                molecule.add_or_replace_interaction('dihedrals',
-                                                    atoms=bbbs_atomlist,
-                                                    parameters=['1', '0', '-2.0', '1'],
-                                                    meta={"group": "idp-fix", "comment": "BB-BB(GLY)-BB-SC1-v1",
-                                                          "version": 1}
-                                                    )
 
     def run_molecule(self, molecule):
         """
@@ -289,12 +115,12 @@ class IDRBonds(Processor):
             res_graph = molecule.res_graph
         else:
             res_graph = make_residue_graph(molecule)
+            molecule.res_graph = res_graph
 
         self.remove_cross_nb_interactions(molecule, res_graph)
 
-        BB, SC1 = self.get_idr_keys(molecule)
-        self.add_idr_dih(molecule, BB, SC1)
-        self.add_idr_angles(molecule, BB, SC1)
+        order_disorder = make_disorder_string(molecule, self.idr_regions)
+        annotate_residues_from_sequence(molecule, "cgidr", order_disorder)
 
         return molecule
 

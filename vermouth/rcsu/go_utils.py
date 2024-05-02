@@ -71,28 +71,6 @@ def _in_resid_region(resid, regions):
             return True
     return False
 
-def _get_resid_region(resid, regions):
-    """
-    Check if resid falls in regions interval.
-
-    Parameters
-    ----------
-    resid: int
-        the resid of a molecule
-    regions: list[tuple(int, int)]
-        a list of the intervals
-
-    Returns
-    -------
-    bool
-    """
-    for region_index, limits in enumerate(regions):
-        # perhaps someone gives them as reversed
-        low, up = sorted(limits)
-        if low <= resid <= up:
-            return region_index
-    return False
-
 def _get_bead_size(atype):
     if atype.startswith("S"):
         bead_size = "small"
