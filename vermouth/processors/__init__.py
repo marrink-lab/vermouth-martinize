@@ -44,4 +44,4 @@ from .sort_molecule_atoms import SortMoleculeAtoms
 from .merge_all_molecules import MergeAllMolecules
 from .annotate_mut_mod import AnnotateMutMod
 from .water_bias import ComputeWaterBias
-from .tune_idp_bonds import IDRBonds
+from .annotate_idrs import AnnotateIDRs

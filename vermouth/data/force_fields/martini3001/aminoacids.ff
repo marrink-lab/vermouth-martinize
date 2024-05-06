@@ -965,7 +965,7 @@ BB +BB +SC1 10 100 15 {"group": "SC-BB-BB and BB-BB-SC scFix", "comment": "BB-BB
 ;;; IDR specific links
 [ link ]
 resname $protein_resnames
-cgidr "D"
+cgidr true
 [ features ]
 idr
 [ molmeta ]
@@ -975,7 +975,7 @@ BB +BB +SC1 10 85 10 {"group": "idp-fix"}
 
 [ link ]
 resname $protein_resnames
-cgidr "D"
+cgidr true
 [ features ]
 idr
 [ molmeta ]
@@ -985,7 +985,7 @@ idr true
 
 [ link ]
 resname $protein_resnames
-cgidr "D"
+cgidr true
 [ features ]
 idr
 [ molmeta ]
@@ -996,7 +996,7 @@ BB +BB ++BB +++BB 9 -120 -1 2 {"group": "idp-fix", "comment": "BB-BB-BB-BB-v2", 
 
 [ link ]
 resname $protein_resnames
-cgidr "D"
+cgidr true
 [ features ]
 idr
 [ molmeta ]
@@ -1007,7 +1007,7 @@ SC1 BB +BB +SC1 9  100 -1.5 2 {"group": "idp-fix", "version": 2, "comment": "SC1
 
 [ link ]
 resname $protein_resnames
-cgidr "D"
+cgidr true
 [ features ]
 idr
 [ molmeta ]
@@ -1019,7 +1019,7 @@ BB SC1
 
 [ link ]
 resname $protein_resnames
-cgidr "D"
+cgidr true
 [ features ]
 idr
 [ molmeta ]

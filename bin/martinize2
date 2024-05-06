@@ -170,7 +170,7 @@ def pdb_to_universal(
     return canonicalized
 
 
-def martinize(system, mappings, to_ff, delete_unknown=False):
+def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disordered_regions = []):
     """
     Convert a system from one force field to an other at lower resolution.
     """
@@ -185,6 +185,9 @@ def martinize(system, mappings, to_ff, delete_unknown=False):
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
+    if idrs:
+        LOGGER.info("Annotating IDRs.", type="step")
+        vermouth.AnnotateIDRs(idr_regions=[(int(start), int(stop)) for start, stop in disordered_regions]).run_system(system)
     LOGGER.info("Applying the links.", type="step")
     vermouth.DoLinks().run_system(system)
     LOGGER.info("Placing the charge dummies.", type="step")
@@ -930,6 +933,11 @@ def entry():
     vermouth.SetMoleculeMeta(scfix=args.scfix).run_system(system)
 
     vermouth.SetMoleculeMeta(idr=args.idr_tune).run_system(system)
+    if args.idr_tune:
+        if not target_ff.has_feature("idr"):
+            LOGGER.warning('Improved IDR potentials are not implemented '
+                           'for this force field',
+                           type="missing-feature")
 
     ss_sequence = list(
         itertools.chain(
@@ -952,6 +960,8 @@ def entry():
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
+        idrs=args.idr_tune,
+        disordered_regions=args.water_idrs
     )
 
     # Apply position restraints if required.
@@ -1066,16 +1076,16 @@ def entry():
                                              { s:float(eps) for s, eps in args.water_bias_eps},
                                              [(int(start), int(stop)) for start, stop in args.water_idrs],
                                             ).run_system(system)
-
-    # apply idr specific bonded potentials if required
-    if args.idr_tune:
-        if not target_ff.has_feature("idr"):
-            LOGGER.warning('Improved IDR potentials are not implemented '
-                           'for this force field',
-                           type="missing-feature")
-        else:
-            vermouth.IDRBonds(idr_regions = [(int(start), int(stop)) for start, stop in args.water_idrs]).run_system(system)
-            vermouth.DoLinks().run_system(system)
+    #
+    # # apply idr specific bonded potentials if required
+    # if args.idr_tune:
+    #     if not target_ff.has_feature("idr"):
+    #         LOGGER.warning('Improved IDR potentials are not implemented '
+    #                        'for this force field',
+    #                        type="missing-feature")
+    #     else:
+    #         vermouth.IDRBonds(idr_regions=[(int(start), int(stop)) for start, stop in args.water_idrs]).run_system(system)
+    #         vermouth.DoLinks().run_system(system)
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
