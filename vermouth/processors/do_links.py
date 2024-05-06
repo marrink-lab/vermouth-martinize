@@ -313,8 +313,15 @@ class DoLinks(Processor):
                         except ValueError:
                             pass
                 for inter_type, interactions in link.interactions.items():
+                    interactions_to_add = []
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
+                        interactions_to_add.append(interaction)
+                        try:
+                            molecule.remove_interaction(inter_type, interaction.atoms, version=None)
+                        except KeyError:
+                            pass
+                    for interaction in interactions_to_add:
                         molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
 
                 for loglevel, entries in link.log_entries.items():
