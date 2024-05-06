@@ -1076,16 +1076,6 @@ def entry():
                                              { s:float(eps) for s, eps in args.water_bias_eps},
                                              [(int(start), int(stop)) for start, stop in args.water_idrs],
                                             ).run_system(system)
-    #
-    # # apply idr specific bonded potentials if required
-    # if args.idr_tune:
-    #     if not target_ff.has_feature("idr"):
-    #         LOGGER.warning('Improved IDR potentials are not implemented '
-    #                        'for this force field',
-    #                        type="missing-feature")
-    #     else:
-    #         vermouth.IDRBonds(idr_regions=[(int(start), int(stop)) for start, stop in args.water_idrs]).run_system(system)
-    #         vermouth.DoLinks().run_system(system)
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
