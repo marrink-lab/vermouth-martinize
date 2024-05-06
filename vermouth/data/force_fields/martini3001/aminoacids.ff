@@ -946,6 +946,19 @@ BB SC1
 
 [ link ]
 resname $protein_resnames
+[ angles ]
+-BB  BB  SC1  2 100 25 {"group": "BBS angles regular martini", "version": 1}
+
+[ link ]
+resname $protein_resnames
+[ angles ]
+#meta {"group": "First SBB regular martini"}
+SC1 BB +BB 2 100 25 {"version": 1}
+[ non-edges ]
+BB -BB
+
+[ link ]
+resname $protein_resnames
 [ features ]
 scfix
 [ molmeta ]
@@ -960,20 +973,20 @@ scfix
 [ molmeta ]
 scfix true
 [ angles ]
-BB +BB +SC1 10 100 15 {"group": "SC-BB-BB and BB-BB-SC scFix", "comment": "BB-BB-SC"}
-
-[ link ]
-resname $protein_resnames
-[ angles ]
--BB  BB  SC1  2 100 25 {"group": "BBS angles regular martini", "version": 1}
-
-[ link ]
-resname $protein_resnames
-[ angles ]
-#meta {"group": "First SBB regular martini"}
-SC1 BB +BB 2 100 25 {"version": 1}
+SC1 BB +BB 10 100 15 {"group": "SC-BB-BB and BB-BB-SC scFix", "comment": "SC-BB-BB"}
+SC1 BB +BB 2 100 25 {"version": 1, "group": "First SBB regular martini"}
 [ non-edges ]
 BB -BB
+
+[ link ]
+resname $protein_resnames
+[ features ]
+scfix
+[ molmeta ]
+scfix true
+[ angles ]
+BB +BB +SC1  2 100 25 {"group": "BBS angles regular martini", "version": 1}
+BB +BB +SC1 10 100 15 {"group": "SC-BB-BB and BB-BB-SC scFix", "comment": "BB-BB-SC"}
 
 ;; Links for the different secondary structures.
 ;; Setup the bonds. We only have the bonds assuming everything is coil.
