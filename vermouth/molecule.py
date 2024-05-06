@@ -577,7 +577,7 @@ class Molecule(nx.Graph):
         """
         return self.interactions[type_]
 
-    def remove_interaction(self, type_, atoms, version=0):
+    def remove_interaction(self, type_, atoms, version=None):
         """
         Removes the specified interaction.
 
@@ -587,25 +587,27 @@ class Molecule(nx.Graph):
             The type of interaction, such as 'bonds' or 'angles'.
         atoms: collections.abc.Sequence
             The atoms that are involved in this interaction.
-        version: int
+        version: Optional[int]
             Sometimes there can be multiple distinct interactions between the
             same group of atoms. This is reflected with their `version` meta
             attribute.
+            If None, the version is not taken into account.
 
         Raises
         ------
         KeyError
             If the specified interaction could not be found
         """
-        idx = 0
+        to_remove = []
         for idx, interaction in enumerate(self.interactions[type_]):
-            if interaction.atoms == atoms and interaction.meta.get('version', 0) == version:
-                break
-        else:  # no break
+            if interaction.atoms == atoms and (version is None or interaction.meta.get('version', 0) == version):
+                to_remove.append(idx)
+        if not to_remove:
             msg = ("Can't find interaction of type {} between atoms {} "
                    "and with version {}")
             raise KeyError(msg.format(type_, atoms, version))
-        del self.interactions[type_][idx]
+        for idx in reversed(to_remove):
+            del self.interactions[type_][idx]
         if not self.interactions[type_]:
             del self.interactions[type_]
 
