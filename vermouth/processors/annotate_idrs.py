@@ -17,10 +17,7 @@
 Provides processors that can add and remove IDR specific bonds
 """
 
-import functools
-
 from .processor import Processor
-from ..graph_utils import make_residue_graph
 from ..rcsu.go_utils import _in_resid_region
 from ..log_helpers import StyleAdapter, get_logger
 LOGGER = StyleAdapter(get_logger(__name__))
