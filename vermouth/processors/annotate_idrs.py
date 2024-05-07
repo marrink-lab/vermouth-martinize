@@ -23,15 +23,22 @@ from ..log_helpers import StyleAdapter, get_logger
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
-def annotate_disorder(molecule, idr_regions):
+def annotate_disorder(molecule, id_regions, annotation="cgidr"):
     """
-    annotate the disordered regions of the molecule
+    Annotate the disordered regions of the molecule
+
+    molecule: :class:`vermouth.molecule.Molecule`
+            the molecule
+    idr_regions: list
+        list of tuples defining the resids of the idrs in the molecule
+    annotation: str
+        name of the annotation in the node
     """
 
     for key, node in molecule.nodes.items():
         _old_resid = node['_old_resid']
-        if _in_resid_region(_old_resid, idr_regions):
-            molecule.nodes[key]["cgidr"] = True
+        if _in_resid_region(_old_resid, id_regions):
+            molecule.nodes[key][annotation] = True
 
 class AnnotateIDRs(Processor):
     """
@@ -43,21 +50,21 @@ class AnnotateIDRs(Processor):
 
     """
 
-    def __init__(self, idr_regions = None):
+    def __init__(self, id_regions=None):
         """
         Parameters
         ----------
-        idr_regions:
+        id_regions:
             regions defining the IDRs
         """
-        self.idr_regions = idr_regions
+        self.id_regions = id_regions
 
     def run_molecule(self, molecule):
         """
         Assign disordered regions for a single molecule
         """
 
-        annotate_disorder(molecule, self.idr_regions)
+        annotate_disorder(molecule, self.id_regions)
 
         return molecule
 
@@ -71,8 +78,7 @@ class AnnotateIDRs(Processor):
         ----------
         system: :class:`vermouth.system.System`
         """
-        if not self.idr_regions:
+        if not self.id_regions:
             return system
-        self.system = system
         LOGGER.info("Annotating disordered regions", type="step")
         super().run_system(system)

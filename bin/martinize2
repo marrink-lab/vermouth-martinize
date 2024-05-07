@@ -170,7 +170,7 @@ def pdb_to_universal(
     return canonicalized
 
 
-def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disordered_regions = []):
+def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disordered_regions=None):
     """
     Convert a system from one force field to an other at lower resolution.
     """
@@ -187,7 +187,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disorde
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
     if idrs:
         LOGGER.info("Annotating IDRs.", type="step")
-        vermouth.AnnotateIDRs(idr_regions=[(int(start), int(stop)) for start, stop in disordered_regions]).run_system(system)
+        vermouth.AnnotateIDRs(id_regions=[(int(start), int(stop)) for start, stop in disordered_regions]).run_system(system)
     LOGGER.info("Applying the links.", type="step")
     vermouth.DoLinks().run_system(system)
     LOGGER.info("Placing the charge dummies.", type="step")
