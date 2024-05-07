@@ -50,7 +50,7 @@ def protein():
 ])
 def test_make_disorder_string(idr_regions, expected):
     molecule = protein()
-    AnnotateIDRs(idr_regions=idr_regions).run_molecule(molecule)
+    AnnotateIDRs(id_regions=idr_regions).run_molecule(molecule)
     result = []
     for key, node in molecule.nodes.items():
         if molecule.nodes[key].get("cgidr"):
