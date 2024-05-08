@@ -22,20 +22,21 @@ import argparse
 import functools
 import logging
 import itertools
-import textwrap
 from pathlib import Path
 import sys
 import networkx as nx
 import vermouth
 import vermouth.forcefield
-from vermouth.file_writer import deferred_open, DeferredFileWriter
+from vermouth.file_writer import DeferredFileWriter
 from vermouth import DATA_PATH
+from vermouth.processors.processor import ProcessorPipeline
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
     AnnotateDSSP,
     AnnotateMartiniSecondaryStructures,
     AnnotateResidues,
 )
+from vermouth.rcsu import ComputeStructuralGoBias, VirtualSiteCreator
 from vermouth.log_helpers import (
     StyleAdapter,
     BipolarFormatter,
@@ -50,12 +51,7 @@ from vermouth.map_input import (
     combine_mappings,
 )
 from vermouth.rcsu.contact_map import read_go_map
-from vermouth.rcsu.go_pipeline import GoPipeline
-from vermouth.citation_parser import citation_formatter
 from vermouth.gmx.topology import write_gmx_topology
-
-# TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
-# not work as intended. Investigation required.
 
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
@@ -84,31 +80,7 @@ LOGGER = StyleAdapter(LOGGER)
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 
 
-def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
-    """
-    Read a system from a PDB or GRO file.
-
-    This function guesses the file type based on the file extension.
-
-    The resulting system does not have a force field and may not have edges.
-    """
-    system = vermouth.System()
-    file_extension = path.suffix.upper()[1:]  # We do not keep the dot
-    if file_extension in ["PDB", "ENT"]:
-        vermouth.PDBInput(
-            str(path), exclude=ignore_resnames, ignh=ignh, modelidx=modelidx
-        ).run_system(system)
-    elif file_extension in ["GRO"]:
-        vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(
-            system
-        )
-    else:
-        raise ValueError('Unknown file extension "{}".'.format(file_extension))
-    return system
-
-
 def pdb_to_universal(
-    system,
     delete_unknown=False,
     force_field=None,
     modifications=None,
@@ -123,73 +95,66 @@ def pdb_to_universal(
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
+    pipeline = ProcessorPipeline(name='to universal')
     if force_field is None:
         force_field = vermouth.forcefield.get_native_force_field("charmm")
     if modifications is None:
         modifications = []
     if mutations is None:
         mutations = []
-    canonicalized = system.copy()
-    canonicalized.force_field = force_field
+    pipeline.add(vermouth.SetFF(force_field))
 
     LOGGER.info("Guessing the bonds.", type="step")
-    vermouth.MakeBonds(
-        allow_name=bonds_from_name, allow_dist=bonds_from_dist, fudge=bonds_fudge
-    ).run_system(canonicalized)
-    vermouth.MergeNucleicStrands().run_system(canonicalized)
-    if write_graph is not None:
-        vermouth.pdb.write_pdb(
-            canonicalized, str(write_graph), omit_charges=True, defer_writing=False
+    pipeline.add(
+        vermouth.MakeBonds(
+            allow_name=bonds_from_name, allow_dist=bonds_from_dist, fudge=bonds_fudge
         )
+    )
+    pipeline.add(vermouth.MergeNucleicStrands())
+    if write_graph is not None:
+        pipeline.add(vermouth.PDBWriter(write_graph, omit_charges=True, defer_writing=False))
 
     LOGGER.debug("Annotating required mutations and modifications.", type="step")
-    vermouth.AnnotateMutMod(modifications, mutations).run_system(canonicalized)
+    pipeline.add(vermouth.AnnotateMutMod(modifications, mutations))
     LOGGER.info("Repairing the graph.", type="step")
-    vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False).run_system(
-        canonicalized
-    )
+    pipeline.add(vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False))
     if write_repair is not None:
-        vermouth.pdb.write_pdb(
-            canonicalized,
-            str(write_repair),
-            omit_charges=True,
-            nan_missing_pos=True,
-            defer_writing=False,
-        )
+        pipeline.add(vermouth.PDBWriter(write_repair, omit_charges=True,
+                                        nan_missing_pos=True, defer_writing=False))
+
     LOGGER.info("Dealing with modifications.", type="step")
-    vermouth.CanonicalizeModifications().run_system(canonicalized)
+    pipeline.add(vermouth.CanonicalizeModifications())
     if write_canon is not None:
-        vermouth.pdb.write_pdb(
-            canonicalized,
-            str(write_canon),
-            omit_charges=True,
-            nan_missing_pos=True,
-            defer_writing=False,
-        )
-    vermouth.AttachMass(attribute="mass").run_system(canonicalized)
-    return canonicalized
+        pipeline.add(vermouth.PDBWriter(write_canon, omit_charges=True,
+                                        nan_missing_pos=True, defer_writing=False))
+
+    pipeline.add(vermouth.AttachMass(attribute="mass"))
+    return pipeline
 
 
-def martinize(system, mappings, to_ff, delete_unknown=False):
+def martinize(mappings, to_ff, delete_unknown=False):
     """
     Convert a system from one force field to an other at lower resolution.
     """
+    pipeline = ProcessorPipeline('martinize')
     LOGGER.info("Creating the graph at the target resolution.", type="step")
-    vermouth.DoMapping(
-        mappings=mappings,
-        to_ff=to_ff,
-        delete_unknown=delete_unknown,
-        attribute_keep=("cgsecstruct", "chain"),
-        attribute_must=("resname",),
-        attribute_stash=("resid",),
-    ).run_system(system)
+    pipeline.add(
+        vermouth.DoMapping(
+            mappings=mappings,
+            to_ff=to_ff,
+            delete_unknown=delete_unknown,
+            attribute_keep=("cgsecstruct", "chain", "secstruct"),
+            attribute_must=("resname",),
+            attribute_stash=("resid",),
+        )
+    )
     LOGGER.info("Averaging the coordinates.", type="step")
-    vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
+    pipeline.add(vermouth.DoAverageBead(ignore_missing_graphs=True))
     LOGGER.info("Applying the links.", type="step")
-    vermouth.DoLinks().run_system(system)
+    pipeline.add(vermouth.DoLinks())
     LOGGER.info("Placing the charge dummies.", type="step")
-    vermouth.LocateChargeDummies().run_system(system)
-    return system
+    pipeline.add(vermouth.LocateChargeDummies())
+    return pipeline
 
 
 def _cys_argument(value):
@@ -776,7 +741,6 @@ def entry():
     partial_mapping = generate_all_self_mappings(known_force_fields.values())
     combine_mappings(known_mappings, partial_mapping)
 
-    from_ff = args.from_ff
     if args.to_ff not in known_force_fields:
         raise ValueError('Unknown force field "{}".'.format(args.to_ff))
     if args.from_ff not in known_force_fields:
@@ -812,15 +776,6 @@ def entry():
             "be used together."
         )
 
-    if args.to_ff.startswith("elnedyn"):
-        # FIXME: This type of thing should be added to the FF itself.
-        LOGGER.info(
-            "The forcefield {} must always be used with an elastic "
-            "network. Enabling it now.",
-            args.to_ff,
-        )
-        args.elastic = True
-
     file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ["GRO"] and args.modelidx is not None:
         parser.error("GRO files don't know the concept of models.")
@@ -851,20 +806,20 @@ def entry():
         if not any("nter" in resspec for resspec in resspecs):
             args.modifications.append(["nter", "N-ter"])
 
-    # Reading the input structure.
-    # So far, we assume we only go from atomistic to martini. We want the
-    # input structure to be a clean universal system.
-    # For now at least, we silently delete molecules with unknown blocks.
-    system = read_system(
-        args.inpath,
-        ignore_resnames=ignore_res,
-        ignh=args.ignore_h,
-        modelidx=args.modelidx,
-    )
-    system = pdb_to_universal(
-        system,
+    system = vermouth.System()
+    pipeline = ProcessorPipeline(name='martinize2')
+
+    file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
+    if file_extension in ["PDB", "ENT"]:
+        pipeline.add(vermouth.PDBInput(args.inpath, exclude=ignore_res, ignh=args.ignore_h, modelidx=args.modelidx))
+    elif file_extension in ["GRO"]:
+        pipeline.add(vermouth.GROInput(args.inpath, exclude=ignore_res, ignh=args.ignore_h))
+    else:
+        raise ValueError('Unknown file extension "{}".'.format(file_extension))
+
+    to_universal = pdb_to_universal(
         delete_unknown=True,
-        force_field=known_force_fields[from_ff],
+        force_field=known_force_fields[args.from_ff],
         bonds_from_name=bonds_from_name,
         bonds_from_dist=bonds_from_dist,
         bonds_fudge=args.bonds_fudge,
@@ -874,24 +829,37 @@ def entry():
         write_repair=args.write_repair,
         write_canon=args.write_canon,
     )
+    pipeline.add(to_universal)
 
     LOGGER.info("Read input.", type="step")
     for molecule in system.molecules:
         LOGGER.debug("Read molecule {}.", molecule, type="step")
 
+    annotate_pipeline = ProcessorPipeline(name='annotate')
+
     target_ff = known_force_fields[args.to_ff]
+    if target_ff.variables.get('requires_EN'):
+        LOGGER.info(
+            "The forcefield {} must always be used with an elastic "
+            "network. Enabling it now.",
+            args.to_ff,
+        )
+        args.elastic = True
+
     if args.dssp:
         if not isinstance(args.dssp, str):
             args.dssp = None
-        AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
-        AnnotateMartiniSecondaryStructures().run_system(system)
+        annotate_pipeline.add(AnnotateDSSP(executable=args.dssp, savedir="."))
+        annotate_pipeline.add(AnnotateMartiniSecondaryStructures())
     elif args.ss is not None:
-        AnnotateResidues(
-            attribute="secstruct",
-            sequence=args.ss,
-            molecule_selector=selectors.is_protein,
-        ).run_system(system)
-        AnnotateMartiniSecondaryStructures().run_system(system)
+        annotate_pipeline.add(
+            AnnotateResidues(
+                attribute="secstruct",
+                sequence=args.ss,
+                molecule_selector=selectors.is_protein,
+            )
+        )
+        annotate_pipeline.add(AnnotateMartiniSecondaryStructures())
     elif args.collagen:
         if not target_ff.has_feature("collagen"):
             LOGGER.warning(
@@ -900,11 +868,13 @@ def entry():
                 target_ff.name,
                 type="missing-feature",
             )
-        AnnotateResidues(
-            attribute="cgsecstruct",
-            sequence="F",
-            molecule_selector=selectors.is_protein,
-        ).run_system(system)
+        annotate_pipeline.add(
+            AnnotateResidues(
+                attribute="cgsecstruct",
+                sequence="F",
+                molecule_selector=selectors.is_protein,
+            )
+        )
     if args.extdih and not target_ff.has_feature("extdih"):
         LOGGER.warning(
             'The force field "{}" does not define dihedral '
@@ -912,7 +882,7 @@ def entry():
             target_ff.name,
             type="missing-feature",
         )
-    vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
+    annotate_pipeline.add(vermouth.SetMoleculeMeta(extdih=args.extdih))
     if args.scfix and not target_ff.has_feature("scfix"):
         LOGGER.warning(
             'The force field "{}" does not define angle and '
@@ -920,8 +890,10 @@ def entry():
             target_ff.name,
             type="missing-feature",
         )
-    vermouth.SetMoleculeMeta(scfix=args.scfix).run_system(system)
+    annotate_pipeline.add(vermouth.SetMoleculeMeta(scfix=args.scfix))
 
+
+    # FIXME
     ss_sequence = list(
         itertools.chain(
             *(
@@ -933,18 +905,21 @@ def entry():
     )
 
     if args.cystein_bridge == "none":
-        vermouth.RemoveCysteinBridgeEdges().run_system(system)
+        annotate_pipeline.add(vermouth.RemoveCysteinBridgeEdges())
     elif args.cystein_bridge != "auto":
-        vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
+        annotate_pipeline.add(vermouth.AddCysteinBridgesThreshold(args.cystein_bridge))
+
+    pipeline.add(annotate_pipeline)
 
     # Run martinize on the system.
-    system = martinize(
-        system,
+    martinize_pipeline = martinize(
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
     )
+    pipeline.add(martinize_pipeline)
 
+    postprocessing = ProcessorPipeline(name='post-processing')
     # Apply position restraints if required.
     if args.posres != "none":
         LOGGER.info("Applying position restraints.", type="step")
@@ -953,21 +928,24 @@ def entry():
             "backbone": selectors.select_backbone,
         }
         node_selector = node_selectors[args.posres]
-        vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
+        postprocessing.add(vermouth.ApplyPosres(node_selector, args.posres_fc))
 
     # Generate the Go model if required
     if args.go:
         LOGGER.info("Reading Go model contact map.", type="step")
         go_map = read_go_map(args.go)
         LOGGER.info("Generating the Go model.", type="step")
-        GoPipeline.run_system(system,
-                              moltype=args.govs_moltype,
-                              contact_map=go_map,
-                              cutoff_short=args.go_low,
-                              cutoff_long=args.go_up,
-                              go_eps=args.go_eps,
-                              res_dist=args.go_res_dist,)
-
+        go_pipeline = ProcessorPipeline(name='GoPipeline')
+        go_pipeline.add(vermouth.MergeAllMolecules())
+        go_pipeline.add(vermouth.SetMoleculeMeta(moltype=args.govs_moltype))
+        go_pipeline.add(VirtualSiteCreator())
+        go_pipeline.add(ComputeStructuralGoBias(moltype=args.govs_moltype,
+                                                contact_map=go_map,
+                                                cutoff_short=args.go_low,
+                                                cutoff_long=args.go_up,
+                                                go_eps=args.go_eps,
+                                                res_dist=args.go_res_dist))
+        postprocessing.add(go_pipeline)
         defines = ("GO_VIRT",)
         itp_paths = {"atomtypes": "go_atomtypes.itp",
                      "nonbond_params": "go_nbparams.itp"}
@@ -980,16 +958,16 @@ def entry():
             if "all" not in args.merge_chains:
                 input_chain_sets = [i.split(",") for i in args.merge_chains]
                 for chain_set in input_chain_sets:
-                    vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
+                    postprocessing.add(vermouth.MergeChains(chains=chain_set, all_chains=False))
             #if "all" is in the list and is the only argument
             elif "all" in args.merge_chains and len(args.merge_chains) == 1:
-                vermouth.MergeChains(chains=[], all_chains=True).run_system(system)
+                postprocessing.add(vermouth.MergeChains(chains=[], all_chains=True))
             #otherwise there are multiple arguments and we need to raise an ArgumentError
             else:
                 raise argparse.ArgumentError(chain_merging,
                                              message=("Multiple conflicting merging arguments given. "
                                                       "Either specify -merge all or -merge A,B,C (+)."))
-        vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
+        postprocessing.add(vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp))
         defines = ()
 
     # Apply a rubber band elastic network is required.
@@ -998,7 +976,7 @@ def entry():
         if args.rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
         elif args.rb_unit == "all":
-            vermouth.MergeAllMolecules().run_system(system)
+            postprocessing.add(vermouth.MergeAllMolecules())
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
         elif args.rb_unit == "chain":
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
@@ -1041,75 +1019,57 @@ def entry():
             domain_criterion=domain_criterion,
             res_min_dist=args.res_min_dist,
         )
-        rubber_band_processor.run_system(system)
+        postprocessing.add(rubber_band_processor)
 
     # If required add some water bias
     if args.water_bias:
         # if the go model hasn't been used we need to create virtual
         # sites for the biasing
         if not args.go:
-            vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
+            postprocessing.add(VirtualSiteCreator())
             itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
                          "nonbond_params": "virtual_sites_nonbond_params.itp"}
         # now we add a bias by defining specific virtual-site water interactions
-        vermouth.processors.ComputeWaterBias(args.water_bias,
+        postprocessing.add(vermouth.ComputeWaterBias(args.water_bias,
                                              { s:float(eps) for s, eps in args.water_bias_eps},
                                              [(int(start), int(stop)) for start, stop in args.water_idrs],
-                                            ).run_system(system)
+                                            ))
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
-        for molecule in system.molecules:
-            old_resids = nx.get_node_attributes(molecule, "_old_resid")
-            nx.set_node_attributes(molecule, old_resids, "resid")
+        postprocessing.add(vermouth.CopyNodeAttrs("_old_resid", "resid"))
 
     # The Martini Go model assumes that we do not mess with the order of
     # particles in any way especially the virtual sites needed for the Go
     # model, thus we skip the sorting here altogether.
     if not args.go:
         LOGGER.info("Sorting atomids", type="step")
-        vermouth.SortMoleculeAtoms().run_system(system)
+        postprocessing.add(vermouth.SortMoleculeAtoms())
 
     LOGGER.info("Writing output.", type="step")
     for molecule in system.molecules:
         LOGGER.debug("Writing molecule {}.", molecule, type="step")
-        for loglevel, entries in molecule.log_entries.items():
-            for entry, fmt_args in entries.items():
-                for fmt_arg in fmt_args:
-                    fmt_arg = {str(k): molecule.nodes[v] for k, v in fmt_arg.items()}
-                    LOGGER.log(loglevel, entry, **fmt_arg, type="model")
+    postprocessing.add(vermouth.PrintMolLogs())
 
-    # Write the topology if requested
-    # grompp has a limit in the number of character it can read per line
-    # (due to the size limit of a buffer somewhere in its implementation).
-    # The command line can be longer than this limit and therefore
-    # prevent grompp from reading the topology.
-    gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
-    command = " ".join(sys.argv)
-    if len(command) > gromacs_char_limit:
-        command = command[:gromacs_char_limit] + " ..."
-    header = [
-        "This file was generated using the following command:",
-        command,
-        VERSION,
-    ]
-    if None not in ss_sequence:
-        header += [
-            "The following sequence of secondary structure ",
-            "was used for the full system:",
-            "".join(ss_sequence),
-        ]
+    pipeline.add(postprocessing)
 
+    write_output = ProcessorPipeline(name='write_output')
     if args.top_path is not None:
-        write_gmx_topology(system,
-                           args.top_path,
-                           itp_paths=itp_paths,
-                           C6C12=False,
-                           defines=defines,
-                           header=header)
+        command = " ".join(sys.argv)
+        header = [
+            "This file was generated using the following command:",
+            command,
+            VERSION,
+        ]
+        write_output.add(vermouth.gmx.GMXTopologyWriter(args.top_path, itp_paths,
+                                                        False, defines, header))
+    if args.outpath:
+        # Write a PDB file.
+        write_output.add(vermouth.PDBWriter(args.outpath, omit_charges=True))
 
-    # Write a PDB file.
-    vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
+    pipeline.add(write_output)
+    print(pipeline)
+    pipeline.run_system(system)
 
     # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
     #       inconsistent-data warnings)
@@ -1126,7 +1086,7 @@ def entry():
         sys.exit(2)
     else:
         DeferredFileWriter().write()
-        vermouth.Quoter().run_system(system)
+        vermouth.Quoter().run_system(None)
 
 
 if __name__ == "__main__":

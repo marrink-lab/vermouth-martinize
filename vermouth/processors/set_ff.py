@@ -1,4 +1,6 @@
-# Copyright 2018 University of Groningen
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright 2024 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,4 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .dssp import *
+from . import Processor
+
+
+class SetFF(Processor):
+    def __init__(self, force_field):
+        self.force_field = force_field
+
+    def run_system(self, system):
+        system.force_field = self.force_field
+        return system
