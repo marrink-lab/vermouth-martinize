@@ -81,8 +81,6 @@ VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 
 
 def pdb_to_universal(
-    pipeline,
-    system,
     delete_unknown=False,
     force_field=None,
     modifications=None,
@@ -97,14 +95,14 @@ def pdb_to_universal(
     """
     Convert a system read from the PDB to a clean canonical atomistic system.
     """
+    pipeline = ProcessorPipeline(name='to universal')
     if force_field is None:
         force_field = vermouth.forcefield.get_native_force_field("charmm")
     if modifications is None:
         modifications = []
     if mutations is None:
         mutations = []
-    canonicalized = system.copy()
-    canonicalized.force_field = force_field
+    pipeline.add(vermouth.SetFF(force_field))
 
     LOGGER.info("Guessing the bonds.", type="step")
     pipeline.add(
@@ -114,40 +112,31 @@ def pdb_to_universal(
     )
     pipeline.add(vermouth.MergeNucleicStrands())
     if write_graph is not None:
-        vermouth.pdb.write_pdb(
-            canonicalized, write_graph, omit_charges=True, defer_writing=False
-        )
+        pipeline.add(vermouth.PDBWriter(write_graph, omit_charges=True, defer_writing=False))
 
     LOGGER.debug("Annotating required mutations and modifications.", type="step")
     pipeline.add(vermouth.AnnotateMutMod(modifications, mutations))
     LOGGER.info("Repairing the graph.", type="step")
     pipeline.add(vermouth.RepairGraph(delete_unknown=delete_unknown, include_graph=False))
     if write_repair is not None:
-        vermouth.pdb.write_pdb(
-            canonicalized,
-            write_repair,
-            omit_charges=True,
-            nan_missing_pos=True,
-            defer_writing=False,
-        )
+        pipeline.add(vermouth.PDBWriter(write_repair, omit_charges=True,
+                                        nan_missing_pos=True, defer_writing=False))
+
     LOGGER.info("Dealing with modifications.", type="step")
     pipeline.add(vermouth.CanonicalizeModifications())
     if write_canon is not None:
-        vermouth.pdb.write_pdb(
-            canonicalized,
-            write_canon,
-            omit_charges=True,
-            nan_missing_pos=True,
-            defer_writing=False,
-        )
+        pipeline.add(vermouth.PDBWriter(write_canon, omit_charges=True,
+                                        nan_missing_pos=True, defer_writing=False))
+
     pipeline.add(vermouth.AttachMass(attribute="mass"))
-    return canonicalized
+    return pipeline
 
 
-def martinize(pipeline, system, mappings, to_ff, delete_unknown=False):
+def martinize(mappings, to_ff, delete_unknown=False):
     """
     Convert a system from one force field to an other at lower resolution.
     """
+    pipeline = ProcessorPipeline('martinize')
     LOGGER.info("Creating the graph at the target resolution.", type="step")
     pipeline.add(
         vermouth.DoMapping(
@@ -165,7 +154,7 @@ def martinize(pipeline, system, mappings, to_ff, delete_unknown=False):
     pipeline.add(vermouth.DoLinks())
     LOGGER.info("Placing the charge dummies.", type="step")
     pipeline.add(vermouth.LocateChargeDummies())
-    return system
+    return pipeline
 
 
 def _cys_argument(value):
@@ -752,7 +741,6 @@ def entry():
     partial_mapping = generate_all_self_mappings(known_force_fields.values())
     combine_mappings(known_mappings, partial_mapping)
 
-    from_ff = args.from_ff
     if args.to_ff not in known_force_fields:
         raise ValueError('Unknown force field "{}".'.format(args.to_ff))
     if args.from_ff not in known_force_fields:
@@ -820,21 +808,18 @@ def entry():
 
     system = vermouth.System()
     pipeline = ProcessorPipeline(name='martinize2')
-    to_universal = ProcessorPipeline(name='to universal')
 
     file_extension = args.inpath.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ["PDB", "ENT"]:
-        to_universal.add(vermouth.PDBInput(args.inpath, exclude=ignore_res, ignh=args.ignore_h, modelidx=args.modelidx))
+        pipeline.add(vermouth.PDBInput(args.inpath, exclude=ignore_res, ignh=args.ignore_h, modelidx=args.modelidx))
     elif file_extension in ["GRO"]:
-        to_universal.add(vermouth.GROInput(args.inpath, exclude=ignore_res, ignh=args.ignore_h))
+        pipeline.add(vermouth.GROInput(args.inpath, exclude=ignore_res, ignh=args.ignore_h))
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
 
-    system = pdb_to_universal(
-        to_universal,
-        system,
+    to_universal = pdb_to_universal(
         delete_unknown=True,
-        force_field=known_force_fields[from_ff],
+        force_field=known_force_fields[args.from_ff],
         bonds_from_name=bonds_from_name,
         bonds_from_dist=bonds_from_dist,
         bonds_fudge=args.bonds_fudge,
@@ -850,7 +835,7 @@ def entry():
     for molecule in system.molecules:
         LOGGER.debug("Read molecule {}.", molecule, type="step")
 
-    martinize_pipeline = ProcessorPipeline(name='martinize')
+    annotate_pipeline = ProcessorPipeline(name='annotate')
 
     target_ff = known_force_fields[args.to_ff]
     if target_ff.variables.get('requires_EN'):
@@ -864,17 +849,17 @@ def entry():
     if args.dssp:
         if not isinstance(args.dssp, str):
             args.dssp = None
-        martinize_pipeline.add(AnnotateDSSP(executable=args.dssp, savedir="."))
-        martinize_pipeline.add(AnnotateMartiniSecondaryStructures())
+        annotate_pipeline.add(AnnotateDSSP(executable=args.dssp, savedir="."))
+        annotate_pipeline.add(AnnotateMartiniSecondaryStructures())
     elif args.ss is not None:
-        martinize_pipeline.add(
+        annotate_pipeline.add(
             AnnotateResidues(
                 attribute="secstruct",
                 sequence=args.ss,
                 molecule_selector=selectors.is_protein,
             )
         )
-        martinize_pipeline.add(AnnotateMartiniSecondaryStructures())
+        annotate_pipeline.add(AnnotateMartiniSecondaryStructures())
     elif args.collagen:
         if not target_ff.has_feature("collagen"):
             LOGGER.warning(
@@ -883,7 +868,7 @@ def entry():
                 target_ff.name,
                 type="missing-feature",
             )
-        martinize_pipeline.add(
+        annotate_pipeline.add(
             AnnotateResidues(
                 attribute="cgsecstruct",
                 sequence="F",
@@ -897,7 +882,7 @@ def entry():
             target_ff.name,
             type="missing-feature",
         )
-    martinize_pipeline.add(vermouth.SetMoleculeMeta(extdih=args.extdih))
+    annotate_pipeline.add(vermouth.SetMoleculeMeta(extdih=args.extdih))
     if args.scfix and not target_ff.has_feature("scfix"):
         LOGGER.warning(
             'The force field "{}" does not define angle and '
@@ -905,8 +890,10 @@ def entry():
             target_ff.name,
             type="missing-feature",
         )
-    martinize_pipeline.add(vermouth.SetMoleculeMeta(scfix=args.scfix))
+    annotate_pipeline.add(vermouth.SetMoleculeMeta(scfix=args.scfix))
 
+
+    # FIXME
     ss_sequence = list(
         itertools.chain(
             *(
@@ -918,19 +905,20 @@ def entry():
     )
 
     if args.cystein_bridge == "none":
-        martinize_pipeline.add(vermouth.RemoveCysteinBridgeEdges())
+        annotate_pipeline.add(vermouth.RemoveCysteinBridgeEdges())
     elif args.cystein_bridge != "auto":
-        martinize_pipeline.add(vermouth.AddCysteinBridgesThreshold(args.cystein_bridge))
+        annotate_pipeline.add(vermouth.AddCysteinBridgesThreshold(args.cystein_bridge))
+
+    pipeline.add(annotate_pipeline)
 
     # Run martinize on the system.
-    system = martinize(
-        martinize_pipeline,
-        system,
+    martinize_pipeline = martinize(
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
     )
     pipeline.add(martinize_pipeline)
+
     postprocessing = ProcessorPipeline(name='post-processing')
     # Apply position restraints if required.
     if args.posres != "none":
@@ -952,11 +940,11 @@ def entry():
         go_pipeline.add(vermouth.SetMoleculeMeta(moltype=args.govs_moltype))
         go_pipeline.add(VirtualSiteCreator())
         go_pipeline.add(ComputeStructuralGoBias(moltype=args.govs_moltype,
-                                                          contact_map=go_map,
-                                                          cutoff_short=args.go_low,
-                                                          cutoff_long=args.go_up,
-                                                          go_eps=args.go_eps,
-                                                          res_dist=args.go_res_dist))
+                                                contact_map=go_map,
+                                                cutoff_short=args.go_low,
+                                                cutoff_long=args.go_up,
+                                                go_eps=args.go_eps,
+                                                res_dist=args.go_res_dist))
         postprocessing.add(go_pipeline)
         defines = ("GO_VIRT",)
         itp_paths = {"atomtypes": "go_atomtypes.itp",

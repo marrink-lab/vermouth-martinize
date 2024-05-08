@@ -15,19 +15,12 @@
 # limitations under the License.
 
 from . import Processor
-from ..pdb import write_pdb
 
 
-class PDBWriter(Processor):
-    def __init__(self, path, conect=True, omit_charges=True, nan_missing_pos=False, defer_writing=True):
-        self.path = path
-        self.conect = conect
-        self.omit_charges = omit_charges
-        self.nan_missing_pos = nan_missing_pos
-        self.defer_writing = defer_writing
+class SetFF(Processor):
+    def __init__(self, force_field):
+        self.force_field = force_field
 
     def run_system(self, system):
-        write_pdb(system, path=self.path, conect=self.conect,
-                  omit_charges=self.omit_charges, nan_missing_pos=self.nan_missing_pos,
-                  defer_writing=self.defer_writing)
+        system.force_field = self.force_field
         return system

@@ -47,3 +47,4 @@ from .annotate_mut_mod import AnnotateMutMod
 from .water_bias import ComputeWaterBias
 from .copy_node_attrs import CopyNodeAttrs
 from .print_mol_logs import PrintMolLogs
+from .set_ff import SetFF
