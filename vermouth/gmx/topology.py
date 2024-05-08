@@ -14,6 +14,7 @@ LOGGER = StyleAdapter(get_logger(__name__))
 
 Atomtype = namedtuple('Atomtype', 'molecule node sigma epsilon meta')
 NonbondParam = namedtuple('NonbondParam', 'atoms sigma epsilon meta')
+BondParam = namedtuple('BondParam', 'atoms btype length fc meta')
 
 def _group_by_conditionals(interactions):
     interactions_group_sorted = sorted(interactions,
@@ -109,11 +110,43 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                 else:
                     comments = ""
                 itp_file.write(f"{a1} {a2} 1 {nb1:3.8F} {nb2:3.8F} {comments}\n")
+def write_bond_params(system, itp_path, C6C12=False):
+    """
+    Writes the [ bonds ] directive to file.
+    All atomtypes are defined in system.gmx_topology_params.
+    Masses and further information are taken from the molecule
+    directly.
+    """
+    conditional_keys = {True: '#ifdef', False: '#ifndef'}
+    with deferred_open(itp_path, "w") as itp_file:
+        itp_file.write("[ bonds ]\n")
+        grouped_types = _group_by_conditionals(system.gmx_topology_params['en_bonds'])
+        for (conditional, group), interactions_in_group in grouped_types:
+            if conditional:
+                conditional_key = conditional_keys[conditional[1]]
+                itp_file.write('{} {}\n'.format(conditional_key, conditional[0]))
+            if group:
+                itp_file.write('; {}\n'.format(group))
+
+            for b_params in interactions_in_group:
+                a1, a2 = b_params.atoms
+                btype = b_params.btype
+                l = b_params.length
+                k = b_params.fc
+
+                if b_params.meta.get('comment'):
+                    comments = ";" + " ".join(b_params.meta['comment'])
+                else:
+                    comments = ""
+                itp_file.write(f"{a1} {a2} {btype} {l} {k} {comments}\n")
+
+
 
 def write_gmx_topology(system,
                        top_path,
                        itp_paths={"nonbond_params": "extra_nbparams.itp",
-                                  "atomtypes": "extra_atomtypes.itp"},
+                                  "atomtypes": "extra_atomtypes.itp",
+                                  "en_bonds": "en_bonds.itp"},
                        C6C12=False,
                        defines=(),
                        header=()):
@@ -158,6 +191,14 @@ def write_gmx_topology(system,
         _path = itp_paths['nonbond_params']
         write_nonbond_params(system, _path, C6C12)
         include_string += f'\n #include "{_path}"\n'
+    if "en_bonds" in system.gmx_topology_params:
+        #nb. do not add anything to include_string here
+        _path = itp_paths['en_bonds']
+        write_bond_params(system, _path, C6C12)
+        LOGGER.info("You are writing out elastic networks externally." 
+                    f" Ensure to include {_path} in your [ bonds ] directive.")
+
+
     # Write the ITP files for the molecule types, and prepare writing the
     # [ molecules ] section of the top file.
     # * We write one ITP file for each different moltype in the system, the
