@@ -14,3 +14,4 @@
 
 [ variables ]
 center_weight "mass"
+requires_EN true
