@@ -22,13 +22,12 @@ import argparse
 import functools
 import logging
 import itertools
-import textwrap
 from pathlib import Path
 import sys
 import networkx as nx
 import vermouth
 import vermouth.forcefield
-from vermouth.file_writer import deferred_open, DeferredFileWriter
+from vermouth.file_writer import DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.processors.processor import ProcessorPipeline
 from vermouth.dssp import dssp
@@ -52,11 +51,7 @@ from vermouth.map_input import (
     combine_mappings,
 )
 from vermouth.rcsu.contact_map import read_go_map
-from vermouth.citation_parser import citation_formatter
 from vermouth.gmx.topology import write_gmx_topology
-
-# TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
-# not work as intended. Investigation required.
 
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
@@ -1045,20 +1040,18 @@ def entry():
         # if the go model hasn't been used we need to create virtual
         # sites for the biasing
         if not args.go:
-            vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
+            postprocessing.add(VirtualSiteCreator())
             itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
                          "nonbond_params": "virtual_sites_nonbond_params.itp"}
         # now we add a bias by defining specific virtual-site water interactions
-        vermouth.processors.ComputeWaterBias(args.water_bias,
+        postprocessing.add(vermouth.ComputeWaterBias(args.water_bias,
                                              { s:float(eps) for s, eps in args.water_bias_eps},
                                              [(int(start), int(stop)) for start, stop in args.water_idrs],
-                                            ).run_system(system)
+                                            ))
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
-        for molecule in system.molecules:
-            old_resids = nx.get_node_attributes(molecule, "_old_resid")
-            nx.set_node_attributes(molecule, old_resids, "resid")
+        postprocessing.add(vermouth.CopyNodeAttrs("_old_resid", "resid"))
 
     # The Martini Go model assumes that we do not mess with the order of
     # particles in any way especially the virtual sites needed for the Go
