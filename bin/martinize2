@@ -1063,46 +1063,33 @@ def entry():
     LOGGER.info("Writing output.", type="step")
     for molecule in system.molecules:
         LOGGER.debug("Writing molecule {}.", molecule, type="step")
-        for loglevel, entries in molecule.log_entries.items():
-            for entry, fmt_args in entries.items():
-                for fmt_arg in fmt_args:
-                    fmt_arg = {str(k): molecule.nodes[v] for k, v in fmt_arg.items()}
-                    LOGGER.log(loglevel, entry, **fmt_arg, type="model")
+    postprocessing.add(vermouth.PrintMolLogs())
 
-    # Write the topology if requested
-    # grompp has a limit in the number of character it can read per line
-    # (due to the size limit of a buffer somewhere in its implementation).
-    # The command line can be longer than this limit and therefore
-    # prevent grompp from reading the topology.
-    gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
-    command = " ".join(sys.argv)
-    if len(command) > gromacs_char_limit:
-        command = command[:gromacs_char_limit] + " ..."
-    header = [
-        "This file was generated using the following command:",
-        command,
-        VERSION,
-    ]
-    if None not in ss_sequence:
-        header += [
-            "The following sequence of secondary structure ",
-            "was used for the full system:",
-            "".join(ss_sequence),
-        ]
     pipeline.add(postprocessing)
+
+    write_output = ProcessorPipeline(name='write_output')
+    if args.top_path is not None:
+        command = " ".join(sys.argv)
+        header = [
+            "This file was generated using the following command:",
+            command,
+            VERSION,
+        ]
+        if None not in ss_sequence:
+            header += [
+                "The following sequence of secondary structure ",
+                "was used for the full system:",
+                "".join(ss_sequence),
+            ]
+        write_output.add(vermouth.gmx.GMXTopologyWriter(args.top_path, itp_paths,
+                                                        False, defines, header))
+    if args.outpath:
+        # Write a PDB file.
+        write_output.add(vermouth.PDBWriter(args.outpath, omit_charges=True))
+
+    pipeline.add(write_output)
     print(pipeline)
     pipeline.run_system(system)
-
-    if args.top_path is not None:
-        write_gmx_topology(system,
-                           args.top_path,
-                           itp_paths=itp_paths,
-                           C6C12=False,
-                           defines=defines,
-                           header=header)
-
-    # Write a PDB file.
-    vermouth.pdb.write_pdb(system, args.outpath, omit_charges=True)
 
     # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
     #       inconsistent-data warnings)

@@ -4,16 +4,17 @@ I/O of topology parameters that are not molecules.
 import itertools
 from collections import namedtuple
 import textwrap
-import vermouth
-from vermouth.file_writer import deferred_open
-from vermouth.citation_parser import citation_formatter
+from ..processors import Processor
+from ..file_writer import deferred_open
+from ..citation_parser import citation_formatter
 from ..log_helpers import StyleAdapter, get_logger
-from .itp import _interaction_sorting_key
+from .itp import _interaction_sorting_key, write_molecule_itp
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
 Atomtype = namedtuple('Atomtype', 'molecule node sigma epsilon meta')
 NonbondParam = namedtuple('NonbondParam', 'atoms sigma epsilon meta')
+
 
 def _group_by_conditionals(interactions):
     interactions_group_sorted = sorted(interactions,
@@ -25,6 +26,7 @@ def _group_by_conditionals(interactions):
         )
     return interaction_grouped
 
+
 def sigma_epsilon_to_C6_C12(sigma, epsilon):
     """
     Convert the LJ potential from sigma epsilon
@@ -33,6 +35,7 @@ def sigma_epsilon_to_C6_C12(sigma, epsilon):
     C6 = 4*sigma*epsilon**6
     C12 = 4*sigma*epsilon**12
     return C6, C12
+
 
 def write_atomtypes(system, itp_path, C6C12=False):
     """
@@ -72,6 +75,7 @@ def write_atomtypes(system, itp_path, C6C12=False):
                     comments = ""
                 itp_file.write(f"{atype} {mass} {charge} A {nb1:3.8F} {nb2:3.8F} {comments}\n")
 
+
 def write_nonbond_params(system, itp_path, C6C12=False):
     """
     Writes the [nonbond_params] directive to file.
@@ -89,7 +93,6 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                 itp_file.write('{} {}\n'.format(conditional_key, conditional[0]))
             if group:
                 itp_file.write('; {}\n'.format(group))
-
 
             for nb_params in interactions_in_group:
                 if len(nb_params.atoms) == 2:
@@ -109,6 +112,7 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                 else:
                     comments = ""
                 itp_file.write(f"{a1} {a2} 1 {nb1:3.8F} {nb2:3.8F} {comments}\n")
+
 
 def write_gmx_topology(system,
                        top_path,
@@ -146,7 +150,7 @@ def write_gmx_topology(system,
     """
     if not system.molecules:
         raise ValueError("No molecule in the system. Nothing to write.")
-
+    header = list(header)
     include_string = ""
     # First we write the atomtypes directive
     if "atomtypes" in system.gmx_topology_params:
@@ -182,20 +186,20 @@ def write_gmx_topology(system,
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
         if moltype not in moltype_written:
+            # here we format and merge all citations
+            header[-1] = header[-1] + "\n"
+            header.append("Please cite the following papers:")
+            for citation in molecule.citations:
+                cite_string = citation_formatter(
+                    molecule.force_field.citations[citation]
+                )
+                LOGGER.info("Please cite: " + cite_string)
+                header.append(cite_string)
             # A given moltype can appear more than once in the sequence of
-            # molecules, without being uninterupted by other moltypes. Even in
+            # molecules, without being uninterrupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
             with deferred_open("{}.itp".format(moltype), "w") as outfile:
-                # here we format and merge all citations
-                header[-1] = header[-1] + "\n"
-                header.append("Please cite the following papers:")
-                for citation in molecule.citations:
-                    cite_string = citation_formatter(
-                        molecule.force_field.citations[citation]
-                    )
-                    LOGGER.info("Please cite: " + cite_string)
-                    header.append(cite_string)
-                vermouth.gmx.itp.write_molecule_itp(molecule, outfile, header=header)
+                write_molecule_itp(molecule, outfile, header=header)
             this_moltype_len = len(molecule.meta["moltype"])
             if this_moltype_len > max_name_length:
                 max_name_length = this_moltype_len
@@ -238,3 +242,17 @@ def write_gmx_topology(system,
                 )
             )
         )
+
+
+class GMXTopologyWriter(Processor):
+    def __init__(self, top_path, itp_paths=None, C6C12=False, defines=(), header=()):
+        self.top_path = top_path
+        self.itp_paths = itp_paths or {"nonbond_params": "extra_nbparams.itp",
+                                       "atomtypes": "extra_atomtypes.itp"}
+        self.C6C12 = C6C12
+        self.defines = defines
+        self.header = header
+
+    def run_system(self, system):
+        write_gmx_topology(system, self.top_path, self.itp_paths, self.C6C12, self.defines, self.header)
+        return system

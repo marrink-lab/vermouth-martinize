@@ -18,6 +18,7 @@ Handle the ITP file format from Gromacs.
 
 import copy
 import itertools
+import textwrap
 
 __all__ = ['write_molecule_itp', ]
 
@@ -102,7 +103,7 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     # header.
     if moltype is None:
         moltype = molecule.meta.get('moltype')
-        if  moltype is None:
+        if moltype is None:
             raise ValueError('A molecule must have a moltype to write an '
                              'ITP, provide it with the moltype argument, or '
                              'with the "moltype" meta attribute of the molecule.')
@@ -129,10 +130,16 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     # Write the header.
     # We want to follow the header with an empty line, only if there is a
     # header. The `has_header` variable is needed in case `header` is a
-    # generator, in which case we cannot know before hand if it contains lines.
+    # generator, in which case we cannot know beforehand if it contains lines.
     has_header = False
     for line in header:
-        outfile.write('; {}\n'.format(line))
+        # grompp has a limit in the number of character it can read per line
+        # (due to the size limit of a buffer somewhere in its implementation).
+        # The command line can be longer than this limit and therefore
+        # prevent grompp from reading the topology.
+        gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
+        header_lines = textwrap.wrap(line+'\n', width=gromacs_char_limit, initial_indent='; ', subsequent_indent=';   ')
+        outfile.writelines(l+'\n' for l in header_lines)
         has_header = True
     if has_header:
         outfile.write('\n')

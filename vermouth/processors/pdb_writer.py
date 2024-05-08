@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2018 University of Groningen
+# Copyright 2024 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Provides functionality to read and write Gromacs specific files.
-"""
+
+from . import Processor
+from ..pdb import write_pdb
 
 
-from .gro import read_gro, write_gro
-from .itp import write_molecule_itp
-from .itp_read import read_itp
-from .rtp import read_rtp
-from .topology import GMXTopologyWriter
+class PDBWriter(Processor):
+    def __init__(self, outpath, omit_charges=True):
+        self.outpath = outpath
+        self.omit_charges = omit_charges
+
+    def run_system(self, system):
+        write_pdb(system, path=self.outpath, omit_charges=self.omit_charges)
+        return system
