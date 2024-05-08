@@ -368,8 +368,7 @@ def apply_rubber_band(molecule, selector,
                     parameters=[bond_type, length, force_constant],
                     meta={'group': 'Rubber band'},
                 )
-    if len(ebs)>0:
-        return ebs
+    return ebs
 
 
 
@@ -555,7 +554,7 @@ class ApplyRubberBand(Processor):
                                          domain_criterion=self.domain_criterion,
                                          res_min_dist=res_min_dist,
                                          eb_write=self.write_out)
-        if len(_rubber_bands)>0:
+        if _rubber_bands is not None:
             for band in _rubber_bands:
                 self.system.gmx_topology_params["en_bonds"].append(band)
 
