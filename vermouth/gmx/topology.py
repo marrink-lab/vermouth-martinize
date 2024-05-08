@@ -9,6 +9,8 @@ from ..file_writer import deferred_open
 from ..citation_parser import citation_formatter
 from ..log_helpers import StyleAdapter, get_logger
 from .itp import _interaction_sorting_key, write_molecule_itp
+from ..selectors import is_protein
+from ..dssp import sequence_from_residues
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -254,5 +256,22 @@ class GMXTopologyWriter(Processor):
         self.header = header
 
     def run_system(self, system):
+        # Get the atomistic secstruct annotations to add to the topologies.
+        # Slightly too much hard coding for my taste tbh
+        ss_sequence = list(
+            itertools.chain(
+                *(
+                    sequence_from_residues(molecule, "secstruct")
+                    for molecule in system.molecules
+                    if is_protein(molecule)
+                )
+            )
+        )
+        if None not in ss_sequence:
+            self.header += [
+                "The following sequence of secondary structure ",
+                "was used for the full system:",
+                "".join(ss_sequence),
+            ]
         write_gmx_topology(system, self.top_path, self.itp_paths, self.C6C12, self.defines, self.header)
         return system

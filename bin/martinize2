@@ -143,7 +143,7 @@ def martinize(mappings, to_ff, delete_unknown=False):
             mappings=mappings,
             to_ff=to_ff,
             delete_unknown=delete_unknown,
-            attribute_keep=("cgsecstruct", "chain"),
+            attribute_keep=("cgsecstruct", "chain", "secstruct"),
             attribute_must=("resname",),
             attribute_stash=("resid",),
         )
@@ -1061,12 +1061,6 @@ def entry():
             command,
             VERSION,
         ]
-        if None not in ss_sequence:
-            header += [
-                "The following sequence of secondary structure ",
-                "was used for the full system:",
-                "".join(ss_sequence),
-            ]
         write_output.add(vermouth.gmx.GMXTopologyWriter(args.top_path, itp_paths,
                                                         False, defines, header))
     if args.outpath:
