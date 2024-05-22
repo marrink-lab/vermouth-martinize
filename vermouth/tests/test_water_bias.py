@@ -33,7 +33,7 @@ from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
         ({1: None, 2: "H", 3: "H", 4: "H"},
         {"H": 2.1},
         [],
-        {5: "H", 6: "H"}
+        {3: "H", 5: "H", 6: "H"}
         ),
         # only auto-bias two sec struct
         ({1: "H", 2: "H", 3: "C", 4: "C"},
@@ -45,13 +45,13 @@ from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
         ({1: "H", 2: "H", 3: "C", 4: "C"},
         {"idr": 2.1},
         [(2, 3)],
-        {2: "idr", 3: "idr"}
+        {3: "idr", 5: "idr"}
         ),
         # idp and sec struc bias
         ({1: "H", 2: "H", 3: "C", 4: "C"},
         {"idr": 1.1, "C": 3.1, "H": 2.1},
         [(2, 3)],
-        {0: "H", 2: "idr", 3: "idr", 4: "C"}
+        {0: "H", 3: "idr", 5: "idr", 6: "C"}
         )
         ))
 def test_assign_residue_water_bias(test_molecule, 
@@ -88,7 +88,10 @@ def test_assign_residue_water_bias(test_molecule,
     processor.run_system(system)
     for nb_params in system.gmx_topology_params['nonbond_params']:
         assert nb_params.atoms[0] == "W"
-        vs_node = nb_params.atoms[1]
+        vs_node_atype = nb_params.atoms[1]
+        for atom in system.molecules[0].atoms:
+            if atom[1]['atype'] == vs_node_atype:
+                vs_node = atom[0]
         for vs in system.molecules[0].interactions['virtual_sitesn']:
             if vs.atoms[0] == vs_node:
                 bb_node = vs.atoms[1]
