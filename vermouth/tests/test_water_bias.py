@@ -110,8 +110,14 @@ def test_assign_residue_water_bias(test_molecule,
             ),
             (#central idr to remove bonds from
              [(2, 3)],
-             [[1, 3], [2, 4]],
-             [])
+             [[1, 3], [2, 4], [1, 4]],
+             [[1, 4]]
+            ),
+            (#remove all bonds within a region
+            [(1, 4)],
+            [[1, 2], [2, 3], [3, 4], [1, 4]],
+            []
+            )
           ))
 def test_cross_go_bond_removal(test_molecule,
                                idr_regions,

@@ -55,8 +55,8 @@ class ComputeWaterBias(Processor):
         water_bias: dict[str, float]
             a dict of secondary structure codes and
             epsilon value for the water bias in kJ/mol
-        idr_regions:
-            regions defining the IDRs
+        idr_regions: list
+            list of tuples of residue regions defining the IDRs
         prefix: str
             prefix of the Go virtual-site atomtypes
         system: vermouth.system.System
