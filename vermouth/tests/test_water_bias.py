@@ -101,23 +101,20 @@ def test_assign_residue_water_bias(test_molecule,
                 assert water_eps == nb_params.epsilon
                 assert water_sig == nb_params.sigma
 
-@pytest.mark.parametrize('idr_regions, water_bias, go_bonds, expected',
+@pytest.mark.parametrize('idr_regions, go_bonds, expected',
          (
             (#no idrs to remove
              [],
-             {"idr": 1.1, "C": 3.1, "H": 2.1},
              [[1, 3], [2, 4]],
              [[1, 3], [2, 4]]
             ),
             (#central idr to remove bonds from
              [(2, 3)],
-             {"idr": 1.1, "C": 3.1, "H": 2.1},
              [[1, 3], [2, 4]],
              [])
           ))
 def test_cross_go_bond_removal(test_molecule,
                                idr_regions,
-                               water_bias,
                                go_bonds,
                                expected):
     # bead sizes
@@ -158,7 +155,7 @@ def test_cross_go_bond_removal(test_molecule,
         system.gmx_topology_params["nonbond_params"].append(contact_bias)
 
     #apply water bias and remove folded-disordered domain bonds
-    processor = ComputeWaterBias(water_bias=water_bias,
+    processor = ComputeWaterBias(water_bias={"idr": 1.1, "C": 3.1, "H": 2.1}, # doesn't matter
                                  auto_bias=True,
                                  idr_regions=idr_regions)
     processor.run_system(system)
