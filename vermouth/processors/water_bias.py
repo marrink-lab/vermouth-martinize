@@ -16,6 +16,7 @@ from .processor import Processor
 from ..graph_utils import make_residue_graph
 from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size, _in_resid_region
 from ..gmx.topology import NonbondParam
+import numpy as np
 
 class ComputeWaterBias(Processor):
     """
@@ -54,8 +55,8 @@ class ComputeWaterBias(Processor):
         water_bias: dict[str, float]
             a dict of secondary structure codes and
             epsilon value for the water bias in kJ/mol
-        idr_regions:
-            regions defining the IDRs
+        idr_regions: list
+            list of tuples of residue regions defining the IDRs
         prefix: str
             prefix of the Go virtual-site atomtypes
         system: vermouth.system.System
@@ -118,6 +119,41 @@ class ComputeWaterBias(Processor):
                                       meta={"comment": ["water bias", sec_struc]})
             self.system.gmx_topology_params["nonbond_params"].append(water_bias)
 
+    def remove_cross_nb_interactions(self, molecule, res_graph):
+        """
+        Remove Go bonds between folded and disordered regions of a molecule
+
+        Parameters
+        ----------
+        molecule: :class:`vermouth.molecule.Molecule`
+            the molecule
+        res_graph: :class:`vermouth.molecule.Molecule`
+            the residue graph of the molecule
+        """
+        #list of all the Go pairs in the molecule
+        all_go_pairs = np.array([list(i.atoms) for i in self.system.gmx_topology_params["nonbond_params"] if 'W' not in list(i.atoms)])
+        # list to record which items we don't want. cross = go potential between folded and disordered domain.
+        all_cross_pairs = []
+
+        for res_node in res_graph.nodes:
+            resid = res_graph.nodes[res_node]['resid']
+            _old_resid = res_graph.nodes[res_node]['_old_resid']
+            chain = res_graph.nodes[res_node]['chain']
+
+            if _in_resid_region(_old_resid, self.idr_regions):
+                vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
+                                                              resid=resid,
+                                                              chain=chain,
+                                                              prefix=molecule.meta.get('moltype')))
+                all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
+
+        # make sure we only have one entry in case a site has more than one interaction
+        all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])
+        # delete the folded-disordered Go interactions from the list going backwards.
+        # otherwise list order gets messed up.
+        for i in reversed(all_cross_pairs):
+            del self.system.gmx_topology_params["nonbond_params"][i]
+
     def run_molecule(self, molecule):
         """
         Assign water bias for a single molecule
@@ -134,6 +170,7 @@ class ComputeWaterBias(Processor):
             res_graph = make_residue_graph(molecule)
 
         self.assign_residue_water_bias(molecule, res_graph)
+        self.remove_cross_nb_interactions(molecule, res_graph)
 
         return molecule
 
