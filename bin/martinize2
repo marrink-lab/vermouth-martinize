@@ -544,7 +544,7 @@ def entry():
         dest="rb_write",
         default=False,
         action="store_true",
-        help=("Write the elastic network to an external .itp file"),
+        help="Write the elastic network to an external .itp file",
     )
     go_group = parser.add_argument_group("Virtual site based GoMartini")
     go_group.add_argument(
@@ -1069,7 +1069,6 @@ def entry():
             write_out=args.rb_write,
         )
         rubber_band_processor.run_system(system)
-        itp_paths = {"en_bonds": "en_bonds.itp"}
 
     # If required add some water bias
     if args.water_bias:

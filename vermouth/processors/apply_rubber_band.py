@@ -24,7 +24,6 @@ from .processor import Processor
 from .. import selectors
 from ..graph_utils import make_residue_graph
 from ..log_helpers import StyleAdapter, get_logger
-from ..gmx.topology import BondParam
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -346,6 +345,10 @@ def apply_rubber_band(molecule, selector,
     constants *= can_be_linked
     distance_matrix = distance_matrix.round(5)  # For compatibility with legacy
     ebs = []
+    if eb_write:
+        interaction_type = 'el_bonds'
+    else:
+        interaction_type = 'bonds'
     for from_idx, to_idx in zip(*np.triu_indices_from(constants)):
         # note the indices in the matrix are not anymore the idx of
         # the full molecule but the subset of nodes in selection
@@ -354,23 +357,13 @@ def apply_rubber_band(molecule, selector,
         force_constant = constants[from_idx, to_idx]
         length = distance_matrix[from_idx, to_idx]
         if force_constant > minimum_force:
-            if eb_write:
-                rubber_band = BondParam(atoms = (from_key, to_key),
-                                        btype=bond_type,
-                                        length=length,
-                                        fc=force_constant,
-                                        meta={'group': 'Rubber band'})
-                ebs.append(rubber_band)
-            else:
-                molecule.add_interaction(
-                    type_='bonds',
-                    atoms=(from_key, to_key),
-                    parameters=[bond_type, length, force_constant],
-                    meta={'group': 'Rubber band'},
-                )
+            molecule.add_interaction(
+                type_=interaction_type,
+                atoms=(from_key, to_key),
+                parameters=[bond_type, length, force_constant],
+                meta={'group': 'Rubber band'}
+            )
     return ebs
-
-
 
 def always_true(*args, **kwargs):  # pylint: disable=unused-argument
     """
@@ -543,20 +536,17 @@ class ApplyRubberBand(Processor):
             res_min_dist = molecule.force_field.variables.get(self.res_min_dist_variable,
                                                               DEFAULT_RMD)
 
-        _rubber_bands = apply_rubber_band(molecule, self.selector,
-                                         lower_bound=self.lower_bound,
-                                         upper_bound=self.upper_bound,
-                                         decay_factor=self.decay_factor,
-                                         decay_power=self.decay_power,
-                                         base_constant=self.base_constant,
-                                         minimum_force=self.minimum_force,
-                                         bond_type=bond_type,
-                                         domain_criterion=self.domain_criterion,
-                                         res_min_dist=res_min_dist,
-                                         eb_write=self.write_out)
-        if _rubber_bands is not None:
-            for band in _rubber_bands:
-                self.system.gmx_topology_params["en_bonds"].append(band)
+        apply_rubber_band(molecule, self.selector,
+                          lower_bound=self.lower_bound,
+                          upper_bound=self.upper_bound,
+                          decay_factor=self.decay_factor,
+                          decay_power=self.decay_power,
+                          base_constant=self.base_constant,
+                          minimum_force=self.minimum_force,
+                          bond_type=bond_type,
+                          domain_criterion=self.domain_criterion,
+                          res_min_dist=res_min_dist,
+                          eb_write=self.write_out)
 
         return molecule
 
