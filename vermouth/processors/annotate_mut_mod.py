@@ -252,10 +252,9 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
     # Get the name of the chain in the molecule that we're looking at
     residue = {key: residue_graph.nodes[0].get(key)
                for key in 'chain resid resname insertion_code'.split()}
-    chain = residue['chain']
-    extra = False
     for mutmod, key, library in associations:
         for resspec, mod in mutmod:
+            extra = False
             mod_found = _resiter(mod, residue_graph, resspec, library, key, molecule)
             if not mod_found:
                 #if no mod found, return that there's a problem
