@@ -59,10 +59,10 @@ def test_no_header(tmp_path, dummy_molecule):
     Test that no header is written if none is provided.
     """
     outpath = tmp_path / 'out.itp'
-    with open(outpath, 'w') as outfile:
+    with open(outpath, 'w', encoding='UTF-8') as outfile:
         write_molecule_itp(dummy_molecule, outfile)
 
-    with open(outpath) as infile:
+    with open(outpath, encoding='UTF-8') as infile:
         assert next(infile) == '[ moleculetype ]\n'
 
 
@@ -80,10 +80,10 @@ def test_header(tmp_path, dummy_molecule):
         '\n',
     )
     outpath = tmp_path / 'out.itp'
-    with open(outpath, 'w') as outfile:
+    with open(outpath, 'w', encoding='UTF-8') as outfile:
         write_molecule_itp(dummy_molecule, outfile, header=header)
 
-    with open(outpath) as infile:
+    with open(outpath, encoding='UTF-8') as infile:
         for line, expected_line in zip(infile, expected):
             assert line == expected_line
 

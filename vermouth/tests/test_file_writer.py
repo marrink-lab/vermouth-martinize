@@ -43,21 +43,21 @@ def test_backup(tmp_path, monkeypatch, name, existing_files, expected):
     """
     monkeypatch.chdir(tmp_path)
     for idx, file in enumerate(existing_files):
-        with open(file, 'w') as handle:
+        with open(file, 'w', encoding='UTF-8') as handle:
             handle.write(str(idx))
 
     writer = DeferredFileWriter()
-    with writer.open(name, 'w') as handle:
+    with writer.open(name, 'w', encoding='UTF-8') as handle:
         handle.write("new {}".format(name))
     writer.write()
 
     assert Path(name).is_file()
-    with open(name) as file:
+    with open(name, encoding='UTF-8') as file:
         assert file.read() == "new {}".format(name)
 
     for idx, name in enumerate(expected):
         assert Path(name).is_file()
-        with open(name) as file:
+        with open(name, encoding='UTF-8') as file:
             assert file.read() == str(idx)
 
 

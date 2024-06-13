@@ -157,7 +157,7 @@ def parse_gofiles(file, atomtypes=False):
     '''
     Parser of go_nbparams.itp & go_atomtypes.itp files into an easy to assert dictionary.
     '''
-    with open(file) as my_file:
+    with open(file, encoding='UTF-8') as my_file:
         next(my_file)  # Skip header
         vals = {}
         for line in my_file:
