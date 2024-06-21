@@ -304,7 +304,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
     assert found == expected
 
 @pytest.mark.parametrize('node_data, edge_data, mutation, expected', [
-    (
+    (# test 0
         [
             {'chain': 'A', 'resname': 'GLY', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -314,7 +314,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'MET')],
         False
     ),
-    (
+    (# test 1
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -324,7 +324,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'MET')],
         True
     ),
-    (
+    (# test 2
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -334,7 +334,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'GLY', 'resid': 1}, 'MET')],
         True
     ),
-    (
+    (# test 3
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -344,7 +344,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'ALA', 'resid': 1}, 'MET')],
         False
     ),
-    (
+    (# test 4
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -357,7 +357,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'ALA', 'chain': 'A'}, 'GLY')],
         False
     ),
-    (
+    (# test 5
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -370,7 +370,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'GLY', 'resid': 1}, 'ALA')],
         True
     ),
-    (
+    (# test 6
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -383,7 +383,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'GLY', 'resid': 1, 'chain': 'A'}, 'ALA')],
         True
     ),
-    (
+    (# test 7
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -396,7 +396,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'ALA', 'resid': 1}, 'GLY')],
         False
     ),
-    (
+    (# test 8
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -409,7 +409,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resname': 'GLY', 'chain': 'A'}, 'ALA')],
         True
     ),
-    (
+    (# test 9
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -422,7 +422,7 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [({'resid': 1, 'resname': 'ASN'}, 'ALA')],
         False
     ),
-        (
+    (# test 10
         [
             {'chain': 'A', 'resname': 'ALA', 'resid': 1},
             {'chain': 'A', 'resname': 'ALA', 'resid': 2},
@@ -434,6 +434,19 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
         [(0, 1), (1, 2), (3, 4), (4, 5)],
         [({'chain':'B', 'resname': 'ASN'}, 'ALA')],
         False
+    ),
+    (  # test 11
+            [
+                {'chain': 'A', 'resname': 'GLY', 'resid': 1},
+                {'chain': 'A', 'resname': 'ALA', 'resid': 2},
+                {'chain': 'A', 'resname': 'SER', 'resid': 3},
+                {'chain': 'B', 'resname': 'GLY', 'resid': 1},
+                {'chain': 'B', 'resname': 'ALA', 'resid': 2},
+                {'chain': 'B', 'resname': 'SER', 'resid': 3}
+            ],
+            [(0, 1), (1, 2), (3, 4), (4, 5)],
+            [({'chain': 'A', 'resname': 'ALA', 'resid': 2}, 'GLY')],
+            False
     )
 ])
 def test_mod_resid_not_correct(caplog, node_data, edge_data, mutation, expected):
