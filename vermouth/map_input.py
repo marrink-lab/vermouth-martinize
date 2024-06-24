@@ -450,12 +450,12 @@ def generate_self_mappings(force_field):
 
     Parameters
     ----------
-    force_field: vermouth.ForceField
+    force_field: vermouth.forcefield.ForceField
         A force field containing Blocks and Modifications
 
     Returns
     -------
-    mappings: dict[Mapping]
+    mappings: dict[~vermouth.map_parser.Mapping]
         A dictionary of mappings where the keys are the names of the
         blocks/modifications, and the values are Mappings.
 
