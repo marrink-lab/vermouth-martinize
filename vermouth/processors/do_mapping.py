@@ -541,8 +541,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
         `molecule`.
     attribute_stash: tuple[str]
         The attributes that will always be transferred from the input molecule
-        to the produced graph, but prefixed with _old_.Thus they are new attributes
-        and are not conflicting with already defined attributes.
+        to the produced graph, but prefixed with _old_. Thus, they are new
+        attributes and are not conflicting with already defined attributes.
 
 
     Returns
@@ -632,48 +632,49 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
     to_remove = set()
     for out_idx in out_to_mol:
         mol_idxs = out_to_mol[out_idx].keys()
-        # Keep track of what bead comes from where
-        subgraph = molecule.subgraph(mol_idxs)
-        graph_out.nodes[out_idx]['graph'] = subgraph
-        weights = out_to_mol[out_idx]
-        graph_out.nodes[out_idx]['mapping_weights'] = weights
 
+        # Time to collect the attributes to set. Start by grabbing all the
+        # attributes we already have.
+        node_attrs = dict(graph_out.nodes[out_idx])
+        # These attributes the new node *must* have. We'll replace these with
+        # attrs from molecule if we can later.
+        for attr_name in attribute_must:
+            if attr_name not in node_attrs:
+                node_attrs[attr_name] = None
+        # In all cases, keep track of what bead comes from where
+        subgraph = molecule.subgraph(mol_idxs)
+        node_attrs['graph'] = subgraph
+        weights = out_to_mol[out_idx]
+        node_attrs['mapping_weights'] = weights
+
+        # Now we find attribute values from molecule.
         if out_idx in all_references:
             ref_idx = all_references[out_idx]
-            new_attrs = attrs_from_node(molecule.nodes[ref_idx],
-                                        attribute_keep+attribute_must+attribute_stash)
-            for attr, val in new_attrs.items():
-                # Attrs in attribute_keep we always transfer, those in
-                # attribute_must we transfer only if they're not already in the
-                # created node
-                if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
-                    graph_out.nodes[out_idx].update(new_attrs)
-                if attr in attribute_stash:
-                    graph_out.nodes[out_idx]["_old_"+attr] = val
+            mol_attrs = attrs_from_node(molecule.nodes[ref_idx], attribute_keep + attribute_must + attribute_stash)
+            for attr, val in mol_attrs.items():
+                if attr in attribute_keep:
+                    node_attrs[attr] = val
+                elif attr in attribute_stash:
+                    node_attrs["_old_" + attr] = val
+                elif attr not in graph_out.nodes[out_idx]:
+                    node_attrs[attr] = val
         else:
             attrs = defaultdict(list)
-            for mol_idx in mol_idxs:
-                new_attrs = attrs_from_node(molecule.nodes[mol_idx],
-                                            attribute_keep+attribute_must+attribute_stash)
-                for attr, val in new_attrs.items():
-                    attrs[attr].append(val)
             attrs_not_sane = []
-            for attr, vals in attrs.items():
-                if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
-                    if vals:
-                        graph_out.nodes[out_idx][attr] = vals[0]
-                    else:
-                        # No nodes hat the attribute.
-                        graph_out.nodes[out_idx][attr] = None
-                if attr in attribute_stash:
-                    if vals:
-                        graph_out.nodes[out_idx]["_old_"+attr] = vals[0]
-                    else:
-                        # No nodes hat the attribute.
-                        graph_out.nodes[out_idx]["_old_"+attr] = None
+            for mol_idx in mol_idxs:
+                mol_attrs = attrs_from_node(molecule.nodes[mol_idx], attribute_keep + attribute_must + attribute_stash)
+                for attr, val in mol_attrs.items():
+                    attrs[attr].append(val)
 
+            for attr, vals in attrs.items():
                 if not are_all_equal(vals):
                     attrs_not_sane.append(attr)
+                if attr in attribute_keep:
+                    node_attrs[attr] = vals[0]
+                elif attr in attribute_stash:
+                    node_attrs["_old_" + attr] = vals[0]
+                elif attr not in graph_out.nodes[out_idx]:
+                    node_attrs[attr] = vals[0]
 
             if attrs_not_sane:
                 LOGGER.warning('The attributes {} for atom {} are going to'
@@ -682,6 +683,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
                                attrs_not_sane,
                                format_atom_string(graph_out.nodes[out_idx]),
                                type='inconsistent-data')
+        graph_out.nodes[out_idx].update(node_attrs)
         if graph_out.nodes[out_idx].get('atomname', '') is None:
             to_remove.add(out_idx)
 
