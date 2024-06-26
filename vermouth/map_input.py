@@ -480,7 +480,7 @@ def generate_self_mappings(force_field):
     for name, mod in force_field.modifications.items():
         mapping = Mapping(mod, mod, {idx: {idx: 1} for idx in mod.nodes},
                           {}, ff_from=force_field, ff_to=force_field,
-                          extra=[], type='modification', names=name)
+                          extra=[], type='modification', names=(name,))
         mappings[name] = mapping
     return mappings
 
