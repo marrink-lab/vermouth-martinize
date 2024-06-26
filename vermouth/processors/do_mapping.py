@@ -274,7 +274,7 @@ def modification_matches(molecule, mappings):
             LOGGER.warning("Can't find modification mappings for the "
                            "modifications {}. The following modification "
                            "mappings are known: {}",
-                           list(group), known_mod_mappings,
+                           list(group), sorted(known_mod_mappings.keys()),
                            type='unmapped-atom')
             continue
         needed_mod_mappings.update(covered_by)
