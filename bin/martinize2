@@ -180,7 +180,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disorde
         to_ff=to_ff,
         delete_unknown=delete_unknown,
         attribute_keep=("cgsecstruct", "chain"),
-        attribute_must=("resname", "charge_group"),
+        attribute_must=("resname", "charge_group", "atype"),
         attribute_stash=("resid",),
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
