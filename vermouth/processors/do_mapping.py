@@ -456,11 +456,10 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
             graph_out.nodes[out_idx]['modifications'].append(modification)
 
     # FIXME Jank here to ensure the charge_group attributes look reasonable
-    charge_group_start = max(graph_out.nodes[mod_to_out[idx]]['charge_group'] for idx in anchors)
+    charge_group_start = max(graph_out.nodes[mod_to_out[idx]].get('charge_group', 1) for idx in anchors) if anchors else 1
     for charge_group, mod_idx in enumerate(modification, charge_group_start):
         out_idx = mod_to_out[mod_idx]
         if 'charge_group' not in graph_out.nodes[out_idx]:
-            print(f'{format_atom_string(graph_out.nodes[out_idx])} {charge_group}')
             graph_out.nodes[out_idx]['charge_group'] = charge_group
 
     for mol_idx in mol_to_mod:
