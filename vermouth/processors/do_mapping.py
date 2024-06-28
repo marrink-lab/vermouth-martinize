@@ -18,6 +18,7 @@ Provides a processor that can perform a resolution transformation on a
 molecule.
 """
 from collections import defaultdict
+from copy import deepcopy
 from itertools import product, combinations
 
 import networkx as nx
@@ -635,12 +636,8 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
 
         # Time to collect the attributes to set. Start by grabbing all the
         # attributes we already have.
-        node_attrs = dict(graph_out.nodes[out_idx])
-        # These attributes the new node *must* have. We'll replace these with
-        # attrs from molecule if we can later.
-        for attr_name in attribute_must:
-            if attr_name not in node_attrs:
-                node_attrs[attr_name] = None
+        node_attrs = deepcopy(graph_out.nodes[out_idx])
+
         # In all cases, keep track of what bead comes from where
         subgraph = molecule.subgraph(mol_idxs)
         node_attrs['graph'] = subgraph
@@ -652,11 +649,11 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
             ref_idx = all_references[out_idx]
             mol_attrs = attrs_from_node(molecule.nodes[ref_idx], attribute_keep + attribute_must + attribute_stash)
             for attr, val in mol_attrs.items():
-                if attr in attribute_keep:
-                    node_attrs[attr] = val
-                elif attr in attribute_stash:
+                # This is if/if rather than if/elif on purpose. It could be that
+                # an attribute needs to be both stashed and kept
+                if attr in attribute_stash:
                     node_attrs["_old_" + attr] = val
-                elif attr not in graph_out.nodes[out_idx]:
+                if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
                     node_attrs[attr] = val
         else:
             attrs = defaultdict(list)
@@ -669,11 +666,11 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
             for attr, vals in attrs.items():
                 if not are_all_equal(vals):
                     attrs_not_sane.append(attr)
-                if attr in attribute_keep:
-                    node_attrs[attr] = vals[0]
-                elif attr in attribute_stash:
+                # This is if/if rather than if/elif on purpose. It could be that
+                # an attribute needs to be both stashed and kept
+                if attr in attribute_stash:
                     node_attrs["_old_" + attr] = vals[0]
-                elif attr not in graph_out.nodes[out_idx]:
+                if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
                     node_attrs[attr] = vals[0]
 
             if attrs_not_sane:
@@ -758,6 +755,34 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
                            [format_atom_string(molecule.nodes[idx])
                             for idx in other_uncovered],
                            type='unmapped-atom')
+
+    # "None to one" mapping - Strictly speaking this cannot happen, but it could
+    # be that output particles map to only particles that were not present in
+    # the input structure. This probably causes massive issues downstream.
+    # For now, flag a sane warning, and at the same time transfer missing "must"
+    # attributes from nearby atoms.
+    for node in graph_out:
+        for attr in attribute_must:
+            if attr not in graph_out.nodes[node]:
+                # We can skip `node`, since if it had the attribute required we
+                # wouldn't be in this mess to begin with.
+                # Set a depth_limit to keep the runtime within bounds.
+                close_nodes = (v for (u, v) in nx.bfs_edges(graph_out, source=node, depth_limit=3))
+                for template_node in close_nodes:
+                    if attr in graph_out.nodes[template_node]:
+                        graph_out.nodes[node][attr] = deepcopy(graph_out.nodes[template_node][attr])
+                        LOGGER.warning("Atom {} did not have a {}, so we took "
+                                       "it from atom {} instead.",
+                                       format_atom_string(graph_out.nodes[node]),
+                                       attr,
+                                       format_atom_string(graph_out.nodes[template_node]),
+                                       type="inconsistent-data")
+                        break
+                else:  # no break, attribute not found
+                    LOGGER.warning("Atom {} does not have a {}, and we couldn't "
+                                   "find a nearby atom that does.",
+                                   format_atom_string(graph_out.nodes[node]),
+                                   attr, type="inconsistent-data")
 
     for interaction_type in modified_interactions:
         for atoms, modifications in modified_interactions[interaction_type].items():
