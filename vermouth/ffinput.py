@@ -166,12 +166,14 @@ class FFDirector(SectionLineParser):
             self.current_block.citations.update(self.citations)
             self.current_block.make_edges_from_interactions()
             self.force_field.blocks[self.current_block.name] = self.current_block
+            self.current_block = None
 
         if self.current_link is not None:
             # add FF wide citations
             self.current_link.citations.update(self.citations)
             self.current_link.make_edges_from_interactions()
             self.force_field.links.append(self.current_link)
+            self.current_link = None
 
         if self.current_modification is not None:
             # add FF wide citations
@@ -180,6 +182,14 @@ class FFDirector(SectionLineParser):
                              self.current_modification.name, self.force_field.name)
             self.current_modification.citations.update(self.citations)
             self.force_field.modifications[self.current_modification.name] = self.current_modification
+            # Add charge_group attribute to nodes that don't have one.
+            charge_group = 1
+            for node_idx in sorted(self.current_modification):
+                node = self.current_modification.nodes[node_idx]
+                if 'charge_group' not in node:
+                    node['charge_group'] = charge_group
+                charge_group = node['charge_group'] + 1
+            self.current_modification = None
 
     def get_context(self, context_type=''):
         possible_contexts = {
