@@ -647,7 +647,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
         # Now we find attribute values from molecule.
         if out_idx in all_references:
             ref_idx = all_references[out_idx]
-            mol_attrs = attrs_from_node(molecule.nodes[ref_idx], attribute_keep + attribute_must + attribute_stash)
+            mol_attrs = attrs_from_node(molecule.nodes[ref_idx], attribute_keep + attribute_stash)
             for attr, val in mol_attrs.items():
                 # This is if/if rather than if/elif on purpose. It could be that
                 # an attribute needs to be both stashed and kept
@@ -659,7 +659,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
             attrs = defaultdict(list)
             attrs_not_sane = []
             for mol_idx in mol_idxs:
-                mol_attrs = attrs_from_node(molecule.nodes[mol_idx], attribute_keep + attribute_must + attribute_stash)
+                mol_attrs = attrs_from_node(molecule.nodes[mol_idx], attribute_keep + attribute_stash)
                 for attr, val in mol_attrs.items():
                     attrs[attr].append(val)
 
