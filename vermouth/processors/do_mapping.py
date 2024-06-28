@@ -415,6 +415,8 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     mod_to_out = {}
     # Some nodes of modification will already exist. The question is
     # which, and which index they have in graph_out.
+    # We'll store these anchors for now
+    anchors = set()
     for mod_idx in modification:
         if not node_should_exist(modification, mod_idx):
             # Node does not exist yet.
@@ -446,11 +448,20 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
                 raise ValueError("No node found in molecule with "
                                  "atomname {}".format(modification.nodes[mod_idx]['atomname']))
             # Undefined loop variable is guarded against by the else-raise above
+            anchors.add(mod_idx)
             mod_to_out[mod_idx] = out_idx  # pylint: disable=undefined-loop-variable
             graph_out.nodes[out_idx].update(modification.nodes[mod_idx].get('replace', {})) # pylint: disable=undefined-loop-variable
         graph_out.nodes[out_idx]['modifications'] = graph_out.nodes[out_idx].get('modifications', [])
         if modification not in graph_out.nodes[out_idx]['modifications']:
             graph_out.nodes[out_idx]['modifications'].append(modification)
+
+    # FIXME Jank here to ensure the charge_group attributes look reasonable
+    charge_group_start = max(graph_out.nodes[mod_to_out[idx]]['charge_group'] for idx in anchors)
+    for charge_group, mod_idx in enumerate(modification, charge_group_start):
+        out_idx = mod_to_out[mod_idx]
+        if 'charge_group' not in graph_out.nodes[out_idx]:
+            print(f'{format_atom_string(graph_out.nodes[out_idx])} {charge_group}')
+            graph_out.nodes[out_idx]['charge_group'] = charge_group
 
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():

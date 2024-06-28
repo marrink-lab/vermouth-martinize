@@ -182,13 +182,6 @@ class FFDirector(SectionLineParser):
                              self.current_modification.name, self.force_field.name)
             self.current_modification.citations.update(self.citations)
             self.force_field.modifications[self.current_modification.name] = self.current_modification
-            # Add charge_group attribute to nodes that don't have one.
-            charge_group = 1
-            for node_idx in sorted(self.current_modification):
-                node = self.current_modification.nodes[node_idx]
-                if 'charge_group' not in node:
-                    node['charge_group'] = charge_group
-                charge_group = node['charge_group'] + 1
             self.current_modification = None
 
     def get_context(self, context_type=''):
