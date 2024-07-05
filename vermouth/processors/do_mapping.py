@@ -426,6 +426,7 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
                 out_idx = max(graph_out) + 1
             mod_to_out[mod_idx] = out_idx
             graph_out.add_node(out_idx, **modification.nodes[mod_idx])
+            graph_out.nodes[out_idx].update(modification.nodes[mod_idx].get('replace', {}))
         else:
             # Node should already exist
             # We need to find the out_index of this node. Since the
