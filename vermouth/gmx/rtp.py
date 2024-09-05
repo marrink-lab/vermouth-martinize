@@ -254,6 +254,14 @@ def _complete_block(block, bondedtypes):
     """
     block.make_edges_from_interactions()
 
+    # Generate all (missing) angles
+    existing_angles = [i.atoms for i in block.get_interaction("angles")]
+    for atoms in block.guess_angles():
+        if atoms in existing_angles or reversed(atoms) in existing_angles:
+            continue
+        else:
+            block.add_interaction("angles", atoms, [])
+
     # Generate missing dihedrals
     # As pdb2gmx generates all the possible dihedral angles by default,
     # RTP files are written assuming they will be generated. A RTP file
