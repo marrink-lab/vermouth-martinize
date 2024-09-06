@@ -20,15 +20,15 @@ jobs:
     
     strategy:
       matrix:
-       py_version: ["3.8", "3.9", "3.10", "3.11"]
+       py_version: ["3.9", "3.10", "3.11", "3.12"]
        include:
-         - py_version: "3.8"
-           WITH_CODECOV: true
          - py_version: "3.9"
            WITH_CODECOV: true
          - py_version: "3.10"
            WITH_CODECOV: true
          - py_version: "3.11"
+           WITH_CODECOV: true
+         - py_version: "3.12"
            WITH_CODECOV: true
 
     steps:
