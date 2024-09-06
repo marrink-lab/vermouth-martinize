@@ -16,7 +16,6 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-20.04
     
     strategy:
@@ -33,9 +32,9 @@ jobs:
            WITH_CODECOV: true
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.py_version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.py_version }}
         cache: pip
@@ -71,11 +70,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+    - name: Set up Python 3
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.x'
         cache: pip
         cache-dependency-path: |
           **/setup.cfg
@@ -96,11 +95,11 @@ jobs:
       runs-on: ubuntu-latest
       
       steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
         with:
-           python-version: '3.11'
+           python-version: '3.x'
            cache: pip
            cache-dependency-path: |
              **/setup.cfg
@@ -116,3 +115,35 @@ jobs:
         run: | 
           mkdir -p doc/source/_static
           sphinx-build -EnW -b html doc/source/ doc/build/html
+
+  deploy:
+    needs: [build, lint, docs]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/vermouth
+    permissions:
+      id-token: write
+    steps:
+    - name: Set up Python 3
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        cache: pip
+        cache-dependency-path: |
+          **/setup.cfg
+          **/requirements-*.txt
+          **/pyproject.toml
+    - name: Install dependencies
+      run: |
+        pip install --upgrade setuptools pip
+        pip install --upgrade .
+    - name: Install pypa/build
+      run: |
+        python3 -m pip install build --user
+    - name: Build a binary wheel and a source tarball
+      run: python3 -m build --sdist --wheel --outdir dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/

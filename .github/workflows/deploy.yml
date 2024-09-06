@@ -14,7 +14,6 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-20.04
     
     strategy:
@@ -31,9 +30,9 @@ jobs:
            WITH_CODECOV: true
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.py_version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.py_version }}
         cache: pip
@@ -54,6 +53,7 @@ jobs:
       run: |
         coverage run $(which pytest) -vv --hypothesis-show-statistics
         coverage report --omit='*/bin/pytest'
+        coverage xml
         
     - if: ${{ matrix.WITH_CODECOV }}
       name: Upload coverage codecov   
@@ -68,11 +68,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+    - name: Set up Python 3
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.x'
         cache: pip
         cache-dependency-path: |
           **/setup.cfg
@@ -93,11 +93,11 @@ jobs:
       runs-on: ubuntu-latest
       
       steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
         with:
-           python-version: '3.11'
+           python-version: '3.x'
            cache: pip
            cache-dependency-path: |
              **/setup.cfg
@@ -118,37 +118,29 @@ jobs:
   deploy:
     needs: [build, lint, docs]
     runs-on: ubuntu-latest
-
+    environment:
+      name: pypi
+      url: https://pypi.org/p/vermouth
+    permissions:
+      id-token: write
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+    - name: Set up Python 3
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.x'
         cache: pip
         cache-dependency-path: |
           **/setup.cfg
           **/requirements-*.txt
           **/pyproject.toml
-        
+    - name: Install dependencies
+      run: |
+        pip install --upgrade setuptools pip
+        pip install --upgrade .
     - name: Install pypa/build
-      run: >-
-        python -m
-        pip install
-        build
-        --user
-        pip install pbr
-         
+      run: |
+        python3 -m pip install build --user
     - name: Build a binary wheel and a source tarball
-      run: >-
-        python -m
-        build
-        --sdist
-        --wheel
-        --outdir dist/
-        
-    - name: Publish package to PyPI
+      run: python3 -m build --sdist --wheel --outdir dist/
+    - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
