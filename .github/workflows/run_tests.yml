@@ -141,7 +141,7 @@ jobs:
         pip install --upgrade .
     - name: Install pypa/build
       run: |
-        python3 -m pip install build --user
+        python3 -m pip install build pbr --user
     - name: Build a binary wheel and a source tarball
       run: python3 -m build --sdist --wheel --outdir dist/
     - name: Publish distribution 📦 to PyPI
