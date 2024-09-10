@@ -59,6 +59,14 @@ def _interaction_sorting_key(interaction):
     return (conditional, group)
 
 
+def _sort_atoms(atoms, name):
+    if name[:4] in ('bond', 'pair'):
+        return sorted(atoms)
+    if name.startswith('angle'):
+        return atoms if atoms[0] < atoms[-1] else list(reversed(atoms))
+    return atoms
+
+
 def write_molecule_itp(molecule, outfile, header=(), moltype=None,
                        post_section_lines=None, pre_section_lines=None):
     """
@@ -222,11 +230,11 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
                 outfile.write('{} {}\n'.format(conditional_key, conditional[0]))
             if group:
                 outfile.write('; {}\n'.format(group))
-            for interaction in interactions_in_group:
+            for interaction in sorted(interactions_in_group, key=lambda i: _sort_atoms(list(map(correspondence.get, i.atoms)), name)):
                 atoms = ['{atom_idx:>{max_length[idx]}}'
-                         .format(atom_idx=correspondence[x],
+                         .format(atom_idx=x,
                                  max_length=max_length)
-                         for x in interaction.atoms]
+                         for x in _sort_atoms(list(map(correspondence.get, interaction.atoms)), name)]
                 parameters = ' '.join(str(x) for x in interaction.parameters)
                 comment = ''
                 if 'comment' in interaction.meta:
