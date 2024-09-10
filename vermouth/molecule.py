@@ -1311,6 +1311,7 @@ class Link(Block):
             'molecule_meta': {},
             'patterns': [],
             'features': set(),
+            'symmetric': False
         }
         self._set_defaults(defaults)
         self._apply_to_all_nodes = {}

@@ -16,12 +16,14 @@
 
 from itertools import combinations
 import numbers
+from operator import eq
 
 import networkx as nx
 from numpy import sign
 
 from ..molecule import attributes_match
 from .processor import Processor
+from ..ismags import ISMAGS
 
 
 def _atoms_match(node1, node2):
@@ -296,8 +298,15 @@ class DoLinks(Processor):
         links = molecule.force_field.links
         _nodes_to_remove = []
         for link in links:
+            if link.symmetric:
+                ismags = ISMAGS(link, link, node_match=eq, edge_match=eq)
+                _, cosets = ismags.analyze_symmetry(link, link._sgn_paritions, link._sge_colors)
+                constraints = ismags._make_constraints(cosets)
+
             matches = match_link(molecule, link)
             for match in matches:
+                if not all(match[idx] < match[jdx] for (idx, jdx) in constraints):
+                    continue
                 for node, node_attrs in link.nodes.items():
                     if 'replace' in node_attrs:
                         if node_attrs['replace'].get('atomname', False) is None:
