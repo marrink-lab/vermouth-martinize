@@ -12,4 +12,6 @@ repository: https://github.com/marrink-lab/martinize-examples
 
 .. toctree::
     basic_usage
-    7_adding_modifications/index
+    elastic_networks
+    go_models
+    mutmod

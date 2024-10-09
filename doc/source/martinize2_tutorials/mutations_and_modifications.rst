@@ -1,6 +1,6 @@
-======
+===========================
 Mutations and modifications
-======
+===========================
 
 Martinize2 facilitates a powerful syntax for defining mutations and modifications to your input protein structure.
 Here we'll look at some of the options for how your protein can be changed during the coarse graining process. While

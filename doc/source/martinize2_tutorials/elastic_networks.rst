@@ -1,4 +1,6 @@
-# Elastic Networks
+================
+Elastic Networks
+================
 
 The first method applied to maintain the secondary and tertiary structure
 of Martini proteins was `Elastic Networks <https://doi.org/10.1021/ct9002114>`_.

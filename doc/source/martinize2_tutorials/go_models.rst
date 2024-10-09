@@ -1,6 +1,6 @@
-=======
+=========
 Go models
-=======
+=========
 
 GoMartini is a popular method for retaining the secondary and tertiary structures of proteins originating from the lab
 of `Adolfo Poma <https://pubs.acs.org/doi/full/10.1021/acs.jctc.6b00986>`_. In contrast to an elastic network, the Go

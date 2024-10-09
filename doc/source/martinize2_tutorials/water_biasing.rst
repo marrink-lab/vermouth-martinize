@@ -1,6 +1,6 @@
-=========
+=============
 Water biasing
-=========
+=============
 
 One feature associated with the latest version of the
 `Go model <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_ is the ability to
