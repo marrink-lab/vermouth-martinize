@@ -1,0 +1,69 @@
+=========
+Water biasing
+=========
+
+One feature associated with the latest version of the
+`Go model <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_ is the ability to
+bias the non-bonded interactions with water, specified by secondary structure. As the reference
+demonstrates, this may be important in fixing several problems with the current model of proteins,
+including over-compactness of intrinsically disordered regions.
+
+The documentation describes these features::
+
+  Apply water bias.:
+    -water-bias           Automatically apply water bias to different secondary structure elements. (default: False)
+    -water-bias-eps WATER_BIAS_EPS [WATER_BIAS_EPS ...]
+                          Define the strength of the water bias by secondary structure type. For example, use `H:3.6 C:2.1` to bias helixes and coils. Using
+                          the idr option (e.g. idr:2.1) intrinsically disordered regions are biased seperately. (default: [])
+    -id-regions WATER_IDRS [WATER_IDRS ...]
+                          Intrinsically disordered regions specified by resid.These parts are biased differently when applying a water bias.format:
+                          <start_resid_1>:<end_resid_1> <start_resid_2>:<end_resid_2>... (default: [])
+    -idr-tune             Tune the idr regions with specific bonded potentials. (default: False)
+
+These flags can be specified in conjunction with the `Go model <go_models>`_.
+
+
+Water biasing for secondary structure
+--------
+
+To apply a water bias to your protein dependent on the secondary structure, the first two flags
+described above must be used.
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -water-bias -water-bias-eps H:1``
+
+This will produce a coarse-grained model of your protein, with virtual sites along the backbone.
+The virtual sites will be defined in an external file, which should be included in your topology
+as per the `Go model <go_models>`_ instructions.
+
+There will also be a second file, defining the additional non-bonded interactions between
+water and the secondary structure elements defined in the command. In this case, any residue
+identified as ``H`` (ie. helix) by dssp will have an additional Lennard-Jones interaction of
+epsilon = 1 kJ/mol between its backbone virtual site and water.
+
+To define more interactions based on secondary structure, add more letter codes to the
+``-water-bias-eps``:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -water-bias -water-bias-eps H:1 C:0.5 E:2``
+
+
+Water biasing for idps
+-----------------
+
+If you have disordered regions in your protein, then they can have additional bonded and nonbonded
+parameters added (described more in the `Go model paper <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_).
+
+These regions need to firstly be annotated by the user, using the ``-id-regions`` flag to indicate resid segments
+known to be disordered:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -id-regions 1:10 65:92``
+
+Ideally, as the paper describes, these should have their water bias and bonded parameters fixed too.
+This can be done by combining the above command with the ones previously described about water biasing:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -id-regions 1:10 65:92 -idr-tune -water-bias -water-bias-eps idr:0.5``
+
+Here, ``-idr-tune`` makes sure that the additional bonded parameters are applied to the region specified by ``-id-regions``,
+while ``-water-bias`` and ``-water-bias-eps idr:0.5`` ensures that for the idr region defined, an additional nonbonded parameter
+with water is written to the nonbond_params.itp file.
+
+
