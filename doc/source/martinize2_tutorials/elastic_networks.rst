@@ -30,7 +30,7 @@ Let's have a look at how to combine these in more detail.
 
 
 Basic usage
-------
+-----------
 Without any further consideration, an elastic network can be added to your martinize2 command easily:
 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -elastic``
@@ -43,7 +43,7 @@ elastic constant per force field will be fixed in future versions of martinize2.
 
 
 Customising cutoffs
--------
+-------------------
 
 If your system requires more of a custom cutoff to better reproduce the dynamics of your protein,
 the region for the force to be applied in can be customised using the ``-el`` and ``-eu`` flags:
@@ -54,7 +54,7 @@ In this example, the elastic network will only be applied between backbone beads
 apart.
 
 Using decays
------
+------------
 
 The strength of the elastic bond can be tuned with distance using an exponential decay function,
 which uses the ``-ea`` and ``-ep`` flags as input parameters:
@@ -69,7 +69,7 @@ where:
 - ``p`` = decay power  (-ep)
 
 Combining parameters
-------
+--------------------
 
 
 .. image:: elastic_examples.png

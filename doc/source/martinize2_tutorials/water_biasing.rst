@@ -24,7 +24,7 @@ These flags can be specified in conjunction with the `Go model <go_models>`_.
 
 
 Water biasing for secondary structure
---------
+-------------------------------------
 
 To apply a water bias to your protein dependent on the secondary structure, the first two flags
 described above must be used.
@@ -47,7 +47,7 @@ To define more interactions based on secondary structure, add more letter codes 
 
 
 Water biasing for idps
------------------
+----------------------
 
 If you have disordered regions in your protein, then they can have additional bonded and nonbonded
 parameters added (described more in the `Go model paper <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_).

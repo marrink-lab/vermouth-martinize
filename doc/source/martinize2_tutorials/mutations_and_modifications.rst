@@ -7,14 +7,14 @@ Here we'll look at some of the options for how your protein can be changed durin
 chemically and structurally the two processes are different, the command line options share the same syntax.
 
 General syntax
-====
+==============
 
 For both modifications and mutations, the syntax is specified as, e.g. A-PHE45:ALA, parts of which can be eliminated
 depending on what is needed. As per the documentation, this syntax can be thought of as
 <chain>-<resname><resid>:<new resname>.
 
 Mutate a single residue
-=====
+=======================
 
 If you have a single specific residue that you want to mutate, the you can use the mutate flag. For example, if you know
 your protein has a phenylalanine on chain A at resid 45 that you want to mutate to an alanine, then you can use the
@@ -30,7 +30,7 @@ in addition to the F45A mutation above, we have an arginine on chain B at resid 
 
 
 Mutate all residues
-======
+===================
 
 If you need to simulate a protein where every instance of a particular residue has been mutated to another, you can
 leave out aspects of the syntax described above. To build on the previous command, if we no longer needed just the

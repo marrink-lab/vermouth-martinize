@@ -18,13 +18,13 @@ Other force fields are available to convert your protein to. To view them you
 can use ``martinize2 -list-ff``.
 
 Minimal physical reality usage
-====
+==============================
 
 Our knowledge of proteins and Martini tells us that we need to add some more
 information to the topology to account for secondary structure.
 
 Let martinize2 deal with secondary structure for you
-----
+----------------------------------------------------
 
 Martinize2 can deal with secondary structure intelligently using dssp in one of two ways:
 
@@ -51,7 +51,7 @@ To explain these more:
 
 
 User knows best
------------
+---------------
 
 If you already know the secondary structure of your protein and don't want to worry about
 dssp calculating it correctly, the ``-ss`` flag can be used.
