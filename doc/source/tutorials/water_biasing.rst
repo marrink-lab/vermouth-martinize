@@ -20,7 +20,7 @@ The documentation describes these features::
                           <start_resid_1>:<end_resid_1> <start_resid_2>:<end_resid_2>... (default: [])
     -idr-tune             Tune the idr regions with specific bonded potentials. (default: False)
 
-These flags can be specified in conjunction with the `Go model <go_models>`_.
+These flags can be specified in conjunction with the Go model.
 
 
 Water biasing for secondary structure
@@ -33,7 +33,7 @@ described above must be used.
 
 This will produce a coarse-grained model of your protein, with virtual sites along the backbone.
 The virtual sites will be defined in an external file, which should be included in your topology
-as per the `Go model <go_models>`_ instructions.
+as per the Go model instructions.
 
 There will also be a second file, defining the additional non-bonded interactions between
 water and the secondary structure elements defined in the command. In this case, any residue
