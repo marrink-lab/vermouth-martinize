@@ -14,4 +14,4 @@ repository: https://github.com/marrink-lab/martinize-examples
     basic_usage
     elastic_networks
     go_models
-    mutmod
+    mutations_and_modifications
