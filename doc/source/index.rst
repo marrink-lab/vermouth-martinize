@@ -16,7 +16,6 @@ Welcome to VerMoUTH's documentation!
    file_formats
    tutorials/index
    api/modules
-   martinize2_tutorials/index
 
 
 Indices and tables
