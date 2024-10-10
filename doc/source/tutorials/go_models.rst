@@ -73,9 +73,9 @@ depend on your protein)::
 To activate your Go model, you can simply include these files in your master ``martini_v3.0.0.itp`` file with the
 following commands::
 
- sed -i "s/\[ nonbond_params \]/\#ifdef GO_VIRT\n\#include \"go_atomtype.itp\"\n\#endif\n\n\[ nonbond_params \]/" martini_v3.0.0.itp
+ sed -i "s/\[ nonbond_params \]/\#ifdef GO_VIRT\n\#include \"go_atomtypes.itp\"\n\#endif\n\n\[ nonbond_params \]/" martini_v3.0.0.itp
 
- echo -e "\n#ifdef GO_VIRT \n#include \"go-table_VirtGoSites.itp\"\n#endif" >> martini_v3.0.0.itp
+ echo -e "\n#ifdef GO_VIRT \n#include \"go_nbparams.itp\"\n#endif" >> martini_v3.0.0.itp
 
 The Go model should then be usable in your simulations following the `general protein tutorial <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
 But careful! While the Go model specifies nonbonded interactions, the interactions are only defined
