@@ -59,14 +59,14 @@ Using decays
 The strength of the elastic bond can be tuned with distance using an exponential decay function,
 which uses the ``-ea`` and ``-ep`` flags as input parameters:
 
-.. math::
-  decay = e^{(- f * ((x - l) ^p))
+
+``decay = exp^{(- f * ((x - l) ^p)}``
 
 where:
 
-- ``l`` = lower bound  (-el)
-- ``f`` = decay factor (-ea)
-- ``p`` = decay power  (-ep)
+- ``l`` = lower bound  (``-el``)
+- ``f`` = decay factor (``-ea``)
+- ``p`` = decay power  (``-ep``)
 
 Combining parameters
 --------------------

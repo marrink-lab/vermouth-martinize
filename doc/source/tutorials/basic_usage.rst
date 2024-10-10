@@ -54,7 +54,7 @@ User knows best
 ---------------
 
 If you already know the secondary structure of your protein and don't want to worry about
-dssp calculating it correctly, the ``-ss`` flag can be used.
+dssp assigning it correctly, the ``-ss`` flag can be used instead.
 
 The ``-ss`` flag must be one of either:
 
@@ -63,12 +63,21 @@ The ``-ss`` flag must be one of either:
 
 For example:
 
-``martinize2 -f 181L_clean.pdb -o t4l_only.top -x t4l_cg.pdb -ss etcetc``
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ss HHHHHHHHHH``
 
-will use the ``etcetc`` dssp formatted string that the user provides to specify how the secondary structure is
-treated, which must contain the same number of characters as the residues you have in the protein.
+will read the ``HHHHHHHHHH`` dssp formatted string, indicating that there are exactly 10 residues in the
+input pdb which should all be treated as part of a helix. If the string provided does not contain the same
+number of residues as the input file, an error will be raised.
 
+Alternatively in this case, as we know everything should be a helix, the same result can be achieved through
+using a single letter as described above:
 
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ss H``
+
+If instead we needed to assert that only the first five residues are in a helix, and the final five are coiled,
+we must we the full length string again:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ss HHHHHCCCCC``
 
 
 
