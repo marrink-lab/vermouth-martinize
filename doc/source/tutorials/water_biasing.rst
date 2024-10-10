@@ -66,4 +66,9 @@ Here, ``-idr-tune`` makes sure that the additional bonded parameters are applied
 while ``-water-bias`` and ``-water-bias-eps idr:0.5`` ensures that for the idr region defined, an additional nonbonded parameter
 with water is written to the nonbond_params.itp file.
 
+If you're working extensively with proteins which are fully disordered in Martini, it may be more convenient to
+use `Polyply <https://github.com/marrink-lab/polyply_1.0>`_ to generate the input parameters for your system
+than Martinize2, as Polyply does not require an atomistic input structure to generate these parameters. The
+`tutorial <https://github.com/marrink-lab/polyply_1.0/wiki/Tutorial:-Martini-3-IDPs>`_ on the Polyply wiki
+may be a useful starting point as an indication for Polyply can be used for this.
 
