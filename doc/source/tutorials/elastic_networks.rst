@@ -60,7 +60,9 @@ The strength of the elastic bond can be tuned with distance using an exponential
 which uses the ``-ea`` and ``-ep`` flags as input parameters:
 
 
-$$decay = e^{(- f * ((x - l) ^ p)}$$
+.. math::
+    :label: decay
+    decay = e^{(- f * ((x - l) ^ p)}
 
 where:
 
