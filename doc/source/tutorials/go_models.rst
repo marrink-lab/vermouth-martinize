@@ -38,12 +38,12 @@ Without any further additions, this will:
     ``-go-moltype`` flag.
  2) Use the contact map to generate a set of non-bonded parameters between specific pairs of ``CA`` atoms in your molecule
     with strength 9.414 kJ/mol (changed through the ``-go-eps`` flag).
- 3) Eliminate any parameters which are shorter than 0.3 nm and longer than 1.1 nm, or are closer than 3 residues in the
+ 3) Eliminate any contacts which are shorter than 0.3 nm and longer than 1.1 nm, or are closer than 3 residues in the
     molecular graph. These options are flexible through the ``-go-low`` and ``-go-up`` flags.
  4) If the contact map finds any atoms within contact range defined, but are *also* within 3 residues of each other,
     then the contacts are removed. This is defined through the ``-go-res-dist`` flag.
 
-As a result, along with the standard output of martinize2 (ie. itp files for your molecules, a generic .top file,
+As a result, along with the standard output of martinize2 (*i.e.* itp files for your molecules, a generic .top file,
 a coarse grained structure file), you will get two extra files: ``go_atomtypes.itp`` and ``go_nbparams.itp``. The atomtypes
 file defines the new virtual sites as atoms for your system, and the nbparams file defines specific non-bonded
 interactions between them.
@@ -70,8 +70,48 @@ depend on your protein)::
  molecule_0_23 molecule_0_19 1 0.53307395 9.41400000 ;go bond 0.5983552758317587
  ...
 
-To activate your Go model, you can simply include these files in your master ``martini_v3.0.0.itp`` file with the
-following commands::
+To activate your Go model for use in Gromacs, the `martini_v3.0.0.itp` master itp needs the additional files included.
+The additional atomtypes defined in the ``go_atomtypes.itp`` file should be included at the end of the `[ atomtypes ]`
+directive as::
+
+
+ [ atomtypes ]
+ ...
+ TX1er 36.0 0.000 A 0.0 0.0
+ W  72.0 0.000 A 0.0 0.0
+ SW 54.0 0.000 A 0.0 0.0
+ TW 36.0 0.000 A 0.0 0.0
+ U  24.0 0.000 A 0.0 0.0
+
+ #ifdef GO_VIRT
+ #include "go_atomtypes.itp"
+ #endif
+
+ [ nonbond_params ]
+ P6    P6  1 4.700000e-01    4.990000e+00
+ P6    P5  1 4.700000e-01    4.730000e+00
+ P6    P4  1 4.700000e-01    4.480000e+00
+ ...
+
+Similarly, the nonbonded parameters should be included at the end of the `[ nonbond_params ]`
+directive::
+
+ ...
+ TX2er  SQ1n  1 3.660000e-01    3.528000e+00
+ TX2er  TQ1n  1 3.520000e-01    5.158000e+00
+ TX1er   Q1n  1 3.950000e-01    1.981000e+00
+ TX1er  SQ1n  1 3.780000e-01    3.098000e+00
+ TX1er  TQ1n  1 3.660000e-01    4.422000e+00
+
+ #ifdef GO_VIRT
+ #include "go_nbparams.itp"
+ #endif
+
+Then in the .top file for your system, simply include `#define GO_VIRT` along with the other files
+to be included to active the Go network in your model.
+
+As a shortcut for writing the include statements above, you can simply include these files in your master
+``martini_v3.0.0.itp`` file with the following commands::
 
  sed -i "s/\[ nonbond_params \]/\#ifdef GO_VIRT\n\#include \"go_atomtypes.itp\"\n\#endif\n\n\[ nonbond_params \]/" martini_v3.0.0.itp
 
@@ -83,3 +123,11 @@ internally for each molecule. This means that if you have multiple copies of you
 in the system, the Go bonds are still only specified internally for each copy of the molecule,
 not truly as intermolecular forces in the system as a whole. For more detail on this phenomenon,
 see the paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
+
+
+Visualising Go networks
+----------------------------
+
+If you want to look at your Go network in VMD to confirm that it's been constructed in the
+way that you're expecting, the `MartiniGlass <https://github.com/Martini-Force-Field-Initiative/MartiniGlass>`_
+package can help write visualisable topologies to view.

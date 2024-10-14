@@ -13,7 +13,7 @@ repository: https://github.com/marrink-lab/martinize-examples
     basic_usage
     elastic_networks
     go_models
-    mutations_and_modifications
     water_biasing
+    mutations_and_modifications
     6_adding_residues_links/index
     7_adding_modifications/index

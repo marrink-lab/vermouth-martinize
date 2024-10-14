@@ -37,7 +37,7 @@ as per the Go model instructions.
 
 There will also be a second file, defining the additional non-bonded interactions between
 water and the secondary structure elements defined in the command. In this case, any residue
-identified as ``H`` (ie. helix) by dssp will have an additional Lennard-Jones interaction of
+identified as ``H`` (*i.e.* helix) by dssp will have an additional Lennard-Jones interaction of
 epsilon = 1 kJ/mol between its backbone virtual site and water.
 
 To define more interactions based on secondary structure, add more letter codes to the
@@ -46,8 +46,8 @@ To define more interactions based on secondary structure, add more letter codes 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -water-bias -water-bias-eps H:1 C:0.5 E:2``
 
 
-Water biasing for idps
-----------------------
+Water biasing for intrinsically disordered regions/proteins
+-----------------------------------------------------------
 
 If you have disordered regions in your protein, then they can have additional bonded and nonbonded
 parameters added (described more in the `Go model paper <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_).

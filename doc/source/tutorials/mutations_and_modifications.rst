@@ -6,6 +6,11 @@ Martinize2 facilitates a powerful syntax for defining mutations and modification
 Here we'll look at some of the options for how your protein can be changed during the coarse graining process. While
 chemically and structurally the two processes are different, the command line options share the same syntax.
 
+Although the two processes share a syntax, it should be noted that Martinize2 **does not** build coordinates. While
+(for example) mutating a glycine to a phenylalanine will still output a topology file with the necessary parameters,
+the corresponding coordinate file will contain NaN values because there was insufficient data to reconstruct the
+necessary mappings.
+
 General syntax
 ==============
 

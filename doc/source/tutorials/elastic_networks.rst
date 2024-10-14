@@ -60,7 +60,7 @@ The strength of the elastic bond can be tuned with distance using an exponential
 which uses the ``-ea`` and ``-ep`` flags as input parameters:
 
 
-``decay = exp^{(- f * ((x - l) ^p)}``
+$$decay = e^{(- f * ((x - l) ^ p)}$$
 
 where:
 
@@ -92,3 +92,38 @@ The fifth example adds an additional parameter ``-em`` into the function. As des
 calculated to be lower than this force, they are removed and set to zero. Note how the input values are almost identical
 to the fourth example, which would otherwise get cutoff at 0.9 nm. Because the decay function reduces the force below
 the minimum before the cutoff, it overrides it and the force is zeroed before the upper cutoff anyway.
+
+
+Defining structural units
+-------------------------
+
+By default, martinize2 will look at the structure given in the input file, and construct a distance-based elastic
+network, filtered by each molecule. This behaviour is controlled by the `-eunit` flag. If you have multiple molecules
+within your input file and would like the way the elastic network is written to be changed, this can be achieved
+through different specifications as described in the help above.
+
+For example:
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -elastic -eunit chain``
+
+will limit the unit to individual chains in the system. *i.e.* chain A of your protein will *not* have any elastic
+bonds with chain B, and so on.
+
+Conversely,
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -elastic -eunit all``
+
+will write elastic bonds between every molecule in your system in the positions that have been found.
+
+Finally:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -elastic -eunit 1:100 150:200``
+
+Will write elastic networks internally between residues 1 to 100, and residues 150 to 200, but *not* between either of
+these domains, nor between either of these domains and residues 101 to 149.
+
+
+Visualising elastic networks
+----------------------------
+
+If you want to look at your elastic network in VMD to confirm that it's been constructed in the
+way that you're expecting, the `MartiniGlass <https://github.com/Martini-Force-Field-Initiative/MartiniGlass>`_
+package can help write visualisable topologies to view.
