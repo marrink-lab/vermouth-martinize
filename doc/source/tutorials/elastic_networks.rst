@@ -62,6 +62,7 @@ which uses the ``-ea`` and ``-ep`` flags as input parameters:
 
 .. math::
     :label: decay
+
     decay = e^{(- f * ((x - l) ^ p)}
 
 where:
