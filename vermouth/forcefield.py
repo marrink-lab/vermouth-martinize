@@ -86,7 +86,7 @@ class ForceField:
         source_files = iter_force_field_files(directory)
         for source in source_files:
             extension = os.path.splitext(source)[-1]
-            with open(source) as infile:
+            with open(source, encoding='UTF-8') as infile:
                 FORCE_FIELD_PARSERS[extension](infile, self)
 
     @property

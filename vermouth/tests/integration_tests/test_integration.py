@@ -74,10 +74,10 @@ def compare_itp(filename1, filename2):
     Asserts that two itps are functionally identical
     """
     dummy_ff = ForceField(name='dummy')
-    with open(filename1) as fn1:
+    with open(filename1, encoding='UTF-8') as fn1:
         vermouth.gmx.read_itp(fn1, dummy_ff)
     dummy_ff2 = ForceField(name='dummy')
-    with open(filename2) as fn2:
+    with open(filename2, encoding='UTF-8') as fn2:
         vermouth.gmx.read_itp(fn2, dummy_ff2)
     for block in dummy_ff2.blocks.values():
         block._force_field = dummy_ff
@@ -193,7 +193,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
 
     data_path = Path(PATTERN.format(path=INTEGRATION_DATA, tier=tier, protein=protein))
 
-    with open(str(data_path / 'command')) as cmd_file:
+    with open(str(data_path / 'command'), encoding='UTF-8') as cmd_file:
         command = cmd_file.read().strip()
     assert command  # Defensive
     command = shlex.split(command)
@@ -209,7 +209,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
 
     # read the citations that are expected
     citations = []
-    with open(str(data_path/'citation')) as cite_file:
+    with open(str(data_path/'citation'), encoding='UTF-8') as cite_file:
         for line in cite_file:
             citations.append(line.strip())
     print(command)
@@ -225,7 +225,7 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
 
     # check if strdout has citations in string
     for citation in citations:
-        assert citation in proc.stderr
+        assert proc.stderr and citation in proc.stderr
 
     files = list(tmp_path.iterdir())
 

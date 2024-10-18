@@ -421,7 +421,7 @@ def read_mapping_directory(directory, force_fields):
     mappings = collections.defaultdict(lambda: collections.defaultdict(dict))
     # Old style mappings
     for path in directory.glob('**/*.map'):
-        with open(str(path)) as infile:
+        with open(str(path), encoding='UTF-8') as infile:
             try:
                 new_mappings = read_backmapping_file(infile, force_fields)
             except IOError:
@@ -430,7 +430,7 @@ def read_mapping_directory(directory, force_fields):
                 combine_mappings(mappings, new_mappings)
     # New style mappings
     for path in directory.glob('**/*.mapping'):
-        with open(str(path)) as infile:
+        with open(str(path), encoding='UTF-8') as infile:
             try:
                 new_mappings = read_mapping_file(infile, force_fields)
             except IOError:

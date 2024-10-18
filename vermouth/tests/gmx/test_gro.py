@@ -166,7 +166,7 @@ def gro_reference(request, tmp_path_factory):
     Generate a GRO file and the corresponding molecule.
     """
     filename = tmp_path_factory.mktemp("data") / "tmp.gro"
-    with open(filename, 'w') as outfile:
+    with open(filename, 'w', encoding='UTF-8') as outfile:
         write_ref_gro(outfile, velocities=request.param, box='10.0 11.1 12.2')
     molecule = build_ref_molecule(velocities=request.param)
     return filename, molecule
@@ -179,7 +179,7 @@ def gro_wrong_length(request, gro_reference, tmp_path_factory):  # pylint: disab
     """
     path_in, _ = gro_reference
     path_out = tmp_path_factory.mktemp("data") / "wrong.gro"
-    with open(path_in) as infile, open(path_out, 'w') as outfile:
+    with open(path_in, encoding='UTF-8') as infile, open(path_out, 'w', encoding='UTF-8') as outfile:
         outfile.write(next(infile))
         outfile.write('{}\n'.format(request.param))
         for line in infile:
@@ -566,5 +566,5 @@ def test_write_gro(gro_reference, tmp_path):
         title='Just a title',
     )
     DeferredFileWriter().write()
-    with open(filename) as ref, open(outname) as out:
+    with open(filename, encoding='UTF-8') as ref, open(outname, encoding='UTF-8') as out:
         assert out.read() == ref.read()

@@ -50,7 +50,7 @@ def read_gro(file_name, exclude=('SOL',), ignh=False):
     field_names = ['resid', 'resname', 'atomname', 'atomid', 'x', 'y', 'z']
     field_widths = [5, 5, 5, 5]
 
-    with open(str(file_name)) as gro:
+    with open(str(file_name), encoding='UTF-8') as gro:
         next(gro)  # skip title
         num_atoms = int(next(gro))
 
@@ -149,7 +149,7 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
         open = deferred_open
     else:
         from builtins import open
-    with open(str(file_name), 'w') as out:
+    with open(str(file_name), 'w', encoding='UTF-8') as out:
         out.write(title + '\n')  # Title
         out.write(formatter.format('{}\n', system.num_particles))  # number of atoms
         atomid = 1
