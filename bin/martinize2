@@ -629,7 +629,7 @@ def entry():
         "-scfix",
         dest="scfix",
         action="store_true",
-        default=False,
+        default=True,
         help="Apply side chain corrections.",
     )
     prot_group.add_argument(
