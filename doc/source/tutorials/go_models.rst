@@ -4,11 +4,11 @@ Gō models
 
 The MartiniGō model is a method of maintaining secondary and tertiary structure using native contacts of proteins
 to create a `Gō-like model <https://pubs.acs.org/doi/full/10.1021/acs.jctc.6b00986>`_ between beads.
-In contrast to an elastic network, the Go model applies non-bonded interactions between pairs of
+In contrast to an elastic network, the Gō model applies non-bonded interactions between pairs of
 beads within a protein based on residue overlap and restricted chemical structural unit criteria.
 
 The latest version of Martinize2 (version ≥ 0.10.0) implements the newest version of the
-`Gō model <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_. In this version of the Go model, interactions
+`Gō model <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_. In this version of the Gō model, interactions
 are mediated through the addition of extra virtual sites on top of backbone beads in the protein. Interactions are in
 the form of Lennard-Jones interactions, which are written as an extra file to be included in the protein topology.
 
