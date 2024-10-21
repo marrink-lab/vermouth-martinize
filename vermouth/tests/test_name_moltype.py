@@ -150,7 +150,7 @@ def test_martinize2_moltypes(tmp_path, deduplicate):
         '-f', str(PDB_HB),
         '-o', 'topol.top',
         '-x', 'out.pdb',
-        '-ignore', 'HOH', '-ignore', 'HEME',
+        '-ignore', 'HOH', '-ignore', 'HEME', '-scfix',
     ]
     if deduplicate:
         expected = ['molecule_{}.itp'.format(i) for i in range(2)]
