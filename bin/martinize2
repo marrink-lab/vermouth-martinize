@@ -472,7 +472,7 @@ def entry():
         "-ef",
         dest="rb_force_constant",
         type=float,
-        default=500,
+        default=700,
         help="Elastic bond force constant Fc in kJ/mol/nm^2",
     )
     rb_group.add_argument(
