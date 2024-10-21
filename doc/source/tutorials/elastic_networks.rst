@@ -4,6 +4,10 @@ Elastic Networks
 
 The first method applied to maintain the secondary and tertiary structure
 of Martini proteins was `Elastic Networks <https://doi.org/10.1021/ct9002114>`_.
+In Martini and other coarse-grained models, extra restraints are necessary to
+retain folded protein structure in the absense of hydrogen bonding. As the
+`Martini protein tutorial <https://cgmartini.nl/docs/tutorials/Martini3/ProteinsI/>`_
+suggests, try simulating a protein without them and seeing what happens!
 
 Elastic networks are formed by finding contacts between protein backbone
 beads within a particular cutoff distance, and applying harmonic bonds between them,

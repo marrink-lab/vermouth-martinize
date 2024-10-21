@@ -34,6 +34,7 @@ Martinize2 can deal with secondary structure intelligently using dssp in one of 
 To explain these more:
 
 1) If you have dssp installed locally, note that martinize2 is only validated for particular versions of dssp.
+   Currently the versions supported are 2.2.1 and 3.0.0.
    If a non-validated version is used, a warning will be raised and nothing is written.
    If you know what you're doing and are confident with what's been produced, you can override the warning
    with the ``-maxwarn`` flag. Otherwise, dssp can be used using the ``-dssp`` flag in martinize.
@@ -79,11 +80,81 @@ we must we the full length string again:
 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ss HHHHHCCCCC``
 
+Other basic features of martinize2
+==================================
 
+Side chain fixing
+-----------------
 
+One important addition for the generation of correct Martini protein topologies is side chain fixing.
+Side chain fixing is essential for ensuring correct sampling of side chain dynamics, and involves adding
+additional bonded terms into the structure of the protein, relating to the angles and dihedrals around
+side chain and backbone atoms. For further information on the background and motivation for these terms,
+please read the paper by `Herzog et. al <https://pubs.acs.org/doi/full/10.1021/acs.jctc.6b00122>`_.
 
+Building on the command we wrote above, side chain fixing is added into martini topologies through the
+`-scfix` flag:
 
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -scfix``
 
+**PLEASE NOTE**: Side chain fixes are *essential* for martini3 proteins. Currently martinize2
+(version 0.11.0) *does not* add side chain fixing parameters automatically, and so `-scfix`
+must explictly be given as an argument. This will be fixed in future version of martinize2.
 
+Secondary and tertiary structure considerations
+-----------------------------------------------
+
+The examples given on this page show how to generate basic coarse grained topologies for the
+martini force field using martinize2. Martinize2 has many further features to
+transform your simulation from a physically naive coarse grained model to one that really
+reproduces underlying atomistic behaviour. One of the most important considerations in this
+is how to treat secondary structure in the absence of hydrogen bonding. Two such methods
+are described in both the
+`Martini protein tutorial <https://cgmartini.nl/docs/tutorials/Martini3/ProteinsI/>`_, which
+should be an essential route in to conducting simulations with the martini force field.
+
+We cover the documentation of these features in greater detail in the pages about
+`Elastic Networks <elastic_networks.rst>`_ and `Gō models <go_models.rst>`_.
+
+Cysteine bridges
+----------------
+
+If your protein contains cysteine bridges, martinize2 can attempt to identify linked residues
+and add correct Martini parameters between them using the `-cys` flag. When bridged residue pairs
+are identified, a constraint of length 0.24 nm will be added between the side chains of the two
+residues.
+
+The `-cys` flag can read one of two types of argments. `-cys auto` will look for pairs of residues
+within a short cutoff:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -scfix -cys auto``
+
+You can check if the correct bridges have been identified and added in the `[ constraints ]` directive
+of the output itp file. Disulfide bonds are written at the top of the directive like so::
+
+ [ constraints ]
+  5 25 1 0.24 ; Disulfide bridge
+ 30 50 1 0.24 ; Disulfide bridge
+
+Alternatively if you need to assert the identification of the bridges over a distance that isn't
+automatically identified, a distance in nm can be supplied to `-cys`, e.g.:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -scfix -cys 5``
+
+will look for cysteines within 5 nm of each other and apply the same disulfide bond as before.
+
+Citations
+---------
+
+At the end of the execution of martinize2, the final output log writes general information with
+requests to citate relevant papers. Martinize2 collects paper citation information dynamically
+based on what features have been used, such as force fields, extra parameters,
+how secondary structure has been determined, and so on. For posterity and to ensure ease of
+reference, the same paper citations are also printed to the header information of the output
+topology files.
+
+As the correct references are collected dynamically, all the papers printed here by martinize2
+should be cited, to ensure that relevant authors and features are credited. Please do so!
+Martinize2 is both free and open source, and continued citations help us to keep it this way.
 
 

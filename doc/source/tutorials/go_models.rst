@@ -1,18 +1,18 @@
 =========
-Go models
+Gō models
 =========
 
-GoMartini is a popular method for retaining the secondary and tertiary structures of proteins originating from the lab
-of `Adolfo Poma <https://pubs.acs.org/doi/full/10.1021/acs.jctc.6b00986>`_. In contrast to an elastic network, the Go
-model enforces interactions between specific pairs of beads within a protein based on residue overlap and restricted
-chemical structural unit criteria.
+The MartiniGō model is a method of maintaining secondary and tertiary structure using native contacts of proteins
+to create a `Gō-like model <https://pubs.acs.org/doi/full/10.1021/acs.jctc.6b00986>`_ between beads.
+In contrast to an elastic network, the Go model applies non-bonded interactions between pairs of
+beads within a protein based on residue overlap and restricted chemical structural unit criteria.
 
-The latest version of Martinize2 implements the newest version of the
-`Go model <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_. In this version of the Go model, interactions
+The latest version of Martinize2 (version ≥ 0.10.0) implements the newest version of the
+`Gō model <https://www.biorxiv.org/content/10.1101/2024.04.15.589479v1>`_. In this version of the Go model, interactions
 are mediated through the addition of extra virtual sites on top of backbone beads in the protein. Interactions are in
 the form of Lennard-Jones interactions, which are written as an extra file to be included in the protein topology.
 
-The Go model is described in the help::
+The Gō model is described in the help::
 
  Virtual site based GoMartini:
    -go GO                Contact map to be used for the Martini Go model. Currently, only one format is supported. See docs. (default: None)
@@ -24,7 +24,7 @@ The Go model is described in the help::
    -go-res-dist GO_RES_DIST
                          Minimum graph distance (similar sequence distance) below which contacts are removed. (default: 3)
 
-To add a Go model to your protein, the first step is to calculate the contact map of your protein by uploading it
+To add a Gō model to your protein, the first step is to calculate the contact map of your protein by uploading it
 to the `web server <http://pomalab.ippt.pan.pl/GoContactMap/>`_.
 
 The contact map is then used in your martinize2 command:
@@ -70,7 +70,7 @@ depend on your protein)::
  molecule_0_23 molecule_0_19 1 0.53307395 9.41400000 ;go bond 0.5983552758317587
  ...
 
-To activate your Go model for use in Gromacs, the `martini_v3.0.0.itp` master itp needs the additional files included.
+To activate your Gō model for use in Gromacs, the `martini_v3.0.0.itp` master itp needs the additional files included.
 The additional atomtypes defined in the ``go_atomtypes.itp`` file should be included at the end of the `[ atomtypes ]`
 directive as::
 
@@ -108,19 +108,19 @@ directive::
  #endif
 
 Then in the .top file for your system, simply include `#define GO_VIRT` along with the other files
-to be included to active the Go network in your model.
+to be included to active the Gō network in your model.
 
 As a shortcut for writing the include statements above, you can simply include these files in your master
-``martini_v3.0.0.itp`` file with the following commands::
+``martini_v3.0.0.itp`` file with the following commands in a bash shell::
 
  sed -i "s/\[ nonbond_params \]/\#ifdef GO_VIRT\n\#include \"go_atomtypes.itp\"\n\#endif\n\n\[ nonbond_params \]/" martini_v3.0.0.itp
 
  echo -e "\n#ifdef GO_VIRT \n#include \"go_nbparams.itp\"\n#endif" >> martini_v3.0.0.itp
 
-The Go model should then be usable in your simulations following the `general protein tutorial <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
-But careful! While the Go model specifies nonbonded interactions, the interactions are only defined
-internally for each molecule. This means that if you have multiple copies of your Go model protein
-in the system, the Go bonds are still only specified internally for each copy of the molecule,
+The Gō model should then be usable in your simulations following the `general protein tutorial <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
+But careful! While the Gō model specifies nonbonded interactions, the interactions are only defined
+internally for each molecule. This means that if you have multiple copies of your Gō model protein
+in the system, the Gō bonds are still only specified internally for each copy of the molecule,
 not truly as intermolecular forces in the system as a whole. For more detail on this phenomenon,
 see the paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
 
@@ -128,6 +128,6 @@ see the paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4
 Visualising Go networks
 ----------------------------
 
-If you want to look at your Go network in VMD to confirm that it's been constructed in the
+If you want to look at your Gō network in VMD to confirm that it's been constructed in the
 way that you're expecting, the `MartiniGlass <https://github.com/Martini-Force-Field-Initiative/MartiniGlass>`_
 package can help write visualisable topologies to view.
