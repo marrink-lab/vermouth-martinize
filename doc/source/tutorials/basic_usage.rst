@@ -92,14 +92,13 @@ additional bonded terms into the structure of the protein, relating to the angle
 side chain and backbone atoms. For further information on the background and motivation for these terms,
 please read the paper by `Herzog et. al <https://pubs.acs.org/doi/full/10.1021/acs.jctc.6b00122>`_.
 
-Building on the command we wrote above, side chain fixing is added into martini topologies through the
-`-scfix` flag:
+From martinize2 version 0.12.0, side chain fixing is done automatically. For martinize2 ≤ 0.11.0,
+side chain fixing must be done for the martini 3 forcefield manually:
 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -scfix``
 
-**PLEASE NOTE**: Side chain fixes are *essential* for martini3 proteins. Currently martinize2
-(version 0.11.0) *does not* add side chain fixing parameters automatically, and so `-scfix`
-must explictly be given as an argument. This will be fixed in future version of martinize2.
+In martinize2 ≥ 0.12.0, side chain fixing is done by default. If you want to turn this behaviour off
+for the forcefield that you're using, the `-noscfix` flag may be used instead.
 
 Secondary and tertiary structure considerations
 -----------------------------------------------
@@ -119,15 +118,16 @@ We cover the documentation of these features in greater detail in the pages abou
 Cysteine bridges
 ----------------
 
-If your protein contains cysteine bridges, martinize2 can attempt to identify linked residues
-and add correct Martini parameters between them using the `-cys` flag. When bridged residue pairs
+If your protein contains cysteine bridges, martinize2 will attempt to identify linked residues
+and add correct Martini parameters between them. When bridged residue pairs
 are identified, a constraint of length 0.24 nm will be added between the side chains of the two
 residues.
 
-The `-cys` flag can read one of two types of argments. `-cys auto` will look for pairs of residues
-within a short cutoff:
+The `-cys` flag can read one of two types of argments. The default value `-cys auto` will look
+for pairs of residues within a short cutoff. This is assumed by default, so if your protein
+contains disulfide bridges at the correct distance, then they'll be found automatically just using:
 
-``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -scfix -cys auto``
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp``
 
 You can check if the correct bridges have been identified and added in the `[ constraints ]` directive
 of the output itp file. Disulfide bonds are written at the top of the directive like so::
@@ -139,7 +139,7 @@ of the output itp file. Disulfide bonds are written at the top of the directive 
 Alternatively if you need to assert the identification of the bridges over a distance that isn't
 automatically identified, a distance in nm can be supplied to `-cys`, e.g.:
 
-``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -scfix -cys 5``
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -cys 5``
 
 will look for cysteines within 5 nm of each other and apply the same disulfide bond as before.
 

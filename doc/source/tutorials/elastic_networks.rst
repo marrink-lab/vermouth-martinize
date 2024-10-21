@@ -18,7 +18,7 @@ Elastic networks are applied in Martinize2 as per the section of the help::
 
   -elastic              Write elastic bonds (default: False)
   -ef RB_FORCE_CONSTANT
-                        Elastic bond force constant Fc in kJ/mol/nm^2 (default: 500)
+                        Elastic bond force constant Fc in kJ/mol/nm^2 (default: 700)
   -el RB_LOWER_BOUND    Elastic bond lower cutoff: F = Fc if rij < lo (default: 0)
   -eu RB_UPPER_BOUND    Elastic bond upper cutoff: F = 0 if rij > up (default: 0.9)
   -ermd RES_MIN_DIST    The minimum separation between two residues to have an RB the default value is set by the force-field. (default: None)
@@ -39,11 +39,11 @@ Without any further consideration, an elastic network can be added to your marti
 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -elastic``
 
-which will apply the default harmonic bond constant (500 kJ/mol/nm^2) between non-successive BB beads
+which will apply the default harmonic bond constant (700 kJ/mol/nm^2) between non-successive BB beads
 which are < 0.9 nm apart in space.
 
-NOTE! For proteins in martini 3, the default constant should be 700 kJ/mol/nm^2. Changing the default
-elastic constant per force field will be fixed in future versions of martinize2.
+NOTE! For proteins in martini 3, the default constant is 700 kJ/mol/nm^2. For proteins in martini 2,
+a value of 500 kJ/mol/nm^2 may be more appropriate.
 
 
 Customising cutoffs
