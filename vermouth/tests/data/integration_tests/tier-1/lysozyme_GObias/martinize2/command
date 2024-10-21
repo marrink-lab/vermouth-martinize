@@ -9,4 +9,4 @@ martinize2
 -water-bias
 -water-bias-eps E:-.5 C:1.0 H:-1.0
 -scfix
-
+-cys none

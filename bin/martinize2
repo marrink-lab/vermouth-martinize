@@ -636,7 +636,7 @@ def entry():
         "-cys",
         dest="cystein_bridge",
         type=_cys_argument,
-        default="none",
+        default="auto",
         help="Cystein bonds",
     )
     prot_group.add_argument(
