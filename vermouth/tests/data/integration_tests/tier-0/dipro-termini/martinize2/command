@@ -4,3 +4,4 @@ martinize2
 -o topol.top
 -ff martini3001
 -nt
+-scfix

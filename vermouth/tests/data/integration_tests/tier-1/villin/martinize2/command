@@ -5,3 +5,4 @@ martinize2
 -ff martini22p
 -mutate A-MET53:VAL
 -resid input
+-scfix

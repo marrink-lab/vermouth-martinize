@@ -8,3 +8,4 @@ martinize2
 -water-bias-eps idr:0.5
 -id-regions 1:24
 -idr-tune
+-scfix

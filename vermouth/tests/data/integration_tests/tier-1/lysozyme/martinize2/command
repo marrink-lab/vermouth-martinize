@@ -4,7 +4,7 @@ martinize2
 -o topol.top
 -ff martini30b32
 -elastic
--scfix
 -cys auto
 -dssp
 -ignore HOH
+-ef 500
