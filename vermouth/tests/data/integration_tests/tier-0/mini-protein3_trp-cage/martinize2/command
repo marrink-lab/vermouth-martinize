@@ -6,4 +6,4 @@ martinize2
 -dssp 
 -eu 0.7
 -ef 800.0
--scfix
+-noscfix
