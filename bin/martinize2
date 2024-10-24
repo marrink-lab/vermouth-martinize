@@ -472,7 +472,7 @@ def entry():
         "-ef",
         dest="rb_force_constant",
         type=float,
-        default=500,
+        default=700,
         help="Elastic bond force constant Fc in kJ/mol/nm^2",
     )
     rb_group.add_argument(
@@ -626,17 +626,24 @@ def entry():
 
     prot_group = parser.add_argument_group("Protein description")
     prot_group.add_argument(
+        "-noscfix",
+        dest="noscfix",
+        action="store_true",
+        default=False,
+        help="Don't apply side chain corrections. Please note the change in behaviour from martinize v0.11.0",
+    )
+    prot_group.add_argument(
         "-scfix",
         dest="scfix",
         action="store_true",
-        default=False,
-        help="Apply side chain corrections.",
+        help="Old -scfix argument. Side chain fixes are now assumed by default, and the flag does not need"
+             " to be specified. Will be deprecated in future."
     )
     prot_group.add_argument(
         "-cys",
         dest="cystein_bridge",
         type=_cys_argument,
-        default="none",
+        default="auto",
         help="Cystein bonds",
     )
     prot_group.add_argument(
@@ -923,14 +930,23 @@ def entry():
             type="missing-feature",
         )
     vermouth.SetMoleculeMeta(extdih=args.extdih).run_system(system)
-    if args.scfix and not target_ff.has_feature("scfix"):
+    if args.scfix:
+        LOGGER.warning(
+            "The scfix argument has been deprecated and will be removed in the future. "
+            "Side chain fixing is now assumed by default, so no flag needs to be "
+            "passed. If you do not want side chain fixes to be applied, the -noscfix "
+            "flag can be used."
+        )
+    scfix = not args.noscfix
+    if scfix and not target_ff.has_feature("scfix"):
         LOGGER.warning(
             'The force field "{}" does not define angle and '
-            "torsion for the side chain corrections (-scfix).",
+            "torsion for the side chain corrections."
+            " If intended, please specify -noscfix explicitly",
             target_ff.name,
             type="missing-feature",
         )
-    vermouth.SetMoleculeMeta(scfix=args.scfix).run_system(system)
+    vermouth.SetMoleculeMeta(scfix=scfix).run_system(system)
 
     vermouth.SetMoleculeMeta(idr=args.idr_tune).run_system(system)
     if args.idr_tune:
