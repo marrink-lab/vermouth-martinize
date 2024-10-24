@@ -50,6 +50,9 @@ To explain these more:
 
    ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp``
 
+If you want to check how the secondary structure has been assigned, martinize2 will write the
+secondary structure sequence into the header information of the output topology files, along
+with the input command used.
 
 User knows best
 ---------------
@@ -92,10 +95,14 @@ additional bonded terms into the structure of the protein, relating to the angle
 side chain and backbone atoms. For further information on the background and motivation for these terms,
 please read the paper by `Herzog et. al <https://pubs.acs.org/doi/full/10.1021/acs.jctc.6b00122>`_.
 
-From martinize2 version 0.12.0, side chain fixing is done automatically. For martinize2 ≤ 0.11.0,
+From martinize2 version ≥ 0.12.0, side chain fixing is done automatically. For martinize2 ≤ 0.11.0,
 side chain fixing must be done for the martini 3 forcefield manually:
 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -scfix``
+
+You can check the version of martinize2 that you have installed by running:
+
+``martinize2 --version``
 
 In martinize2 ≥ 0.12.0, side chain fixing is done by default. If you want to turn this behaviour off
 for the forcefield that you're using, the `-noscfix` flag may be used instead.
@@ -113,7 +120,7 @@ are described in both the
 should be an essential route in to conducting simulations with the martini force field.
 
 We cover the documentation of these features in greater detail in the pages about
-`Elastic Networks <elastic_networks.rst>`_ and `Gō models <go_models.rst>`_.
+`Elastic Networks </tutorials/elastic_networks.rst>`_ and `Gō models <go_models.rst>`_.
 
 Cysteine bridges
 ----------------
