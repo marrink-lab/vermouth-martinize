@@ -1,451 +1,450 @@
 ; This file was generated using the following command:
-; /coarse/chris/python_packages/vermouth_dev/vermouth-martinize/venv/bin/martinize2 -f ../aa.pdb -ff martini3001 -x cg.pdb -o topol.top -ignore HOH -ss CBCCHHHHHHHHHHTTCTTBTTBCHHHHHHHHHHHHTTBTTCEEECTTSCEEETTTTEETTTTCBCSCCTTCCCTTCSBGGGGGSSSCHHHHHHHHHHHHTSSGGGGSHHHHHHTTTSCGGGGGTTCCC -go ../map.map -noscfix -cys none
-; martinize with vermouth 0.0.1.dev1783
+; /local/lborge01/martinize_stuff/dev_go/devmartinize/bin/martinize2 -f ../aa.pdb -ff martini3001 -x cg.pdb -o topol.top -ignore HOH -ss CBCCHHHHHHHHHHTTCTTBTTBCHHHHHHHHHHHHTTBTTCEEECTTSCEEETTTTEETTTTCBCSCCTTCCCTTCSBGGGGGSSSCHHHHHHHHHHHHTSSGGGGSHHHHHHTTTSCGGGGGTTCCC -go -go-map ../map.map
+; martinize with vermouth 0.9.7.dev79
 ; The following sequence of secondary structure 
 ; was used for the full system:
 ; CBCCHHHHHHHHHHTTCTTBTTBCHHHHHHHHHHHHTTBTTCEEECTTSCEEETTTTEETTTTCBCSCCTTCCCTTCSBGGGGGSSSCHHHHHHHHHHHHTSSGGGGSHHHHHHTTTSCGGGGGTTCCC
 
-; Please cite the following papers:
+; Pleas cite the following papers:
 ; Souza, P C T; Alessandri, R; Barnoud, J; Thallmair, S; Faustino, I; Grünewald, F; Patmanidis, I; Abdizadeh, H; Bruininks, B M H; Wassenaar, T A; Kroon, P C; Melcr, J; Nieto, V; Corradi, V; Khan, H M; Domański, J; Javanainen, M; Martinez-Seara, H; Reuter, N; Best, R B; Vattulainen, I; Monticelli, L; Periole, X; Tieleman, D P; de Vries, A H; Marrink, S J;  Nature Methods 2021; 10.1038/s41592-021-01098-3
-; Souza, P C T; Araujo, L P B; Brasnett, C; Moreira, R A; Grunewald, F; Park, P; Wang, L; Razmazma, H; Borges-Araujo, A C; Cofas-Vargas, L F; Monticelli, L; Mera-Adasme, R; Melo, M N; Wu, S; Marrink, S J; Poma, A B; Thallmair, S;  2024; 10.1101/2024.04.15.589479
 
 [ moleculetype ]
-molecule 1
+molecule_0 1
 
 [ atoms ]
-  1 Q5             1 LYS BB    1    1     
-  2 SC3            1 LYS SC1   2  0.0     
-  3 SQ4p           1 LYS SC2   3  1.0     
-  4 SP2            2 VAL BB    4  0.0     
-  5 SC3            2 VAL SC1   5  0.0     
-  6 P2             3 PHE BB    6  0.0     
-  7 SC4            3 PHE SC1   7  0.0     
-  8 TC5            3 PHE SC2   8  0.0     
-  9 TC5            3 PHE SC3   9  0.0     
- 10 SP1            4 GLY BB   10  0.0     
- 11 P2             5 ARG BB   11  0.0     
- 12 SC3            5 ARG SC1  12  0.0     
- 13 SQ3p           5 ARG SC2  13  1.0     
- 14 P2             6 CYS BB   14  0.0     
- 15 TC6            6 CYS SC1  15  0.0     
- 16 P2             7 GLU BB   16  0.0     
- 17 Q5n            7 GLU SC1  17 -1.0     
- 18 P2             8 LEU BB   18  0.0     
- 19 SC2            8 LEU SC1  19  0.0     
- 20 SP2            9 ALA BB   20  0.0     
- 21 TC3            9 ALA SC1  21  0.0     
- 22 SP2           10 ALA BB   22  0.0     
- 23 TC3           10 ALA SC1  23  0.0     
- 24 SP2           11 ALA BB   24  0.0     
- 25 TC3           11 ALA SC1  25  0.0     
- 26 P2            12 MET BB   26  0.0     
- 27 C6            12 MET SC1  27  0.0     
- 28 P2            13 LYS BB   28  0.0     
- 29 SC3           13 LYS SC1  29  0.0     
- 30 SQ4p          13 LYS SC2  30  1.0     
- 31 P2            14 ARG BB   31  0.0     
- 32 SC3           14 ARG SC1  32  0.0     
- 33 SQ3p          14 ARG SC2  33  1.0     
- 34 P2            15 HIS BB   34  0.0     
- 35 TC4           15 HIS SC1  35  0.0     
- 36 TN6d          15 HIS SC2  36  0.0     
- 37 TN5a          15 HIS SC3  37  0.0     
- 38 SP1           16 GLY BB   38  0.0     
- 39 P2            17 LEU BB   39  0.0     
- 40 SC2           17 LEU SC1  40  0.0     
- 41 P2            18 ASP BB   41  0.0     
- 42 SQ5n          18 ASP SC1  42 -1.0     
- 43 P2            19 ASN BB   43  0.0     
- 44 SP5           19 ASN SC1  44  0.0     
- 45 P2            20 TYR BB   45  0.0     
- 46 TC4           20 TYR SC1  46  0.0     
- 47 TC5           20 TYR SC2  47  0.0     
- 48 TC5           20 TYR SC3  48  0.0     
- 49 TN6           20 TYR SC4  49  0.0     
- 50 P2            21 ARG BB   50  0.0     
- 51 SC3           21 ARG SC1  51  0.0     
- 52 SQ3p          21 ARG SC2  52  1.0     
- 53 SP1           22 GLY BB   53  0.0     
- 54 P2            23 TYR BB   54  0.0     
- 55 TC4           23 TYR SC1  55  0.0     
- 56 TC5           23 TYR SC2  56  0.0     
- 57 TC5           23 TYR SC3  57  0.0     
- 58 TN6           23 TYR SC4  58  0.0     
- 59 P2            24 SER BB   59  0.0     
- 60 TP1           24 SER SC1  60  0.0     
- 61 P2            25 LEU BB   61  0.0     
- 62 SC2           25 LEU SC1  62  0.0     
- 63 SP1           26 GLY BB   63  0.0     
- 64 P2            27 ASN BB   64  0.0     
- 65 SP5           27 ASN SC1  65  0.0     
- 66 P2            28 TRP BB   66  0.0     
- 67 TC4           28 TRP SC1  67  0.0 36.0
- 68 TN6d          28 TRP SC2  68  0.0 36.0
- 69 TC5           28 TRP SC3  69  0.0  0.0
- 70 TC5           28 TRP SC4  70  0.0 36.0
- 71 TC5           28 TRP SC5  71  0.0 36.0
- 72 SP2           29 VAL BB   72  0.0     
- 73 SC3           29 VAL SC1  73  0.0     
- 74 P2            30 CYS BB   74  0.0     
- 75 TC6           30 CYS SC1  75  0.0     
- 76 SP2           31 ALA BB   76  0.0     
- 77 TC3           31 ALA SC1  77  0.0     
- 78 SP2           32 ALA BB   78  0.0     
- 79 TC3           32 ALA SC1  79  0.0     
- 80 P2            33 LYS BB   80  0.0     
- 81 SC3           33 LYS SC1  81  0.0     
- 82 SQ4p          33 LYS SC2  82  1.0     
- 83 P2            34 PHE BB   83  0.0     
- 84 SC4           34 PHE SC1  84  0.0     
- 85 TC5           34 PHE SC2  85  0.0     
- 86 TC5           34 PHE SC3  86  0.0     
- 87 P2            35 GLU BB   87  0.0     
- 88 Q5n           35 GLU SC1  88 -1.0     
- 89 P2            36 SER BB   89  0.0     
- 90 TP1           36 SER SC1  90  0.0     
- 91 P2            37 ASN BB   91  0.0     
- 92 SP5           37 ASN SC1  92  0.0     
- 93 P2            38 PHE BB   93  0.0     
- 94 SC4           38 PHE SC1  94  0.0     
- 95 TC5           38 PHE SC2  95  0.0     
- 96 TC5           38 PHE SC3  96  0.0     
- 97 P2            39 ASN BB   97  0.0     
- 98 SP5           39 ASN SC1  98  0.0     
- 99 P2            40 THR BB   99  0.0     
-100 SP1           40 THR SC1 100  0.0     
-101 P2            41 GLN BB  101  0.0     
-102 P5            41 GLN SC1 102  0.0     
-103 SP2           42 ALA BB  103  0.0     
-104 TC3           42 ALA SC1 104  0.0     
-105 P2            43 THR BB  105  0.0     
-106 SP1           43 THR SC1 106  0.0     
-107 P2            44 ASN BB  107  0.0     
-108 SP5           44 ASN SC1 108  0.0     
-109 P2            45 ARG BB  109  0.0     
-110 SC3           45 ARG SC1 110  0.0     
-111 SQ3p          45 ARG SC2 111  1.0     
-112 P2            46 ASN BB  112  0.0     
-113 SP5           46 ASN SC1 113  0.0     
-114 P2            47 THR BB  114  0.0     
-115 SP1           47 THR SC1 115  0.0     
-116 P2            48 ASP BB  116  0.0     
-117 SQ5n          48 ASP SC1 117 -1.0     
-118 SP1           49 GLY BB  118  0.0     
-119 P2            50 SER BB  119  0.0     
-120 TP1           50 SER SC1 120  0.0     
-121 P2            51 THR BB  121  0.0     
-122 SP1           51 THR SC1 122  0.0     
-123 P2            52 ASP BB  123  0.0     
-124 SQ5n          52 ASP SC1 124 -1.0     
-125 P2            53 TYR BB  125  0.0     
-126 TC4           53 TYR SC1 126  0.0     
-127 TC5           53 TYR SC2 127  0.0     
-128 TC5           53 TYR SC3 128  0.0     
-129 TN6           53 TYR SC4 129  0.0     
-130 SP1           54 GLY BB  130  0.0     
-131 P2            55 ILE BB  131  0.0     
-132 SC2           55 ILE SC1 132  0.0     
-133 P2            56 LEU BB  133  0.0     
-134 SC2           56 LEU SC1 134  0.0     
-135 P2            57 GLN BB  135  0.0     
-136 P5            57 GLN SC1 136  0.0     
-137 P2            58 ILE BB  137  0.0     
-138 SC2           58 ILE SC1 138  0.0     
-139 P2            59 ASN BB  139  0.0     
-140 SP5           59 ASN SC1 140  0.0     
-141 P2            60 SER BB  141  0.0     
-142 TP1           60 SER SC1 142  0.0     
-143 P2            61 ARG BB  143  0.0     
-144 SC3           61 ARG SC1 144  0.0     
-145 SQ3p          61 ARG SC2 145  1.0     
-146 P2            62 TRP BB  146  0.0     
-147 TC4           62 TRP SC1 147  0.0 36.0
-148 TN6d          62 TRP SC2 148  0.0 36.0
-149 TC5           62 TRP SC3 149  0.0  0.0
-150 TC5           62 TRP SC4 150  0.0 36.0
-151 TC5           62 TRP SC5 151  0.0 36.0
-152 P2            63 TRP BB  152  0.0     
-153 TC4           63 TRP SC1 153  0.0 36.0
-154 TN6d          63 TRP SC2 154  0.0 36.0
-155 TC5           63 TRP SC3 155  0.0  0.0
-156 TC5           63 TRP SC4 156  0.0 36.0
-157 TC5           63 TRP SC5 157  0.0 36.0
-158 P2            64 CYS BB  158  0.0     
-159 TC6           64 CYS SC1 159  0.0     
-160 P2            65 ASN BB  160  0.0     
-161 SP5           65 ASN SC1 161  0.0     
-162 P2            66 ASP BB  162  0.0     
-163 SQ5n          66 ASP SC1 163 -1.0     
-164 SP1           67 GLY BB  164  0.0     
-165 P2            68 ARG BB  165  0.0     
-166 SC3           68 ARG SC1 166  0.0     
-167 SQ3p          68 ARG SC2 167  1.0     
-168 P2            69 THR BB  168  0.0     
-169 SP1           69 THR SC1 169  0.0     
-170 SP2a          70 PRO BB  170  0.0     
-171 SC3           70 PRO SC1 171  0.0     
-172 SP1           71 GLY BB  172  0.0     
-173 P2            72 SER BB  173  0.0     
-174 TP1           72 SER SC1 174  0.0     
-175 P2            73 ARG BB  175  0.0     
-176 SC3           73 ARG SC1 176  0.0     
-177 SQ3p          73 ARG SC2 177  1.0     
-178 P2            74 ASN BB  178  0.0     
-179 SP5           74 ASN SC1 179  0.0     
-180 P2            75 LEU BB  180  0.0     
-181 SC2           75 LEU SC1 181  0.0     
-182 P2            76 CYS BB  182  0.0     
-183 TC6           76 CYS SC1 183  0.0     
-184 P2            77 ASN BB  184  0.0     
-185 SP5           77 ASN SC1 185  0.0     
-186 P2            78 ILE BB  186  0.0     
-187 SC2           78 ILE SC1 187  0.0     
-188 SP2a          79 PRO BB  188  0.0     
-189 SC3           79 PRO SC1 189  0.0     
-190 P2            80 CYS BB  190  0.0     
-191 TC6           80 CYS SC1 191  0.0     
-192 P2            81 SER BB  192  0.0     
-193 TP1           81 SER SC1 193  0.0     
-194 SP2           82 ALA BB  194  0.0     
-195 TC3           82 ALA SC1 195  0.0     
-196 P2            83 LEU BB  196  0.0     
-197 SC2           83 LEU SC1 197  0.0     
-198 P2            84 LEU BB  198  0.0     
-199 SC2           84 LEU SC1 199  0.0     
-200 P2            85 SER BB  200  0.0     
-201 TP1           85 SER SC1 201  0.0     
-202 P2            86 SER BB  202  0.0     
-203 TP1           86 SER SC1 203  0.0     
-204 P2            87 ASP BB  204  0.0     
-205 SQ5n          87 ASP SC1 205 -1.0     
-206 P2            88 ILE BB  206  0.0     
-207 SC2           88 ILE SC1 207  0.0     
-208 P2            89 THR BB  208  0.0     
-209 SP1           89 THR SC1 209  0.0     
-210 SP2           90 ALA BB  210  0.0     
-211 TC3           90 ALA SC1 211  0.0     
-212 P2            91 SER BB  212  0.0     
-213 TP1           91 SER SC1 213  0.0     
-214 SP2           92 VAL BB  214  0.0     
-215 SC3           92 VAL SC1 215  0.0     
-216 P2            93 ASN BB  216  0.0     
-217 SP5           93 ASN SC1 217  0.0     
-218 P2            94 CYS BB  218  0.0     
-219 TC6           94 CYS SC1 219  0.0     
-220 SP2           95 ALA BB  220  0.0     
-221 TC3           95 ALA SC1 221  0.0     
-222 P2            96 LYS BB  222  0.0     
-223 SC3           96 LYS SC1 223  0.0     
-224 SQ4p          96 LYS SC2 224  1.0     
-225 P2            97 LYS BB  225  0.0     
-226 SC3           97 LYS SC1 226  0.0     
-227 SQ4p          97 LYS SC2 227  1.0     
-228 P2            98 ILE BB  228  0.0     
-229 SC2           98 ILE SC1 229  0.0     
-230 SP2           99 VAL BB  230  0.0     
-231 SC3           99 VAL SC1 231  0.0     
-232 P2           100 SER BB  232  0.0     
-233 TP1          100 SER SC1 233  0.0     
-234 P2           101 ASP BB  234  0.0     
-235 SQ5n         101 ASP SC1 235 -1.0     
-236 SP1          102 GLY BB  236  0.0     
-237 P2           103 ASN BB  237  0.0     
-238 SP5          103 ASN SC1 238  0.0     
-239 SP1          104 GLY BB  239  0.0     
-240 P2           105 MET BB  240  0.0     
-241 C6           105 MET SC1 241  0.0     
-242 P2           106 ASN BB  242  0.0     
-243 SP5          106 ASN SC1 243  0.0     
-244 SP2          107 ALA BB  244  0.0     
-245 TC3          107 ALA SC1 245  0.0     
-246 P2           108 TRP BB  246  0.0     
-247 TC4          108 TRP SC1 247  0.0 36.0
-248 TN6d         108 TRP SC2 248  0.0 36.0
-249 TC5          108 TRP SC3 249  0.0  0.0
-250 TC5          108 TRP SC4 250  0.0 36.0
-251 TC5          108 TRP SC5 251  0.0 36.0
-252 SP2          109 VAL BB  252  0.0     
-253 SC3          109 VAL SC1 253  0.0     
-254 SP2          110 ALA BB  254  0.0     
-255 TC3          110 ALA SC1 255  0.0     
-256 P2           111 TRP BB  256  0.0     
-257 TC4          111 TRP SC1 257  0.0 36.0
-258 TN6d         111 TRP SC2 258  0.0 36.0
-259 TC5          111 TRP SC3 259  0.0  0.0
-260 TC5          111 TRP SC4 260  0.0 36.0
-261 TC5          111 TRP SC5 261  0.0 36.0
-262 P2           112 ARG BB  262  0.0     
-263 SC3          112 ARG SC1 263  0.0     
-264 SQ3p         112 ARG SC2 264  1.0     
-265 P2           113 ASN BB  265  0.0     
-266 SP5          113 ASN SC1 266  0.0     
-267 P2           114 ARG BB  267  0.0     
-268 SC3          114 ARG SC1 268  0.0     
-269 SQ3p         114 ARG SC2 269  1.0     
-270 P2           115 CYS BB  270  0.0     
-271 TC6          115 CYS SC1 271  0.0     
-272 P2           116 LYS BB  272  0.0     
-273 SC3          116 LYS SC1 273  0.0     
-274 SQ4p         116 LYS SC2 274  1.0     
-275 SP1          117 GLY BB  275  0.0     
-276 P2           118 THR BB  276  0.0     
-277 SP1          118 THR SC1 277  0.0     
-278 P2           119 ASP BB  278  0.0     
-279 SQ5n         119 ASP SC1 279 -1.0     
-280 SP2          120 VAL BB  280  0.0     
-281 SC3          120 VAL SC1 281  0.0     
-282 P2           121 GLN BB  282  0.0     
-283 P5           121 GLN SC1 283  0.0     
-284 SP2          122 ALA BB  284  0.0     
-285 TC3          122 ALA SC1 285  0.0     
-286 P2           123 TRP BB  286  0.0     
-287 TC4          123 TRP SC1 287  0.0 36.0
-288 TN6d         123 TRP SC2 288  0.0 36.0
-289 TC5          123 TRP SC3 289  0.0  0.0
-290 TC5          123 TRP SC4 290  0.0 36.0
-291 TC5          123 TRP SC5 291  0.0 36.0
-292 P2           124 ILE BB  292  0.0     
-293 SC2          124 ILE SC1 293  0.0     
-294 P2           125 ARG BB  294  0.0     
-295 SC3          125 ARG SC1 295  0.0     
-296 SQ3p         125 ARG SC2 296  1.0     
-297 SP1          126 GLY BB  297  0.0     
-298 P2           127 CYS BB  298  0.0     
-299 TC6          127 CYS SC1 299  0.0     
-300 P2           128 ARG BB  300  0.0     
-301 SC3          128 ARG SC1 301  0.0     
-302 SQ3p         128 ARG SC2 302  1.0     
-303 Q5           129 LEU BB  303   -1     
-304 SC2          129 LEU SC1 304  0.0     
-305 molecule_1     1 LYS CA  305    0  0.0
-306 molecule_2     2 VAL CA  306    0  0.0
-307 molecule_3     3 PHE CA  307    0  0.0
-308 molecule_4     4 GLY CA  308    0  0.0
-309 molecule_5     5 ARG CA  309    0  0.0
-310 molecule_6     6 CYS CA  310    0  0.0
-311 molecule_7     7 GLU CA  311    0  0.0
-312 molecule_8     8 LEU CA  312    0  0.0
-313 molecule_9     9 ALA CA  313    0  0.0
-314 molecule_10   10 ALA CA  314    0  0.0
-315 molecule_11   11 ALA CA  315    0  0.0
-316 molecule_12   12 MET CA  316    0  0.0
-317 molecule_13   13 LYS CA  317    0  0.0
-318 molecule_14   14 ARG CA  318    0  0.0
-319 molecule_15   15 HIS CA  319    0  0.0
-320 molecule_16   16 GLY CA  320    0  0.0
-321 molecule_17   17 LEU CA  321    0  0.0
-322 molecule_18   18 ASP CA  322    0  0.0
-323 molecule_19   19 ASN CA  323    0  0.0
-324 molecule_20   20 TYR CA  324    0  0.0
-325 molecule_21   21 ARG CA  325    0  0.0
-326 molecule_22   22 GLY CA  326    0  0.0
-327 molecule_23   23 TYR CA  327    0  0.0
-328 molecule_24   24 SER CA  328    0  0.0
-329 molecule_25   25 LEU CA  329    0  0.0
-330 molecule_26   26 GLY CA  330    0  0.0
-331 molecule_27   27 ASN CA  331    0  0.0
-332 molecule_28   28 TRP CA  332    0  0.0
-333 molecule_29   29 VAL CA  333    0  0.0
-334 molecule_30   30 CYS CA  334    0  0.0
-335 molecule_31   31 ALA CA  335    0  0.0
-336 molecule_32   32 ALA CA  336    0  0.0
-337 molecule_33   33 LYS CA  337    0  0.0
-338 molecule_34   34 PHE CA  338    0  0.0
-339 molecule_35   35 GLU CA  339    0  0.0
-340 molecule_36   36 SER CA  340    0  0.0
-341 molecule_37   37 ASN CA  341    0  0.0
-342 molecule_38   38 PHE CA  342    0  0.0
-343 molecule_39   39 ASN CA  343    0  0.0
-344 molecule_40   40 THR CA  344    0  0.0
-345 molecule_41   41 GLN CA  345    0  0.0
-346 molecule_42   42 ALA CA  346    0  0.0
-347 molecule_43   43 THR CA  347    0  0.0
-348 molecule_44   44 ASN CA  348    0  0.0
-349 molecule_45   45 ARG CA  349    0  0.0
-350 molecule_46   46 ASN CA  350    0  0.0
-351 molecule_47   47 THR CA  351    0  0.0
-352 molecule_48   48 ASP CA  352    0  0.0
-353 molecule_49   49 GLY CA  353    0  0.0
-354 molecule_50   50 SER CA  354    0  0.0
-355 molecule_51   51 THR CA  355    0  0.0
-356 molecule_52   52 ASP CA  356    0  0.0
-357 molecule_53   53 TYR CA  357    0  0.0
-358 molecule_54   54 GLY CA  358    0  0.0
-359 molecule_55   55 ILE CA  359    0  0.0
-360 molecule_56   56 LEU CA  360    0  0.0
-361 molecule_57   57 GLN CA  361    0  0.0
-362 molecule_58   58 ILE CA  362    0  0.0
-363 molecule_59   59 ASN CA  363    0  0.0
-364 molecule_60   60 SER CA  364    0  0.0
-365 molecule_61   61 ARG CA  365    0  0.0
-366 molecule_62   62 TRP CA  366    0  0.0
-367 molecule_63   63 TRP CA  367    0  0.0
-368 molecule_64   64 CYS CA  368    0  0.0
-369 molecule_65   65 ASN CA  369    0  0.0
-370 molecule_66   66 ASP CA  370    0  0.0
-371 molecule_67   67 GLY CA  371    0  0.0
-372 molecule_68   68 ARG CA  372    0  0.0
-373 molecule_69   69 THR CA  373    0  0.0
-374 molecule_70   70 PRO CA  374    0  0.0
-375 molecule_71   71 GLY CA  375    0  0.0
-376 molecule_72   72 SER CA  376    0  0.0
-377 molecule_73   73 ARG CA  377    0  0.0
-378 molecule_74   74 ASN CA  378    0  0.0
-379 molecule_75   75 LEU CA  379    0  0.0
-380 molecule_76   76 CYS CA  380    0  0.0
-381 molecule_77   77 ASN CA  381    0  0.0
-382 molecule_78   78 ILE CA  382    0  0.0
-383 molecule_79   79 PRO CA  383    0  0.0
-384 molecule_80   80 CYS CA  384    0  0.0
-385 molecule_81   81 SER CA  385    0  0.0
-386 molecule_82   82 ALA CA  386    0  0.0
-387 molecule_83   83 LEU CA  387    0  0.0
-388 molecule_84   84 LEU CA  388    0  0.0
-389 molecule_85   85 SER CA  389    0  0.0
-390 molecule_86   86 SER CA  390    0  0.0
-391 molecule_87   87 ASP CA  391    0  0.0
-392 molecule_88   88 ILE CA  392    0  0.0
-393 molecule_89   89 THR CA  393    0  0.0
-394 molecule_90   90 ALA CA  394    0  0.0
-395 molecule_91   91 SER CA  395    0  0.0
-396 molecule_92   92 VAL CA  396    0  0.0
-397 molecule_93   93 ASN CA  397    0  0.0
-398 molecule_94   94 CYS CA  398    0  0.0
-399 molecule_95   95 ALA CA  399    0  0.0
-400 molecule_96   96 LYS CA  400    0  0.0
-401 molecule_97   97 LYS CA  401    0  0.0
-402 molecule_98   98 ILE CA  402    0  0.0
-403 molecule_99   99 VAL CA  403    0  0.0
-404 molecule_100 100 SER CA  404    0  0.0
-405 molecule_101 101 ASP CA  405    0  0.0
-406 molecule_102 102 GLY CA  406    0  0.0
-407 molecule_103 103 ASN CA  407    0  0.0
-408 molecule_104 104 GLY CA  408    0  0.0
-409 molecule_105 105 MET CA  409    0  0.0
-410 molecule_106 106 ASN CA  410    0  0.0
-411 molecule_107 107 ALA CA  411    0  0.0
-412 molecule_108 108 TRP CA  412    0  0.0
-413 molecule_109 109 VAL CA  413    0  0.0
-414 molecule_110 110 ALA CA  414    0  0.0
-415 molecule_111 111 TRP CA  415    0  0.0
-416 molecule_112 112 ARG CA  416    0  0.0
-417 molecule_113 113 ASN CA  417    0  0.0
-418 molecule_114 114 ARG CA  418    0  0.0
-419 molecule_115 115 CYS CA  419    0  0.0
-420 molecule_116 116 LYS CA  420    0  0.0
-421 molecule_117 117 GLY CA  421    0  0.0
-422 molecule_118 118 THR CA  422    0  0.0
-423 molecule_119 119 ASP CA  423    0  0.0
-424 molecule_120 120 VAL CA  424    0  0.0
-425 molecule_121 121 GLN CA  425    0  0.0
-426 molecule_122 122 ALA CA  426    0  0.0
-427 molecule_123 123 TRP CA  427    0  0.0
-428 molecule_124 124 ILE CA  428    0  0.0
-429 molecule_125 125 ARG CA  429    0  0.0
-430 molecule_126 126 GLY CA  430    0  0.0
-431 molecule_127 127 CYS CA  431    0  0.0
-432 molecule_128 128 ARG CA  432    0  0.0
-433 molecule_129 129 LEU CA  433    0  0.0
+  1 Q5               1 LYS BB    1    1     
+  2 SC3              1 LYS SC1   2  0.0     
+  3 SQ4p             1 LYS SC2   3  1.0     
+  4 SP2              2 VAL BB    4  0.0     
+  5 SC3              2 VAL SC1   5  0.0     
+  6 P2               3 PHE BB    6  0.0     
+  7 SC4              3 PHE SC1   7  0.0     
+  8 TC5              3 PHE SC2   8  0.0     
+  9 TC5              3 PHE SC3   9  0.0     
+ 10 SP1              4 GLY BB   10  0.0     
+ 11 P2               5 ARG BB   11  0.0     
+ 12 SC3              5 ARG SC1  12  0.0     
+ 13 SQ3p             5 ARG SC2  13  1.0     
+ 14 P2               6 CYS BB   14  0.0     
+ 15 TC6              6 CYS SC1  15  0.0     
+ 16 P2               7 GLU BB   16  0.0     
+ 17 Q5n              7 GLU SC1  17 -1.0     
+ 18 P2               8 LEU BB   18  0.0     
+ 19 SC2              8 LEU SC1  19  0.0     
+ 20 SP2              9 ALA BB   20  0.0     
+ 21 TC3              9 ALA SC1  21  0.0     
+ 22 SP2             10 ALA BB   22  0.0     
+ 23 TC3             10 ALA SC1  23  0.0     
+ 24 SP2             11 ALA BB   24  0.0     
+ 25 TC3             11 ALA SC1  25  0.0     
+ 26 P2              12 MET BB   26  0.0     
+ 27 C6              12 MET SC1  27  0.0     
+ 28 P2              13 LYS BB   28  0.0     
+ 29 SC3             13 LYS SC1  29  0.0     
+ 30 SQ4p            13 LYS SC2  30  1.0     
+ 31 P2              14 ARG BB   31  0.0     
+ 32 SC3             14 ARG SC1  32  0.0     
+ 33 SQ3p            14 ARG SC2  33  1.0     
+ 34 P2              15 HIS BB   34  0.0     
+ 35 TC4             15 HIS SC1  35  0.0     
+ 36 TN6d            15 HIS SC2  36  0.0     
+ 37 TN5a            15 HIS SC3  37  0.0     
+ 38 SP1             16 GLY BB   38  0.0     
+ 39 P2              17 LEU BB   39  0.0     
+ 40 SC2             17 LEU SC1  40  0.0     
+ 41 P2              18 ASP BB   41  0.0     
+ 42 SQ5n            18 ASP SC1  42 -1.0     
+ 43 P2              19 ASN BB   43  0.0     
+ 44 SP5             19 ASN SC1  44  0.0     
+ 45 P2              20 TYR BB   45  0.0     
+ 46 TC4             20 TYR SC1  46  0.0     
+ 47 TC5             20 TYR SC2  47  0.0     
+ 48 TC5             20 TYR SC3  48  0.0     
+ 49 TN6             20 TYR SC4  49  0.0     
+ 50 P2              21 ARG BB   50  0.0     
+ 51 SC3             21 ARG SC1  51  0.0     
+ 52 SQ3p            21 ARG SC2  52  1.0     
+ 53 SP1             22 GLY BB   53  0.0     
+ 54 P2              23 TYR BB   54  0.0     
+ 55 TC4             23 TYR SC1  55  0.0     
+ 56 TC5             23 TYR SC2  56  0.0     
+ 57 TC5             23 TYR SC3  57  0.0     
+ 58 TN6             23 TYR SC4  58  0.0     
+ 59 P2              24 SER BB   59  0.0     
+ 60 TP1             24 SER SC1  60  0.0     
+ 61 P2              25 LEU BB   61  0.0     
+ 62 SC2             25 LEU SC1  62  0.0     
+ 63 SP1             26 GLY BB   63  0.0     
+ 64 P2              27 ASN BB   64  0.0     
+ 65 SP5             27 ASN SC1  65  0.0     
+ 66 P2              28 TRP BB   66  0.0     
+ 67 TC4             28 TRP SC1  67  0.0 36.0
+ 68 TN6d            28 TRP SC2  68  0.0 36.0
+ 69 TC5             28 TRP SC3  69  0.0  0.0
+ 70 TC5             28 TRP SC4  70  0.0 36.0
+ 71 TC5             28 TRP SC5  71  0.0 36.0
+ 72 SP2             29 VAL BB   72  0.0     
+ 73 SC3             29 VAL SC1  73  0.0     
+ 74 P2              30 CYS BB   74  0.0     
+ 75 TC6             30 CYS SC1  75  0.0     
+ 76 SP2             31 ALA BB   76  0.0     
+ 77 TC3             31 ALA SC1  77  0.0     
+ 78 SP2             32 ALA BB   78  0.0     
+ 79 TC3             32 ALA SC1  79  0.0     
+ 80 P2              33 LYS BB   80  0.0     
+ 81 SC3             33 LYS SC1  81  0.0     
+ 82 SQ4p            33 LYS SC2  82  1.0     
+ 83 P2              34 PHE BB   83  0.0     
+ 84 SC4             34 PHE SC1  84  0.0     
+ 85 TC5             34 PHE SC2  85  0.0     
+ 86 TC5             34 PHE SC3  86  0.0     
+ 87 P2              35 GLU BB   87  0.0     
+ 88 Q5n             35 GLU SC1  88 -1.0     
+ 89 P2              36 SER BB   89  0.0     
+ 90 TP1             36 SER SC1  90  0.0     
+ 91 P2              37 ASN BB   91  0.0     
+ 92 SP5             37 ASN SC1  92  0.0     
+ 93 P2              38 PHE BB   93  0.0     
+ 94 SC4             38 PHE SC1  94  0.0     
+ 95 TC5             38 PHE SC2  95  0.0     
+ 96 TC5             38 PHE SC3  96  0.0     
+ 97 P2              39 ASN BB   97  0.0     
+ 98 SP5             39 ASN SC1  98  0.0     
+ 99 P2              40 THR BB   99  0.0     
+100 SP1             40 THR SC1 100  0.0     
+101 P2              41 GLN BB  101  0.0     
+102 P5              41 GLN SC1 102  0.0     
+103 SP2             42 ALA BB  103  0.0     
+104 TC3             42 ALA SC1 104  0.0     
+105 P2              43 THR BB  105  0.0     
+106 SP1             43 THR SC1 106  0.0     
+107 P2              44 ASN BB  107  0.0     
+108 SP5             44 ASN SC1 108  0.0     
+109 P2              45 ARG BB  109  0.0     
+110 SC3             45 ARG SC1 110  0.0     
+111 SQ3p            45 ARG SC2 111  1.0     
+112 P2              46 ASN BB  112  0.0     
+113 SP5             46 ASN SC1 113  0.0     
+114 P2              47 THR BB  114  0.0     
+115 SP1             47 THR SC1 115  0.0     
+116 P2              48 ASP BB  116  0.0     
+117 SQ5n            48 ASP SC1 117 -1.0     
+118 SP1             49 GLY BB  118  0.0     
+119 P2              50 SER BB  119  0.0     
+120 TP1             50 SER SC1 120  0.0     
+121 P2              51 THR BB  121  0.0     
+122 SP1             51 THR SC1 122  0.0     
+123 P2              52 ASP BB  123  0.0     
+124 SQ5n            52 ASP SC1 124 -1.0     
+125 P2              53 TYR BB  125  0.0     
+126 TC4             53 TYR SC1 126  0.0     
+127 TC5             53 TYR SC2 127  0.0     
+128 TC5             53 TYR SC3 128  0.0     
+129 TN6             53 TYR SC4 129  0.0     
+130 SP1             54 GLY BB  130  0.0     
+131 P2              55 ILE BB  131  0.0     
+132 SC2             55 ILE SC1 132  0.0     
+133 P2              56 LEU BB  133  0.0     
+134 SC2             56 LEU SC1 134  0.0     
+135 P2              57 GLN BB  135  0.0     
+136 P5              57 GLN SC1 136  0.0     
+137 P2              58 ILE BB  137  0.0     
+138 SC2             58 ILE SC1 138  0.0     
+139 P2              59 ASN BB  139  0.0     
+140 SP5             59 ASN SC1 140  0.0     
+141 P2              60 SER BB  141  0.0     
+142 TP1             60 SER SC1 142  0.0     
+143 P2              61 ARG BB  143  0.0     
+144 SC3             61 ARG SC1 144  0.0     
+145 SQ3p            61 ARG SC2 145  1.0     
+146 P2              62 TRP BB  146  0.0     
+147 TC4             62 TRP SC1 147  0.0 36.0
+148 TN6d            62 TRP SC2 148  0.0 36.0
+149 TC5             62 TRP SC3 149  0.0  0.0
+150 TC5             62 TRP SC4 150  0.0 36.0
+151 TC5             62 TRP SC5 151  0.0 36.0
+152 P2              63 TRP BB  152  0.0     
+153 TC4             63 TRP SC1 153  0.0 36.0
+154 TN6d            63 TRP SC2 154  0.0 36.0
+155 TC5             63 TRP SC3 155  0.0  0.0
+156 TC5             63 TRP SC4 156  0.0 36.0
+157 TC5             63 TRP SC5 157  0.0 36.0
+158 P2              64 CYS BB  158  0.0     
+159 TC6             64 CYS SC1 159  0.0     
+160 P2              65 ASN BB  160  0.0     
+161 SP5             65 ASN SC1 161  0.0     
+162 P2              66 ASP BB  162  0.0     
+163 SQ5n            66 ASP SC1 163 -1.0     
+164 SP1             67 GLY BB  164  0.0     
+165 P2              68 ARG BB  165  0.0     
+166 SC3             68 ARG SC1 166  0.0     
+167 SQ3p            68 ARG SC2 167  1.0     
+168 P2              69 THR BB  168  0.0     
+169 SP1             69 THR SC1 169  0.0     
+170 SP2a            70 PRO BB  170  0.0     
+171 SC3             70 PRO SC1 171  0.0     
+172 SP1             71 GLY BB  172  0.0     
+173 P2              72 SER BB  173  0.0     
+174 TP1             72 SER SC1 174  0.0     
+175 P2              73 ARG BB  175  0.0     
+176 SC3             73 ARG SC1 176  0.0     
+177 SQ3p            73 ARG SC2 177  1.0     
+178 P2              74 ASN BB  178  0.0     
+179 SP5             74 ASN SC1 179  0.0     
+180 P2              75 LEU BB  180  0.0     
+181 SC2             75 LEU SC1 181  0.0     
+182 P2              76 CYS BB  182  0.0     
+183 TC6             76 CYS SC1 183  0.0     
+184 P2              77 ASN BB  184  0.0     
+185 SP5             77 ASN SC1 185  0.0     
+186 P2              78 ILE BB  186  0.0     
+187 SC2             78 ILE SC1 187  0.0     
+188 SP2a            79 PRO BB  188  0.0     
+189 SC3             79 PRO SC1 189  0.0     
+190 P2              80 CYS BB  190  0.0     
+191 TC6             80 CYS SC1 191  0.0     
+192 P2              81 SER BB  192  0.0     
+193 TP1             81 SER SC1 193  0.0     
+194 SP2             82 ALA BB  194  0.0     
+195 TC3             82 ALA SC1 195  0.0     
+196 P2              83 LEU BB  196  0.0     
+197 SC2             83 LEU SC1 197  0.0     
+198 P2              84 LEU BB  198  0.0     
+199 SC2             84 LEU SC1 199  0.0     
+200 P2              85 SER BB  200  0.0     
+201 TP1             85 SER SC1 201  0.0     
+202 P2              86 SER BB  202  0.0     
+203 TP1             86 SER SC1 203  0.0     
+204 P2              87 ASP BB  204  0.0     
+205 SQ5n            87 ASP SC1 205 -1.0     
+206 P2              88 ILE BB  206  0.0     
+207 SC2             88 ILE SC1 207  0.0     
+208 P2              89 THR BB  208  0.0     
+209 SP1             89 THR SC1 209  0.0     
+210 SP2             90 ALA BB  210  0.0     
+211 TC3             90 ALA SC1 211  0.0     
+212 P2              91 SER BB  212  0.0     
+213 TP1             91 SER SC1 213  0.0     
+214 SP2             92 VAL BB  214  0.0     
+215 SC3             92 VAL SC1 215  0.0     
+216 P2              93 ASN BB  216  0.0     
+217 SP5             93 ASN SC1 217  0.0     
+218 P2              94 CYS BB  218  0.0     
+219 TC6             94 CYS SC1 219  0.0     
+220 SP2             95 ALA BB  220  0.0     
+221 TC3             95 ALA SC1 221  0.0     
+222 P2              96 LYS BB  222  0.0     
+223 SC3             96 LYS SC1 223  0.0     
+224 SQ4p            96 LYS SC2 224  1.0     
+225 P2              97 LYS BB  225  0.0     
+226 SC3             97 LYS SC1 226  0.0     
+227 SQ4p            97 LYS SC2 227  1.0     
+228 P2              98 ILE BB  228  0.0     
+229 SC2             98 ILE SC1 229  0.0     
+230 SP2             99 VAL BB  230  0.0     
+231 SC3             99 VAL SC1 231  0.0     
+232 P2             100 SER BB  232  0.0     
+233 TP1            100 SER SC1 233  0.0     
+234 P2             101 ASP BB  234  0.0     
+235 SQ5n           101 ASP SC1 235 -1.0     
+236 SP1            102 GLY BB  236  0.0     
+237 P2             103 ASN BB  237  0.0     
+238 SP5            103 ASN SC1 238  0.0     
+239 SP1            104 GLY BB  239  0.0     
+240 P2             105 MET BB  240  0.0     
+241 C6             105 MET SC1 241  0.0     
+242 P2             106 ASN BB  242  0.0     
+243 SP5            106 ASN SC1 243  0.0     
+244 SP2            107 ALA BB  244  0.0     
+245 TC3            107 ALA SC1 245  0.0     
+246 P2             108 TRP BB  246  0.0     
+247 TC4            108 TRP SC1 247  0.0 36.0
+248 TN6d           108 TRP SC2 248  0.0 36.0
+249 TC5            108 TRP SC3 249  0.0  0.0
+250 TC5            108 TRP SC4 250  0.0 36.0
+251 TC5            108 TRP SC5 251  0.0 36.0
+252 SP2            109 VAL BB  252  0.0     
+253 SC3            109 VAL SC1 253  0.0     
+254 SP2            110 ALA BB  254  0.0     
+255 TC3            110 ALA SC1 255  0.0     
+256 P2             111 TRP BB  256  0.0     
+257 TC4            111 TRP SC1 257  0.0 36.0
+258 TN6d           111 TRP SC2 258  0.0 36.0
+259 TC5            111 TRP SC3 259  0.0  0.0
+260 TC5            111 TRP SC4 260  0.0 36.0
+261 TC5            111 TRP SC5 261  0.0 36.0
+262 P2             112 ARG BB  262  0.0     
+263 SC3            112 ARG SC1 263  0.0     
+264 SQ3p           112 ARG SC2 264  1.0     
+265 P2             113 ASN BB  265  0.0     
+266 SP5            113 ASN SC1 266  0.0     
+267 P2             114 ARG BB  267  0.0     
+268 SC3            114 ARG SC1 268  0.0     
+269 SQ3p           114 ARG SC2 269  1.0     
+270 P2             115 CYS BB  270  0.0     
+271 TC6            115 CYS SC1 271  0.0     
+272 P2             116 LYS BB  272  0.0     
+273 SC3            116 LYS SC1 273  0.0     
+274 SQ4p           116 LYS SC2 274  1.0     
+275 SP1            117 GLY BB  275  0.0     
+276 P2             118 THR BB  276  0.0     
+277 SP1            118 THR SC1 277  0.0     
+278 P2             119 ASP BB  278  0.0     
+279 SQ5n           119 ASP SC1 279 -1.0     
+280 SP2            120 VAL BB  280  0.0     
+281 SC3            120 VAL SC1 281  0.0     
+282 P2             121 GLN BB  282  0.0     
+283 P5             121 GLN SC1 283  0.0     
+284 SP2            122 ALA BB  284  0.0     
+285 TC3            122 ALA SC1 285  0.0     
+286 P2             123 TRP BB  286  0.0     
+287 TC4            123 TRP SC1 287  0.0 36.0
+288 TN6d           123 TRP SC2 288  0.0 36.0
+289 TC5            123 TRP SC3 289  0.0  0.0
+290 TC5            123 TRP SC4 290  0.0 36.0
+291 TC5            123 TRP SC5 291  0.0 36.0
+292 P2             124 ILE BB  292  0.0     
+293 SC2            124 ILE SC1 293  0.0     
+294 P2             125 ARG BB  294  0.0     
+295 SC3            125 ARG SC1 295  0.0     
+296 SQ3p           125 ARG SC2 296  1.0     
+297 SP1            126 GLY BB  297  0.0     
+298 P2             127 CYS BB  298  0.0     
+299 TC6            127 CYS SC1 299  0.0     
+300 P2             128 ARG BB  300  0.0     
+301 SC3            128 ARG SC1 301  0.0     
+302 SQ3p           128 ARG SC2 302  1.0     
+303 Q5             129 LEU BB  303   -1     
+304 SC2            129 LEU SC1 304  0.0     
+305 molecule_0_1     1 LYS CA  305    0  0.0
+306 molecule_0_2     2 VAL CA  306    0  0.0
+307 molecule_0_3     3 PHE CA  307    0  0.0
+308 molecule_0_4     4 GLY CA  308    0  0.0
+309 molecule_0_5     5 ARG CA  309    0  0.0
+310 molecule_0_6     6 CYS CA  310    0  0.0
+311 molecule_0_7     7 GLU CA  311    0  0.0
+312 molecule_0_8     8 LEU CA  312    0  0.0
+313 molecule_0_9     9 ALA CA  313    0  0.0
+314 molecule_0_10   10 ALA CA  314    0  0.0
+315 molecule_0_11   11 ALA CA  315    0  0.0
+316 molecule_0_12   12 MET CA  316    0  0.0
+317 molecule_0_13   13 LYS CA  317    0  0.0
+318 molecule_0_14   14 ARG CA  318    0  0.0
+319 molecule_0_15   15 HIS CA  319    0  0.0
+320 molecule_0_16   16 GLY CA  320    0  0.0
+321 molecule_0_17   17 LEU CA  321    0  0.0
+322 molecule_0_18   18 ASP CA  322    0  0.0
+323 molecule_0_19   19 ASN CA  323    0  0.0
+324 molecule_0_20   20 TYR CA  324    0  0.0
+325 molecule_0_21   21 ARG CA  325    0  0.0
+326 molecule_0_22   22 GLY CA  326    0  0.0
+327 molecule_0_23   23 TYR CA  327    0  0.0
+328 molecule_0_24   24 SER CA  328    0  0.0
+329 molecule_0_25   25 LEU CA  329    0  0.0
+330 molecule_0_26   26 GLY CA  330    0  0.0
+331 molecule_0_27   27 ASN CA  331    0  0.0
+332 molecule_0_28   28 TRP CA  332    0  0.0
+333 molecule_0_29   29 VAL CA  333    0  0.0
+334 molecule_0_30   30 CYS CA  334    0  0.0
+335 molecule_0_31   31 ALA CA  335    0  0.0
+336 molecule_0_32   32 ALA CA  336    0  0.0
+337 molecule_0_33   33 LYS CA  337    0  0.0
+338 molecule_0_34   34 PHE CA  338    0  0.0
+339 molecule_0_35   35 GLU CA  339    0  0.0
+340 molecule_0_36   36 SER CA  340    0  0.0
+341 molecule_0_37   37 ASN CA  341    0  0.0
+342 molecule_0_38   38 PHE CA  342    0  0.0
+343 molecule_0_39   39 ASN CA  343    0  0.0
+344 molecule_0_40   40 THR CA  344    0  0.0
+345 molecule_0_41   41 GLN CA  345    0  0.0
+346 molecule_0_42   42 ALA CA  346    0  0.0
+347 molecule_0_43   43 THR CA  347    0  0.0
+348 molecule_0_44   44 ASN CA  348    0  0.0
+349 molecule_0_45   45 ARG CA  349    0  0.0
+350 molecule_0_46   46 ASN CA  350    0  0.0
+351 molecule_0_47   47 THR CA  351    0  0.0
+352 molecule_0_48   48 ASP CA  352    0  0.0
+353 molecule_0_49   49 GLY CA  353    0  0.0
+354 molecule_0_50   50 SER CA  354    0  0.0
+355 molecule_0_51   51 THR CA  355    0  0.0
+356 molecule_0_52   52 ASP CA  356    0  0.0
+357 molecule_0_53   53 TYR CA  357    0  0.0
+358 molecule_0_54   54 GLY CA  358    0  0.0
+359 molecule_0_55   55 ILE CA  359    0  0.0
+360 molecule_0_56   56 LEU CA  360    0  0.0
+361 molecule_0_57   57 GLN CA  361    0  0.0
+362 molecule_0_58   58 ILE CA  362    0  0.0
+363 molecule_0_59   59 ASN CA  363    0  0.0
+364 molecule_0_60   60 SER CA  364    0  0.0
+365 molecule_0_61   61 ARG CA  365    0  0.0
+366 molecule_0_62   62 TRP CA  366    0  0.0
+367 molecule_0_63   63 TRP CA  367    0  0.0
+368 molecule_0_64   64 CYS CA  368    0  0.0
+369 molecule_0_65   65 ASN CA  369    0  0.0
+370 molecule_0_66   66 ASP CA  370    0  0.0
+371 molecule_0_67   67 GLY CA  371    0  0.0
+372 molecule_0_68   68 ARG CA  372    0  0.0
+373 molecule_0_69   69 THR CA  373    0  0.0
+374 molecule_0_70   70 PRO CA  374    0  0.0
+375 molecule_0_71   71 GLY CA  375    0  0.0
+376 molecule_0_72   72 SER CA  376    0  0.0
+377 molecule_0_73   73 ARG CA  377    0  0.0
+378 molecule_0_74   74 ASN CA  378    0  0.0
+379 molecule_0_75   75 LEU CA  379    0  0.0
+380 molecule_0_76   76 CYS CA  380    0  0.0
+381 molecule_0_77   77 ASN CA  381    0  0.0
+382 molecule_0_78   78 ILE CA  382    0  0.0
+383 molecule_0_79   79 PRO CA  383    0  0.0
+384 molecule_0_80   80 CYS CA  384    0  0.0
+385 molecule_0_81   81 SER CA  385    0  0.0
+386 molecule_0_82   82 ALA CA  386    0  0.0
+387 molecule_0_83   83 LEU CA  387    0  0.0
+388 molecule_0_84   84 LEU CA  388    0  0.0
+389 molecule_0_85   85 SER CA  389    0  0.0
+390 molecule_0_86   86 SER CA  390    0  0.0
+391 molecule_0_87   87 ASP CA  391    0  0.0
+392 molecule_0_88   88 ILE CA  392    0  0.0
+393 molecule_0_89   89 THR CA  393    0  0.0
+394 molecule_0_90   90 ALA CA  394    0  0.0
+395 molecule_0_91   91 SER CA  395    0  0.0
+396 molecule_0_92   92 VAL CA  396    0  0.0
+397 molecule_0_93   93 ASN CA  397    0  0.0
+398 molecule_0_94   94 CYS CA  398    0  0.0
+399 molecule_0_95   95 ALA CA  399    0  0.0
+400 molecule_0_96   96 LYS CA  400    0  0.0
+401 molecule_0_97   97 LYS CA  401    0  0.0
+402 molecule_0_98   98 ILE CA  402    0  0.0
+403 molecule_0_99   99 VAL CA  403    0  0.0
+404 molecule_0_100 100 SER CA  404    0  0.0
+405 molecule_0_101 101 ASP CA  405    0  0.0
+406 molecule_0_102 102 GLY CA  406    0  0.0
+407 molecule_0_103 103 ASN CA  407    0  0.0
+408 molecule_0_104 104 GLY CA  408    0  0.0
+409 molecule_0_105 105 MET CA  409    0  0.0
+410 molecule_0_106 106 ASN CA  410    0  0.0
+411 molecule_0_107 107 ALA CA  411    0  0.0
+412 molecule_0_108 108 TRP CA  412    0  0.0
+413 molecule_0_109 109 VAL CA  413    0  0.0
+414 molecule_0_110 110 ALA CA  414    0  0.0
+415 molecule_0_111 111 TRP CA  415    0  0.0
+416 molecule_0_112 112 ARG CA  416    0  0.0
+417 molecule_0_113 113 ASN CA  417    0  0.0
+418 molecule_0_114 114 ARG CA  418    0  0.0
+419 molecule_0_115 115 CYS CA  419    0  0.0
+420 molecule_0_116 116 LYS CA  420    0  0.0
+421 molecule_0_117 117 GLY CA  421    0  0.0
+422 molecule_0_118 118 THR CA  422    0  0.0
+423 molecule_0_119 119 ASP CA  423    0  0.0
+424 molecule_0_120 120 VAL CA  424    0  0.0
+425 molecule_0_121 121 GLN CA  425    0  0.0
+426 molecule_0_122 122 ALA CA  426    0  0.0
+427 molecule_0_123 123 TRP CA  427    0  0.0
+428 molecule_0_124 124 ILE CA  428    0  0.0
+429 molecule_0_125 125 ARG CA  429    0  0.0
+430 molecule_0_126 126 GLY CA  430    0  0.0
+431 molecule_0_127 127 CYS CA  431    0  0.0
+432 molecule_0_128 128 ARG CA  432    0  0.0
+433 molecule_0_129 129 LEU CA  433    0  0.0
 
 [ bonds ]
 ; Backbone bonds

@@ -3,10 +3,10 @@
 
  #include "go_atomtypes.itp"
  #include "go_nbparams.itp"
-#include "molecule.itp"
+#include "molecule_0.itp"
 
 [ system ]
 Title of the system
 
 [ molecules ]
-molecule      1
+molecule_0    1
