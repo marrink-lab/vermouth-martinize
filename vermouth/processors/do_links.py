@@ -23,6 +23,10 @@ from numpy import sign
 from ..molecule import attributes_match
 from .processor import Processor
 
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
+
 
 def _atoms_match(node1, node2):
     # node1 is molecule, node2 is link
@@ -315,6 +319,12 @@ class DoLinks(Processor):
                 for inter_type, interactions in link.interactions.items():
                     for interaction in interactions:
                         interaction = _build_link_interaction_from(molecule, interaction, match)
+                        if "comment" in interaction.meta:
+                            if interaction.meta["comment"] == "Disulfide bridge":
+                                res1 = molecule.nodes[interaction.atoms[0]].get("resid")
+                                res2 = molecule.nodes[interaction.atoms[1]].get("resid")
+                                msg = f"Disulfide bridge found between residues {res1} and {res2}"
+                                LOGGER.info(msg)
                         molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
 
                 for loglevel, entries in link.log_entries.items():
