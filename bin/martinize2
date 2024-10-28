@@ -565,12 +565,6 @@ def entry():
         help=("The strength of the Go model structural bias in kJ/mol."),
     )
     go_group.add_argument(
-        "-go-moltype",
-        dest="govs_moltype",
-        default="molecule_0",
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
-    )
-    go_group.add_argument(
         "-go-low",
         dest="go_low",
         type=float,
@@ -1000,11 +994,12 @@ def entry():
 
     # Generate the Go model if required
     if args.go:
+        go_name_prefix = args.molname
         LOGGER.info("Reading Go model contact map.", type="step")
         go_map = read_go_map(args.go)
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
-                              moltype=args.govs_moltype,
+                              moltype=go_name_prefix,
                               contact_map=go_map,
                               cutoff_short=args.go_low,
                               cutoff_long=args.go_up,
