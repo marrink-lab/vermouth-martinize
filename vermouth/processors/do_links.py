@@ -23,10 +23,6 @@ from numpy import sign
 from ..molecule import attributes_match
 from .processor import Processor
 
-from ..log_helpers import StyleAdapter, get_logger
-
-LOGGER = StyleAdapter(get_logger(__name__))
-
 
 def _atoms_match(node1, node2):
     # node1 is molecule, node2 is link
