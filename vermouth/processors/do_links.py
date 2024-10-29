@@ -321,15 +321,14 @@ class DoLinks(Processor):
                         interaction = _build_link_interaction_from(molecule, interaction, match)
                         if "comment" in interaction.meta:
                             if interaction.meta["comment"] == "Disulfide bridge":
-                                msg = ("Disulfide bridge found between residues "
-                                       f"{molecule.nodes[interaction.atoms[0]].get('chain')}-"
-                                       f"{molecule.nodes[interaction.atoms[0]].get('resname')}"
-                                       f"{molecule.nodes[interaction.atoms[0]].get('resid')} and "
-                                       f"{molecule.nodes[interaction.atoms[1]].get('chain')}-"
-                                       f"{molecule.nodes[interaction.atoms[1]].get('resname')}"
-                                       f"{molecule.nodes[interaction.atoms[1]].get('resid')}"
-                                       )
-                                LOGGER.info(msg)
+                                LOGGER.info("Disulfide bridge found between residues {}-{}{} and {}-{}{}",
+                                             molecule.nodes[interaction.atoms[0]].get('chain'),
+                                             molecule.nodes[interaction.atoms[0]].get('resname'),
+                                             molecule.nodes[interaction.atoms[0]].get('resid'),
+                                             molecule.nodes[interaction.atoms[1]].get('chain'),
+                                             molecule.nodes[interaction.atoms[1]].get('resname'),
+                                             molecule.nodes[interaction.atoms[1]].get('resid')
+                                             )
                         molecule.add_or_replace_interaction(inter_type, *interaction, link.citations)
 
                 for loglevel, entries in link.log_entries.items():
