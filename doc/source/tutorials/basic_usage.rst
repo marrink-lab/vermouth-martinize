@@ -120,7 +120,7 @@ are described in both the
 should be an essential route in to conducting simulations with the martini force field.
 
 We cover the documentation of these features in greater detail in the pages about
-:ref:`Elastic Networks <elastic_networks>` and :ref:`Gō models <go_models>`.
+:ref:`Elastic Networks <_elastic>` and :ref:`Gō models <_go>`.
 
 Cysteine bridges
 ----------------

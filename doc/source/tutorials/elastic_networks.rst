@@ -1,3 +1,4 @@
+.. _elastic:
 ================
 Elastic Networks
 ================
