@@ -8,3 +8,4 @@ martinize2
 -go ../map.map 
 -noscfix
 -cys none
+-name molecule_0
