@@ -578,11 +578,10 @@ def read_rtp(lines, force_field):
 
     # 1-4 pair link:
     pair_link = Link(nx.path_graph(4))
+    pair_link.symmetric = True
     pair_link.add_interaction('pair', atoms=(0, 3), parameters=[1])
     if not bondedtypes.HH14:
         pair_link.nodes[0]['element'] = Regex(r'[^H]')
-        # pair_link.patterns.append([(3, {'element': Regex(r'[^H]')})])
-
     links.append(pair_link)
     force_field.blocks.update(blocks)
     force_field.links.extend(links)

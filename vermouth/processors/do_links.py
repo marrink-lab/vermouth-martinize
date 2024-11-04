@@ -300,8 +300,10 @@ class DoLinks(Processor):
         for link in links:
             if link.symmetric:
                 ismags = ISMAGS(link, link, node_match=eq, edge_match=eq)
-                _, cosets = ismags.analyze_symmetry(link, link._sgn_paritions, link._sge_colors)
+                _, cosets = ismags.analyze_symmetry(link, ismags._sgn_partitions, ismags._sge_colors)
                 constraints = ismags._make_constraints(cosets)
+            else:
+                constraints = []
 
             matches = match_link(molecule, link)
             for match in matches:
