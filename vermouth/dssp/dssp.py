@@ -42,9 +42,6 @@ else:
 LOGGER = StyleAdapter(get_logger(__name__))
 SUPPORTED_DSSP_VERSIONS = ("2.2.1", "3.0.0")
 
-SS_CG = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
-         'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
-
 
 class DSSPError(Exception):
     """
