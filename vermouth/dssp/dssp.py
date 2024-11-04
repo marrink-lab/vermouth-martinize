@@ -42,6 +42,9 @@ else:
 LOGGER = StyleAdapter(get_logger(__name__))
 SUPPORTED_DSSP_VERSIONS = ("2.2.1", "3.0.0")
 
+SS_CG = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
+         'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
+
 
 class DSSPError(Exception):
     """
@@ -406,15 +409,13 @@ def convert_dssp_to_martini(sequence):
         A sequence of secondary structures usable for martini. One letter per
         residue.
     """
-    ss_cg = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
-             'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
     patterns = collections.OrderedDict([
         ('.H.', '.3.'), ('.HH.', '.33.'), ('.HHH.', '.333.'),
         ('.HHHH.', '.3333.'), ('.HHHHH.', '.13332.'),
         ('.HHHHHH.', '.113322.'), ('.HHHHHHH.', '.1113222.'),
         ('.HHHH', '.1111'), ('HHHH.', '2222.'),
     ])
-    cg_sequence = ''.join(ss_cg[secstruct] for secstruct in sequence)
+    cg_sequence = ''.join(SS_CG[secstruct] for secstruct in sequence)
     wildcard_sequence = ''.join('H' if secstruct == 'H' else '.'
                                 for secstruct in cg_sequence)
     # Flank the sequence with dots. Otherwise in a sequence consisting of only
@@ -455,7 +456,7 @@ def sequence_from_residues(molecule, attribute, default=None):
         # TODO: Make sure they're the same for every node in residue.
         first_name = residue_nodes[0]
         first_node = molecule.nodes[first_name]
-        value = first_node.get(attribute, default)
+        value = SS_CG[first_node.get(attribute, default)]
         yield value
 
 

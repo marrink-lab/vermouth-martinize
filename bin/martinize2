@@ -955,16 +955,6 @@ def entry():
                            'for this force field',
                            type="missing-feature")
 
-    ss_sequence = list(
-        itertools.chain(
-            *(
-                dssp.sequence_from_residues(molecule, "secstruct")
-                for molecule in system.molecules
-                if selectors.is_protein(molecule)
-            )
-        )
-    )
-
     if args.cystein_bridge == "none":
         vermouth.RemoveCysteinBridgeEdges().run_system(system)
     elif args.cystein_bridge != "auto":
@@ -978,6 +968,16 @@ def entry():
         delete_unknown=True,
         idrs=args.idr_tune,
         disordered_regions=args.water_idrs
+    )
+
+    ss_sequence = list(
+        itertools.chain(
+            *(
+                dssp.sequence_from_residues(molecule, "cgsecstruct")
+                for molecule in system.molecules
+                if selectors.is_protein(molecule)
+            )
+        )
     )
 
     # Apply position restraints if required.
