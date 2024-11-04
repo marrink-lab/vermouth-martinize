@@ -1006,6 +1006,12 @@ def entry():
         defines = ("GO_VIRT",)
         itp_paths = {"atomtypes": "go_atomtypes.itp",
                      "nonbond_params": "go_nbparams.itp"}
+        if not args.water_bias:
+            # in this situation, args.water_bias = []
+            vermouth.processors.ComputeWaterBias(args.water_bias,
+                                                 {s:float(eps) for s, eps in args.water_bias_eps},
+                                                 [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                                ).run_system(system)
     else:
         # don't write non-bonded interactions
         itp_paths = []
