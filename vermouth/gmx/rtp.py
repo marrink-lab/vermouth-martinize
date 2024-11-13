@@ -18,15 +18,12 @@ Handle the RTP format from Gromacs.
 
 import collections
 import copy
-import itertools
 import networkx as nx
 
-from ..molecule import Block, Link, Interaction, Regex
+from ..molecule import Block, Link, Interaction
 from .. import utils
 
 __all__ = ['read_rtp']
-
-from ..utils import first_alpha
 
 # Name of the subsections in RTP files.
 # Names starting with a '_' are for internal use.
@@ -204,6 +201,7 @@ def _parse_bondedtypes(section):
     # Default taken from
     # 'src/gromacs/gmxpreprocess/resall.cpp::read_resall' in the Gromacs
     # source code.
+
     defaults = _BondedTypes(bonds=1, angles=1, dihedrals=1,
                             impropers=1, all_dihedrals=0,
                             nrexcl=3, HH14=1, remove_dih=1)
@@ -237,18 +235,6 @@ def _parse_bondedtypes(section):
     return bondedtypes
 
 
-def _count_hydrogens(names):
-    return len([name for name in names if utils.first_alpha(name) == 'H'])
-
-
-def _keep_dihedral(center, block, bondedtypes):
-    if (not bondedtypes.all_dihedrals) and block.has_dihedral_around(center):
-        return False
-    if bondedtypes.remove_dih and block.has_improper_around(center):
-        return False
-    return True
-
-
 def _complete_block(block, bondedtypes):
     """
     Add information from the bondedtypes section to a block.
@@ -257,49 +243,6 @@ def _complete_block(block, bondedtypes):
     interactions.
     """
     block.make_edges_from_interactions()
-
-    # Generate all (missing) angles
-    existing_angles = {tuple(i.atoms) for i in block.get_interaction("angles")}
-    for atoms in block.guess_angles():
-        if tuple(atoms) in existing_angles or tuple(reversed(atoms)) in existing_angles:
-            continue
-        else:
-            block.add_interaction("angles", atoms, [])
-            existing_angles.add(tuple(atoms))
-
-    # Generate missing dihedrals
-    # As pdb2gmx generates all the possible dihedral angles by default,
-    # RTP files are written assuming they will be generated. A RTP file
-    # have some control over these dihedral angles through the bondedtypes
-    # section.
-    all_dihedrals = []
-    for center, dihedrals in itertools.groupby(
-            sorted(block.guess_dihedrals(), key=_dihedral_sorted_center),
-            _dihedral_sorted_center):
-        if _keep_dihedral(center, block, bondedtypes):
-            # TODO: Also sort the dihedrals by index.
-            # See src/gromacs/gmxpreprocess/gen_add.cpp::dcomp in the
-            # Gromacs source code (see version 2016.3 for instance).
-            atoms = sorted(dihedrals, key=_count_hydrogens)[0]
-            all_dihedrals.append(Interaction(atoms=atoms, parameters=[], meta={}))
-    # TODO: Sort the dihedrals by index
-    block.interactions['dihedrals'] = (
-        block.interactions.get('dihedrals', []) + all_dihedrals
-    )
-
-    # https://manual.gromacs.org/current/reference-manual/file-formats.html#rtp
-    # Pair interactions are generated for all pairs of atoms which are separated
-    # by 3 bonds (except pairs of hydrogens).
-    # hydrogens = {n for n in block if block.nodes[n].get('element', first_alpha(n)) == 'H'}
-    # distances = dict(nx.shortest_path_length(block))
-    # for n_idx in block:
-    #     for n_jdx in block:
-    #         if n_idx >= n_jdx:
-    #             continue
-    #         # 1-4 pairs have distance 3
-    #         if ((distances[n_idx].get(n_jdx, -1) == 3) and
-    #                 (bondedtypes.HH14 or not (n_idx in hydrogens and n_jdx in hydrogens))):
-    #             block.add_interaction('pair', atoms=(n_idx, n_jdx), parameters=[1])
 
     # Add function types to the interaction parameters. This is done as a
     # post processing step to cluster as much interaction specific code
@@ -354,7 +297,8 @@ def _split_blocks_and_links(pre_blocks):
     for name, pre_block in pre_blocks.items():
         block, link = _split_block_and_link(pre_block)
         blocks[name] = block
-        links.append(link)
+        if link:
+            links.append(link)
     return blocks, links
 
 
@@ -397,7 +341,6 @@ def _split_block_and_link(pre_block):
 
     link_atoms = set()
 
-    do_print = pre_block.force_field.name == 'charmm36-jul2022.ff' and pre_block.name == 'ALA'
     for _, interactions in pre_block.interactions.items():
         for interaction in interactions:
             # Atoms that are not defined in the atoms section but only in interactions
@@ -405,52 +348,15 @@ def _split_block_and_link(pre_block):
             atomnames = [pre_block.nodes[n_idx].get('atomname') or n_idx for n_idx in interaction.atoms]
             if any(atomname[0] in '+-' for atomname in atomnames):
                 link_atoms.update(interaction.atoms)
+    # Here we make 1 link consisting of all the atoms in interactions that
+    # contain at least one atom from a neighbouring residue, which may be an
+    # issue since it constrains where the link applies.
     link = Link(pre_block.subgraph(link_atoms))
-
 
     block = pre_block
     block.remove_nodes_from([n for n in pre_block if pre_block.nodes[n].get('atomname', n)[0] in '+-'])
     for node in block:
         block.nodes[node]['resname'] = block.name
-
-    # Filter the particles from neighboring residues out of the block.
-    # for atom in pre_block.atoms:
-    #     if not atom['atomname'].startswith('+-'):
-    #         atom['resname'] = pre_block.name
-    #         block.add_atom(atom)
-    #     link.add_node(atom['atomname'])
-    #
-    # Create the edges of the link and block based on the edges in the pre-block.
-    # This will create too many edges in the link, but the useless ones will be
-    # pruned latter.
-    # link.add_edges_from(pre_block.edges)
-    # block.add_edges_from(edge for edge in pre_block.edges
-    #                      if not any(node[0] in '+-' for node in edge))
-
-    # Split the interactions from the pre-block between the block (for
-    # intra-residue interactions) and the link (for inter-residues ones).
-    # The "relevant_atoms" set keeps track of what particles are
-    # involved in the link. This will allow to prune the link without
-    # iterating again through its interactions.
-    # relevant_atoms = set()
-    # for name, interactions in pre_block.interactions.items():
-    #     for interaction in interactions:
-    #         for_link = any(atom[0] in '+-' for atom in interaction.atoms)
-    #         if for_link:
-    #             link.interactions[name].append(interaction)
-    #             relevant_atoms.update(interaction.atoms)
-    #         else:
-    #             block.interactions[name].append(interaction)
-
-    # Prune the link to keep only the edges and particles that are
-    # relevant.
-    # nodes = set(link.nodes())
-    # link.remove_nodes_from(nodes - relevant_atoms)
-    # Some interactions do not generate nodes (impropers for instance). If a
-    # node is only described in one of such interactions, then the node never
-    # appears in the link. Here we make sure these nodes exists even if they
-    # are note connected.
-    # link.add_nodes_from(relevant_atoms)
 
     # Atoms from a links are matched against a molecule based on its node
     # attributes. The name is a primary criterion, but other criteria can be
@@ -489,8 +395,6 @@ def _split_block_and_link(pre_block):
         for interaction in interactions:
             atoms = tuple(relabel_mapping[atom] for atom in interaction.atoms)
             if not any(link.nodes[node]['order'] for node in atoms):
-                if do_print:
-                    print(f'Skipping {interaction}')
                 continue
             new_interactions[name].append(Interaction(
                 atoms=atoms,
@@ -498,13 +402,9 @@ def _split_block_and_link(pre_block):
                 meta=interaction.meta
             ))
     link.interactions = new_interactions
-    if do_print:
-        print(link.interactions)
 
     # Revert the interactions back to regular dicts to avoid creating
     # keys when querying them.
-    if do_print:
-        print(block.interactions['angles'])
     block.interactions = dict(block.interactions)
     link.interactions = dict(link.interactions)
     return block, link
@@ -516,11 +416,6 @@ def _clean_lines(lines):
         splitted = line.split(';', 1)
         if splitted[0].strip():
             yield splitted[0]
-
-
-def _dihedral_sorted_center(atoms):
-    #return sorted(atoms[1:-1])
-    return atoms[1:-1]
 
 
 def read_rtp(lines, force_field):
@@ -576,12 +471,6 @@ def read_rtp(lines, force_field):
     # blocks and links.
     blocks, links = _split_blocks_and_links(pre_blocks)
 
-    # 1-4 pair link:
-    pair_link = Link(nx.path_graph(4))
-    pair_link.symmetric = True
-    pair_link.add_interaction('pair', atoms=(0, 3), parameters=[1])
-    if not bondedtypes.HH14:
-        pair_link.nodes[0]['element'] = Regex(r'[^H]')
-    links.append(pair_link)
     force_field.blocks.update(blocks)
     force_field.links.extend(links)
+    force_field.variables['bondedtypes'] = bondedtypes
