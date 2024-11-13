@@ -772,8 +772,6 @@ class Molecule(nx.Graph):
                 # Renumber any existing formatting maps
                 fmt_args = [{name: correspondence[old] for (name, old) in fmt_arg.items()} for fmt_arg in fmt_args]
                 self.log_entries[loglevel][entry] += fmt_args + [correspondence]
-        if 'cmap' in molecule.interactions:
-            print(molecule.interactions['cmap'])
         return correspondence
 
     def share_moltype_with(self, other):
@@ -1311,7 +1309,6 @@ class Link(Block):
             'molecule_meta': {},
             'patterns': [],
             'features': set(),
-            'symmetric': False,
         }
         self._set_defaults(defaults)
         self._apply_to_all_nodes = {}
