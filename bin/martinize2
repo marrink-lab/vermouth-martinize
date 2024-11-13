@@ -22,13 +22,12 @@ import argparse
 import functools
 import logging
 import itertools
-import textwrap
 from pathlib import Path
 import sys
 import networkx as nx
 import vermouth
 import vermouth.forcefield
-from vermouth.file_writer import deferred_open, DeferredFileWriter
+from vermouth.file_writer import DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
@@ -51,7 +50,6 @@ from vermouth.map_input import (
 )
 from vermouth.rcsu.contact_map import read_go_map
 from vermouth.rcsu.go_pipeline import GoPipeline
-from vermouth.citation_parser import citation_formatter
 from vermouth.gmx.topology import write_gmx_topology
 
 # TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
