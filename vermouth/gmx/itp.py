@@ -218,10 +218,12 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
         # object to distinguish them from the proper dihedrals. Yet, they
         # should be written under the [ dihedrals ] section of the ITP file.
         if name == 'impropers':
-            name = 'dihedrals'
-        outfile.write('[ {} ]\n'.format(name))
+            section_name = 'dihedrals'
+        else:
+            section_name = name
+        outfile.write('[ {} ]\n'.format(section_name))
         seen_sections.add(name)
-        for line in pre_section_lines.get(name, []):
+        for line in pre_section_lines.get(section_name, []):
             outfile.write(line + '\n')
         interactions_group_sorted = sorted(
             interactions,
