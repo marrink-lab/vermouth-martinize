@@ -154,7 +154,7 @@ Molecule naming
 ---------------
 
 By default, the molecules in your system will be named `molecule_{0..n}`
-(i.e. `molecule_0`, `molecule_1`, etc.), where `n` is the number of molecules you have in the system.
+(*i.e.* `molecule_0`, `molecule_1`, etc.), where `n` is the number of molecules you have in the system.
 
 To change this, the `-name` flag can be used so that your the prefix is specified how you want. For
 example, the heterotetrameric protein `Sorbitol dehydrogenase <https://www.rcsb.org/structure/1pl7>`_
@@ -168,7 +168,7 @@ the `-name` flag can be used:
 
 In this case, the molecules will be renamed to `SDH_{0..n}` to indicate that they form Sorbitol
 dehydrogenase. Note that this feature is also important when the Gō model is used to ensure
-unique atom names for the Gō sites generated.
+unique atom names for the Gō sites are generated.
 
 Citations
 ---------
