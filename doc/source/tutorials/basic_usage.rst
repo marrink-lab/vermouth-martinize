@@ -150,6 +150,26 @@ automatically identified, a distance in nm can be supplied to `-cys`, e.g.:
 
 will look for cysteines within 5 nm of each other and apply the same disulfide bond as before.
 
+Molecule naming
+---------------
+
+By default, the molecules in your system will be named `molecule_{0..n}`
+(i.e. `molecule_0`, `molecule_1`, etc.), where `n` is the number of molecules you have in the system.
+
+To change this, the `-name` flag can be used so that your the prefix is specified how you want. For
+example, the heterotetrameric protein `Sorbitol dehydrogenase <https://www.rcsb.org/structure/1pl7>`_
+would produce 4 molecules called `molecule_0`, `molecule_1`, `molecule_2`, and `molecule_3`, each
+with their own `.itp` file (unless the `-merge` flag was used). If one were to use this topology
+along with proteins martinized separately, there will be multiple molecules called `molecule_0` in
+the system, which will raise an error in gromacs at the preprocessing (grompp) stage. To solve this,
+the `-name` flag can be used:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -name SDH``
+
+In this case, the molecules will be renamed to `SDH_{0..n}` to indicate that they form Sorbitol
+dehydrogenase. Note that this feature is also important when the Gō model is used to ensure
+unique atom names for the Gō sites generated.
+
 Citations
 ---------
 
