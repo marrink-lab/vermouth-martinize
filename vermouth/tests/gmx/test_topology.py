@@ -193,9 +193,6 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
 
     reference =f"""#define random
 #include "martini.itp"
-
-#include "{tmp_path}/atomtypes.itp"
-#include "{tmp_path}/nonbond_params.itp"
 #include "molecule_0.itp"
 
 [ system ]
