@@ -46,7 +46,7 @@ class ComputeStructuralGoBias(Processor):
     replacement in the GoPipeline.
     """
     def __init__(self,
-                 contact_map,
+                 # contact_map,
                  cutoff_short,
                  cutoff_long,
                  go_eps,
@@ -85,7 +85,7 @@ class ComputeStructuralGoBias(Processor):
             magic number for Go contacts from the old
             GoVirt script.
         """
-        self.contact_map = contact_map
+        # self.contact_map = contact_map
         self.cutoff_short = cutoff_short
         self.cutoff_long = cutoff_long
         self.go_eps = go_eps
@@ -137,7 +137,7 @@ class ComputeStructuralGoBias(Processor):
         """
         Select all contacts from the contact map
         that according to their distance and graph
-        connectivity are elegible to form a Go
+        connectivity are eligible to form a Go
         bond and create exclusions between the
         backbone beads of those contacts.
 
@@ -150,22 +150,22 @@ class ComputeStructuralGoBias(Processor):
         list[(collections.abc.Hashable, collections.abc.Hashable, float)]
             list of node keys and distance
         """
-        # distance_matrix of elegible pairs as tuple(node, node, dist)
+        # distance_matrix of eligible pairs as tuple(node, node, dist)
         contact_matrix = []
-        # distance_matrix of elegible symmetrical pairs as tuple(node, node, dist)
+        # distance_matrix of eligible symmetrical pairs as tuple(node, node, dist)
         symmetrical_matrix = []
         # find all pairs of residues that are within bonded distance of
         # self.res_dist
         connected_pairs = dict(nx.all_pairs_shortest_path_length(self.res_graph,
                                                             cutoff=self.res_dist))
-        for contact in self.contact_map:
+        for contact in self.system.go_params["go_map"][0]:#self.contact_map:
             resIDA, chainA, resIDB, chainB = contact
             # identify the contact in the residue graph based on
             # chain ID and resid
             resA = self._chain_id_to_resnode(chainA, resIDA)
             resB = self._chain_id_to_resnode(chainB, resIDB)
             # make sure that both residues are not connected
-            # note: contacts should be symmteric so we only
+            # note: contacts should be symmetric so we only
             # check against one
             if resB not in connected_pairs[resA]:
                 # now we lookup the backbone nodes within the residue contact
@@ -190,8 +190,8 @@ class ComputeStructuralGoBias(Processor):
                     # and add the exclusions. Else, we add to the full valid contact_matrix
                     # and continue searching.
                     if (atype_b, atype_a, dist) in contact_matrix:
-                        # generate backbone backbone exclusions
-                        # perhaps one day can be it's own function
+                        # generate backbone-backbone exclusions
+                        # perhaps one day can be its own function
                         excl = Interaction(atoms=(bb_node_A, bb_node_B),
                                            parameters=[], meta={"group": "Go model exclusion"})
                         molecule.interactions['exclusions'].append(excl)

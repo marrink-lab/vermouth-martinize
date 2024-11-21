@@ -48,7 +48,7 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings,
 )
-from vermouth.rcsu.contact_map import read_go_map
+from vermouth.rcsu.contact_map import GenerateContactMap, read_go_map
 from vermouth.rcsu.go_pipeline import GoPipeline
 from vermouth.gmx.topology import write_gmx_topology
 
@@ -965,6 +965,20 @@ def entry():
     elif args.cystein_bridge != "auto":
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
+    go_map = None
+    if args.go:
+        # need this here because have to get contact map at atomistic resolution
+        # can also change this later once we can obtain contact map either from server or here
+        # not great atm because splits the go_map across the martinize function
+        # but can probably do something later along:
+        '''
+        if go_map is None:
+            go_map = args.go_from_server
+        i.e. have another argument where the server file can still be used as an input.
+        '''
+        LOGGER.info("Generating Go model contact map.", type="step")
+        go_map = GenerateContactMap(path=args.go).run_system(system)
+
     # Run martinize on the system.
     system = martinize(
         system,
@@ -987,8 +1001,9 @@ def entry():
 
     # Generate the Go model if required
     if args.go:
-        LOGGER.info("Reading Go model contact map.", type="step")
-        go_map = read_go_map(args.go)
+        if go_map is not None:
+            LOGGER.info("Reading Go model contact map.", type="step")
+            go_map = read_go_map(args.go)
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
                               moltype=args.govs_moltype,

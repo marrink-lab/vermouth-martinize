@@ -20,9 +20,10 @@ import vermouth
 from ..processors.processor import Processor
 from .go_vs_includes import VirtualSiteCreator
 from .go_structure_bias import ComputeStructuralGoBias
+from .contact_map import GenerateContactMap
 from ..processors import SetMoleculeMeta
 
-class GoProcessorPipline(Processor):
+class GoProcessorPipeline(Processor):
     """
     Wrapping all processors for the go model.
     """
@@ -46,10 +47,11 @@ class GoProcessorPipline(Processor):
         self.prepare_run(system, moltype=kwargs['moltype'])
         for processor in self.processor_list:
             process_args = inspect.getfullargspec(processor).args
-            process_args_values = {arg:self.kwargs[arg] for arg in kwargs.keys() if arg in process_args}
+            process_args_values = {arg: self.kwargs[arg] for arg in kwargs.keys() if arg in process_args}
             processor(**process_args_values).run_system(system)
         return system
 
-GoPipeline = GoProcessorPipline([SetMoleculeMeta,
-                                 VirtualSiteCreator,
-                                 ComputeStructuralGoBias])
+
+GoPipeline = GoProcessorPipeline([SetMoleculeMeta,
+                                  VirtualSiteCreator,
+                                  ComputeStructuralGoBias])
