@@ -148,7 +148,6 @@ def write_gmx_topology(system,
         raise ValueError("No molecule in the system. Nothing to write.")
 
     include_string = ""
-    external_itps = []
     # First we write the atomtypes directive
     if "atomtypes" in system.gmx_topology_params:
         _path = itp_paths['atomtypes']
