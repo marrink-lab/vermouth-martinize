@@ -58,9 +58,10 @@ class NameMolType(Processor):
         the molecule.
     """
     # TODO: See issue #35
-    def __init__(self, deduplicate=True, meta_key='moltype'):
+    def __init__(self, deduplicate=True, meta_key='moltype', molname='molecule'):
         self.deduplicate = deduplicate
         self.meta_key = meta_key
+        self.molname = molname
         super().__init__()
 
     def run_system(self, system):
@@ -85,8 +86,8 @@ class NameMolType(Processor):
                 group_id += 1
                 representatives.append((group_id, molecule))
                 match_id = group_id
-            molecule.meta[self.meta_key] = 'molecule_{}'.format(match_id)
+            molecule.meta[self.meta_key] = '{}_{}'.format(self.molname, match_id)
 
     def _name_without_deduplication(self, system):
         for molecule_id, molecule in enumerate(system.molecules):
-            molecule.meta[self.meta_key] = 'molecule_{}'.format(molecule_id)
+            molecule.meta[self.meta_key] = '{}_{}'.format(self.molname, molecule_id)

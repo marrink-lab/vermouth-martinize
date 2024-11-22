@@ -22,13 +22,12 @@ import argparse
 import functools
 import logging
 import itertools
-import textwrap
 from pathlib import Path
 import sys
 import networkx as nx
 import vermouth
 import vermouth.forcefield
-from vermouth.file_writer import deferred_open, DeferredFileWriter
+from vermouth.file_writer import DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.dssp import dssp
 from vermouth.dssp.dssp import (
@@ -51,11 +50,7 @@ from vermouth.map_input import (
 )
 from vermouth.rcsu.contact_map import read_go_map
 from vermouth.rcsu.go_pipeline import GoPipeline
-from vermouth.citation_parser import citation_formatter
 from vermouth.gmx.topology import write_gmx_topology
-
-# TODO Since vermouth's __init__.py does some logging (KDTree), this may or may
-# not work as intended. Investigation required.
 
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
@@ -222,7 +217,7 @@ def _cys_argument(value):
     """
     try:
         result = float(value)
-    except ValueError:
+    except ValueError as error:
         lowered = value.lower()
         if lowered in ("auto", "none"):
             return lowered
@@ -232,7 +227,7 @@ def _cys_argument(value):
                 'The value of the "cys" option must be "auto", "none", '
                 "or a distance in nanometers."
             ),
-        )
+        ) from error
     else:
         return result
 
@@ -330,6 +325,14 @@ def entry():
         help="Merge chains: either a comma separated list of chains to merge e.g. -merge A,B,C (+), or -merge all\n"
              "if instead all chains in the input file should be merged.\n"
              "Can be given multiple times for different groups of chains to merge.",
+    )
+    file_group.add_argument(
+        "-name",
+        dest="molname",
+        type=str,
+        default="molecule",
+        help="Name for the output molecule. If not specified, will default to 'molecule_{0..n}' for the number of"
+             " molecules in your system."
     )
     file_group.add_argument(
         "-resid",
@@ -560,12 +563,6 @@ def entry():
         help=("The strength of the Go model structural bias in kJ/mol."),
     )
     go_group.add_argument(
-        "-go-moltype",
-        dest="govs_moltype",
-        default="molecule_0",
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
-    )
-    go_group.add_argument(
         "-go-low",
         dest="go_low",
         type=float,
@@ -775,15 +772,15 @@ def entry():
     for directory in args.extra_ff_dir:
         try:
             vermouth.forcefield.find_force_fields(directory, known_force_fields)
-        except FileNotFoundError:
+        except FileNotFoundError as error:
             msg = '"{}" given to the -ff-dir option should be a directory.'
-            raise ValueError(msg.format(directory))
+            raise ValueError(msg.format(directory)) from error
     for directory in args.extra_map_dir:
         try:
             partial_mapping = read_mapping_directory(directory, known_force_fields)
-        except NotADirectoryError:
+        except NotADirectoryError as error:
             msg = '"{}" given to the -map-dir option should be a directory.'
-            raise ValueError(msg.format(directory))
+            raise ValueError(msg.format(directory)) from error
         combine_mappings(known_mappings, partial_mapping)
 
     if args.list_ff:
@@ -996,11 +993,12 @@ def entry():
 
     # Generate the Go model if required
     if args.go:
+        go_name_prefix = args.molname
         LOGGER.info("Reading Go model contact map.", type="step")
         go_map = read_go_map(args.go)
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
-                              moltype=args.govs_moltype,
+                              moltype=go_name_prefix,
                               contact_map=go_map,
                               cutoff_short=args.go_low,
                               cutoff_long=args.go_up,
@@ -1034,7 +1032,7 @@ def entry():
                 raise argparse.ArgumentError(chain_merging,
                                              message=("Multiple conflicting merging arguments given. "
                                                       "Either specify -merge all or -merge A,B,C (+)."))
-        vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
+        vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp, molname=args.molname).run_system(system)
         defines = ()
 
     # Apply a rubber band elastic network is required.
@@ -1049,7 +1047,7 @@ def entry():
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
         else:
             regions = [
-                tuple([int(i) for i in apair.split(":")])
+                tuple(int(i) for i in apair.split(":"))
                 for apair in args.rb_unit.split(",")
             ]
             if any(len(region) != 2 for region in regions):

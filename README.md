@@ -29,7 +29,7 @@ Bugs can occur. If you encounter an issue, please report it on
 
 ## Installation
 
-Martinize2 and vermouth require python 3.6 or greater. They are distributed via [PyPi][pypi_vermouth], and can be
+Martinize2 and vermouth require python 3.9 or greater. They are distributed via [PyPi][pypi_vermouth], and can be
 installed using the `pip` command:
     
     pip install vermouth
