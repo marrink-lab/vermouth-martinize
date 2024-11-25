@@ -21,7 +21,9 @@ import copy
 import networkx as nx
 
 from ..molecule import Block, Link, Interaction
-from .. import utils
+
+from ..log_helpers import StyleAdapter, get_logger
+LOGGER = StyleAdapter(get_logger(__name__))
 
 __all__ = ['read_rtp']
 
@@ -293,13 +295,15 @@ def _split_blocks_and_links(pre_blocks):
         Split an individual pre-block into a block and a link.
     """
     blocks = {}
-    links = []
+    all_links = []
     for name, pre_block in pre_blocks.items():
-        block, link = _split_block_and_link(pre_block)
+        block, links = _split_block_and_link(pre_block)
         blocks[name] = block
-        if link:
-            links.append(link)
-    return blocks, links
+        if links:
+            for link in links:
+                if link:
+                    all_links.append(link)
+    return blocks, all_links
 
 
 def _split_block_and_link(pre_block):
@@ -320,7 +324,7 @@ def _split_block_and_link(pre_block):
     -------
     block: Block
         All the intra-residue information.
-    link: Link
+    links: List[Link]
         All the inter-residues information.
     """
     block = Block(force_field=pre_block.force_field)
@@ -339,19 +343,24 @@ def _split_block_and_link(pre_block):
     except AttributeError:
         pass
 
-    link_atoms = set()
+    links = []
 
-    for _, interactions in pre_block.interactions.items():
+    for interaction_type, interactions in pre_block.interactions.items():
         for interaction in interactions:
             # Atoms that are not defined in the atoms section but only in interactions
             # (because they're part of the neighbours), don't have an atomname
             atomnames = [pre_block.nodes[n_idx].get('atomname') or n_idx for n_idx in interaction.atoms]
             if any(atomname[0] in '+-' for atomname in atomnames):
-                link_atoms.update(interaction.atoms)
-    # Here we make 1 link consisting of all the atoms in interactions that
-    # contain at least one atom from a neighbouring residue, which may be an
-    # issue since it constrains where the link applies.
-    link = Link(pre_block.subgraph(link_atoms))
+                link = Link(pre_block.subgraph(interaction.atoms))
+                if not nx.is_connected(link):
+                    LOGGER.info('Discarding {} between atoms {} for link'
+                                ' defined in residue {} in force field {}'
+                                ' because it is disconnected.',
+                                interaction_type, ' '.join(interaction.atoms),
+                                pre_block.name, pre_block.force_field.name,
+                                type='inconsistent-data')
+                    continue
+                links.append(link)
 
     block = pre_block
     block.remove_nodes_from([n for n in pre_block if pre_block.nodes[n].get('atomname', n)[0] in '+-'])
@@ -368,46 +377,48 @@ def _split_block_and_link(pre_block):
     # RTP files convey the order by prefixing the names with + or -. We need to
     # get rid of these prefixes.
     order = {'+': +1, '-': -1}
-    relabel_mapping = {}
-    # (Deep)copy interactions, since relabel_nodes removes/adds nodes, which
-    # wipes out all interactions otherwise.
-    interactions = copy.deepcopy(link.interactions)
-    remove_attrs = 'atype charge charge_group'.split()
-    for idx, node in enumerate(link.nodes()):
-        atomname = node
-        if node[0] in '+-':
-            link.nodes[node]['order'] = order[node[0]]
-            atomname = atomname[1:]
-        else:
-            link.nodes[node]['order'] = 0
-            link.nodes[node]['resname'] = block.name
-        for attr in remove_attrs:
-            if attr in link.nodes[node]:
-                del link.nodes[node][attr]
-        link.nodes[node]['atomname'] = atomname
-        relabel_mapping[node] = idx
-    nx.relabel_nodes(link, relabel_mapping, copy=False)
 
-    # By relabelling the nodes, we lost the relations between interactions and
-    # nodes, so we need to relabel the atoms in the interactions
-    new_interactions = collections.defaultdict(list)
-    for name, interactions in interactions.items():
-        for interaction in interactions:
-            atoms = tuple(relabel_mapping[atom] for atom in interaction.atoms)
-            if not any(link.nodes[node]['order'] for node in atoms):
-                continue
-            new_interactions[name].append(Interaction(
-                atoms=atoms,
-                parameters=interaction.parameters,
-                meta=interaction.meta
-            ))
-    link.interactions = new_interactions
+    for link in links:
+        relabel_mapping = {}
+        # (Deep)copy interactions, since relabel_nodes removes/adds nodes, which
+        # wipes out all interactions otherwise.
+        interactions = copy.deepcopy(link.interactions)
+        remove_attrs = 'atype charge charge_group'.split()
+        for idx, node in enumerate(link.nodes()):
+            atomname = node
+            if node[0] in '+-':
+                link.nodes[node]['order'] = order[node[0]]
+                atomname = atomname[1:]
+            else:
+                link.nodes[node]['order'] = 0
+                link.nodes[node]['resname'] = block.name
+            for attr in remove_attrs:
+                if attr in link.nodes[node]:
+                    del link.nodes[node][attr]
+            link.nodes[node]['atomname'] = atomname
+            relabel_mapping[node] = idx
+        nx.relabel_nodes(link, relabel_mapping, copy=False)
+
+        # By relabelling the nodes, we lost the relations between interactions and
+        # nodes, so we need to relabel the atoms in the interactions
+        new_interactions = collections.defaultdict(list)
+        for name, interactions in interactions.items():
+            for interaction in interactions:
+                atoms = tuple(relabel_mapping[atom] for atom in interaction.atoms)
+                if not any(link.nodes[node]['order'] for node in atoms):
+                    continue
+                new_interactions[name].append(Interaction(
+                    atoms=atoms,
+                    parameters=interaction.parameters,
+                    meta=interaction.meta
+                ))
+        link.interactions = new_interactions
+        link.interactions = dict(link.interactions)
 
     # Revert the interactions back to regular dicts to avoid creating
     # keys when querying them.
     block.interactions = dict(block.interactions)
-    link.interactions = dict(link.interactions)
-    return block, link
+    return block, links
 
 
 def _clean_lines(lines):
