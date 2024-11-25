@@ -324,6 +324,14 @@ def entry():
              "Can be given multiple times for different groups of chains to merge.",
     )
     file_group.add_argument(
+        "-name",
+        dest="molname",
+        type=str,
+        default="molecule",
+        help="Name for the output molecule. If not specified, will default to 'molecule_{0..n}' for the number of"
+             " molecules in your system."
+    )
+    file_group.add_argument(
         "-resid",
         dest="resid_handling",
         type=str,
@@ -550,12 +558,6 @@ def entry():
         type=float,
         default=9.414,
         help=("The strength of the Go model structural bias in kJ/mol."),
-    )
-    go_group.add_argument(
-        "-go-moltype",
-        dest="govs_moltype",
-        default="molecule_0",
-        help=("Set the name of the molecule when using " "Virtual Sites GoMartini."),
     )
     go_group.add_argument(
         "-go-low",
@@ -990,11 +992,12 @@ def entry():
 
     # Generate the Go model if required
     if args.go:
+        go_name_prefix = args.molname
         LOGGER.info("Reading Go model contact map.", type="step")
         go_map = read_go_map(args.go)
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
-                              moltype=args.govs_moltype,
+                              moltype=go_name_prefix,
                               contact_map=go_map,
                               cutoff_short=args.go_low,
                               cutoff_long=args.go_up,
@@ -1022,7 +1025,7 @@ def entry():
                 raise argparse.ArgumentError(chain_merging,
                                              message=("Multiple conflicting merging arguments given. "
                                                       "Either specify -merge all or -merge A,B,C (+)."))
-        vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp).run_system(system)
+        vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp, molname=args.molname).run_system(system)
         defines = ()
 
     # Apply a rubber band elastic network is required.
