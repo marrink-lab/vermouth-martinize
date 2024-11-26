@@ -15,8 +15,6 @@
 from ..processors.processor import Processor
 import numpy as np
 from scipy.spatial.distance import euclidean, cdist
-# import numpy.ma as ma
-import time
 
 # REFERENCES FOR PROTEIN MAP
 # REFERENCE: J. Tsai, R. Taylor, C. Chothia, and M. Gerstein, J. Mol. Biol 290:290 (1999)
@@ -460,7 +458,6 @@ def res2atom(nresidues, res_array, mask):
     return out
 
 def main(molecule):
-    start0 = time.time()
     # get the number of residues
     nresidues = get_nres(molecule)
 
@@ -492,24 +489,19 @@ def main(molecule):
     # definitely need the *10 here to make sure these distances are correct.
     com_distances = res2atom(nresidues, cdist(np.array(coms), np.array(coms))*10, mask)
 
-    setup_time = time.time()
-
     # calculate all interatomic distances in the protein
     distances = cdist(np.array(coords), np.array(coords))*10
-    distance_time = time.time()
 
     # generate fibonacci spheres for all atoms. This is a big time limiting step atm
     spheres = np.stack([make_surface(i, fiba, fibb, water_radius + j) for i, j in zip(coords, vdw_list)])
-    sphere_time = time.time()
-    # print(f'sphere time {sphere_time - distance_time}')
 
-    # # vdw is nxn array of all pairs of atomic vdws
+    # vdw is nxn array of all pairs of atomic vdws
     vdw_sum_array = np.array(vdw_list)[:, np.newaxis] + np.array(vdw_list)[np.newaxis, :]
 
     # Enlarged overlap (OV) contact
     overlapcounter = np.zeros(distances.shape, dtype=int)
     overlapcounter[distances < (vdw_sum_array * alpha)] = 1  # this still needs correcting for intra-residue contacts
-    overlapcounter[np.where(com_distances < 3.5 * 4)] = 0
+    overlapcounter[com_distances > 3.5 * 4] = 0  # nb condition goes the other way here
 
     contactcounter = np.zeros(distances.shape, dtype=int)
     stabilizercounter = np.zeros(distances.shape, dtype=int)
@@ -518,155 +510,31 @@ def main(molecule):
     # this loop takes about as long as the sphere point generation, pretty sure it could be sped up somehow
     # find where csu contacts are possibly relevant
     csu_criteria = np.zeros(distances.shape)
-    csu_targets = np.where(distances < (vdw_sum_array * water_radius))
+    csu_targets = np.where(distances <= (vdw_sum_array + water_radius))
     for i in np.unique(csu_targets[0]):
         group = np.stack(csu_targets).T[csu_targets[0] == i]
         target_coords = []
         for j in group:
-            if (not mask[j[0]] == mask[j[1]]) and (com_distances[j[0], j[1]] < 3.5 * 4):
+            if (not mask[j[0]] == mask[j[1]]) and (com_distances[j[0], j[1]] <= 3.5 * 4):
                 target_coords.append(coords[j[1]])
         if len(target_coords) > 0:
             contact_distances = cdist(spheres[group.T[0]][0], np.stack(target_coords))
-            # this now gives the correct indexing
-            csu_criteria[i, np.unravel_index(contact_distances.argmin(), contact_distances.shape)[1]] = 1
-    print(csu_criteria)
-    # csu_time = time.time()
-    # # print(f'csu time {csu_time - sphere_time}')
-    #
-    # for i in range(distances.shape[0]):
-    #     for j in range(distances.shape[1]):
-    #         at1, at2 = atypes[i], atypes[j]
-    #         if at1 > 0 and at2 > 0:
-    #             contactcounter[i, j] += 1
-    #             btype = BONDTYPE(at1, at2)
-    #             if btype <= 4:
-    #                 stabilizercounter[i, j] += 1
-    #             if btype == 5:
-    #                 destabilizercounter[i, j] += 1
-    # counting = time.time()
-    # # print(f'counting time {counting - csu_time}')
-    #
-    # overlap_residues = atom2res(nresidues, overlapcounter, mask, onemax=True)
-    # contact_residues = atom2res(nresidues, contactcounter, mask)
-    # stabiliser_residues = atom2res(nresidues, stabilizercounter, mask)
-    # destabiliser_residues = atom2res(nresidues, destabilizercounter, mask)
-    #
-    # finish = time.time()
-    # # print(f'finish {finish - counting}')
-    #
-    # with open('test.out', 'w') as f:
-    #     count = 0
-    #     for i1 in range(nresidues):
-    #         for i2 in range(nresidues):
-    #             res0 = get_residue(molecule, i1)
-    #             res1 = get_residue(molecule, i2)
-    #             if not (i1 == i2) and model_assertion(res0, res1):
-    #                 over = overlap_residues[i1, i2]
-    #                 cont = contact_residues[i1, i2]
-    #                 stab = stabiliser_residues[i1, i2]
-    #                 dest = destabiliser_residues[i1, i2]
-    #                 ocsu = stab
-    #                 rcsu = stab - dest
-    #
-    #                 if over > 0 or cont > 0:
-    #                     count += 1
-    #                     msg = (f"R {count:6d} "
-    #                            f"{i1 + 1:5d} {res0[0]['resname']:4} {res0[0]['chain']:1} {res0[0]['resid']:4d}    "
-    #                            f"{i2 + 1:5d} {res1[0]['resname']:4} {res1[0]['chain']:1} {res1[0]['resid']:4d}    "
-    #                            f"{DISTANCE_C_ALPHA(res0, res1):8.4f}     "
-    #                            f"{over} {1 if cont != 0 else 0} {1 if ocsu != 0 else 0} {1 if rcsu > 0 else 0} "
-    #                            f"{rcsu:6d}  {cont:6d} {res0[0]['mol_idx']:4d}\n")
-    #                     f.writelines(msg)
-    #
+            # np.unravel_index(contact_distances.argmin(), contact_distances.shape) - get the index in the group
+            # which has the shortest distance to the target atom indexed by i
+            csu_criteria[i, group[np.unravel_index(contact_distances.argmin(), contact_distances.shape)[1]][1]] = 1
 
+    for i in range(distances.shape[0]):
+        for j in range(distances.shape[1]):
+            at1, at2 = atypes[i], atypes[j]
+            if (at1 > 0) and (at2 > 0) and (csu_criteria[i, j] > 0):
+                contactcounter[i, j] += 1
+                btype = BONDTYPE(at1, at2)
+                print(at1, at2, csu_criteria[i, j], btype)
+                if btype <= 4:
+                    stabilizercounter[i, j] += 1
+                if btype == 5:
+                    destabilizercounter[i, j] += 1
 
-
-
-
-
-
-
-
-
-
-
-
-    # at1 = get_atype(res0, j1)
-    # at2 = get_atype(get_residue(molecule, int(s[3])), int(s[4]))
-    # if at1 > 0 and at2 > 0:
-    #     contactcounter[i1, int(s[3])] += 1
-    #     btype = BONDTYPE(at1, at2)
-    #     if btype <= 4:
-    #         stabilizercounter[i1, int(s[3])] += 1
-    #     if btype == 5:
-    #         destabilizercounter[i1, int(s[3])] += 1
-
-
-            # base_atom_vdw = vdw_radius(res0, j1)
-            # if base_atom_coords is not None:
-                # generate the Fibonacci surface points on a sphere
-                # surface = make_surface(base_atom_coords, fiba, fibb, base_atom_vdw + water_radius)
-                # loop over all the residues a second time
-                # for i2 in range(nresidues):
-                #     res1 = get_residue(molecule, i2)
-                #     if model_assertion(res0, res1) and close_residues(res0, res1):
-                #         for j2 in range(len(res1)):
-                            # if not (i1 == i2 and j1 == j2):
-                            #     target_atom_coords = atom_coords(res1, j2)
-                            #     target_atom_vdw = vdw_radius(res1, j2)
-    #                             if target_atom_coords is not None:
-    #                                 distance = euclidean(base_atom_coords, target_atom_coords)*10
-    #
-    #                                 # Enlarged overlap (OV) contact
-    #                                 if distance <= ((base_atom_vdw + target_atom_vdw) * alpha):
-    #                                     overlapcounter[i1, i2] = 1
-    #
-    #                                 # CSU contacts
-    #                                 if distance <= ((base_atom_vdw + target_atom_vdw) * water_radius):
-    #                                     for k in range(fibb):
-    #                                         s = surface[k]
-    #                                         if (euclidean(s[:3], target_atom_coords) < target_atom_vdw + water_radius) \
-    #                                                 and distance <= s[5]:
-    #                                             s[3] = i2
-    #                                             s[4] = j2
-    #                                             s[5] = distance
-    #
-    #             for k in range(fibb):
-    #                 s = surface[k]
-    #                 if s[3] >= 0 and s[4] >= 0:
-    #                     at1 = get_atype(res0, j1)
-    #                     at2 = get_atype(get_residue(molecule, int(s[3])), int(s[4]))
-    #                     if at1 > 0 and at2 > 0:
-    #                         contactcounter[i1, int(s[3])] += 1
-    #                         btype = BONDTYPE(at1, at2)
-    #                         if btype <= 4:
-    #                             stabilizercounter[i1, int(s[3])] += 1
-    #                         if btype == 5:
-    #                             destabilizercounter[i1, int(s[3])] += 1
-    #
-    # with open('test.out', 'w') as f:
-    #     count = 0
-    #     for i1 in range(nresidues):
-    #         for i2 in range(nresidues):
-    #             res0 = get_residue(molecule, i1)
-    #             res1 = get_residue(molecule, i2)
-    #             if not (i1 == i2) and model_assertion(res0, res1):
-    #                 over = overlapcounter[i1, i2]
-    #                 cont = contactcounter[i1, i2]
-    #                 stab = stabilizercounter[i1, i2]
-    #                 dest = destabilizercounter[i1, i2]
-    #                 ocsu = stab
-    #                 rcsu = stab - dest
-    #
-    #                 if over > 0 or cont > 0:
-    #                     count += 1
-    #                     msg = (f"R {count:6d} "
-    #                            f"{i1 + 1:5d} {res0[0]['resname']:4} {res0[0]['chain']:1} {res0[0]['resid']:4d}    "
-    #                            f"{i2 + 1:5d} {res1[0]['resname']:4} {res1[0]['chain']:1} {res1[0]['resid']:4d}    "
-    #                            f"{DISTANCE_C_ALPHA(res0, res1):8.4f}     "
-    #                            f"{over} {1 if cont != 0 else 0} {1 if ocsu != 0 else 0} {1 if rcsu > 0 else 0} "
-    #                            f"{rcsu:6d}  {cont:6d} {res0[0]['mol_idx']:4d}\n")
-    #                     f.writelines(msg)
 
 """
 Read RCSU Go model contact maps.
