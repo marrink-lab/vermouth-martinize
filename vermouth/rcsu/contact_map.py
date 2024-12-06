@@ -16,9 +16,6 @@ from ..processors.processor import Processor
 import numpy as np
 from scipy.spatial.distance import euclidean, cdist
 
-# REFERENCES FOR PROTEIN MAP
-# REFERENCE: J. Tsai, R. Taylor, C. Chothia, and M. Gerstein, J. Mol. Biol 290:290 (1999)
-# REFERENCE: https:# aip.scitation.org/doi/suppl/10.1063/1.4929599/suppl_file/sm.pdf
 PROTEIN_MAP = {
     "ALA": {
         'N': {'vrad': 1.64, 'atype': 3},
@@ -30,7 +27,7 @@ PROTEIN_MAP = {
     },
     "ARG": {
         'N': {'vrad': 1.64, 'atype': 3},
-        'CA ': {'vrad': 1.88, 'atype': 7},
+        'CA': {'vrad': 1.88, 'atype': 7},
         'C': {'vrad': 1.61, 'atype': 6},
         'O': {'vrad': 1.42, 'atype': 2},
         'CB': {'vrad': 1.88, 'atype': 4},
@@ -129,7 +126,7 @@ PROTEIN_MAP = {
         'CB': {'vrad': 1.88, 'atype': 4},
         'CG1': {'vrad': 1.88, 'atype': 4},
         'CG2': {'vrad': 1.88, 'atype': 4},
-        'CD1': {'vrad': 1.88, 'atype': 4},
+        'CD': {'vrad': 1.88, 'atype': 4},
         'default': {'vrad': 0.00, 'atype': 0},
     },
     "LEU": {
@@ -242,16 +239,118 @@ PROTEIN_MAP = {
         'default': {'vrad': 0.00, 'atype': 0},
     },
     "VAL": {
-        'N  ': {'vrad': 1.64, 'atype': 3},
-        'CA ': {'vrad': 1.88, 'atype': 7},
-        'C  ': {'vrad': 1.61, 'atype': 6},
-        'O  ': {'vrad': 1.42, 'atype': 2},
-        'CB ': {'vrad': 1.88, 'atype': 4},
+        'N': {'vrad': 1.64, 'atype': 3},
+        'CA': {'vrad': 1.88, 'atype': 7},
+        'C': {'vrad': 1.61, 'atype': 6},
+        'O': {'vrad': 1.42, 'atype': 2},
+        'CB': {'vrad': 1.88, 'atype': 4},
         'CG1': {'vrad': 1.88, 'atype': 4},
         'CG2': {'vrad': 1.88, 'atype': 4},
         'default': {'vrad': 0.00, 'atype': 0},
     }
 }
+
+
+def get_vdw_radius(resname, atomname):
+    """
+    get the vdw radius of an atom indexed internally within a serially numbered residue
+    """
+    res_vdw = PROTEIN_MAP[resname]
+    try:
+        atom_vdw = res_vdw[atomname]['vrad']
+    except KeyError:
+        atom_vdw = res_vdw['default']['vrad']
+    return atom_vdw
+
+
+def get_atype(resname, atomname):
+    """
+    get the vdw radius of an atom indexed internally within a serially numbered residue
+    """
+    res_vdw = PROTEIN_MAP[resname]
+    try:
+        atom_vdw = res_vdw[atomname]['atype']
+    except KeyError:
+        atom_vdw = res_vdw['default']['atype']
+    return atom_vdw
+
+
+def make_surface(position, fiba, fibb, vrad):
+    """
+    Generate points on a sphere using Fibonacci points
+
+    position: centre of sphere
+    """
+    x, y, z = position[0], position[1], position[2]
+    phi_aux = 0
+
+    surface = np.zeros((0, 3))
+    for k in range(fibb):
+
+        phi_aux += fiba
+        if phi_aux > fibb:
+            phi_aux -= fibb
+
+        theta = np.arccos(1.0 - 2.0 * k / fibb)
+        phi = 2.0 * np.pi * phi_aux / fibb
+        surface_x = x + vrad * np.sin(theta) * np.cos(phi)
+        surface_y = y + vrad * np.sin(theta) * np.sin(phi)
+        surface_z = z + vrad * np.cos(theta)
+        surface = np.vstack((surface, np.array([surface_x, surface_y, surface_z])))
+    return surface
+
+
+def res2atom(arrin, residues, nresidues):
+    '''
+    take an array with residue level data and repeat the entries over
+    each atom within the residue
+
+    would be nice to do this with list comprension but Ican't work out how
+    to do something like:
+
+    [np.tile(res_dists[i-1,j-1],
+             np.where(residues == i)[0].size)
+        for i in range(1, nresidues+1)
+        for j in range(1, nresidues+1)
+    ]
+
+    to get it correct in the 2 dimensional way we actually need.
+
+    At the moment we only need this function once
+    (to get the residue COGs foreach atom)
+    so it's not too much of a limiting factor, but something to optimise
+    better in future
+
+    '''
+    # find out how many residues we have, and how many atoms are in each of them
+    unique_values, counts = np.unique(residues, return_counts=True)
+
+    assert len(unique_values) == nresidues
+
+    out = np.zeros((len(residues), len(residues)))
+    start0 = 0
+    for i, j in zip(unique_values - 1, counts):
+        start1 = 0
+        for k, l in zip(unique_values - 1, counts):
+            target_value = arrin[i, k]
+            out[start0:start0 + j, start1:start1 + l] = target_value.sum()
+            start1 += l
+        start0 += j
+
+    return out
+
+
+def atom2res(arrin, residues, nresidues, norm=False):
+    '''
+    take an array with atom level data and sum the entries over within the residue
+    '''
+    out = np.array([int(arrin[np.where(residues == i)[0], np.where(residues == j)[0][:, np.newaxis]].sum())
+                    for i in range(1, nresidues + 1)
+                    for j in range(1, nresidues + 1)]).reshape((nresidues, nresidues))
+    if norm:
+        out[out > 0] = 1
+
+    return out
 
 
 def BONDTYPE(i, j):
@@ -284,184 +383,9 @@ def BONDTYPE(i, j):
                       [1, 5, 1, 5, 5, 6, 6, 6, 4, 5]])
     return btype[i][j]
 
-def get_nres(molecule):
-    """
-    get the total number of residues in a molecule, across all chains
-    """
-    chains = list([molecule.nodes[node]['chain'] for node in molecule.nodes])
-    resids = list([molecule.nodes[node]['resid'] for node in molecule.nodes])
+def calculate_contact_map(mol):
 
-    # for all unique chains, get all the resids in that chain
-    lens = 0
-    for i, c in enumerate(list(set(chains))):
-        res = []
-        for j, k in enumerate(chains):
-            if k == c:
-                res.append(j)
-        lens += len(list(set([resids[j] for j in res])))
-    return lens
-
-def atom_coords(residue_nodes, atomid):
-    """
-    get the coordinates of an atom indexed internally within a serially numbered residue
-    """
-    try:
-        return residue_nodes[atomid]['position']
-    except KeyError:
-        return np.array([np.nan, np.nan, np.nan])
-
-def vdw_radius(residue_nodes, atomid):
-    """
-    get the vdw radius of an atom indexed internally within a serially numbered residue
-    """
-    res_vdw = PROTEIN_MAP[residue_nodes[atomid]['resname']]
-    try:
-        atom_vdw = res_vdw[residue_nodes[atomid]['atomname']]['vrad']
-    except KeyError:
-        atom_vdw = res_vdw['default']['vrad']
-    return atom_vdw
-
-def get_residue(molecule, serial_resid):
-    """
-    get the node entry of a molecule from its serial resid
-    """
-    residue_nodes = []
-    for node in molecule.nodes:
-        if molecule.nodes[node]['_res_serial'] == serial_resid:
-            residue_nodes.append(molecule.nodes[node])
-
-    return residue_nodes
-
-def make_surface(position, fiba, fibb, vrad):
-    """
-    Generate points on a sphere using Fibonacci points
-
-    position: centre of sphere
-    """
-    x, y, z = position[0], position[1], position[2]
-    phi_aux = 0
-
-    surface = np.zeros((0, 3))
-    for k in range(fibb):
-
-        phi_aux += fiba
-        if phi_aux > fibb:
-            phi_aux -= fibb
-
-        theta = np.arccos(1.0 - 2.0 * k / fibb)
-        phi = 2.0 * np.pi * phi_aux / fibb
-        surface_x = x + vrad * np.sin(theta) * np.cos(phi)
-        surface_y = y + vrad * np.sin(theta) * np.sin(phi)
-        surface_z = z + vrad * np.cos(theta)
-        surface = np.vstack((surface, np.array([surface_x, surface_y, surface_z])))
-    return surface
-
-def model_assertion(res0, res1):
-    """
-    assert that two residues are from the same model in a pdb
-
-    maybe this can be scrapped given main() is called from run_molecule, so they must be?
-    """
-    result = []
-    for i in res0:
-        for j in res1:
-            try:
-                assert i['mol_idx'] == j['mol_idx']
-                result.append(True)
-            except AssertionError:
-                result.append(False)
-
-    return all(result)
-
-def residue_COM(residue):
-    """
-    get the centre of mass of a residue
-
-    residue: list of molecule.nodes that make up a residue
-    """
-    positions = np.zeros((0,3))
-    weights = np.zeros(0)
-    for i in residue:
-        try:
-            positions = np.vstack((positions, i['position']))
-            weights = np.append(weights, i['mass'])
-        except KeyError:
-            pass
-    return np.average(positions, axis=0, weights=weights)
-
-def get_atype(residue_nodes, atomid):
-    """
-    get the vdw radius of an atom indexed internally within a serially numbered residue
-    """
-    res_vdw = PROTEIN_MAP[residue_nodes[atomid]['resname']]
-    try:
-        atom_vdw = res_vdw[residue_nodes[atomid]['atomname']]['atype']
-    except KeyError:
-        atom_vdw = res_vdw['default']['atype']
-    return atom_vdw
-
-
-def DISTANCE_C_ALPHA(res0, res1):
-    """
-    identify the CA atoms within a residue and calculate the distance between them
-    """
-    atom0 = None
-    atom1 = None
-    for i in res0:
-        if i['atomname'] == 'CA':
-            atom0 = i
-            continue
-    for i in res1:
-        if i['atomname'] == 'CA':
-            atom1 = i
-            continue
-    if (atom0 is not None) and (atom1 is not None):
-        return euclidean(atom0['position'], atom1['position'])*10 #this distance is working, because the output distances where the contacts are found are matching
-    else:
-        return None
-
-def atom2res(nresidues, atom_array, mask, onemax=False):
-    '''
-    count the atom entries in each residue and return an array at the residue level
-    '''
-    out = np.zeros((nresidues, nresidues), dtype=int)
-    # map all atom back to residues
-    for i in range(nresidues):
-        find0 = np.where(mask == i)[0]
-        for j in range(nresidues):
-            find1 = np.where(mask == j)[0]
-            out[i, j] = np.count_nonzero(atom_array[find0][:, find1])
-
-    if onemax:
-        out[np.where(out > 0)] = 1
-    return out
-
-def res2atom(nresidues, res_array, mask):
-    '''
-    take an array with residue level data and repeat the entries over each atom within the residue
-    '''
-    # find out what the values are, and how many of them there are
-    unique_values, counts = np.unique(mask, return_counts=True)
-
-    assert len(unique_values) == nresidues
-
-    out = np.zeros((len(mask), len(mask)))
-    start0 = 0
-    for i, j in zip(unique_values, counts):
-        start1 = 0
-        for k, l in zip(unique_values, counts):
-            target_value = res_array[i, k]
-            out[start0:start0 + j, start1:start1 + l] = target_value
-            start1 += l
-        start0 += j
-
-    return out
-
-def main(molecule):
-    # get the number of residues
-    nresidues = get_nres(molecule)
-
-    # Fibonacci sequence generation. Can make arguments for this later, but 14 is what's usually needed
+    # some initial definitions of variables that we need
     fib = 14
     fiba, fibb = 0, 1
     for _ in range(fib):
@@ -470,70 +394,168 @@ def main(molecule):
     alpha = 1.24  # Enlargement factor for attraction effects
     water_radius = 2.80  # Radius of a water molecule in A
 
-    # loop over all atoms in the protein to get atom information
+    # 1) Set up the basic information that we need to calculate the contact map
+    residues = []
     coords = []
     vdw_list = []
-    mask = []
     atypes = []
-    coms = []
-    for i in range(nresidues):
-        res0 = get_residue(molecule, i)
-        mask.append([str(i)]*len(res0))
-        coms.append(residue_COM(res0))
-        for j in range(len(res0)):
-            coords.append(atom_coords(res0, j))
-            vdw_list.append(vdw_radius(res0, j))
-            atypes.append(get_atype(res0, j))
-    mask = np.array([x for xs in mask for x in xs], dtype=int)
+    resnames = []
+    ca_pos = []
+    chains = []
+    for node in mol.nodes:
+        try:
+            coords.append(mol.nodes[node]['position'] * 10)  #  need *10 here because of the way Vermouth read coords
+            residues.append(mol.nodes[node]['resid'])
+            resnames.append(mol.nodes[node]['resname'])
+            vdw_list.append(get_vdw_radius(mol.nodes[node]['resname'],
+                                           mol.nodes[node]['atomname']))
+            atypes.append(get_atype(mol.nodes[node]['resname'],
+                                    mol.nodes[node]['atomname']))
+            if mol.nodes[node]['atomname'] == "CA":
+                ca_pos.append(mol.nodes[node]['position'])
+            chains.append(mol.nodes[node]['chain'])
 
-    # definitely need the *10 here to make sure these distances are correct.
-    com_distances = res2atom(nresidues, cdist(np.array(coms), np.array(coms))*10, mask)
+        except KeyError:
+            pass
 
-    # calculate all interatomic distances in the protein
-    distances = cdist(np.array(coords), np.array(coords))*10
+    residues = np.array(residues)
+    vdw_list = np.array(vdw_list)
+    atypes = np.array(atypes)
 
-    # generate fibonacci spheres for all atoms. This is a big time limiting step atm
+    # 2) find the number of residues that we have
+    nresidues = len(list(set(residues)))
+
+    # 4) set up final bits of information
+    # sums of vdw pairs for each atom we have
+    vdw_sum_array = vdw_list[:, np.newaxis] + vdw_list[np.newaxis, :]
+
+    # distances between all the atoms that we have
+    atomic_distances = cdist(np.stack(coords), np.stack(coords))
+
+    # array with 1 on the diagonal, so we can exclude the self atoms
+    diagonal_ones = np.diagflat(np.ones(atomic_distances.shape[0], dtype=int))
+
+    # get the coordinates of the centres of geometry for each residue
+    res_cogs = np.stack(
+        [np.stack(coords[np.where(residues == i)[0][0]:np.where(residues == i)[0][-1]]).mean(axis=0) for i in
+         range(1, nresidues + 1)])
+    res_dists = res2atom(cdist(res_cogs, res_cogs), residues, nresidues)
+
+    # 5) find atoms which meet the overlap criterion
+    over = np.zeros_like(atomic_distances)
+    overlaps = np.where((atomic_distances <= (vdw_sum_array * alpha)) & (diagonal_ones != 1) & (res_dists < 14))
+    over[overlaps[0], overlaps[1]] = 1
+
+    # 6) set up the surface overlap criterion
+    # generate fibonacci spheres for all atoms.
+    # can't decide whether quicker/better for memory to generate all in one go here
+    # or incorporate into the loop. left
     spheres = np.stack([make_surface(i, fiba, fibb, water_radius + j) for i, j in zip(coords, vdw_list)])
+    surface_overlaps = np.where(
+        (atomic_distances <= (vdw_sum_array + water_radius)) & (diagonal_ones != 1) & (res_dists < 14))
+    # find which atoms are uniquely involved as base points
+    base_points = np.unique(surface_overlaps[0])
 
-    # vdw is nxn array of all pairs of atomic vdws
-    vdw_sum_array = np.array(vdw_list)[:, np.newaxis] + np.array(vdw_list)[np.newaxis, :]
+    hit_results = np.ones((spheres.shape[0], spheres.shape[1]), dtype=int) * -1
 
-    # Enlarged overlap (OV) contact
-    overlapcounter = np.zeros(distances.shape, dtype=int)
-    overlapcounter[distances < (vdw_sum_array * alpha)] = 1  # this still needs correcting for intra-residue contacts
-    overlapcounter[com_distances > 3.5 * 4] = 0  # nb condition goes the other way here
+    # loop over all base points
+    for base_point in base_points:
 
-    contactcounter = np.zeros(distances.shape, dtype=int)
-    stabilizercounter = np.zeros(distances.shape, dtype=int)
-    destabilizercounter = np.zeros(distances.shape, dtype=int)
+        # generate the base point sphere now if we didn't earlier.
+        # sphere = make_surface(coords[base_point], fiba, fibb, vdw_list[base_point] + water_radius)
+        # get the target points
+        target_points = surface_overlaps[1][np.where(surface_overlaps[0] == base_point)[0]]
+        # array of all the target point coordinates
+        target_point_coords = np.stack(coords)[target_points]
+        # distances between the points on the base sphere surface and the target point coordinates
+        surface_to_point = cdist(spheres[base_point], target_point_coords)
+        # surface_to_point = cdist(sphere, target_point_coords)
+        # cutoff distances for each of the target points
+        target_distances = vdw_list[target_points] + water_radius
 
-    # this loop takes about as long as the sphere point generation, pretty sure it could be sped up somehow
-    # find where csu contacts are possibly relevant
-    csu_criteria = np.zeros(distances.shape)
-    csu_targets = np.where(distances <= (vdw_sum_array + water_radius))
-    for i in np.unique(csu_targets[0]):
-        group = np.stack(csu_targets).T[csu_targets[0] == i]
-        target_coords = []
-        for j in group:
-            if (not mask[j[0]] == mask[j[1]]) and (com_distances[j[0], j[1]] <= 3.5 * 4):
-                target_coords.append(coords[j[1]])
-        if len(target_coords) > 0:
-            contact_distances = cdist(spheres[group.T[0]][0], np.stack(target_coords))
-            # np.unravel_index(contact_distances.argmin(), contact_distances.shape) - get the index in the group
-            # which has the shortest distance to the target atom indexed by i
-            csu_criteria[i, group[np.unravel_index(contact_distances.argmin(), contact_distances.shape)[1]][1]] = 1
+        for i, j in enumerate(surface_to_point):
+            '''
+            first find where the radius condition is met, i.e. where the distance between
+            the target point and this point on the surface is smaller than the vdw radius
+            of the target point
+            '''
+            radius_condition = j < target_distances
+            if any(radius_condition):
+                '''
+                For all the points that meet this condition, look at the distance between the 
+                target point and the base point
+                '''
+                distances_to_compare = atomic_distances[base_point][target_points[radius_condition]]
+                '''
+                the point that we need is the point with the smallest distance
+                '''
+                point_needed = target_points[radius_condition][distances_to_compare.argmin()]
+                hit_results[base_point, i] = point_needed
 
-    for i in range(distances.shape[0]):
-        for j in range(distances.shape[1]):
-            at1, at2 = atypes[i], atypes[j]
-            if (at1 > 0) and (at2 > 0) and (csu_criteria[i, j] > 0):
-                contactcounter[i, j] += 1
-                btype = BONDTYPE(at1, at2)
-                print(at1, at2, csu_criteria[i, j], btype)
-                if btype <= 4:
-                    stabilizercounter[i, j] += 1
-                if btype == 5:
-                    destabilizercounter[i, j] += 1
+    contactcounter_1 = np.zeros_like(atomic_distances)
+    stabilisercounter_1 = np.zeros_like(atomic_distances)
+    destabilisercounter_1 = np.zeros_like(atomic_distances)
+
+    for i, j in enumerate(hit_results):
+        for k in j:
+            if k >= 0:
+                at1 = atypes[i]
+                at2 = atypes[k]
+                if (at1 > 0) and (at2 > 0):
+                    contactcounter_1[i, k] += 1
+                    btype = BONDTYPE(at1, at2)
+                    if btype <= 4:
+                        stabilisercounter_1[i, k] += 1
+                    if btype == 5:
+                        destabilisercounter_1[i, k] += 1
+
+    overlapcounter_2 = atom2res(over, residues, nresidues, norm=True)
+    contactcounter_2 = atom2res(contactcounter_1, residues, nresidues)
+    stabilisercounter_2 = atom2res(stabilisercounter_1, residues, nresidues)
+    destabilisercounter_2 = atom2res(destabilisercounter_1, residues, nresidues)
+
+    resnames = np.array(resnames)[np.unique(residues, return_index=True)[1]]
+    resids = np.array(residues)[np.unique(residues, return_index=True)[1]]
+
+    # this to write out the file if needed
+    # with open('contact_map_out.out', 'w') as f:
+    #     count = 0
+    #     for i1 in range(nresidues):
+    #         for i2 in range(nresidues):
+    #             over = overlapcounter_2[i1, i2]
+    #             cont = contactcounter_2[i1, i2]
+    #             stab = stabilisercounter_2[i1, i2]
+    #             dest = destabilisercounter_2[i1, i2]
+    #             ocsu = stab
+    #             rcsu = stab - dest
+    #
+    #             if (over > 0 or cont > 0) and (i1 != i2):
+    #                 count += 1
+    #                 msg = (f"R {int(count):6d} "
+    #                        f"{int(i1 + 1):5d}  {resnames[i1]:3s} A {int(resids[i1]):4d}    "
+    #                        f"{int(i2 + 1):5d}  {resnames[i2]:3s} A {int(resids[i2]):4d}    "
+    #                        f"{euclidean(ca_pos[i1], ca_pos[i2]) * 10:9.4f}     "
+    #                        f"{int(over):1d} {1 if cont != 0 else 0} {1 if ocsu != 0 else 0} {1 if rcsu > 0 else 0}"
+    #                        f"{int(rcsu):6d}  {int(cont):6d}\n")
+    #                 f.writelines(msg)
+
+    contacts = []
+    for i1 in range(nresidues):
+        for i2 in range(nresidues):
+            over = overlapcounter_2[i1, i2]
+            cont = contactcounter_2[i1, i2]
+            stab = stabilisercounter_2[i1, i2]
+            dest = destabilisercounter_2[i1, i2]
+            # ocsu = stab
+            rcsu = 1 if (stab - dest) > 0 else 0
+
+            if (over > 0 or cont > 0) and (i1 != i2):
+                if over == 1 or (over == 0 and rcsu == 1):
+                    # this is a OV or rCSU contact we take it
+                    chain_i1 = chains[np.where(residues == i1+1)[0][0]]
+                    chain_i2 = chains[np.where(residues == i2+1)[0][0]]
+                    contacts.append((i1+1, chain_i1, i2+1, chain_i2))
+    return contacts
 
 
 """
@@ -574,7 +596,6 @@ def read_go_map(file_path):
 
         if len(contacts) == 0:
             raise IOError("You contact map is empty. Are you sure it has the right formatting?")
-
     return contacts
 
 
@@ -586,8 +607,10 @@ class GenerateContactMap(Processor):
         self.path = path
 
     def run_molecule(self, molecule):
-        self.system.go_params["go_map"].append(read_go_map(file_path=self.path))
-        main(molecule)
+        if self.path is None:
+            self.system.go_params["go_map"].append(calculate_contact_map(molecule))
+        else:
+            self.system.go_params["go_map"].append(read_go_map(file_path=self.path))
         return molecule
 
     def run_system(self, system):
