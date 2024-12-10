@@ -282,7 +282,9 @@ def modification_matches(molecule, mappings):
     matches = []
     # Sort on the tuple[str] type names of the mappings so that mappings that
     # define most modifications at the same time get processed first
-    for mod_name in sorted(needed_mod_mappings, key=len, reverse=True):
+    for mod_name in sorted(needed_mod_mappings,
+                           key=lambda ms: (len(ms), len(known_mod_mappings[ms].block_from.nodes)),
+                           reverse=True):
         mod_mapping = known_mod_mappings[mod_name]
         for mol_to_mod, modification, references in mod_mapping.map(molecule, node_match=ptm_resname_match):
             matches.append((mol_to_mod, modification, references))
