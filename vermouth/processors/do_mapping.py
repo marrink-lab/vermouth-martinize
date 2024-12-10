@@ -155,7 +155,7 @@ def ptm_resname_match(mol_node, map_node):
         del map_node['PTM_atom']
     if 'modifications' in mol_node:
         map_node = map_node.copy()
-        matching_mod = all(map_mod in mol_node.get('modifications', [])
+        matching_mod = all(map_mod in (m.name for m in mol_node.get('modifications', []))
                            for map_mod in map_node.pop('modifications', []))
     else:
         matching_mod = True
