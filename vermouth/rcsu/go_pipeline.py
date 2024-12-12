@@ -20,7 +20,6 @@ import vermouth
 from ..processors.processor import Processor
 from .go_vs_includes import VirtualSiteCreator
 from .go_structure_bias import ComputeStructuralGoBias
-from .contact_map import GenerateContactMap
 from ..processors import SetMoleculeMeta
 
 class GoProcessorPipeline(Processor):

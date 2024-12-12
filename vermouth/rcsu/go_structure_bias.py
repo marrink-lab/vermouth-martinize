@@ -157,7 +157,7 @@ class ComputeStructuralGoBias(Processor):
         # find all pairs of residues that are within bonded distance of
         # self.res_dist
         connected_pairs = dict(nx.all_pairs_shortest_path_length(self.res_graph,
-                                                            cutoff=self.res_dist))
+                                                                 cutoff=self.res_dist))
         for contact in self.system.go_params["go_map"][0]:
             resIDA, chainA, resIDB, chainB = contact
             # identify the contact in the residue graph based on
