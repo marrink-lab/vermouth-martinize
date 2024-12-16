@@ -46,7 +46,6 @@ class ComputeStructuralGoBias(Processor):
     replacement in the GoPipeline.
     """
     def __init__(self,
-                 # contact_map,
                  cutoff_short,
                  cutoff_long,
                  go_eps,
@@ -85,7 +84,6 @@ class ComputeStructuralGoBias(Processor):
             magic number for Go contacts from the old
             GoVirt script.
         """
-        # self.contact_map = contact_map
         self.cutoff_short = cutoff_short
         self.cutoff_long = cutoff_long
         self.go_eps = go_eps

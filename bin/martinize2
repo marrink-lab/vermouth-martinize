@@ -549,16 +549,10 @@ def entry():
         dest="go",
         nargs='?',
         const=None,
-        type=str,
+        type=Path,
         help="Use Martini Go model. Accepts either an input file from the server, "
              "or just provide the flag to calculate as part of Martinize. Can be slow for large proteins "
              "(> 1500 residues)"
-        # required=False,
-        # type=Path,
-        # action='store_true',
-        # default=False,
-        # help="Contact map to be used for the Martini Go model."
-        #      "Currently, only one format is supported. See docs.",
     )
     go_group.add_argument(
         "-go-eps",
@@ -834,12 +828,19 @@ def entry():
             "be used together."
         )
 
+    """
+    Sort out the use of the go model:
+    
+    go = True : do the go model
+    go_file = None : calculate the contact map in martinize2
+    go_file = some file : read in the contact map from elsewhere
+    """
     go = False
     go_file = None
     if args.go is None:
         go = True
     else:
-        if os.path.isfile(args.go):
+        if Path(args.go).is_file():
             go_file = args.go
             go = True
 
@@ -1015,14 +1016,13 @@ def entry():
     # Generate the Go model if required
 
     if go:
-        if not go_map:
+        if not system.go_params["go_map"]:
             LOGGER.info("Reading Go model contact map.", type="step")
             GenerateContactMap(path=go_file).run_system(system)
         go_name_prefix = args.molname
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
                               moltype=go_name_prefix,
-                              # contact_map=go_map,
                               cutoff_short=args.go_low,
                               cutoff_long=args.go_up,
                               go_eps=args.go_eps,
