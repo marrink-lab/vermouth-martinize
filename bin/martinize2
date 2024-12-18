@@ -22,7 +22,6 @@ import argparse
 import functools
 import logging
 import itertools
-import os.path
 from pathlib import Path
 import sys
 import networkx as nx
@@ -831,9 +830,9 @@ def entry():
     """
     Sort out the use of the go model:
     
-    go = True : do the go model
-    go_file = None : calculate the contact map in martinize2
-    go_file = some file : read in the contact map from elsewhere
+    go_file = True: calculate contact map
+    go_file = str: parse contact map 
+    bool(go_file) = False: no go
     """
     go = False
     go_file = None
@@ -985,13 +984,15 @@ def entry():
     elif args.cystein_bridge != "auto":
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
-    go_map = False
     if go:
         # need this here because have to get contact map at atomistic resolution
         if go_file is None:
             LOGGER.info("Generating Go model contact map.", type="step")
             GenerateContactMap().run_system(system)
-            go_map = True
+        else:
+            LOGGER.info("Reading Go model contact map.", type="step")
+            GenerateContactMap(path=go_file).run_system(system)
+
 
     # Run martinize on the system.
     system = martinize(
@@ -1016,9 +1017,6 @@ def entry():
     # Generate the Go model if required
 
     if go:
-        if not system.go_params["go_map"]:
-            LOGGER.info("Reading Go model contact map.", type="step")
-            GenerateContactMap(path=go_file).run_system(system)
         go_name_prefix = args.molname
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
