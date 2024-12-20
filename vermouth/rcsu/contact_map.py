@@ -16,9 +16,31 @@ from ..processors.processor import Processor
 import numpy as np
 from scipy.spatial.distance import euclidean
 from scipy.spatial import cKDTree as KDTree
-from .. import MergeAllMolecules
 from ..graph_utils import make_residue_graph
 from itertools import product
+from vermouth.file_writer import DeferredFileWriter
+from pathlib import Path
+
+# BOND TYPE
+# Types of contacts:
+# HB -- 1 -- hydrogen-bond
+# PH -- 2 -- hydrophobic
+# AR -- 3 -- aromatic - contacts between aromatic rings
+# IB -- 4 -- ionic bridge - contacts created by two atoms with different charges
+# DC -- 5 -- destabilizing contact - contacts which are in general repulsive
+# OT -- 6 -- denotes negligible other contacts.
+# 1-HB,2-PH,3-AR,4-IP,5-DC,6-OT
+BOND_TYPE = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                      [0, 1, 1, 1, 5, 5, 6, 6, 6, 1, 1],
+                      [0, 1, 5, 1, 5, 5, 6, 6, 6, 1, 5],
+                      [0, 1, 1, 5, 5, 5, 6, 6, 6, 5, 1],
+                      [0, 5, 5, 5, 2, 2, 6, 6, 6, 5, 5],
+                      [0, 5, 5, 5, 2, 3, 6, 6, 6, 5, 5],
+                      [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+                      [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+                      [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+                      [0, 1, 1, 5, 5, 5, 6, 6, 6, 5, 4],
+                      [0, 1, 5, 1, 5, 5, 6, 6, 6, 4, 5]])
 
 PROTEIN_MAP = {
     "ALA": {
@@ -275,7 +297,7 @@ PROTEIN_MAP = {
 }
 
 
-def get_vdw_radius(resname, atomname):
+def _get_vdw_radius(resname, atomname):
     """
     get the vdw radius of an atom indexed internally within a serially numbered residue
     """
@@ -287,7 +309,7 @@ def get_vdw_radius(resname, atomname):
     return atom_vdw['vrad']
 
 
-def get_atype(resname, atomname):
+def _get_atype(resname, atomname):
     """
     get the vdw radius of an atom indexed internally within a serially numbered residue
     """
@@ -315,7 +337,8 @@ def make_surface(position, fiba, fibb, vrad):
     x, y, z = position
 
     k = np.arange(fibb)
-    phi_aux = (np.arange(fibb) * fiba) % fibb
+    phi_aux = (np.arange(1, fibb+1) * fiba) % fibb
+    phi_aux[phi_aux == 0] = fibb
     theta = np.arccos(1.0 - 2.0 * k / fibb)
     phi = 2.0 * np.pi * phi_aux / fibb
     surface_x = x + vrad * np.sin(theta) * np.cos(phi)
@@ -329,7 +352,6 @@ def make_surface(position, fiba, fibb, vrad):
 def atom2res(arrin, nresidues, atom_map, norm=False):
     '''
     take an array with atom level data and sum the entries over within the residue
-
     '''
 
     out = np.zeros((nresidues, nresidues))
@@ -346,42 +368,12 @@ def atom2res(arrin, nresidues, atom_map, norm=False):
     return out
 
 
-def bondtype(i, j):
-    maxatomtype = 10
-    assert 1 <= i <= maxatomtype
-    assert 1 <= j <= maxatomtype
-
-    i -= 1
-    j -= 1
-    # BOND TYPE
-    # Types of contacts:
-    # HB -- 1 -- hydrogen-bond
-    # PH -- 2 -- hydrophobic
-    # AR -- 3 -- aromatic - contacts between aromatic rings
-    # IB -- 4 -- ionic bridge - contacts created by two atoms with different charges
-    # DC -- 5 -- destabilizing contact - contacts which are in general repulsive
-    # OT -- 6 -- denotes negligible other contacts.
-    # 1-HB,2-PH,3-AR,4-IP,5-DC,6-OT
-    btype = np.array([[1, 1, 1, 5, 5, 6, 6, 6, 1, 1],
-                      [1, 5, 1, 5, 5, 6, 6, 6, 1, 5],
-                      [1, 1, 5, 5, 5, 6, 6, 6, 5, 1],
-                      [5, 5, 5, 2, 2, 6, 6, 6, 5, 5],
-                      [5, 5, 5, 2, 3, 6, 6, 6, 5, 5],
-                      [6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
-                      [6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
-                      [6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
-                      [1, 1, 5, 5, 5, 6, 6, 6, 5, 4],
-                      [1, 5, 1, 5, 5, 6, 6, 6, 4, 5]])
-    return btype[i][j]
-
-
-def contact_info(system):
+def _contact_info(molecule):
     """
     get the atom attributes that we need to calculate the contacts
     """
 
-    system = MergeAllMolecules().run_system(system)
-    G = make_residue_graph(system.molecules[0])
+    G = make_residue_graph(molecule)
 
     resids = []
     chains = []
@@ -407,10 +399,10 @@ def contact_info(system):
 
                 positions_all.append(subgraph.nodes[atom]['position'] * 10)
 
-                vdw_list.append(get_vdw_radius(subgraph.nodes[atom]['resname'],
-                                               subgraph.nodes[atom]['atomname']))
-                atypes.append(get_atype(subgraph.nodes[atom]['resname'],
-                                        subgraph.nodes[atom]['atomname']))
+                vdw_list.append(_get_vdw_radius(subgraph.nodes[atom]['resname'],
+                                                subgraph.nodes[atom]['atomname']))
+                atypes.append(_get_atype(subgraph.nodes[atom]['resname'],
+                                         subgraph.nodes[atom]['atomname']))
 
             if subgraph.nodes[atom]['atomname'] == 'CA':
                 ca_pos.append(subgraph.nodes[atom]['position'])
@@ -431,7 +423,7 @@ def contact_info(system):
 
     return vdw_list, atypes, coords, res_serial, resids, chains, resnames, nodes, ca_pos, nresidues, G
 
-def calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha):
+def _calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha):
     """
     Find enlarged (OV) overlap contacts
 
@@ -454,7 +446,7 @@ def calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha):
                 over[idx, jdx] = 1
     return over
 
-def calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius):
+def _calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius):
     """
     Calculate contacts of structural units (CSU)
 
@@ -516,7 +508,7 @@ def calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, wa
     return hit_results
 
 
-def contact_types(hit_results, natoms, atypes):
+def _contact_types(hit_results, natoms, atypes):
     """
     From CSU contacts, establish contact types from atomtypes
 
@@ -540,7 +532,7 @@ def contact_types(hit_results, natoms, atypes):
                 at2 = atypes[k]
                 if (at1 > 0) and (at2 > 0):
                     contactcounter_1[i, k] += 1
-                    btype = bondtype(at1, at2)
+                    btype = BOND_TYPE[at1, at2]
                     if btype <= 4:
                         stabilisercounter_1[i, k] += 1
                     if btype == 5:
@@ -549,7 +541,7 @@ def contact_types(hit_results, natoms, atypes):
     return contactcounter_1, stabilisercounter_1, destabilisercounter_1
 
 
-def calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
+def _calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
     """
     run the contact calculation functions
 
@@ -573,19 +565,19 @@ def calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
 
     natoms = len(coords)
 
-    vdw_max = max(item['vmax'] for atoms in PROTEIN_MAP.values() for item in atoms.values())
+    vdw_max = max(item['vrad'] for atoms in PROTEIN_MAP.values() for item in atoms.values())
 
     # make the KDTree of the input coordinates
     coords_tree = KDTree(coords)
 
     # calculate the OV contacts of the molecule
-    over = calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24)
+    over = _calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24)
 
     # Calculate the CSU contacts of the molecule
-    hit_results = calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius=2.80)
+    hit_results = _calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius=2.80)
 
     # find the types of contacts we have
-    contactcounter_1, stabilisercounter_1, destabilisercounter_1 = contact_types(hit_results, natoms, atypes)
+    contactcounter_1, stabilisercounter_1, destabilisercounter_1 = _contact_types(hit_results, natoms, atypes)
 
     atom_map = {}
     for i in range(nresidues):
@@ -600,10 +592,30 @@ def calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
     return overlapcounter_2, contactcounter_2, stabilisercounter_2, destabilisercounter_2
 
 
-def get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, nodes, G):
+def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, nodes, G):
+    '''
+    Generate contacts list from the contact arrays calculated
+
+    nresidues: int
+        number of residues in the molecule
+    overlaps: ndarray
+        nresidues x nresidues array of OV contacts in the molecule
+    contacts: ndarray
+        nresidues x nresidues array of CSU contacts in the molecule
+    stabilisers: ndarray
+        nresidues x nresidues array of CSU stabilising contacts in the molecule
+    destabilisers: ndarray
+        nresidues x nresidues array of CSU destabilising contacts in the molecule
+    nodes: list
+        list of serial residue ids for each of the residues
+    G: nx.Graph
+        residue based graph of the molecule
+    '''
     contacts_list = []
+    all_contacts = []
     for i1, i2 in product(np.arange(nresidues), np.arange(nresidues)):
-        if i1 == i2: continue
+        if i1 == i2:
+            continue
         over = overlaps[i1, i2]
         cont = contacts[i1, i2]
         stab = stabilisers[i1, i2]
@@ -613,38 +625,41 @@ def get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, node
         if (over > 0 or cont > 0):
             a = np.where(nodes == i1)[0][0]
             b = np.where(nodes == i2)[0][0]
+            all_contacts.append([i1+1, i2+1, a, b, over, cont, stab, rcsu])
             if over == 1 or (over == 0 and rcsu):
                 # this is a OV or rCSU contact we take it
                 contacts_list.append((int(G.nodes[a]['resid']), G.nodes[a]['chain'],
                                       int(G.nodes[b]['resid']), G.nodes[b]['chain']))
 
-    return contacts_list
+    return contacts_list, all_contacts
 
 
-def write_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, nodes, ca_pos, G):
+def _write_contacts(all_contacts, ca_pos, G):
+    '''
+    write the contacts calculated to file
+
+    all_contacts: list
+        list of lists of every contact found
+    ca_pos: list
+        list of (3,) arrays with the position of the CA atom of each residue
+    G: nx.Graph
+        residue graph of the input molecule
+    '''
     # this to write out the file if needed
-    with open('contact_map_vermouth.out', 'w') as f:
+    with DeferredFileWriter.open(Path('contact_map_vermouth.out'), 'w') as f:
         count = 0
-        for i1, i2 in product(np.arange(nresidues), np.arange(nresidues)):
-            over = overlaps[i1, i2]
-            cont = contacts[i1, i2]
-            stab = stabilisers[i1, i2]
-            dest = destabilisers[i1, i2]
-            rcsu = (stab - dest) > 0
-
-            if (over > 0 or cont > 0) and (i1 != i2):
-                a = np.where(nodes == i1)[0][0]
-                b = np.where(nodes == i2)[0][0]
-                count += 1
-                msg = (f"R {int(count):6d} "
-                       f"{int(i1 + 1):5d}  {G.nodes[a]['resname']:3s}"
-                       f"{G.nodes[a]['chain']:1s} {int(G.nodes[a]['resid']):4d}    "
-                       f"{int(i2 + 1):5d}  {G.nodes[b]['resname']:3s}"
-                       f"{G.nodes[b]['chain']:1s} {int(G.nodes[b]['resid']):4d}    "
-                       f"{euclidean(ca_pos[a], ca_pos[b])*10:9.4f}     "
-                       f"{int(over):1d} {1 if cont != 0 else 0} {1 if stab != 0 else 0} {1 if rcsu else 0}"
-                       f"{int(rcsu):6d}  {int(cont):6d}\n")
-                f.writelines(msg)
+        for contact in all_contacts:
+            count += 1
+            msg = (f"R {int(count): 6d} "
+                   f"{int(contact[0]): 5d}  {G.nodes[contact[2]]['resname']: 3s}"
+                   f"{G.nodes[contact[2]]['chain']:1s} {int(G.nodes[contact[2]]['resid']): 4d}    "
+                   f"{int(contact[1]): 5d}  {G.nodes[contact[3]]['resname']: 3s}"
+                   f"{G.nodes[contact[3]]['chain']: 1s} {int(G.nodes[contact[3]]['resid']): 4d}    "
+                   f"{euclidean(ca_pos[contact[2]], ca_pos[contact[3]])*10: 9.4f}     "
+                   f"{int(contact[4]): 1d} {1 if contact[5] != 0 else 0} "
+                   f"{1 if contact[6] != 0 else 0} {1 if contact[7] else 0}"
+                   f"{int(contact[7]): 6d}  {int(contact[5]): 6d}\n")
+            f.writelines(msg)
 
 
 """
@@ -652,15 +667,17 @@ Read RCSU Go model contact maps.
 """
 
 
-def read_go_map(file_path):
+def read_go_map(system, file_path):
     """
     Read a RCSU contact map from the c code as published in
-    doi:10.5281/zenodo.3817447. The format requires all 
-    contacts to have 18 columns and the first column to be 
+    doi:10.5281/zenodo.3817447. The format requires all
+    contacts to have 18 columns and the first column to be
     a capital R.
 
     Parameters
     ----------
+    system: vermouth.system.System
+        The system to process. Is modified in-place.
     file_path: :class:`pathlib.Path`
         path to the contact map file
 
@@ -685,6 +702,38 @@ def read_go_map(file_path):
 
         if len(contacts) == 0:
             raise IOError("You contact map is empty. Are you sure it has the right formatting?")
+
+    system.go_params["go_map"].append(contacts)
+
+
+def do_contacts(molecule, write_file):
+    '''
+    master function to calculate Go contacts
+
+    molecule: vermouth.Molecule
+        molecule to calculate contacts for
+    write_file: bool
+        write the file of the contacts out
+    '''
+    vdw_list, atypes, coords, res_serial, resids, chains, resnames, nodes, ca_pos, nresidues, mol_graph = _contact_info(
+        molecule)
+
+    overlaps, contacts, stabilisers, destabilisers = _calculate_contacts(vdw_list,
+                                                                        atypes,
+                                                                        coords,
+                                                                        res_serial,
+                                                                        nresidues)
+
+    contacts, all_contacts = _get_contacts(nresidues,
+                            overlaps, contacts,
+                            stabilisers,
+                            destabilisers,
+                            nodes,
+                            mol_graph)
+
+    if write_file:
+        _write_contacts(all_contacts, ca_pos, mol_graph)
+
     return contacts
 
 
@@ -692,10 +741,10 @@ class GenerateContactMap(Processor):
     """
     Processor to generate the contact rCSU contact map for a protein from an atomistic structure
     """
-    def __init__(self, path=None):
-        self.path = path
+    def __init__(self, go_write_file):
+        self.write_file = go_write_file
 
-    def run_system(self, system):
+    def run_molecule(self, molecule):
         """
         Process `system`.
 
@@ -704,23 +753,10 @@ class GenerateContactMap(Processor):
         system: vermouth.system.System
             The system to process. Is modified in-place.
         """
-        self.system = system
+        return do_contacts(molecule, self.write_file)
 
-        if self.path is None:
-            vdw_list, atypes, coords, res_serial, resids, chains, resnames, nodes, ca_pos, nresidues, G = contact_info(
-                system)
+    def run_system(self, system):
+        for molecule in system.molecules:
+            contacts = self.run_molecule(molecule)
+            system.go_params["go_map"].append(contacts)
 
-            overlaps, contacts, stabilisers, destabilisers = calculate_contacts(vdw_list,
-                                                                                atypes,
-                                                                                coords,
-                                                                                res_serial,
-                                                                                nresidues)
-
-            self.system.go_params["go_map"].append(get_contacts(nresidues,
-                                                                overlaps, contacts,
-                                                                stabilisers,
-                                                                destabilisers,
-                                                                nodes,
-                                                                G))
-        else:
-            self.system.go_params["go_map"].append(read_go_map(file_path=self.path))
