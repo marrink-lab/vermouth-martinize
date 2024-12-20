@@ -18,7 +18,7 @@ from scipy.spatial.distance import euclidean
 from scipy.spatial import cKDTree as KDTree
 from ..graph_utils import make_residue_graph
 from itertools import product
-from vermouth.file_writer import DeferredFileWriter
+from vermouth.file_writer import deferred_open
 from pathlib import Path
 
 # BOND TYPE
@@ -646,20 +646,23 @@ def _write_contacts(all_contacts, ca_pos, G):
         residue graph of the input molecule
     '''
     # this to write out the file if needed
-    with DeferredFileWriter.open(Path('contact_map_vermouth.out'), 'w') as f:
-        count = 0
-        for contact in all_contacts:
-            count += 1
-            msg = (f"R {int(count): 6d} "
-                   f"{int(contact[0]): 5d}  {G.nodes[contact[2]]['resname']: 3s}"
-                   f"{G.nodes[contact[2]]['chain']:1s} {int(G.nodes[contact[2]]['resid']): 4d}    "
-                   f"{int(contact[1]): 5d}  {G.nodes[contact[3]]['resname']: 3s}"
-                   f"{G.nodes[contact[3]]['chain']: 1s} {int(G.nodes[contact[3]]['resid']): 4d}    "
-                   f"{euclidean(ca_pos[contact[2]], ca_pos[contact[3]])*10: 9.4f}     "
-                   f"{int(contact[4]): 1d} {1 if contact[5] != 0 else 0} "
-                   f"{1 if contact[6] != 0 else 0} {1 if contact[7] else 0}"
-                   f"{int(contact[7]): 6d}  {int(contact[5]): 6d}\n")
-            f.writelines(msg)
+    msgs = []
+    count = 0
+    for contact in all_contacts:
+        count += 1
+        msg = (f"R {int(count):6d} "
+               f"{int(contact[0]):5d}  {G.nodes[contact[2]]['resname']:3s} "
+               f"{G.nodes[contact[2]]['chain']:1s} {int(G.nodes[contact[2]]['resid']):4d}    "
+               f"{int(contact[1]):5d}  {G.nodes[contact[3]]['resname']:3s} "
+               f"{G.nodes[contact[3]]['chain']:1s} {int(G.nodes[contact[3]]['resid']):4d}    "
+               f"{euclidean(ca_pos[contact[2]], ca_pos[contact[3]])*10:9.4f}     "
+               f"{int(contact[4]):1d} {1 if contact[5] != 0 else 0} "
+               f"{1 if contact[6] != 0 else 0} {1 if contact[7] else 0}"
+               f"{int(contact[7]): 6d}  {int(contact[5]): 6d}\n")
+        msgs.append(msg)
+    message_out = ''.join(msgs)
+    with deferred_open('contact_map_vermouth.out', "w") as f:
+        f.write(message_out)
 
 
 """
@@ -741,8 +744,8 @@ class GenerateContactMap(Processor):
     """
     Processor to generate the contact rCSU contact map for a protein from an atomistic structure
     """
-    def __init__(self, go_write_file):
-        self.write_file = go_write_file
+    def __init__(self, write_file):
+        self.write_file = write_file
 
     def run_molecule(self, molecule):
         """

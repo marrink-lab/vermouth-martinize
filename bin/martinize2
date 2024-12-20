@@ -584,8 +584,8 @@ def entry():
     go_group.add_argument(
         "-go-write-file",
         dest="go_write_file",
-        action="store_false",
-        default=True,
+        action="store_true",
+        default=False,
         help=("Write out contact map to file if calculating as part of Martinize2.")
     )
 
