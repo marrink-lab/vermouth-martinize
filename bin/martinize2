@@ -48,7 +48,7 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings,
 )
-from vermouth.rcsu.contact_map import read_go_map
+from vermouth.rcsu.contact_map import GenerateContactMap, read_go_map
 from vermouth.rcsu.go_pipeline import GoPipeline
 from vermouth.gmx.topology import write_gmx_topology
 
@@ -546,11 +546,11 @@ def entry():
     go_group.add_argument(
         "-go",
         dest="go",
-        required=False,
+        nargs='?',
+        const=True,
         type=Path,
-        default=None,
-        help="Contact map to be used for the Martini Go model."
-             "Currently, only one format is supported. See docs.",
+        help="Use Martini Go model. Accepts either an input file from the server, "
+             "or just provide the flag to calculate as part of Martinize."
     )
     go_group.add_argument(
         "-go-eps",
@@ -580,6 +580,14 @@ def entry():
         default=3,
         help=("Minimum graph distance (similar sequence distance) below which"
               "contacts are removed. "),
+    )
+    go_group.add_argument(
+        "-go-write-file",
+        dest="go_write_file",
+        nargs='?',
+        const=True,
+        type=Path,
+        help=("Write out contact map to file if calculating as part of Martinize2.")
     )
 
     water_group = parser.add_argument_group("Apply water bias.")
@@ -967,6 +975,21 @@ def entry():
     elif args.cystein_bridge != "auto":
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
+    if args.go:
+        system = vermouth.MergeAllMolecules().run_system(system)
+        # need this here because have to get contact map at atomistic resolution
+        if isinstance(args.go, str):
+            LOGGER.info("Reading Go model contact map.", type="step")
+            read_go_map(system=system, path=args.go)
+        else:
+            LOGGER.info("Generating Go model contact map.", type="step")
+            if isinstance(args.go_write_file, Path):
+                go_file_path = str(args.go_write_file)
+            else:
+                go_file_path = "contact_map_martinize.out"
+            GenerateContactMap(write_file=go_file_path).run_system(system)
+
+
     # Run martinize on the system.
     system = martinize(
         system,
@@ -988,14 +1011,11 @@ def entry():
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
     # Generate the Go model if required
-    if args.go:
+    if system.go_params["go_map"]:
         go_name_prefix = args.molname
-        LOGGER.info("Reading Go model contact map.", type="step")
-        go_map = read_go_map(args.go)
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
                               moltype=go_name_prefix,
-                              contact_map=go_map,
                               cutoff_short=args.go_low,
                               cutoff_long=args.go_up,
                               go_eps=args.go_eps,
