@@ -547,7 +547,7 @@ def entry():
         "-go",
         dest="go",
         nargs='?',
-        const=None,
+        const=True,
         type=Path,
         help="Use Martini Go model. Accepts either an input file from the server, "
              "or just provide the flag to calculate as part of Martinize."
@@ -584,8 +584,9 @@ def entry():
     go_group.add_argument(
         "-go-write-file",
         dest="go_write_file",
-        action="store_true",
-        default=False,
+        nargs='?',
+        const=True,
+        type=Path,
         help=("Write out contact map to file if calculating as part of Martinize2.")
     )
 
@@ -833,21 +834,6 @@ def entry():
             "be used together."
         )
 
-    """
-    Sort out the use of the go model:
-    
-    go = True: apply go model
-    go_file = str: parse contact map 
-    bool(go_file) = False: no go
-    """
-    go = False
-    go_file = None
-    if args.go is None:
-        go = True
-    else:
-        go_file = args.go
-        go = True
-
     if args.to_ff.startswith("elnedyn"):
         # FIXME: This type of thing should be added to the FF itself.
         LOGGER.info(
@@ -989,15 +975,19 @@ def entry():
     elif args.cystein_bridge != "auto":
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
-    if go:
+    if args.go:
         system = vermouth.MergeAllMolecules().run_system(system)
         # need this here because have to get contact map at atomistic resolution
-        if go_file is None:
-            LOGGER.info("Generating Go model contact map.", type="step")
-            GenerateContactMap(write_file=args.go_write_file).run_system(system)
-        else:
+        if isinstance(args.go, str):
             LOGGER.info("Reading Go model contact map.", type="step")
-            read_go_map(system=system, path=go_file)
+            read_go_map(system=system, path=args.go)
+        else:
+            LOGGER.info("Generating Go model contact map.", type="step")
+            if isinstance(args.go_write_file, Path):
+                go_file_path = str(args.go_write_file)
+            else:
+                go_file_path = "contact_map_martinize.out"
+            GenerateContactMap(write_file=go_file_path).run_system(system)
 
 
     # Run martinize on the system.
@@ -1021,8 +1011,7 @@ def entry():
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
     # Generate the Go model if required
-
-    if go:
+    if system.go_params["go_map"]:
         go_name_prefix = args.molname
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
