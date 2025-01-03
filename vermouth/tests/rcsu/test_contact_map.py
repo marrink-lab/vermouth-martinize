@@ -16,6 +16,7 @@
 """
 Unit tests for the Go contact map generator.
 """
+
 import pytest
 import numpy as np
 from vermouth.rcsu import contact_map
@@ -26,7 +27,7 @@ from vermouth.rcsu.contact_map import GenerateContactMap
 import vermouth
 from vermouth.tests.helper_functions import test_molecule, equal_graphs
 from vermouth.tests.datafiles import TEST_MOLECULE_CONTACT_MAP
-from pathlib import Path
+from vermouth.file_writer import DeferredFileWriter
 
 @pytest.mark.parametrize('resname, atomname, expected',
                          (
@@ -381,13 +382,16 @@ def test_write_contacts(test_molecule, tmp_path):
 
     outpath = tmp_path / 'contacts.out'
 
-    contact_map._write_contacts(str(outpath),
+    contact_map._write_contacts(outpath,
                                 all_contacts,
                                 ca_pos,
                                 molecule_graph)
+    DeferredFileWriter().write()
 
-    with open(outpath) as infile:
-        # skip the first line here because it's the vermouth version
-        for line, expected_line in zip(infile[1:], expected_lines[1:]):
-            assert line == expected_line
+    with open(str(outpath)) as infile:
+        written_lines = infile.readlines()
+
+    # skip the first line here because it's the vermouth version
+    for line, expected_line in zip(written_lines[1:], expected_lines[1:]):
+        assert line == expected_line
 
