@@ -978,9 +978,9 @@ def entry():
     if args.go:
         system = vermouth.MergeAllMolecules().run_system(system)
         # need this here because have to get contact map at atomistic resolution
-        if isinstance(args.go, str):
+        if isinstance(args.go, Path):
             LOGGER.info("Reading Go model contact map.", type="step")
-            read_go_map(system=system, path=args.go)
+            read_go_map(system=system, file_path=args.go)
         else:
             LOGGER.info("Generating Go model contact map.", type="step")
             if isinstance(args.go_write_file, Path):
