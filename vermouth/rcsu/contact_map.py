@@ -321,7 +321,7 @@ def _get_atype(resname, atomname):
     return atom_vdw['atype']
 
 
-def make_surface(position, fiba, fibb, vrad):
+def _make_surface(position, fiba, fibb, vrad):
     """
     Generate points on a sphere using Fibonacci points
 
@@ -489,7 +489,7 @@ def _calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, w
             continue
 
         # Generate the fibonacci sphere for this point and make a KDTree from it
-        base_tree = KDTree(make_surface(coords[idx], fiba, fibb, vdw_list[idx]+water_radius))
+        base_tree = KDTree(_make_surface(coords[idx], fiba, fibb, vdw_list[idx]+water_radius))
 
         # find points on the base point sphere which are within the vdw cutoff of the target point's coordinate
         res = np.array(base_tree.query_ball_point(coords[jdx], vdw_list[jdx] + water_radius))
