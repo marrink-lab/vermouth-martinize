@@ -301,7 +301,11 @@ def _get_vdw_radius(resname, atomname):
     """
     get the vdw radius of an atom indexed internally within a serially numbered residue
     """
-    res_vdw = PROTEIN_MAP[resname]
+    try:
+        res_vdw = PROTEIN_MAP[resname]
+    except KeyError:
+        return 0.00
+
     try:
         atom_vdw = res_vdw[atomname]
     except KeyError:
@@ -313,11 +317,16 @@ def _get_atype(resname, atomname):
     """
     get the vdw radius of an atom indexed internally within a serially numbered residue
     """
-    res_vdw = PROTEIN_MAP[resname]
+    try:
+        res_vdw = PROTEIN_MAP[resname]
+    except KeyError:
+        return 0
+
     try:
         atom_vdw = res_vdw[atomname]
     except KeyError:
         atom_vdw = res_vdw['default']
+
     return atom_vdw['atype']
 
 
