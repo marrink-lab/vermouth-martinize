@@ -21,9 +21,12 @@ import numpy as np
 from vermouth.rcsu import contact_map
 from collections import defaultdict
 from vermouth.graph_utils import make_residue_graph
+from scipy.spatial import cKDTree as KDTree
 from vermouth.rcsu.contact_map import GenerateContactMap
 import vermouth
 from vermouth.tests.helper_functions import test_molecule, equal_graphs
+from vermouth.tests.datafiles import TEST_MOLECULE_CONTACT_MAP
+from pathlib import Path
 
 @pytest.mark.parametrize('resname, atomname, expected',
                          (
@@ -33,6 +36,7 @@ from vermouth.tests.helper_functions import test_molecule, equal_graphs
                                  ('NON', 'NON', 0.00)
                          ))
 def test_get_vdw_radius(resname, atomname, expected):
+    # test that we get the correct vdw radii and errors in resname/atomname are handled correctly
     result = contact_map._get_vdw_radius(resname, atomname)
     assert result == expected
 
@@ -49,6 +53,7 @@ def test_get_atype(resname, atomname, expected):
     assert result == expected
 
 def test_surface_generation():
+    # test that a surface is generated with the correct points
 
     position = np.array([1, 1, 1])
 
@@ -68,22 +73,23 @@ def test_surface_generation():
 @pytest.mark.parametrize('norm, expected', (
      (False,
        np.array([[1, 0, 0, 0, 0],
-                [0, 8, 0, 0, 0],
-                [0, 0, 27, 0, 0],
-                [0, 0, 0, 36, 0],
-                [0, 0, 0, 0, 80]]
+                 [0, 8, 0, 0, 0],
+                 [0, 0, 27, 0, 0],
+                 [0, 0, 0, 36, 0],
+                 [0, 0, 0, 0, 80]]
                 )
       ),
      (True,
       np.array([[1, 0, 0, 0, 0],
-               [0, 1, 0, 0, 0],
-               [0, 0, 1, 0, 0],
-               [0, 0, 0, 1, 0],
-               [0, 0, 0, 0, 1]]
+                [0, 1, 0, 0, 0],
+                [0, 0, 1, 0, 0],
+                [0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 1]]
                )
       )
     ))
 def test_atom2res(norm, expected):
+    # test that atomic resolution arrays get mapped correctly to their residues and are normalised if required
 
     arrin = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                       [0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -107,6 +113,7 @@ def test_atom2res(norm, expected):
     assert np.allclose(res_array, expected)
 
 def test_make_atom_map():
+    # test that the atom_map defaultdict is generated correctly
 
     input = [0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4]
     result = contact_map.make_atom_map(input)
@@ -122,6 +129,8 @@ def test_make_atom_map():
 
 
 def test_contact_info(test_molecule):
+    # test we get the expected input data from a molecule
+
     result = contact_map._contact_info(test_molecule)
 
     vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, G = result
@@ -143,4 +152,242 @@ def test_contact_info(test_molecule):
     assert set(resnames) & set(['res0', 'res1', 'res2', 'res3'])
 
     assert equal_graphs(make_residue_graph(test_molecule), G)
+
+
+def test_calculate_overlap(test_molecule):
+    # test the overlap is calculated correctly
+
+    result = contact_map._contact_info(test_molecule)
+    points = result[2]
+    tree = KDTree(points)
+    vdw_list = [7] * len(points)
+    natoms = len(points)
+    vdw_max = 20
+    alpha = 1
+
+    overlaps = contact_map._calculate_overlap(tree, vdw_list, natoms, vdw_max, alpha)
+
+    expected = np.array([[0., 1., 1., 1., 1., 1., 0., 0., 0.],
+                         [1., 0., 1., 1., 1., 1., 0., 0., 0.],
+                         [1., 1., 0., 1., 1., 0., 0., 0., 0.],
+                         [1., 1., 1., 0., 1., 1., 1., 1., 0.],
+                         [1., 1., 1., 1., 0., 1., 1., 1., 1.],
+                         [1., 1., 0., 1., 1., 0., 1., 1., 1.],
+                         [0., 0., 0., 1., 1., 1., 0., 1., 1.],
+                         [0., 0., 0., 1., 1., 1., 1., 0., 1.],
+                         [0., 0., 0., 0., 1., 1., 1., 1., 0.]])
+
+    assert np.allclose(overlaps, expected)
+
+
+def test_calculate_csu(test_molecule):
+    # test that the csu contacts are found correctly
+
+    result = contact_map._contact_info(test_molecule)
+    points = result[2]
+
+    vdw_list = [7] * len(points)
+    fiba, fibb = 13, 21
+    natoms = len(points)
+    tree = KDTree(points)
+    vdw_max = 20
+    water_radius = 1
+
+    csu_contacts = contact_map._calculate_csu(points,
+                                              vdw_list,
+                                              fiba,
+                                              fibb,
+                                              natoms,
+                                              tree,
+                                              vdw_max,
+                                              water_radius)
+
+    # these are the values that sphere points might have contacts with for each point above.
+    expected = np.array([[-1,  1,  3, -1,  1, -1,  1,  3, -1,  1,  3,  1,  3, -1,  1,  3, -1,  1, -1,  1,  3],
+                         [-1,  2,  0, -1,  2,  0,  2,  4,  0,  2,  0,  2,  4,  0,  2,  0, -1,  2,  0,  2,  4],
+                         [-1, -1,  1, -1, -1,  1, -1,  4,  1, -1,  1, -1,  4,  1, -1,  1, -1, -1,  1, -1, -1],
+                         [-1,  4,  5,  0,  4, -1,  0,  5,  0,  4,  5,  0,  5,  0,  4,  5, 0,  4, -1,  0,  5],
+                         [-1, -1,  3,  1,  7,  3,  1,  5,  1,  8,  3,  1,  5,  1,  2,  3, 1,  8,  3,  1, -1],
+                         [-1, -1,  6,  3,  6, -1,  3,  6,  3,  6,  6,  3,  6,  3,  4,  6, 3,  6, -1,  3,  6],
+                         [-1,  7, -1,  5,  7, -1,  5, -1,  5,  7, -1,  5, -1,  5,  7, -1, 5,  7, -1,  5, -1],
+                         [-1,  8,  6,  4,  8,  6,  8, -1,  6,  8,  6,  8, -1,  6,  8,  6, 5,  8,  6,  8, -1],
+                         [-1, -1,  7, -1, -1,  7, -1, -1,  7, -1,  7, -1, -1,  7, -1,  7, 4, -1,  7, -1, -1]])
+
+    assert np.allclose(csu_contacts, expected)
+
+def test_contact_types(test_molecule):
+
+    result = contact_map._contact_info(test_molecule)
+    points = result[2]
+
+    vdw_list = [7] * len(points)
+    fiba, fibb = 13, 21
+    natoms = len(points)
+    tree = KDTree(points)
+    vdw_max = 20
+    water_radius = 1
+
+    hits = contact_map._calculate_csu(points,
+                                              vdw_list,
+                                              fiba,
+                                              fibb,
+                                              natoms,
+                                              tree,
+                                              vdw_max,
+                                              water_radius)
+
+
+    natoms = len(hits)
+    # this is slightly dodgy, but we get away with it because it's < 10. gives some variety at least
+    atypes = np.arange(natoms)
+
+    expected = [np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 8., 0., 3., 0., 0., 0., 0.],
+                          [0., 7., 0., 0., 2., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 5., 6., 0., 0., 0.],
+                          [0., 7., 1., 5., 0., 2., 0., 1., 2.],
+                          [0., 0., 0., 7., 1., 0., 9., 0., 0.],
+                          [0., 0., 0., 0., 0., 7., 0., 5., 0.],
+                          [0., 0., 0., 0., 1., 1., 7., 0., 8.],
+                          [0., 0., 0., 0., 1., 0., 0., 7., 0.]]),
+                np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 8., 0., 0., 0., 0., 0., 0.],
+                          [0., 7., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 2., 0., 0., 0.],
+                          [0., 0., 0., 0., 1., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 0., 0., 0., 0.]]),
+                np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 3., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 2., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 5., 6., 0., 0., 0.],
+                          [0., 7., 1., 5., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 7., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                          [0., 0., 0., 0., 0., 0., 0., 0., 0.]])]
+
+    contact_arrays = contact_map._contact_types(hits, natoms, atypes)
+
+    for i, j in enumerate(contact_arrays):
+        assert np.allclose(j, expected[i])
+
+
+def test_calculate_contacts(test_molecule):
+
+    result = contact_map._contact_info(test_molecule)
+    points = result[2]
+    res_serial = result[3]
+    nresidues = result[9]
+
+    vdw_list = [7] * len(points)
+    atypes = np.arange(len(points))
+
+    expected = [np.array([[0., 0., 0., 0.],
+                          [0., 0., 0., 0.],
+                          [0., 0., 0., 0.],
+                          [0., 0., 0., 0.]]),
+                np.array([[449.,  66.,   0.,   0.],
+                          [227., 287., 146.,   0.],
+                          [  0., 227.,   0., 226.],
+                          [  0.,   0., 227., 817.]]),
+                np.array([[449.,   0.,   0.,   0.],
+                          [  0.,   0.,   0.,   0.],
+                          [  0.,   0.,   0.,   0.],
+                          [  0.,   0.,   0.,   0.]]),
+                np.array([[  0.,  66.,   0.,   0.],
+                          [227., 287., 146.,   0.],
+                          [  0., 227.,   0.,   0.],
+                          [  0.,   0.,   0.,   0.]])]
+
+
+    contact_arrays = contact_map._calculate_contacts(vdw_list, atypes, points, res_serial, nresidues)
+
+    for i, j in enumerate(contact_arrays):
+        assert np.allclose(j, expected[i])
+
+def test_get_contacts(test_molecule):
+
+    result = contact_map._contact_info(test_molecule)
+    nresidues = result[9]
+    res_idx = result[7]
+    molecule_graph = result[10]
+
+    overlaps, contacts, stabilisers, destabilisers = [np.array([[0., 1., 0., 0.],
+                                                                [0., 1., 1., 0.],
+                                                                [0., 1., 1., 0.],
+                                                                [0., 0., 1., 0.]]),
+                                                      np.array([[449.,  66.,   0.,   0.],
+                                                                [227., 287., 146.,   0.],
+                                                                [  0., 227.,   0., 226.],
+                                                                [  0.,   0., 227., 817.]]),
+                                                      np.array([[449.,   0.,   0.,   0.],
+                                                                [  0.,   0.,   0.,   0.],
+                                                                [  0.,   0.,   0.,   0.],
+                                                                [  0.,   0.,   0.,   0.]]),
+                                                      np.array([[  0.,  66.,   0.,   0.],
+                                                                [227., 287., 146.,   0.],
+                                                                [  0., 227.,   0.,   0.],
+                                                                [  0.,   0.,   0.,   0.]])]
+
+    contacts_list, all_contacts = contact_map._get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers,
+                                                            res_idx, molecule_graph)
+
+    expected_all_contacts = [[1, 2, 0, 1, 1.0, 66.0, 0.0, False],
+                             [2, 1, 1, 0, 0.0, 227.0, 0.0, False],
+                             [2, 3, 1, 2, 1.0, 146.0, 0.0, False],
+                             [3, 2, 2, 1, 1.0, 227.0, 0.0, False],
+                             [3, 4, 2, 3, 0.0, 226.0, 0.0, False],
+                             [4, 3, 3, 2, 1.0, 227.0, 0.0, False]]
+
+    expected_contacts_list = [[1, "A", 2, "A"],
+                              [2, "A", 3, "A"],
+                              [3, "A", 2, "A"],
+                              [4, "A", 3, "A"]]
+    for i, j in zip([contacts_list, all_contacts], [expected_contacts_list, expected_all_contacts]):
+        for k, l in zip(i, j):
+            assert list(k) == list(l)
+
+def test_write_contacts(test_molecule, tmp_path):
+
+    result = contact_map._contact_info(test_molecule)
+    points = result[2]
+    res_serial = result[3]
+    res_idx = result[7]
+    nresidues = result[9]
+    molecule_graph = result[10]
+    vdw_list = [7] * len(points)
+    atypes = np.arange(len(points))
+
+    # make some fake ca positions from the COGs of the residues
+    ca_pos = []
+    for residue in molecule_graph.nodes:
+        subgraph = molecule_graph.nodes[residue]['graph']
+        pos = []
+        for atom in sorted(subgraph.nodes):
+            pos.append(subgraph.nodes[atom]['position']*10)
+        ca_pos.append(np.mean(np.stack(pos), axis=0))
+
+    overlaps, contacts, stabilisers, destabilisers = contact_map._calculate_contacts(vdw_list, atypes, points,
+                                                                                     res_serial, nresidues)
+
+    _, all_contacts = contact_map._get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers,
+                                                res_idx, molecule_graph)
+
+    with open(TEST_MOLECULE_CONTACT_MAP) as expectedfile:
+        expected_lines = expectedfile.readlines()
+
+    outpath = tmp_path / 'contacts.out'
+
+    contact_map._write_contacts(str(outpath),
+                                all_contacts,
+                                ca_pos,
+                                molecule_graph)
+
+    with open(outpath) as infile:
+        # skip the first line here because it's the vermouth version
+        for line, expected_line in zip(infile[1:], expected_lines[1:]):
+            assert line == expected_line
 

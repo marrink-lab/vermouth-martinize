@@ -20,6 +20,7 @@ from ..graph_utils import make_residue_graph
 from itertools import product
 from vermouth.file_writer import deferred_open
 from collections import defaultdict
+from vermouth import __version__ as VERSION
 
 # BOND TYPE
 # Types of contacts:
@@ -660,7 +661,25 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
     G: nx.Graph
         residue graph of the input molecule
     '''
-    # this to write out the file if needed
+
+    header = [f"Go contact map calculated with vermouth {VERSION}\n\n"]
+
+    header.append("Residue-Residue Contacts\n"
+                  "\n"
+                  "ID       - atom identification\n"
+                  "I1,I2    - serial residue id\n"
+                  "AA       - 3-letter code of aminoacid\n"
+                  "C        - chain\n"
+                  "I(PDB)   - residue number in PDB file\n"
+                  "DCA      - distance between CA\n"
+                  "CMs      - OV , CSU , oCSU , rCSU\n"
+                  "           (CSU does not take into account chemical properties of atoms)\n"
+                  "rCSU     - net contact from rCSU\n"
+                  "Count    - number of contacts between residues\n"
+                  "\n"
+                  "      ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count \n"
+                  "=======================================================================================\n")
+
     msgs = []
     count = 0
     for contact in all_contacts:
@@ -677,6 +696,7 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
         msgs.append(msg)
     message_out = ''.join(msgs)
     with deferred_open(fout, "w") as f:
+        f.write(''.join(header))
         f.write(message_out)
 
 
