@@ -20,8 +20,7 @@ def test_compute_go_interaction(test_molecule):
 
     system = vermouth.System()
     system.add_molecule(test_molecule)
-    go_processor = ComputeStructuralGoBias(contact_map=None,
-                                           cutoff_short=None,
+    go_processor = ComputeStructuralGoBias(cutoff_short=None,
                                            cutoff_long=None,
                                            go_eps=2.1,
                                            res_dist=None,
@@ -147,13 +146,15 @@ def test_contact_selector(test_molecule,
 
     # generate the virtual sites
     VirtualSiteCreator().run_system(system)
+    # add the contacts to the system
+    system.go_params["go_map"] = [cmap]
     # initialize the Go processor
-    go_processor = ComputeStructuralGoBias(contact_map=cmap,
-                                           cutoff_short=cshort,
+    go_processor = ComputeStructuralGoBias(cutoff_short=cshort,
                                            cutoff_long=clong,
                                            go_eps=2.1,
                                            res_dist=rdist,
-                                           moltype="mol_0")
+                                           moltype="mol_0",
+                                           system=system)
     go_processor.res_graph = vermouth.graph_utils.make_residue_graph(test_molecule)
     # run the contact map selector
     contact_matrix = go_processor.contact_selector(test_molecule)

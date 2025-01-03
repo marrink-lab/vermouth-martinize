@@ -51,6 +51,7 @@ class ComputeStructuralGoBias(Processor):
                  go_eps,
                  res_dist,
                  moltype,
+                 system=None,
                  res_graph=None):
         """
         Initialize the Processor with arguments required
@@ -91,7 +92,7 @@ class ComputeStructuralGoBias(Processor):
         self.moltype = moltype
         # don't modify
         self.res_graph = None
-        self.system = None
+        self.system = system
         self.__chain_id_to_resnode = {}
         self.conversion_factor = 2**(1/6)
 
