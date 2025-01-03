@@ -480,7 +480,6 @@ def _calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, w
 
     """
 
-
     #setup arrays to keep track
     hit_results = np.full((natoms, fibb), -1)
     dists_counter = np.full((natoms, fibb), np.inf)
@@ -548,6 +547,15 @@ def _contact_types(hit_results, natoms, atypes):
 
     return contactcounter_1, stabilisercounter_1, destabilisercounter_1
 
+def make_atom_map(res_serial):
+
+    atom_map = defaultdict(list)
+    for atom_idx, res_idx in enumerate(res_serial):
+        atom_map[res_idx].append(atom_idx)
+    for key, value in atom_map.items():
+        atom_map[key] = np.array(value)
+
+    return atom_map
 
 def _calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
     """
@@ -587,11 +595,7 @@ def _calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
     # find the types of contacts we have
     contactcounter_1, stabilisercounter_1, destabilisercounter_1 = _contact_types(hit_results, natoms, atypes)
 
-    atom_map = defaultdict(list)
-    for atom_idx, res_idx in enumerate(res_serial):
-        atom_map[res_idx].append(atom_idx)
-    for key, value in atom_map.items():
-        atom_map[key] = np.array(value)
+    atom_map = make_atom_map(res_serial)
 
     # transform the resolution between atoms and residues
     overlapcounter_2 = atom2res(over, nresidues, atom_map, norm=True)
