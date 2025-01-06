@@ -40,7 +40,7 @@ class VirtualSiteCreator(Processor):
         Assign molecule type names to the molecules in a system.
     :func:`add_virtual_sites`
     """
-    def __init__(self, go_anchor_bead, go_atomname):
+    def __init__(self, go_anchor_bead='BB', go_atomname='CA'):
         self.system = None
         self.backbone = go_anchor_bead
         self.atomname = go_atomname
@@ -52,6 +52,8 @@ class VirtualSiteCreator(Processor):
 
         if not self.system:
             raise ValueError('This processor requires a system.')
+        # add citations for the go model here
+        molecule.citations.add('M3_GO')
 
         self.add_virtual_sites(molecule,
                                prefix=moltype,
@@ -65,7 +67,7 @@ class VirtualSiteCreator(Processor):
         LOGGER.info("Adding Virtual Sites to backbone beads.", type="step")
         super().run_system(system)
 
-    def add_virtual_sites(self, molecule, prefix, backbone='BB', atomname='CA', charge=0):
+    def add_virtual_sites(self, molecule, prefix, backbone, atomname, charge=0):
         """
         Add the virtual sites for GoMartini in the molecule.
 
