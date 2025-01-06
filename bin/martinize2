@@ -983,10 +983,13 @@ def entry():
             read_go_map(system=system, file_path=args.go)
         else:
             LOGGER.info("Generating Go model contact map.", type="step")
-            if isinstance(args.go_write_file, Path):
-                go_file_path = str(args.go_write_file)
+            if args.go_write_file:
+                if isinstance(args.go_write_file, Path):
+                    go_file_path = str(args.go_write_file)
+                else:
+                    go_file_path = "contact_map_martinize.out"
             else:
-                go_file_path = "contact_map_martinize.out"
+                go_file_path = False
             GenerateContactMap(write_file=go_file_path).run_system(system)
 
 
