@@ -24,8 +24,7 @@ from collections import defaultdict
 from vermouth.graph_utils import make_residue_graph
 from scipy.spatial import cKDTree as KDTree
 from vermouth.rcsu.contact_map import GenerateContactMap
-import vermouth
-from vermouth.tests.helper_functions import test_molecule, equal_graphs
+from vermouth.tests.helper_functions import test_molecule, equal_graphs, create_sys_all_attrs
 from vermouth.tests.datafiles import TEST_MOLECULE_CONTACT_MAP
 from vermouth.file_writer import DeferredFileWriter
 
@@ -312,26 +311,23 @@ def test_calculate_contacts(test_molecule):
 def test_get_contacts(test_molecule):
 
     result = contact_map._contact_info(test_molecule)
-    nresidues = result[9]
+    points = result[2]
+    res_serial = result[3]
     res_idx = result[7]
+    nresidues = result[9]
     molecule_graph = result[10]
 
-    overlaps, contacts, stabilisers, destabilisers = [np.array([[0., 1., 0., 0.],
-                                                                [0., 1., 1., 0.],
-                                                                [0., 1., 1., 0.],
-                                                                [0., 0., 1., 0.]]),
-                                                      np.array([[449.,  66.,   0.,   0.],
-                                                                [227., 287., 146.,   0.],
-                                                                [  0., 227.,   0., 226.],
-                                                                [  0.,   0., 227., 817.]]),
-                                                      np.array([[449.,   0.,   0.,   0.],
-                                                                [  0.,   0.,   0.,   0.],
-                                                                [  0.,   0.,   0.,   0.],
-                                                                [  0.,   0.,   0.,   0.]]),
-                                                      np.array([[  0.,  66.,   0.,   0.],
-                                                                [227., 287., 146.,   0.],
-                                                                [  0., 227.,   0.,   0.],
-                                                                [  0.,   0.,   0.,   0.]])]
+    vdw_list = [7] * len(points)
+    atypes = np.arange(len(points))
+
+    overlaps, contacts, stabilisers, destabilisers = contact_map._calculate_contacts(vdw_list, atypes, points,
+                                                                                     res_serial, nresidues)
+
+    # add something interesting to overlaps otherwise we get nothing
+    overlaps = np.array([[0., 1., 0., 0.],
+                         [0., 1., 1., 0.],
+                         [0., 1., 1., 0.],
+                         [0., 0., 1., 0.]])
 
     contacts_list, all_contacts = contact_map._get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers,
                                                             res_idx, molecule_graph)
@@ -394,4 +390,56 @@ def test_write_contacts(test_molecule, tmp_path):
     # skip the first line here because it's the vermouth version
     for line, expected_line in zip(written_lines[1:], expected_lines[1:]):
         assert line == expected_line
+
+
+@pytest.mark.parametrize('write_out',
+                         ((False),
+                          (True))
+                         )
+def test_do_contacts(test_molecule, tmp_path, write_out):
+
+    if write_out:
+        outpath = str(tmp_path / 'contacts.out')
+    else:
+        outpath = False
+
+    contacts = contact_map.do_contacts(test_molecule, outpath)
+
+    # because of the vdw radii we actually expect no contacts
+    assert len(contacts) == len([]) == 0
+
+    if write_out:
+        DeferredFileWriter().write()
+
+        with open(TEST_MOLECULE_CONTACT_MAP) as expectedfile:
+            expected_lines = expectedfile.readlines()
+
+        with open(str(outpath)) as infile:
+            written_lines = infile.readlines()
+
+        # skip the first line here because it's the vermouth version
+        # this will actually just check that the header is written because no contacts are found
+        for line, expected_line in zip(written_lines[1:], expected_lines[1:]):
+            assert line == expected_line
+
+def test_processor(test_molecule):
+    # these don't actually matter because the processor only need coordinates
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+    secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
+
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="molecule_0",
+                                  secstruc=secstruc,
+                                  defaults={"chain": "A"},
+                                  attrs={"atype": atypes})
+    assert len(system.go_params["go_map"]) == 0
+
+    processor = GenerateContactMap(write_file=False)
+    processor.run_system(system)
+
+    # really just matters that after the processor has been run a list has been added to the dictionary
+    assert len(system.go_params["go_map"]) == 1
 
