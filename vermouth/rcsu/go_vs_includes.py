@@ -52,7 +52,7 @@ class VirtualSiteCreator(Processor):
 
         if not self.system:
             raise ValueError('This processor requires a system.')
-        print(self.backbone, self.atomname)
+
         self.add_virtual_sites(molecule,
                                prefix=moltype,
                                backbone=self.backbone,
