@@ -40,8 +40,10 @@ class VirtualSiteCreator(Processor):
         Assign molecule type names to the molecules in a system.
     :func:`add_virtual_sites`
     """
-    def __init__(self):
+    def __init__(self, go_anchor_bead, go_atomname):
         self.system = None
+        self.backbone = go_anchor_bead
+        self.atomname = go_atomname
 
     def run_molecule(self, molecule):
         moltype = molecule.meta.get('moltype')
@@ -50,9 +52,11 @@ class VirtualSiteCreator(Processor):
 
         if not self.system:
             raise ValueError('This processor requires a system.')
-        molecule.citations.add('M3_GO')
-
-        self.add_virtual_sites(molecule, prefix=moltype)
+        print(self.backbone, self.atomname)
+        self.add_virtual_sites(molecule,
+                               prefix=moltype,
+                               backbone=self.backbone,
+                               atomname=self.atomname)
 
         return molecule
 
@@ -65,7 +69,7 @@ class VirtualSiteCreator(Processor):
         """
         Add the virtual sites for GoMartini in the molecule.
 
-        One virtual site is added per backbone bead of the the Martini protein.
+        One virtual site is added per backbone bead of the Martini protein.
         Each virtual site copies the resid, resname, and chain of the backbone
         bead. It also copies the *reference* to the position array, so the virtual
         site position follows if the backbone bead is translated. The virtual sites

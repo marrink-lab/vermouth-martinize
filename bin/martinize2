@@ -589,6 +589,20 @@ def entry():
         type=Path,
         help=("Write out contact map to file if calculating as part of Martinize2.")
     )
+    go_group.add_argument(
+        "-go-backbone",
+        dest="go_backbone",
+        default="BB",
+        type=str,
+        help=("Name of protein backbone bead on which to place a virtual interaction go site")
+    )
+    go_group.add_argument(
+        "-go-atomname",
+        dest="go_atomname",
+        default="CA",
+        type=str,
+        help=("Name of the virtual interaction go site atom")
+    )
 
     water_group = parser.add_argument_group("Apply water bias.")
     water_group.add_argument(
@@ -1022,7 +1036,9 @@ def entry():
                               cutoff_short=args.go_low,
                               cutoff_long=args.go_up,
                               go_eps=args.go_eps,
-                              res_dist=args.go_res_dist,)
+                              res_dist=args.go_res_dist,
+                              go_anchor_bead=args.go_backbone,
+                              go_atomname=args.go_atomname)
 
         defines = ("GO_VIRT",)
         itp_paths = {"atomtypes": "go_atomtypes.itp",

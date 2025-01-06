@@ -40,6 +40,8 @@ class GoProcessorPipeline(Processor):
         vermouth.MergeAllMolecules().run_system(system)
         molecule = system.molecules[0]
         molecule.meta['moltype'] = moltype
+        # add citations for the go model here
+        molecule.citations.add('M3_GO')
 
     def run_system(self, system, **kwargs):
         self.kwargs = kwargs
