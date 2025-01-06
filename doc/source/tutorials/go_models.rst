@@ -15,7 +15,8 @@ the form of Lennard-Jones interactions, which are written as an extra file to be
 The Gō model is described in the help::
 
  Virtual site based GoMartini:
-   -go GO                Contact map to be used for the Martini Go model. Currently, only one format is supported. See docs. (default: None)
+  -go [GO]              Use Martini Go model. Accepts either an input file from the server, or just provide the flag to
+                        calculate as part of Martinize. (default: None)
    -go-eps GO_EPS        The strength of the Go model structural bias in kJ/mol. (default: 9.414)
    -go-moltype GOVS_MOLTYPE
                          Set the name of the molecule when using Virtual Sites GoMartini. (default: molecule_0)
@@ -23,13 +24,30 @@ The Gō model is described in the help::
    -go-up GO_UP          Maximum distance (nm) above which contacts are removed. (default: 1.1)
    -go-res-dist GO_RES_DIST
                          Minimum graph distance (similar sequence distance) below which contacts are removed. (default: 3)
+  -go-write-file [GO_WRITE_FILE]
+                        Write out contact map to file if calculating as part of Martinize2. (default: None)
 
-To add a Gō model to your protein, the first step is to calculate the contact map of your protein by uploading it
-to the `web server <http://pomalab.ippt.pan.pl/GoContactMap/>`_.
+To add a Gō model to your protein, the first step is to calculate the contact map of your protein.
+The contact map can be obtained in two ways. Firstly, by uploading it
+to the `web server <http://pomalab.ippt.pan.pl/GoContactMap/>`_, and downloading the associated ``contact_map.out`` file.
+Alternatively, with a version of Martinize2 ≥ 0.13.0 the contact map can be calculated directly without the need for
+any external processes. While the implementations of the contact algorithm are identical, the Martinize2 implementation
+may be relatively slow for larger systems. Typically for proteins with fewer than 1000 residues, the calculation of the
+contact map as part of Martinize2 will add up to a minute of extra calculation. Note that while the implementations of
+the main algorithm are identical, there may be small differences in the resulting contact map files due to assumptions
+the server makes about the format of input pdb files, which the implementation in Martinize2 overcomes. If you want
+to check the contact map that Martinize2 has calculated, you can write it out using the ``-go-write-file`` argument.
+While the contact map files may have small differences, it is likely that they will still result in the same non-bonded
+file outputs, a result of how symmetrical contacts are further identified in the definition of the Gō model.
 
-The contact map is then used in your martinize2 command:
+The go model is then applied to the protein using the ``-go`` argument of martinize2. If you have used a contact map
+from the server, give the path to the contact map file as the argument:
 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -go contact_map.out``
+
+Otherwise the contact map is calculated as part of Martinize2 by just specifying the ``-go`` argument:
+
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -go``
 
 
 Without any further additions, this will:
