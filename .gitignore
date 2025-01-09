@@ -20,10 +20,3 @@ doc/source/api
 doc/source/.doctrees
 
 .idea/
-
-/vermouth/tests/.temp/
-/vermouth/processors/rebuild_sidechains.py
-/vermouth/tests/data/integration_tests/tier-1/EN_ext/README
-/vermouth/data/mappings/martini3001/sp2.charmm36.map
-/vermouth/data/mappings/martini3001/temp.txt
-build/*
