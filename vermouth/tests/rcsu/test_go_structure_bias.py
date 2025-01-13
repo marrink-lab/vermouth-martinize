@@ -159,3 +159,58 @@ def test_contact_selector(test_molecule,
     # run the contact map selector
     contact_matrix = go_processor.contact_selector(test_molecule)
     assert contact_matrix == expected
+
+
+
+@pytest.mark.parametrize('cmap, expected',(
+        # single symmetric contact good chain id
+        ([(1, 'A', 4, 'A'), (4, 'A', 1, 'A')],
+         False),
+        # single symmetric contact bad chain id
+        ([(1, 'Z', 4, 'Z'), (4, 'Z', 1, 'Z')],
+         True),
+))
+def test_correct_chains(test_molecule, cmap, expected, caplog):
+
+    # the molecule atomtypes
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+    # the molecule resnames
+    resnames = {0: "A", 1: "A", 2: "A",
+                3: "B", 4: "B",
+                5: "C",
+                6: "D", 7: "D", 8: "D"}
+
+    secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="mol_0",
+                                  secstruc=secstruc,
+                                  defaults={"chain": "A"},
+                                  attrs={"resname": resnames,
+                                         "atype": atypes})
+
+    # generate the virtual sites
+    VirtualSiteCreator().run_system(system)
+    # add the contacts to the system
+    system.go_params["go_map"] = [cmap]
+    # initialize the Go processor
+    go_processor = ComputeStructuralGoBias(cutoff_short=0.3,
+                                           cutoff_long=2.0,
+                                           go_eps=2.1,
+                                           res_dist=0,
+                                           moltype="mol_0",
+                                           system=system)
+
+    caplog.clear()
+    go_processor.run_system(system)
+
+    if expected:
+        assert any(rec.levelname == 'WARNING' for rec in caplog.records)
+        # makes sure the warning is only printed once
+        assert len(caplog.records) == 1
+    else:
+        assert caplog.records == []
+
+
