@@ -883,6 +883,9 @@ SC4 SC5
 [ moleculetype ]
 GLYM    1
 
+[ citation ]
+m3_lipidations
+
 [ atoms ]
  1 SP1  1 GLYM BB   1 0.0 
  2 SN6a 1 GLYM C1   2 0.0
@@ -909,6 +912,9 @@ GLYM    1
 
 [ moleculetype ]
 CYSP    1
+
+[ citation ]
+m3_lipidations
 
 [ atoms ]
  1 P2   1 CYSP BB   1 0.0 
@@ -940,6 +946,9 @@ CYSP    1
 
 [ moleculetype ]
 CYSF           1
+
+[ citation ]
+m3_lipidations
 
 [ atoms ]
  1 P2   1 CYSF BB   1 0.0 
@@ -979,6 +988,9 @@ CYSF           1
 
 [ moleculetype ]
 CYSG    1
+
+[ citation ]
+m3_lipidations
 
 [ atoms ]
  1 P2   1 CYSG BB   1 0.0 
@@ -1022,8 +1034,6 @@ CYSG    1
  7  3  4  8 1 0.0 1 2
  8  4  5  9 1 0.0 1 2
  9  5  6 10 1 0.0 0.5 4
-
-
 
 ;;; Links
 
