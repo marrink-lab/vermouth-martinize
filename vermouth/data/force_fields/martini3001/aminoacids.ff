@@ -13,8 +13,8 @@
 ; limitations under the License.
 
 [ macros ]
-protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
-protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames "CYSG|CYSF|CYSP|GLYM|GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames_non_pro "CYSG|CYSF|CYSP|GLYM|GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
 prot_default_bb_type P2
 stiff_fc 1000000
 
@@ -877,6 +877,153 @@ SC1 SC2 SC3 SC4 SC5
 SC2 SC3 SC4 SC5
 SC3 SC4 SC5
 SC4 SC5
+
+;;; Lipidated Aminoacids
+
+[ moleculetype ]
+GLYM    1
+
+[ atoms ]
+ 1 SP1  1 GLYM BB   1 0.0 
+ 2 SN6a 1 GLYM C1   2 0.0
+ 3 C1   1 GLYM C2   3 0.0
+ 4 C1   1 GLYM C3   4 0.0
+ 5 C1   1 GLYM C4   5 0.0
+
+[ bonds ]
+ 1  2 1 0.287 15000
+ 2  3 1 0.349 12500
+ 3  4 1 0.473 10000
+ 4  5 1 0.485 10000
+
+[ angles ]
+ 1  2  3 2 131 65
+ 2  3  4 2 145 75
+ 3  4  5 2 146 75
+
+[dihedrals]
+#meta {"group": "ai aj ak al funct angle force_constant multiplicity", "ifdef": "LIPID_PTM_DIHEDRAL"}
+; ai aj ak al funct angle force_constant multiplicity
+ 1  2  3  4 1 180 1.5 1
+ 2  3  4  5 1 180 1.0 1
+
+[ moleculetype ]
+CYSP    1
+
+[ atoms ]
+ 1 P2   1 CYSP BB   1 0.0 
+ 2 N2a  1 CYSP SC1  2 0.0 ; Was named C1 during development
+ 3 SC1  1 CYSP C1   3 0.0 ; C2
+ 4 C1   1 CYSP C2   4 0.0 ; C3
+ 5 C1   1 CYSP C3   5 0.0 ; C4
+ 6 C1   1 CYSP C4   6 0.0 ; C5
+
+[ bonds ]
+ 1  2 1 0.292 5000
+ 2  3 1 0.407 5000
+ 3  4 1 0.417 5000
+ 4  5 1 0.472 5000
+ 5  6 1 0.485 5000
+
+[ angles ]
+ 1  2  3 2 137 80
+ 2  3  4 2 135 75
+ 3  4  5 2 149 75
+ 4  5  6 2 146 75
+
+[dihedrals]
+#meta {"group": "ai aj ak al funct angle force_constant multiplicity", "ifdef": "LIPID_PTM_DIHEDRAL"}
+; ai aj ak al funct angle force_constant multiplicity
+ 1  2  3  4 1 250 1 1
+ 2  3  4  5 1 0.0 0.5 2
+ 3  4  5  6 1 180 0.5 1
+
+[ moleculetype ]
+CYSF           1
+
+[ atoms ]
+ 1 P2   1 CYSF BB   1 0.0 
+ 2 TC6  1 CYSF SC1  2 0.0 ; Was named C1 during development
+ 3 SC4  1 CYSF C1   3 0.0 ; C2
+ 4 SC4  1 CYSF C2   4 0.0 ; C3
+ 5 SC4  1 CYSF C3   5 0.0 ; C4
+ 6 TC2  1 CYSF C4   6 0.0 ; C5
+ 7 TC2  1 CYSF C5   7 0.0 ; C6
+ 8 TC2  1 CYSF C6   8 0.0 ; C7
+
+[ bonds ]
+ 1  2 1 0.249 15000
+ 2  3 1 0.343 5000
+ 3  4 1 0.381 5000
+ 4  5 1 0.432 4000
+
+[ constraints ]
+ 3  6 1 0.330 25000 ; Increased by 0.050 nm for SASA diff
+ 4  7 1 0.330 25000 ; Increased by 0.050 nm for SASA diff
+ 5  8 1 0.289 20000 ; Increased by 0.075 nm for SASA diff
+
+[ angles ]
+ 1  2  3 2 150 65
+ 2  3  6 2 122 75
+ 2  3  4 2 120 45
+ 3  4  7 2 119 75
+ 3  4  5 2 119 45
+ 4  5  8 2 103 50
+
+[dihedrals]
+#meta {"group": "ai aj ak al funct angle force_constant multiplicity", "ifdef": "LIPID_PTM_DIHEDRAL"}
+; ai aj ak al funct angle force_constant multiplicity
+ 1  2  3  6 1 184.0 2 1
+ 6  3  4  7 1 0.0 1 2
+ 7  4  5  8 1 0.0 0.5 4
+
+[ moleculetype ]
+CYSG    1
+
+[ atoms ]
+ 1 P2   1 CYSG BB   1 0.0 
+ 2 TC6  1 CYSG SC1  2 0.0 ; Was named C1 during development
+ 3 SC4  1 CYSG C1   3 0.0 ; C2
+ 4 SC4  1 CYSG C2   4 0.0 ; C3
+ 5 SC4  1 CYSG C3   5 0.0 ; C4
+ 6 SC4  1 CYSG C4   6 0.0 ; C5
+ 7 TC2  1 CYSG C5   7 0.0 ; C6
+ 8 TC2  1 CYSG C6   8 0.0 ; C7
+ 9 TC2  1 CYSG C7   9 0.0 ; C8
+10 TC2  1 CYSG C8  10 0.0 ; C9
+
+[ bonds ]
+ 1  2 1 0.249 15000
+ 2  3 1 0.343 5000
+ 3  4 1 0.381 5000
+ 4  5 1 0.381 4000
+ 5  6 1 0.432 4000
+
+[ constraints ]
+ 3  7 1 0.330 25000 ; Increased by 0.050 nm for SASA diff
+ 4  8 1 0.330 25000 ; Increased by 0.050 nm for SASA diff
+ 5  9 1 0.330 25000 ; Increased by 0.050 nm for SASA diff
+ 6 10 1 0.289 20000 ; Increased by 0.075 nm for SASA diff
+
+[ angles ]
+ 1  2  3 2 150 65
+ 2  3  7 2 122 75
+ 2  3  4 2 120 45
+ 3  4  8 2 119 75
+ 3  4  5 2 119 45
+ 4  5  9 2 119 50
+ 4  5  6 2 119 45
+ 5  6 10 2 103 50
+
+[dihedrals]
+#meta {"group": "ai aj ak al funct angle force_constant multiplicity", "ifdef": "LIPID_PTM_DIHEDRAL"}
+; ai aj ak al funct angle force_constant multiplicity
+ 1  2  3  7 1 184 2 1
+ 7  3  4  8 1 0.0 1 2
+ 8  4  5  9 1 0.0 1 2
+ 9  5  6 10 1 0.0 0.5 4
+
+
 
 ;;; Links
 
