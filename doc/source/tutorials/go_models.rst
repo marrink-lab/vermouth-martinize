@@ -146,6 +146,35 @@ not truly as intermolecular forces in the system as a whole. For more detail on 
 see the paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
 
 
+Multiple Go models in the same system
+-------------------------------------
+
+If you have several different proteins that you have martinized with their own Go models, then several extra steps are
+required to ensure that they can be simulated together.
+
+Firstly, when the proteins are coarse grained with Martinize2, the `-name` flag must be used to ensure that all the virtual
+sites created for the purposes of the Go model have unique names and atomtypes. For example::
+
+ martinize2 -f protein.pdb -x cg.pdb -o topol.top -go contact_map.out -name my_protein
+
+will ensure that the atoms created to apply Go sites to are names `my_protein_{0..n}` for a protein of n residues.
+
+Having martinized the proteins in this way, all the `go_atomtypes.itp` and `go_nbparams.itp` files generated for each
+protein should be concatenated into a single file, which may then be included in the master force field file as
+described above.
+
+Note on multiple Go models
+--------------------------
+
+While the Go model is expressed as a set of interactions between Go sites on a protein, interactions are not
+generally extended over all copies of a protein. That is, if a simulation is set up with several copies of a
+multimeric protein where the monomers are held together by a Go model, Gromacs will not permit the multimers
+to "fall apart" for monomers to find other monomers that were initially in other complexes. This limitation is
+a result of the nature of the Gromacs itp format, with the Go interactions described within each `[ moleculetype ]`
+directive. This issue is discussed more extensively in a recent paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
+
+
+
 Visualising Go networks
 ----------------------------
 
