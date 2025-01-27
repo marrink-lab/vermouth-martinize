@@ -4,6 +4,7 @@ requires = [
         "setuptools >= 30.3.0",
         "pbr",
     ]
+build-backend = "pbr.build"
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
