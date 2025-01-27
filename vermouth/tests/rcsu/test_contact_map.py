@@ -228,13 +228,13 @@ def test_contact_types(test_molecule):
     water_radius = 1
 
     hits = contact_map._calculate_csu(points,
-                                              vdw_list,
-                                              fiba,
-                                              fibb,
-                                              natoms,
-                                              tree,
-                                              vdw_max,
-                                              water_radius)
+                                      vdw_list,
+                                      fiba,
+                                      fibb,
+                                      natoms,
+                                      tree,
+                                      vdw_max,
+                                      water_radius)
 
 
     natoms = len(hits)
@@ -393,8 +393,7 @@ def test_write_contacts(test_molecule, tmp_path):
 
 
 @pytest.mark.parametrize('write_out',
-                         ((False),
-                          (True))
+                         (False, True)
                          )
 def test_do_contacts(test_molecule, tmp_path, write_out):
 

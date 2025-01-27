@@ -585,7 +585,8 @@ def entry():
         "-go-write-file",
         dest="go_write_file",
         nargs='?',
-        const=True,
+        const='contact_map_martinize.out',
+        default=False,
         type=Path,
         help=("Write out contact map to file if calculating as part of Martinize2.")
     )
@@ -997,14 +998,7 @@ def entry():
             read_go_map(system=system, file_path=args.go)
         else:
             LOGGER.info("Generating Go model contact map.", type="step")
-            if args.go_write_file:
-                if isinstance(args.go_write_file, Path):
-                    go_file_path = str(args.go_write_file)
-                else:
-                    go_file_path = "contact_map_martinize.out"
-            else:
-                go_file_path = False
-            GenerateContactMap(write_file=go_file_path).run_system(system)
+            GenerateContactMap(write_file=args.go_write_file).run_system(system)
 
 
     # Run martinize on the system.

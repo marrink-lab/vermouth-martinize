@@ -14,9 +14,9 @@ the form of Lennard-Jones interactions, which are written as an extra file to be
 
 The Gō model is described in the help::
 
- Virtual site based GoMartini:
-  -go [GO]              Use Martini Go model. Accepts either an input file from the server, or just provide the flag to
-                        calculate as part of Martinize. (default: None)
+ Virtual site based GōMartini:
+   -go [GO]              Use Martini Go model. Accepts either an input file from the server, or just provide the flag to
+                         calculate as part of Martinize. (default: None)
    -go-eps GO_EPS        The strength of the Go model structural bias in kJ/mol. (default: 9.414)
    -go-low GO_LOW        Minimum distance (nm) below which contacts are removed. (default: 0.3)
    -go-up GO_UP          Maximum distance (nm) above which contacts are removed. (default: 1.1)
@@ -30,9 +30,9 @@ The Gō model is described in the help::
                          Name of the virtual interaction go site atom (default: CA)
 
 To add a Gō model to your protein, the first step is to calculate the contact map of your protein.
-The contact map can be obtained in two ways. Firstly, by uploading it
+The contact map can be obtained in two ways. Firstly, by uploading your pdb structure
 to the `web server <http://pomalab.ippt.pan.pl/GoContactMap/>`_, and downloading the associated ``contact_map.out`` file.
-Alternatively, with a version of Martinize2 ≥ 0.13.0 the contact map can be calculated directly without the need for
+Alternatively, the contact map can be calculated directly without the need for
 any external processes. While the implementations of the contact algorithm are identical, the Martinize2 implementation
 may be relatively slow for larger systems. Typically for proteins with fewer than 1000 residues, the calculation of the
 contact map as part of Martinize2 will add up to a minute of extra calculation. Note that while the implementations of
@@ -42,7 +42,7 @@ to check the contact map that Martinize2 has calculated, you can write it out us
 While the contact map files may have small differences, it is likely that they will still result in the same non-bonded
 file outputs, a result of how symmetrical contacts are further identified in the definition of the Gō model.
 
-The go model is then applied to the protein using the ``-go`` argument of martinize2. If you have used a contact map
+The Gō model is added to the input system using the ``-go`` argument of martinize2. If you have used a contact map
 from the server, give the path to the contact map file as the argument:
 
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -go contact_map.out``
@@ -146,36 +146,36 @@ not truly as intermolecular forces in the system as a whole. For more detail on 
 see the paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
 
 
-Multiple Go models in the same system
+Multiple Gō models in the same system
 -------------------------------------
 
-If you have several different proteins that you have martinized with their own Go models, then several extra steps are
+If you have several different proteins that you have martinized with their own Gō models, then several extra steps are
 required to ensure that they can be simulated together.
 
 Firstly, when the proteins are coarse grained with Martinize2, the `-name` flag must be used to ensure that all the virtual
-sites created for the purposes of the Go model have unique names and atomtypes. For example::
+sites created for the purposes of the Gō model have unique names and atomtypes. For example::
 
  martinize2 -f protein.pdb -x cg.pdb -o topol.top -go contact_map.out -name my_protein
 
-will ensure that the atoms created to apply Go sites to are names `my_protein_{0..n}` for a protein of n residues.
+will ensure that the atoms created to apply Gō sites to are names `my_protein_{0..n}` for a protein of n residues.
 
 Having martinized the proteins in this way, all the `go_atomtypes.itp` and `go_nbparams.itp` files generated for each
 protein should be concatenated into a single file, which may then be included in the master force field file as
 described above.
 
-Note on multiple Go models
+Note on multiple Gō models
 --------------------------
 
-While the Go model is expressed as a set of interactions between Go sites on a protein, interactions are not
+While the Gō model is expressed as a set of interactions between Gō sites on a protein, interactions are not
 generally extended over all copies of a protein. That is, if a simulation is set up with several copies of a
-multimeric protein where the monomers are held together by a Go model, Gromacs will not permit the multimers
+multimeric protein where the monomers are held together by a Gō model, Gromacs will not permit the multimers
 to "fall apart" for monomers to find other monomers that were initially in other complexes. This limitation is
-a result of the nature of the Gromacs itp format, with the Go interactions described within each `[ moleculetype ]`
+a result of the nature of the Gromacs itp format, with the Gō interactions described within each `[ moleculetype ]`
 directive. This issue is discussed more extensively in a recent paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
 
 
 
-Visualising Go networks
+Visualising Gō networks
 ----------------------------
 
 If you want to look at your Gō network in VMD to confirm that it's been constructed in the
