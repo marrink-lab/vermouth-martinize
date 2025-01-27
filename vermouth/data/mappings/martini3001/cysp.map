@@ -1,0 +1,87 @@
+; CHARMM36m -> Martini 3 mapping for cysteine palmitoyl
+; Original manuscript:
+; 
+
+[ molecule ]
+CYSP
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+BB SC1 C1 C2 C3 C4
+
+[ mapping ]
+charmm36m
+
+[ atoms ]
+1	N	BB
+2	HN	BB
+3	CA	BB
+4	HA	BB
+5	C	BB
+6	O	BB
+7	CB	SC1
+8	HB1	SC1
+9	HB2	SC1
+10	SG	SC1
+11	C1	SC1
+12	O1	SC1
+13	C2	C1
+14	H2A	C1
+15	H2B	C1
+16	C3	C1
+17	H3A	C1
+18	H3B	C1
+19	C4	C1
+20	H4A	C1
+21	H4B	C1
+22	C5	C2
+23	H5A	C2
+24	H5B	C2
+25	C6	C2
+26	H6A	C2
+27	H6B	C2
+28	C7	C2
+29	H7A	C2
+30	H7B	C2
+31	C8	C2
+32	H8A	C2
+33	H8B	C2
+34	C9	C3
+35	H9A	C3
+36	H9B	C3
+37	C10	C3
+38	H10A	C3
+39	H10B	C3
+40	C11	C3
+41	H11A	C3
+42	H11B	C3
+43	C12	C3
+44	H12A	C3
+45	H12B	C3
+46	C13	C4
+47	H13A	C4
+48	H13B	C4
+49	C14	C4
+50	H14A	C4
+51	H14B	C4
+52	C15	C4
+53	H15A	C4
+54	H15B	C4
+55	C16	C4
+56	H16A	C4
+57	H16B	C4
+58	H16C	C4
+
+[ chiral ]
+  CB     CA    N    C
+  HB1    CA    N    C
+  HB2    CA    N    C
+
+[ chiral ]
+  HA     CA    N    CB    C ; L-Cys
+; HA     CA    N    C    CB ; D-Cys
