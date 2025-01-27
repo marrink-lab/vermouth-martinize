@@ -51,6 +51,8 @@ FF_MARTINI_TEST = TEST_DATA / 'force_fields' / 'martini-test'
 # Mappings
 MAP_UNIVERSAL_TEST_PEPPLANE = TEST_DATA / 'mappings' / 'universal-test'
 
+# contact map
+TEST_MOLECULE_CONTACT_MAP = TEST_DATA / 'test_molecule_contacts.out'
 
 # Clean the namespace so only the data file variables can be imported.
 # An other option would be to define __all__, but it is easy to forget to add

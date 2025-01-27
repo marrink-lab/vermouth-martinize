@@ -18,6 +18,8 @@ Unit tests for the Go contact map reader.
 """
 import pytest
 from vermouth.rcsu.contact_map import read_go_map
+import vermouth
+from vermouth.tests.helper_functions import test_molecule
 
 @pytest.mark.parametrize('lines, contacts', 
         # two sets of contacts same chain
@@ -60,9 +62,12 @@ def test_go_map(tmp_path, lines, contacts):
     with open(tmp_path / "go_file.txt", "w") as in_file:
         in_file.write(lines)
 
+    system = vermouth.System()
+    system.add_molecule(test_molecule)
+
     # read go map
-    contact_map = read_go_map(tmp_path / "go_file.txt")
-    assert contact_map == contacts
+    read_go_map(system, tmp_path / "go_file.txt")
+    assert system.go_params["go_map"][0] == contacts
 
 def test_go_error(tmp_path):
     lines="""
@@ -74,5 +79,8 @@ def test_go_error(tmp_path):
     with open(tmp_path / "go_file.txt", "w") as in_file:
         in_file.write(lines)
 
+    system = vermouth.System()
+    system.add_molecule(test_molecule)
+
     with pytest.raises(IOError):
-        read_go_map(tmp_path / "go_file.txt")
+        read_go_map(system, tmp_path / "go_file.txt")
