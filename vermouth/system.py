@@ -32,6 +32,7 @@ class System:
         self._force_field = None
         self.force_field = force_field
         self.gmx_topology_params = defaultdict(list)
+        self.go_params = defaultdict(list)
 
     @property
     def force_field(self):
