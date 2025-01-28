@@ -78,10 +78,6 @@ LOGGER = StyleAdapter(LOGGER)
 
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 
-SS_CG = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
-         'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
-
-
 def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
     """
     Read a system from a PDB or GRO file.
@@ -1007,8 +1003,7 @@ def entry():
     ss_sequence = list(
         itertools.chain(
             *(
-                SS_CG[i]
-                for i in dssp.sequence_from_residues(molecule, "cgsecstruct")
+                dssp.convert_dssp_to_martini(dssp.sequence_from_residues(molecule, "cgsecstruct"))
                 for molecule in system.molecules
                 if selectors.is_protein(molecule) if i is not None
             )
