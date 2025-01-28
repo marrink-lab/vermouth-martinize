@@ -1,0 +1,92 @@
+; CHARMM36m -> Martini 3 mapping for cysteine geranylgeranyl
+; Original manuscript:
+; 
+
+[ molecule ]
+CYSG
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+BB SC1 C1 C2 C3 C4 C5 C6 C7 C8
+
+[ mapping ]
+charmm36m
+
+[ atoms ]
+1	N	BB
+2	HN	BB
+3	CA	BB
+4	HA	BB
+5	C	BB
+6	O	BB
+7	CB	SC1
+8	HB1	SC1
+9	HB2	SC1
+10	SG	SC1
+11	C1	C1
+12	H1A	C1
+13	H1B	C1
+14	C2	C1
+15	H2A	C1
+16	C3	C5
+17	C4	C5
+18	H4A	C5
+19	H4B	C5
+20	H4C	C5
+21	C5	C1
+22	H5A	C1
+23	H5B	C1
+24	C6	C2
+25	H6A	C2
+26	H6B	C2
+27	C7	C2
+28	H7A	C2
+29	C8	C6
+30	C9	C6
+31	H9A	C6
+32	H9B	C6
+33	H9C	C6
+34	C10	C2
+35	H10A	C2
+36	H10B	C2
+37	C11	C3
+38	H11A	C3
+39	H11B	C3
+40	C12	C3
+41	H12A	C3
+42	C13	C7
+43	C14	C7
+44	H14A	C7
+45	H14B	C7
+46	H14C	C7
+47	C15	C3
+48	H15A	C3
+49	H15B	C3
+50	C16	C4
+51	H16A	C4
+52	H16B	C4
+53	C17	C4
+54	H17A	C4
+55	C18	C8
+56	C19	C4
+57	H19A	C4
+58	H19B	C4
+59	H19C	C4
+60	C20	C8
+61	H20A	C8
+62	H20B	C8
+63	H20C	C8
+
+[ chiral ]
+  CB     CA    N    C
+  HB1    CA    N    C
+  HB2    CA    N    C
+
+[ chiral ]
+  HA     CA    N    CB    C ; L-Cys
+; HA     CA    N    C    CB ; D-Cys
