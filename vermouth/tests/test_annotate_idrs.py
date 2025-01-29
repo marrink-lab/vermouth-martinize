@@ -59,20 +59,28 @@ def test_make_disorder_string(test_molecule,
             result.append(False)
     assert result == expected
 
-@pytest.mark.parametrize('idr_regions, expected',(
+@pytest.mark.parametrize('idr_regions, write_sec, expected',(
         ([(1, 4)],
+         True,
          {0: "C", 1: "C", 2: "C",
           3: "C", 4: "C",
           5: "C",
           6: "C", 7: "C", 8: "C"}),
         ([(1, 2)],
+         True,
          {0: "C", 1: "C", 2: "C",
           3: "C", 4: "C",
           5: "H",
           6: "H", 7: "H", 8: "H"}),
+        ([(1, 2)],
+         False,
+         {0: None, 1: None, 2: None,
+          3: None, 4: None,
+          5: None,
+          6: None, 7: None, 8: None})
 
 ))
-def test_ss_reassign(test_molecule, idr_regions, expected):
+def test_ss_reassign(test_molecule, idr_regions, write_sec, expected):
     secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
     resnames = {0: "A", 1: "A", 2: "A",
                 3: "B", 4: "B",
@@ -82,20 +90,16 @@ def test_ss_reassign(test_molecule, idr_regions, expected):
               3: "SP1", 4: "C1",
               5: "TP1",
               6: "P1", 7: "SN3a", 8: "SP4"}
-    cgsectruc = {0: "H", 1: "H", 2: "H",
-                 3: "H", 4: "H",
-                 5: "H",
-                 6: "H", 7: "H", 8: "H"}  # i.e. all ss is H to begin
 
     system = create_sys_all_attrs(test_molecule,
                                   moltype="molecule_0",
                                   secstruc=secstruc,
                                   defaults={"chain": "A"},
                                   attrs={"resname": resnames,
-                                         "atype": atypes,
-                                         "cgsecstruct": cgsectruc})
+                                         "atype": atypes},
+                                  write_secstruct=write_sec)
 
     AnnotateIDRs(id_regions=idr_regions).run_system(system)
 
     for key, node in system.molecules[0].nodes.items():
-        assert system.molecules[0].nodes[key]["cgsecstruct"] == expected[key]
+        assert system.molecules[0].nodes[key].get("cgsecstruct", None) == expected[key]
