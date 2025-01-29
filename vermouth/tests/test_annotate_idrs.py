@@ -73,7 +73,7 @@ def test_make_disorder_string(test_molecule,
 
 ))
 def test_ss_reassign(test_molecule, idr_regions, expected):
-    secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}  # i.e. all ss is H to begin
+    secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
     resnames = {0: "A", 1: "A", 2: "A",
                 3: "B", 4: "B",
                 5: "C",
@@ -82,13 +82,18 @@ def test_ss_reassign(test_molecule, idr_regions, expected):
               3: "SP1", 4: "C1",
               5: "TP1",
               6: "P1", 7: "SN3a", 8: "SP4"}
+    cgsectruc = {0: "H", 1: "H", 2: "H",
+                 3: "H", 4: "H",
+                 5: "H",
+                 6: "H", 7: "H", 8: "H"}  # i.e. all ss is H to begin
 
     system = create_sys_all_attrs(test_molecule,
                                   moltype="molecule_0",
                                   secstruc=secstruc,
                                   defaults={"chain": "A"},
                                   attrs={"resname": resnames,
-                                         "atype": atypes})
+                                         "atype": atypes,
+                                         "cgsecstruct": cgsectruc})
 
     AnnotateIDRs(id_regions=idr_regions).run_system(system)
 
