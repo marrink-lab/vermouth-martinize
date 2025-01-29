@@ -1005,7 +1005,8 @@ def entry():
             *(
                 dssp.convert_dssp_to_martini(dssp.sequence_from_residues(molecule, "cgsecstruct"))
                 for molecule in system.molecules
-                if selectors.is_protein(molecule) if i is not None
+                if ((selectors.is_protein(molecule)) and
+                    (any([i for i in dssp.sequence_from_residues(molecule, "cgsecstruct")])))
             )
         )
     )
