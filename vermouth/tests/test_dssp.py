@@ -459,7 +459,7 @@ def test_run_dssp_executable():
         system.add_molecule(molecule)
 
     with pytest.raises(DSSPError):
-        dssp.run_dssp(system, executable=' ')
+        dssp.run_dssp(system, executable='doesnt_exist')
 
 @pytest.mark.parametrize('ss_struct, expected', (
     (list('ABCDE'), list('ABCDE')),
