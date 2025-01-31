@@ -450,6 +450,16 @@ def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
         # Make sure it's a valid PDB file. Mostly anyway.
         list(read_pdb(matches[0]))
 
+def test_run_dssp_executable():
+    """
+    Test that the executable for dssp is actually found
+    """
+    system = vermouth.System()
+    for molecule in read_pdb(str(PDB_PROTEIN)):
+        system.add_molecule(molecule)
+
+    with pytest.raises(DSSPError):
+        dssp.run_dssp(system, executable='doesnt_exist')
 
 @pytest.mark.parametrize('ss_struct, expected', (
     (list('ABCDE'), list('ABCDE')),
