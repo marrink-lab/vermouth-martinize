@@ -974,6 +974,16 @@ def entry():
                            'for this force field',
                            type="missing-feature")
 
+    ss_sequence = list(
+        itertools.chain(
+            *(
+                dssp.sequence_from_residues(molecule, "secstruct")
+                for molecule in system.molecules
+                if selectors.is_protein(molecule)
+            )
+        )
+    )
+
     if args.cystein_bridge == "none":
         vermouth.RemoveCysteinBridgeEdges().run_system(system)
     elif args.cystein_bridge != "auto":
@@ -998,17 +1008,6 @@ def entry():
         delete_unknown=True,
         idrs=args.idr_tune,
         disordered_regions=args.water_idrs
-    )
-
-    ss_sequence = list(
-        itertools.chain(
-            *(
-                dssp.convert_dssp_to_martini(dssp.sequence_from_residues(molecule, "cgsecstruct"))
-                for molecule in system.molecules
-                if ((selectors.is_protein(molecule)) and
-                    (any([i for i in dssp.sequence_from_residues(molecule, "cgsecstruct")])))
-            )
-        )
     )
 
     # Apply position restraints if required.
@@ -1171,6 +1170,25 @@ def entry():
             "The following sequence of secondary structure ",
             "was used for the full system:",
             "".join(ss_sequence),
+        ]
+
+    supp_ss_seq = list(
+        itertools.chain(
+            *(
+                dssp.sequence_from_residues(molecule, "cgsecstruct")
+                for molecule in system.molecules
+                if selectors.is_protein(molecule)
+            )
+        )
+    )
+    if any(molecule.meta['modified_cgsecstruct'] for molecule in system.molecules):
+        LOGGER.info(("Secondary structure assignment changed between dssp and martinize. "
+                     "Check files for details."), type="general")
+        header += [
+            "The assigned secondary structure conflicted with ",
+            "annotated IDRs. The following sequence of Martini secondary ",
+            "structure was actually applied to the system:",
+            "".join([dssp.SS_CG[i] for i in supp_ss_seq])
         ]
 
     if args.top_path is not None:
