@@ -84,6 +84,14 @@ class ForceField:
             msg = 'At least one of `directory` or `name` must be provided.'
             raise TypeError(msg)
 
+    def __str__(self):
+        return f'ForceField({self.name})'
+
+    def __eq__(self, other):
+        # Note, we cannot compare blocks/links/modifications, since those
+        # compare their forcefields for equality.
+        return self.name == other.name
+
     def read_from(self, directory):
         """
         Populate or update the force field from a directory.
