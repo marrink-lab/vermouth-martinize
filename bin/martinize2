@@ -1181,7 +1181,7 @@ def entry():
             )
         )
     )
-    if any(molecule.meta['modified_cgsecstruct'] for molecule in system.molecules):
+    if any([molecule.meta.get('modified_cgsecstruct', False) for molecule in system.molecules]):
         LOGGER.info(("Secondary structure assignment changed between dssp and martinize. "
                      "Check files for details."), type="general")
         header += [
