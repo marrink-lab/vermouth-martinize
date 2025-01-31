@@ -236,3 +236,6 @@ def get_native_force_field(name):
     except KeyError:
         _FORCE_FIELDS = find_force_fields(os.path.join(DATA_PATH, 'force_fields'))
         return _FORCE_FIELDS[name]
+
+
+DUMMY_FF = ForceField(name='dummy')
