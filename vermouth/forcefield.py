@@ -26,7 +26,6 @@ from . import DATA_PATH
 
 FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff, '.bib': read_bib}
 # All data files that are in the root DATA_PATH, and apply to all force fields.
-COMMON_DATA_FILES = {'citations.bib'}
 
 # Cache the force fields.
 # It should only be used by the get_native_force_field function, else it would
@@ -70,11 +69,6 @@ class ForceField:
         self.variables = {}
         self.name = None
         self.citations = {}
-        for filename in COMMON_DATA_FILES:
-            # This is kind of inefficient. Better to parse the common files
-            # once, and pass around the data.
-            path = DATA_PATH / filename
-            self._read_from_file(path)
         if directory is not None:
             self.read_from(directory)
             self.name = os.path.basename(str(directory))
@@ -90,7 +84,7 @@ class ForceField:
     def __eq__(self, other):
         # Note, we cannot compare blocks/links/modifications, since those
         # compare their forcefields for equality.
-        return self.name == other.name
+        return isinstance(other, self.__class__) and self.name == other.name
 
     def read_from(self, directory):
         """
@@ -236,6 +230,3 @@ def get_native_force_field(name):
     except KeyError:
         _FORCE_FIELDS = find_force_fields(os.path.join(DATA_PATH, 'force_fields'))
         return _FORCE_FIELDS[name]
-
-
-DUMMY_FF = ForceField(name='dummy')

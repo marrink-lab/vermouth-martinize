@@ -2,13 +2,14 @@
 I/O of topology parameters that are not molecules.
 """
 import itertools
-from collections import namedtuple
+from collections import namedtuple, ChainMap
 import textwrap
 import vermouth
 from vermouth.file_writer import deferred_open
 from vermouth.citation_parser import citation_formatter
 from ..log_helpers import StyleAdapter, get_logger
 from .itp import _interaction_sorting_key
+from ..data import COMMON_CITATIONS
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -179,6 +180,10 @@ def write_gmx_topology(system,
     )
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
+        if molecule.force_field is not None:
+            citation_map = ChainMap(molecule.force_field.citations, COMMON_CITATIONS)
+        else:
+            citation_map = COMMON_CITATIONS
         if moltype not in moltype_written:
             # A given moltype can appear more than once in the sequence of
             # molecules, without being uninterupted by other moltypes. Even in
@@ -189,7 +194,7 @@ def write_gmx_topology(system,
                 header.append("Please cite the following papers:")
                 for citation in molecule.citations:
                     cite_string = citation_formatter(
-                        molecule.force_field.citations[citation]
+                        citation_map[citation]
                     )
                     LOGGER.info("Please cite: " + cite_string)
                     header.append(cite_string)
