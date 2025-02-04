@@ -15,5 +15,29 @@
 from .. import DATA_PATH
 from ..citation_parser import read_bib
 
+
+def _read_quote_file(filehandle):
+    """
+    Iterates over `filehandle`, and yields all strings that are not empty.
+
+    Parameters
+    ----------
+    filehandle: collections.abc.Iterable[str]
+        A file opened for reading.
+
+    Yields
+    ------
+    str
+        All stripped elements of `filehandle` that are not empty.
+    """
+    for line in filehandle:
+        line = line.strip()
+        if line:
+            yield line
+
+
 with open(DATA_PATH/'citations.bib') as citation_file:
     COMMON_CITATIONS = read_bib(citation_file)
+
+with open(DATA_PATH/'quotes.txt') as quotes_file:
+    QUOTES = list(_read_quote_file(quotes_file))
