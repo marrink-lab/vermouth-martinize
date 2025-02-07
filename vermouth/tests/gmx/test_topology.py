@@ -178,12 +178,12 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
                                                                      sigma=0.43,
                                                                      epsilon=2.3,
                                                                      meta={}))
+    system.meta["header"] = ['first header comment', 'second header comment']
     outpath = tmp_path / 'out.itp'
     atompath = tmp_path / 'atomtypes.itp'
     nbpath = tmp_path / 'nonbond_params.itp'
     write_gmx_topology(system,
                        outpath,
-                       header=['first header comment', 'second header comment'],
                        defines=('random', ),
                        itp_paths={"atomtypes": atompath, "nonbond_params": nbpath},
                        # at this level C6C12 doesn't matter; it gets

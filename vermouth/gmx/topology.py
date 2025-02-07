@@ -116,8 +116,7 @@ def write_gmx_topology(system,
                        itp_paths={"nonbond_params": "extra_nbparams.itp",
                                   "atomtypes": "extra_atomtypes.itp"},
                        C6C12=False,
-                       defines=(),
-                       header=()):
+                       defines=()):
     """
     Writes a Gromacs .top file for the specified system. Gromacs topology
     files are defined by directives for example `[ atomtypes ]`. However,
@@ -178,6 +177,8 @@ def write_gmx_topology(system,
     molecule_groups = itertools.groupby(
         system.molecules, key=lambda x: x.meta["moltype"]
     )
+
+    header = [i for j in system.meta["header"] for i in j]
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
         if molecule.force_field is not None:
