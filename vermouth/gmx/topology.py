@@ -10,11 +10,34 @@ from vermouth.citation_parser import citation_formatter
 from ..log_helpers import StyleAdapter, get_logger
 from .itp import _interaction_sorting_key
 from ..data import COMMON_CITATIONS
-
+from ..dssp.dssp import sequence_from_residues
+from ..selectors import is_protein
 LOGGER = StyleAdapter(get_logger(__name__))
 
 Atomtype = namedtuple('Atomtype', 'molecule node sigma epsilon meta')
 NonbondParam = namedtuple('NonbondParam', 'atoms sigma epsilon meta')
+
+def system_header(system):
+
+    ss_sequence = list(
+        itertools.chain(
+            *(
+                sequence_from_residues(molecule, "secstruct")
+                for molecule in system.molecules
+                if is_protein(molecule)
+            )
+        )
+    )
+
+    if None not in ss_sequence:
+        system.meta["header"].append(["The following sequence of secondary structure ",
+                                      "was used for the full system:",
+                                      "".join(ss_sequence),
+                                      ])
+
+    header = [i for j in system.meta["header"] for i in j]
+
+    return header
 
 def _group_by_conditionals(interactions):
     interactions_group_sorted = sorted(interactions,
@@ -178,7 +201,8 @@ def write_gmx_topology(system,
         system.molecules, key=lambda x: x.meta["moltype"]
     )
 
-    header = [i for j in system.meta["header"] for i in j]
+    header = system_header(system)
+
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
         if molecule.force_field is not None:
