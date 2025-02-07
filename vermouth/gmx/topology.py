@@ -178,7 +178,7 @@ def write_gmx_topology(system,
         system.molecules, key=lambda x: x.meta["moltype"]
     )
 
-    header = system.meta["header"]
+    header = system.meta.get("header", [])
 
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
