@@ -62,6 +62,15 @@ class System:
         ----------
         molecule: :class:`~vermouth.molecule.Molecule`
         """
+        if molecule.force_field is None:
+            molecule._force_field = self.force_field
+        if self.force_field is None:
+            # We didn't have a FF, but we have one now!
+            self.force_field = molecule.force_field
+        if molecule.force_field != self.force_field:
+            raise KeyError(f'Cannot add Molecule with force field '
+                           f'{molecule.force_field} to system with force field '
+                           f'{self.force_field}')
         self.molecules.append(molecule)
 
     @property

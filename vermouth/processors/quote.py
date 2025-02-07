@@ -18,57 +18,33 @@
 Reads quotes, and produces a random one.
 """
 
-import os.path
 import random
 
 from .processor import Processor
-from .. import DATA_PATH
+from ..data import QUOTES
 from ..log_helpers import StyleAdapter, get_logger
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
-QUOTE_FILE = os.path.join(DATA_PATH, 'quotes.txt')
-
-
-def read_quote_file(filehandle):
-    """
-    Iterates over `filehandle`, and yields all strings that are not empty.
-
-    Parameters
-    ----------
-    filehandle: collections.abc.Iterable[str]
-        A file opened for reading.
-
-    Yields
-    ------
-    str
-        All stripped elements of `filehandle` that are not empty.
-    """
-    for line in filehandle:
-        line = line.strip()
-        if line:
-            yield line
-
 
 class Quoter(Processor):
     """
-    Processor that can produce random string taken from a file. Useful for e.g.
+    Processor that can produce random string taken from a list. Useful for e.g.
     quotes.
 
     Parameters
     ----------
-    quote_file: pathlib.Path or str
-        The path of the file containing the strings. Must contain at least one
-        line.
+    quotes: list[str]
+        List of strings describing the quotes.
     """
-    def __init__(self, quote_file=None):
-        if quote_file is None:
-            quote_file = QUOTE_FILE
-        self._quote_file = quote_file
+    def __init__(self, quotes=None):
+        if not quotes:
+            quotes = QUOTES
+        self.quotes = quotes
 
     def run_system(self, system):
         """
-        Logs a random line from the file passed at initialization.
+        Logs a random line from the list passed at initialization.
 
         Parameters
         ----------
@@ -79,6 +55,4 @@ class Quoter(Processor):
         -------
         None
         """
-        with open(self._quote_file) as handle:
-            all_quotes = list(read_quote_file(handle))
-        LOGGER.info(random.choice(all_quotes))
+        LOGGER.info(random.choice(self.quotes))
