@@ -329,7 +329,7 @@ def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
     return read_dssp2(process.stdout.split('\n'))
 
 
-def annotate_dssp(molecule, callable=None, attribute='secstruct'):
+def annotate_dssp(molecule, callable=None, attribute='aasecstruct'):
     """
     Adds the DSSP assignation to the atoms of a molecule.
 
@@ -504,7 +504,7 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
 
 
 def convert_dssp_annotation_to_martini(
-        molecule, from_attribute='secstruct', to_attribute='cgsecstruct'):
+        molecule, from_attribute='aasecstruct', to_attribute='cgsecstruct'):
     """
     For every node in `molecule`, translate the `from_attribute` with
     :func:`convert_dssp_to_martini`, and assign it to the attribute

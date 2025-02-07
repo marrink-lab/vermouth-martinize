@@ -923,7 +923,7 @@ def entry():
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
         AnnotateResidues(
-            attribute="secstruct",
+            attribute="aasecstruct",
             sequence=args.ss,
             molecule_selector=selectors.is_protein,
         ).run_system(system)
@@ -977,7 +977,7 @@ def entry():
     ss_sequence = list(
         itertools.chain(
             *(
-                dssp.sequence_from_residues(molecule, "secstruct")
+                dssp.sequence_from_residues(molecule, "aasecstruct")
                 for molecule in system.molecules
                 if selectors.is_protein(molecule)
             )
