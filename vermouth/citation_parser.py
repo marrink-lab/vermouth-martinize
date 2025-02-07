@@ -34,8 +34,8 @@ class BibTexDirector():
     check for missing fields or invalid fields. All
     fields are accepted and no fields are required.
     """
-    def __init__(self, force_field):
-        self.force_field = force_field
+    def __init__(self):
+        self.citations = {}
         self.known_entries = ["article",
                               "book",
                               "booklet",
@@ -153,14 +153,14 @@ class BibTexDirector():
         cite_key, entry_string = self.pop_key(entry_string)
         field_dict = dict(self.extract_fields(entry_string))
         field_dict["type"] = entry_type
-        self.force_field.citations[cite_key] = field_dict
+        self.citations[cite_key] = field_dict
 
     def parse(self, lines):
         """
         Given lines from a bibtex file parse them and update
         the force-field citation instance variable.
         """
-        # convert file to string deleting end of line charcters
+        # convert file to string deleting end of line characters
         citations_string = self.prepare_file(lines)
         # extract the entries from the string
         entries = list(self.find_entries(citations_string))
@@ -168,11 +168,14 @@ class BibTexDirector():
         # parse each entry to generate a citation
         for idx, jdx in zip(entries[:-1], entries[1:]):
             self.parse_entry(citations_string[idx:jdx])
-        return self.force_field.citations
+        return self.citations
 
-def read_bib(lines, force_field):
-    director = BibTexDirector(force_field=force_field)
-    return director.parse(iter(lines))
+def read_bib(lines, force_field=None):
+    director = BibTexDirector()
+    director.parse(iter(lines))
+    if force_field:
+        force_field.citations = director.citations
+    return director.citations
 
 def citation_formatter(citation, title=False):
     """
