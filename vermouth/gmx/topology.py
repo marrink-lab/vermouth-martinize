@@ -17,27 +17,6 @@ LOGGER = StyleAdapter(get_logger(__name__))
 Atomtype = namedtuple('Atomtype', 'molecule node sigma epsilon meta')
 NonbondParam = namedtuple('NonbondParam', 'atoms sigma epsilon meta')
 
-def system_header(system):
-
-    ss_sequence = list(
-        itertools.chain(
-            *(
-                sequence_from_residues(molecule, "secstruct")
-                for molecule in system.molecules
-                if is_protein(molecule)
-            )
-        )
-    )
-
-    if None not in ss_sequence:
-        system.meta["header"].append(["The following sequence of secondary structure ",
-                                      "was used for the full system:",
-                                      "".join(ss_sequence),
-                                      ])
-
-    header = [i for j in system.meta["header"] for i in j]
-
-    return header
 
 def _group_by_conditionals(interactions):
     interactions_group_sorted = sorted(interactions,
@@ -164,8 +143,6 @@ def write_gmx_topology(system,
         C6C12 form
     defines: tuple(str)
         define statments to include in the topology
-    header: tuple(str)
-        any comment lines to include at the beginning
     """
     if not system.molecules:
         raise ValueError("No molecule in the system. Nothing to write.")
@@ -201,7 +178,7 @@ def write_gmx_topology(system,
         system.molecules, key=lambda x: x.meta["moltype"]
     )
 
-    header = system_header(system)
+    header = system.meta["header"]
 
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
