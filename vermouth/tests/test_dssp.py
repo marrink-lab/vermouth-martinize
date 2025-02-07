@@ -482,7 +482,7 @@ def test_mdtraj(monkeypatch, ss_struct, expected):
     for mol in system.molecules:
         residues = mol.iter_residues()
         for residue in residues:
-            found.append(mol.nodes[residue[0]]['secstruct'])
+            found.append(mol.nodes[residue[0]]['aasecstruct'])
 
     assert found == expected
 
