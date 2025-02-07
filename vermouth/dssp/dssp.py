@@ -591,6 +591,7 @@ class AnnotateMartiniSecondaryStructures(Processor):
 
     def run_system(self, system):
         gmx_system_header(system)
+        super().run_system(system)
 
 
 class AnnotateResidues(Processor):
