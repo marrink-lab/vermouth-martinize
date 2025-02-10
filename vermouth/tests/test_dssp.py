@@ -707,19 +707,30 @@ def test_convert_dssp_to_martini(sequence, expected):
     found = dssp.convert_dssp_to_martini(sequence)
     assert expected == found
 
-
-def test_gmx_system_header(test_molecule):
+@pytest.mark.parametrize('resnames, ss_string, secstruc',
+     (      # protein resnames with secstruc
+             ({0: "ALA", 1: "ALA", 2: "ALA",
+               3: "GLY", 4: "GLY",
+               5: "MET",
+               6: "ARG", 7: "ARG", 8: "ARG"},
+              'HHHH',
+              {1: "H", 2: "H", 3: "H", 4: "H"}
+              ),
+             # not protein resnames, no secstruc annotated or gets written
+             ({0: "A", 1: "A", 2: "A",
+               3: "B", 4: "B",
+               5: "C",
+               6: "D", 7: "D", 8: "D"},
+              "",
+              {1: "", 2: "", 3: "", 4: ""}
+              )
+     ))
+def test_gmx_system_header(test_molecule, resnames, ss_string, secstruc):
 
     atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
               3: "SP1", 4: "C1",
               5: "TP1",
               6: "P1", 7: "SN3a", 8: "SP4"}
-    # the molecule resnames. needs to be actual protein resnames because gmx_system_header checks is_protein(molecule)
-    resnames = {0: "ALA", 1: "ALA", 2: "ALA",
-                3: "GLY", 4: "GLY",
-                5: "MET",
-                6: "ARG", 7: "ARG", 8: "ARG"}
-    secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
 
     system = create_sys_all_attrs(test_molecule,
                                   moltype="molecule_0",
@@ -728,12 +739,10 @@ def test_gmx_system_header(test_molecule):
                                   attrs={"resname": resnames,
                                          "atype": atypes})
 
-    # need to annotate the actual 'secstruct' attribute because create_sys_all_attrs actually annotates cgsecstruct
+    # annotate the actual 'secstruct' attribute because create_sys_all_attrs actually annotates cgsecstruct
     dssp.AnnotateResidues(attribute="secstruct",
                           sequence="HHHH").run_system(system)
 
     dssp.AnnotateMartiniSecondaryStructures().run_system(system)
 
-    assert len(system.meta.get('header')) == 3
-    assert system.meta.get('header')[-1] == "HHHH"
-
+    assert ss_string in system.meta.get('header', [''])
