@@ -19,6 +19,8 @@ import os
 import textwrap
 import pytest
 import vermouth
+from itertools import product
+from string import ascii_letters
 from vermouth.file_writer import DeferredFileWriter
 from vermouth.gmx.topology import (sigma_epsilon_to_C6_C12,
                                    write_atomtypes,
@@ -205,3 +207,28 @@ molecule_0    1
     with open(str(outpath)) as infile:
         for line, ref_line in zip(infile, ref_lines):
             assert line.strip() == ref_line
+
+@pytest.mark.parametrize('command, expected',
+    (
+        [ascii_letters, " ".join(ascii_letters)],
+        [ascii_letters*100, (" ".join(ascii_letters*100)[:4000] + " ...")]
+    ))
+def test_gromacs_cmd_len(dummy_molecule, tmp_path, command, expected):
+    os.chdir(tmp_path)
+    system = vermouth.System()
+    system.add_molecule(dummy_molecule)
+    dummy_molecule.meta['moltype'] = "molecule_0"
+
+    outpath = tmp_path / 'out.itp'
+
+    write_gmx_topology(system,
+                       outpath,
+                       defines=('random', ),
+                       C6C12=False,
+                       command=command)
+    DeferredFileWriter().write()
+
+    with open(str(tmp_path / 'molecule_0.itp')) as infile:
+        expected_line = infile.readlines()[1].strip()[2:]
+
+    assert expected_line == expected
