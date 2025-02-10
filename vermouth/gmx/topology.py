@@ -188,8 +188,8 @@ def write_gmx_topology(system,
     for line in _header:
         if len(line) > gromacs_char_limit:
             header.append(line[:gromacs_char_limit] + " ...")
-    if not header:
-        header = _header
+        else:
+            header.append(line)
 
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
