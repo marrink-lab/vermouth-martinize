@@ -37,6 +37,7 @@ from vermouth.tests.datafiles import (
     PDB_ALA5_CG,
     PDB_ALA5,
 )
+from vermouth.tests.helper_functions import test_molecule, create_sys_all_attrs
 
 DSSP_EXECUTABLE = os.environ.get("VERMOUTH_TEST_DSSP", "dssp")
 SECSTRUCT_1BTA = list(
@@ -705,3 +706,28 @@ def test_cterm_atomnames():
 def test_convert_dssp_to_martini(sequence, expected):
     found = dssp.convert_dssp_to_martini(sequence)
     assert expected == found
+
+
+def test_dssp_system_header(test_molecule):
+
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+    # the molecule resnames
+    resnames = {0: "A", 1: "A", 2: "A",
+                3: "B", 4: "B",
+                5: "C",
+                6: "D", 7: "D", 8: "D"}
+    secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
+
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="molecule_0",
+                                  secstruc=secstruc,
+                                  defaults={"chain": "A"},
+                                  attrs={"resname": resnames,
+                                         "atype": atypes})
+
+    dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+
+    assert system.meta.get('head')
