@@ -730,4 +730,4 @@ def test_dssp_system_header(test_molecule):
 
     dssp.AnnotateMartiniSecondaryStructures().run_system(system)
 
-    assert system.meta.get('head')
+    assert system.meta.get('header')
