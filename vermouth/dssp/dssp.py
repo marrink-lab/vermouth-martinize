@@ -554,7 +554,7 @@ def gmx_system_header(system):
         )
     )
 
-    if (None not in ss_sequence) and (len(ss_sequence) > 0):
+    if None not in ss_sequence and ss_sequence:
         system.meta["header"].extend(("The following sequence of secondary structure ",
                                       "was used for the full system:",
                                       "".join(ss_sequence),

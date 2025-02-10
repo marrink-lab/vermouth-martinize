@@ -911,7 +911,10 @@ def entry():
         write_repair=args.write_repair,
         write_canon=args.write_canon,
     )
-
+    system.meta["header"].extend(("This file was generated using the following command:",
+                                  " ".join(sys.argv),
+                                  VERSION,
+                                  ))
     LOGGER.info("Read input.", type="step")
     for molecule in system.molecules:
         LOGGER.debug("Read molecule {}.", molecule, type="step")
@@ -1143,9 +1146,7 @@ def entry():
                            args.top_path,
                            itp_paths=itp_paths,
                            C6C12=False,
-                           defines=defines,
-                           command=sys.argv,
-                           version=VERSION)
+                           defines=defines)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
