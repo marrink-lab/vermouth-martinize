@@ -118,7 +118,9 @@ def write_gmx_topology(system,
                        itp_paths={"nonbond_params": "extra_nbparams.itp",
                                   "atomtypes": "extra_atomtypes.itp"},
                        C6C12=False,
-                       defines=()):
+                       defines=(),
+                       command=[],
+                       version=''):
     """
     Writes a Gromacs .top file for the specified system. Gromacs topology
     files are defined by directives for example `[ atomtypes ]`. However,
@@ -143,6 +145,10 @@ def write_gmx_topology(system,
         C6C12 form
     defines: tuple(str)
         define statments to include in the topology
+    command: list
+        command used to generate the system
+    version: str
+        version of vermouth used to generate system
     """
     if not system.molecules:
         raise ValueError("No molecule in the system. Nothing to write.")
@@ -177,6 +183,19 @@ def write_gmx_topology(system,
     molecule_groups = itertools.groupby(
         system.molecules, key=lambda x: x.meta["moltype"]
     )
+
+    # grompp has a limit in the number of character it can read per line
+    # (due to the size limit of a buffer somewhere in its implementation).
+    # The command line can be longer than this limit and therefore
+    # prevent grompp from reading the topology.
+    gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
+    command_used = " ".join(command)
+    if len(command_used) > gromacs_char_limit:
+        command_used = command_used[:gromacs_char_limit] + " ..."
+    system.meta["header"].extend(("This file was generated using the following command:",
+                                  command_used,
+                                  version,
+                                  ))
 
     header = system.meta.get("header", [])
 

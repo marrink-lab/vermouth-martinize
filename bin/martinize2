@@ -912,19 +912,6 @@ def entry():
         write_canon=args.write_canon,
     )
 
-    # grompp has a limit in the number of character it can read per line
-    # (due to the size limit of a buffer somewhere in its implementation).
-    # The command line can be longer than this limit and therefore
-    # prevent grompp from reading the topology.
-    gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
-    command = " ".join(sys.argv)
-    if len(command) > gromacs_char_limit:
-        command = command[:gromacs_char_limit] + " ..."
-    system.meta["header"].extend(("This file was generated using the following command:",
-                                  command,
-                                  VERSION,
-                                 ))
-
     LOGGER.info("Read input.", type="step")
     for molecule in system.molecules:
         LOGGER.debug("Read molecule {}.", molecule, type="step")
@@ -1156,7 +1143,9 @@ def entry():
                            args.top_path,
                            itp_paths=itp_paths,
                            C6C12=False,
-                           defines=defines)
+                           defines=defines,
+                           command=sys.argv,
+                           version=VERSION)
 
     # Write a PDB file.
     vermouth.pdb.write_pdb(system, str(args.outpath), omit_charges=True)
