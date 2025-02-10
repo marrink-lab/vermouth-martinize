@@ -183,10 +183,13 @@ def write_gmx_topology(system,
     # The command line can be longer than this limit and therefore
     # prevent grompp from reading the topology.
     gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
-    header = system.meta.get('header', [])
-    for line in header:
+    _header = system.meta.get('header', [])
+    header = []
+    for line in _header:
         if len(line) > gromacs_char_limit:
             header.append(line[:gromacs_char_limit] + " ...")
+    if not header:
+        header = _header
 
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)

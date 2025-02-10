@@ -210,25 +210,28 @@ molecule_0    1
 
 @pytest.mark.parametrize('command, expected',
     (
-        [ascii_letters, " ".join(ascii_letters)],
-        [ascii_letters*100, (" ".join(ascii_letters*100)[:4000] + " ...")]
+        [ascii_letters, {"length": len(ascii_letters), "string": ascii_letters}],
+        [(ascii_letters*100), {"length": 4004, "string": (ascii_letters*100)[:4000]+" ..."}]
+
     ))
 def test_gromacs_cmd_len(dummy_molecule, tmp_path, command, expected):
     os.chdir(tmp_path)
     system = vermouth.System()
     system.add_molecule(dummy_molecule)
     dummy_molecule.meta['moltype'] = "molecule_0"
+    system.meta['header'].extend([command])
 
     outpath = tmp_path / 'out.itp'
 
     write_gmx_topology(system,
                        outpath,
                        defines=('random', ),
-                       C6C12=False,
-                       command=command)
+                       C6C12=False)
     DeferredFileWriter().write()
 
     with open(str(tmp_path / 'molecule_0.itp')) as infile:
-        expected_line = infile.readlines()[1].strip()[2:]
+        expected_line = infile.readlines()[0].strip()[2:]
 
-    assert expected_line == expected
+    assert len(expected_line) == expected["length"]
+
+    assert expected_line == expected["string"]
