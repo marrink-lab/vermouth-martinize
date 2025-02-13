@@ -478,8 +478,6 @@ def generate_self_mappings(force_field):
                           extra=[], type='block', names=(name,))
         mappings[name] = mapping
     for name, mod in force_field.modifications.items():
-        for n in mod:
-            mod.nodes[n]['modifications'] = mod.nodes[n].get('modifications', []) + [mod]
         mapping = Mapping(mod, mod, {idx: {idx: 1} for idx in mod.nodes},
                           {}, ff_from=force_field, ff_to=force_field,
                           extra=[], type='modification', names=(name,))
