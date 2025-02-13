@@ -23,6 +23,7 @@ import os
 import subprocess
 import tempfile
 import re
+import itertools
 
 from ..file_writer import deferred_open
 from ..pdb import pdb
@@ -542,6 +543,24 @@ def convert_dssp_annotation_to_martini(
         raise ValueError('Not all residues have a DSSP assignation.')
 
 
+def gmx_system_header(system):
+
+    ss_sequence = list(
+        itertools.chain(
+            *(
+                sequence_from_residues(molecule, "secstruct")
+                for molecule in system.molecules
+                if is_protein(molecule)
+            )
+        )
+    )
+
+    if None not in ss_sequence and ss_sequence:
+        system.meta["header"].extend(("The following sequence of secondary structure ",
+                                      "was used for the full system:",
+                                      "".join(ss_sequence),
+                                     ))
+
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
@@ -570,6 +589,10 @@ class AnnotateMartiniSecondaryStructures(Processor):
     def run_molecule(molecule):
         convert_dssp_annotation_to_martini(molecule)
         return molecule
+
+    def run_system(self, system):
+        gmx_system_header(system)
+        super().run_system(system)
 
 
 class AnnotateResidues(Processor):
