@@ -22,6 +22,8 @@ from ..processors.processor import Processor
 from ..selectors import filter_minimal, select_backbone
 from ..gmx.topology import NonbondParam
 from .go_utils import get_go_type_from_attributes
+from ..log_helpers import StyleAdapter, get_logger
+LOGGER = StyleAdapter(get_logger(__name__))
 
 class ComputeStructuralGoBias(Processor):
     """
@@ -46,12 +48,12 @@ class ComputeStructuralGoBias(Processor):
     replacement in the GoPipeline.
     """
     def __init__(self,
-                 contact_map,
                  cutoff_short,
                  cutoff_long,
                  go_eps,
                  res_dist,
                  moltype,
+                 system=None,
                  res_graph=None):
         """
         Initialize the Processor with arguments required
@@ -85,7 +87,6 @@ class ComputeStructuralGoBias(Processor):
             magic number for Go contacts from the old
             GoVirt script.
         """
-        self.contact_map = contact_map
         self.cutoff_short = cutoff_short
         self.cutoff_long = cutoff_long
         self.go_eps = go_eps
@@ -93,7 +94,7 @@ class ComputeStructuralGoBias(Processor):
         self.moltype = moltype
         # don't modify
         self.res_graph = None
-        self.system = None
+        self.system = system
         self.__chain_id_to_resnode = {}
         self.conversion_factor = 2**(1/6)
 
@@ -116,8 +117,12 @@ class ComputeStructuralGoBias(Processor):
         dict
             a dict matching the chain,resid to the self.res_graph node
         """
+
         if self.__chain_id_to_resnode:
-            return self.__chain_id_to_resnode[(chain, resid)]
+            if self.__chain_id_to_resnode.get((chain, resid), None) is not None:
+                return self.__chain_id_to_resnode[(chain, resid)]
+            else:
+                LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')
 
         # for each residue collect the chain and residue in a dict
         # we use this later for identifying the residues from the
@@ -131,13 +136,17 @@ class ComputeStructuralGoBias(Processor):
             resid_key = self.res_graph.nodes[resnode].get('_old_resid')
             self.__chain_id_to_resnode[(chain_key, resid_key)] = resnode
 
-        return self.__chain_id_to_resnode[(chain, resid)]
+        if self.__chain_id_to_resnode.get((chain, resid), None) is not None:
+            return self.__chain_id_to_resnode[(chain, resid)]
+        else:
+            LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')
+
 
     def contact_selector(self, molecule):
         """
         Select all contacts from the contact map
         that according to their distance and graph
-        connectivity are elegible to form a Go
+        connectivity are eligible to form a Go
         bond and create exclusions between the
         backbone beads of those contacts.
 
@@ -150,55 +159,62 @@ class ComputeStructuralGoBias(Processor):
         list[(collections.abc.Hashable, collections.abc.Hashable, float)]
             list of node keys and distance
         """
-        # distance_matrix of elegible pairs as tuple(node, node, dist)
+        # distance_matrix of eligible pairs as tuple(node, node, dist)
         contact_matrix = []
-        # distance_matrix of elegible symmetrical pairs as tuple(node, node, dist)
+        # distance_matrix of eligible symmetrical pairs as tuple(node, node, dist)
         symmetrical_matrix = []
         # find all pairs of residues that are within bonded distance of
         # self.res_dist
         connected_pairs = dict(nx.all_pairs_shortest_path_length(self.res_graph,
-                                                            cutoff=self.res_dist))
-        for contact in self.contact_map:
+                                                                 cutoff=self.res_dist))
+        bad_chains_warning = False
+        for contact in self.system.go_params["go_map"][0]:
             resIDA, chainA, resIDB, chainB = contact
             # identify the contact in the residue graph based on
             # chain ID and resid
             resA = self._chain_id_to_resnode(chainA, resIDA)
             resB = self._chain_id_to_resnode(chainB, resIDB)
             # make sure that both residues are not connected
-            # note: contacts should be symmteric so we only
+            # note: contacts should be symmetric so we only
             # check against one
-            if resB not in connected_pairs[resA]:
-                # now we lookup the backbone nodes within the residue contact
-                bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'], select_backbone))
-                bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'], select_backbone))
-                # compute the distance between bb-beads
-                dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
-                                      molecule.nodes[bb_node_B]['position'])
-                # verify that the distance between BB-beads satisfies the
-                # cut-off criteria
-                if self.cutoff_long > dist > self.cutoff_short:
-                    atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
-                                                               _old_resid=resIDA,
-                                                               chain=chainA,
-                                                               prefix=self.moltype))
-                    atype_b = next(get_go_type_from_attributes(self.res_graph.nodes[resB]['graph'],
-                                                               _old_resid=resIDB,
-                                                               chain=chainB,
-                                                               prefix=self.moltype))
-                    # Check if symmetric contact has already been processed before
-                    # and if so, we append the contact to the final symmetric contact matrix
-                    # and add the exclusions. Else, we add to the full valid contact_matrix
-                    # and continue searching.
-                    if (atype_b, atype_a, dist) in contact_matrix:
-                        # generate backbone backbone exclusions
-                        # perhaps one day can be it's own function
-                        excl = Interaction(atoms=(bb_node_A, bb_node_B),
-                                           parameters=[], meta={"group": "Go model exclusion"})
-                        molecule.interactions['exclusions'].append(excl)
-                        symmetrical_matrix.append((atype_a, atype_b, dist))
-                    else:
-                        contact_matrix.append((atype_a, atype_b, dist))
 
+            if (resA is not None) and (resB is not None):
+                if resB not in connected_pairs[resA]:
+                    # now we lookup the backbone nodes within the residue contact
+                    bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'], select_backbone))
+                    bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'], select_backbone))
+                    # compute the distance between bb-beads
+                    dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
+                                          molecule.nodes[bb_node_B]['position'])
+                    # verify that the distance between BB-beads satisfies the
+                    # cut-off criteria
+                    if self.cutoff_long > dist > self.cutoff_short:
+                        atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
+                                                                   _old_resid=resIDA,
+                                                                   chain=chainA,
+                                                                   prefix=self.moltype))
+                        atype_b = next(get_go_type_from_attributes(self.res_graph.nodes[resB]['graph'],
+                                                                   _old_resid=resIDB,
+                                                                   chain=chainB,
+                                                                   prefix=self.moltype))
+                        # Check if symmetric contact has already been processed before
+                        # and if so, we append the contact to the final symmetric contact matrix
+                        # and add the exclusions. Else, we add to the full valid contact_matrix
+                        # and continue searching.
+                        if (atype_b, atype_a, dist) in contact_matrix:
+                            # generate backbone-backbone exclusions
+                            # perhaps one day can be its own function
+                            excl = Interaction(atoms=(bb_node_A, bb_node_B),
+                                               parameters=[], meta={"group": "Go model exclusion"})
+                            molecule.interactions['exclusions'].append(excl)
+                            symmetrical_matrix.append((atype_a, atype_b, dist))
+                        else:
+                            contact_matrix.append((atype_a, atype_b, dist))
+            else:
+                if bad_chains_warning == False:
+                    LOGGER.warning("Mismatch between chain IDs in pdb and contact map. This probably means the "
+                                   "chain IDs are missing in the pdb and the contact map has all chains = Z.")
+                    bad_chains_warning = True
         return symmetrical_matrix
 
     def compute_go_interaction(self, contacts):

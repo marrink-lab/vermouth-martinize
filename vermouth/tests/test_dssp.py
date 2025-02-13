@@ -37,6 +37,7 @@ from vermouth.tests.datafiles import (
     PDB_ALA5_CG,
     PDB_ALA5,
 )
+from vermouth.tests.helper_functions import test_molecule, create_sys_all_attrs
 
 DSSP_EXECUTABLE = os.environ.get("VERMOUTH_TEST_DSSP", "dssp")
 SECSTRUCT_1BTA = list(
@@ -450,6 +451,16 @@ def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
         # Make sure it's a valid PDB file. Mostly anyway.
         list(read_pdb(matches[0]))
 
+def test_run_dssp_executable():
+    """
+    Test that the executable for dssp is actually found
+    """
+    system = vermouth.System()
+    for molecule in read_pdb(str(PDB_PROTEIN)):
+        system.add_molecule(molecule)
+
+    with pytest.raises(DSSPError):
+        dssp.run_dssp(system, executable='doesnt_exist')
 
 @pytest.mark.parametrize('ss_struct, expected', (
     (list('ABCDE'), list('ABCDE')),
@@ -695,3 +706,43 @@ def test_cterm_atomnames():
 def test_convert_dssp_to_martini(sequence, expected):
     found = dssp.convert_dssp_to_martini(sequence)
     assert expected == found
+
+@pytest.mark.parametrize('resnames, ss_string, secstruc',
+     (      # protein resnames with secstruc
+             ({0: "ALA", 1: "ALA", 2: "ALA",
+               3: "GLY", 4: "GLY",
+               5: "MET",
+               6: "ARG", 7: "ARG", 8: "ARG"},
+              'HHHH',
+              {1: "H", 2: "H", 3: "H", 4: "H"}
+              ),
+             # not protein resnames, no secstruc annotated or gets written
+             ({0: "A", 1: "A", 2: "A",
+               3: "B", 4: "B",
+               5: "C",
+               6: "D", 7: "D", 8: "D"},
+              "",
+              {1: "", 2: "", 3: "", 4: ""}
+              )
+     ))
+def test_gmx_system_header(test_molecule, resnames, ss_string, secstruc):
+
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="molecule_0",
+                                  secstruc=secstruc,
+                                  defaults={"chain": "A"},
+                                  attrs={"resname": resnames,
+                                         "atype": atypes})
+
+    # annotate the actual 'secstruct' attribute because create_sys_all_attrs actually annotates cgsecstruct
+    dssp.AnnotateResidues(attribute="secstruct",
+                          sequence="HHHH").run_system(system)
+
+    dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+
+    assert ss_string in system.meta.get('header', [''])

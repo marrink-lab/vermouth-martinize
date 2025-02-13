@@ -19,6 +19,8 @@ import os
 import textwrap
 import pytest
 import vermouth
+from itertools import product
+from string import ascii_letters
 from vermouth.file_writer import DeferredFileWriter
 from vermouth.gmx.topology import (sigma_epsilon_to_C6_C12,
                                    write_atomtypes,
@@ -166,7 +168,7 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
     """
     os.chdir(tmp_path)
     system = vermouth.System()
-    system.molecules.append(dummy_molecule)
+    system.add_molecule(dummy_molecule)
     dummy_molecule.meta['moltype'] = "molecule_0"
     # "node": 0, "sigma": 0.43, "epsilon": 2.3, "meta": {}}
     system.gmx_topology_params['atomtypes'].append(Atomtype(node=0,
@@ -178,12 +180,12 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
                                                                      sigma=0.43,
                                                                      epsilon=2.3,
                                                                      meta={}))
+    system.meta["header"] = ['first header comment', 'second header comment']
     outpath = tmp_path / 'out.itp'
     atompath = tmp_path / 'atomtypes.itp'
     nbpath = tmp_path / 'nonbond_params.itp'
     write_gmx_topology(system,
                        outpath,
-                       header=['first header comment', 'second header comment'],
                        defines=('random', ),
                        itp_paths={"atomtypes": atompath, "nonbond_params": nbpath},
                        # at this level C6C12 doesn't matter; it gets
@@ -205,3 +207,31 @@ molecule_0    1
     with open(str(outpath)) as infile:
         for line, ref_line in zip(infile, ref_lines):
             assert line.strip() == ref_line
+
+@pytest.mark.parametrize('command, expected',
+    (
+        [ascii_letters, {"length": len(ascii_letters), "string": ascii_letters}],
+        [(ascii_letters*100), {"length": 4004, "string": (ascii_letters*100)[:4000]+" ..."}]
+
+    ))
+def test_gromacs_cmd_len(dummy_molecule, tmp_path, command, expected):
+    os.chdir(tmp_path)
+    system = vermouth.System()
+    system.add_molecule(dummy_molecule)
+    dummy_molecule.meta['moltype'] = "molecule_0"
+    system.meta['header'].extend([command])
+
+    outpath = tmp_path / 'out.itp'
+
+    write_gmx_topology(system,
+                       outpath,
+                       defines=('random', ),
+                       C6C12=False)
+    DeferredFileWriter().write()
+
+    with open(str(tmp_path / 'molecule_0.itp')) as infile:
+        expected_line = infile.readlines()[0].strip()[2:]
+
+    assert len(expected_line) == expected["length"]
+
+    assert expected_line == expected["string"]

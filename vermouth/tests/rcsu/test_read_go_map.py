@@ -18,6 +18,8 @@ Unit tests for the Go contact map reader.
 """
 import pytest
 from vermouth.rcsu.contact_map import read_go_map
+import vermouth
+from vermouth.tests.helper_functions import test_molecule
 
 @pytest.mark.parametrize('lines, contacts', 
         # two sets of contacts same chain
@@ -55,16 +57,19 @@ from vermouth.rcsu.contact_map import read_go_map
          """,
          [(1, "A", 2, "B"), (1, "A", 40, "B"), (2, "C", 37, "D"), (2, "C", 39, "D")]
         )))
-def test_go_map(tmp_path, lines, contacts):
+def test_go_map(test_molecule, tmp_path, lines, contacts):
     # write the go contact map file
     with open(tmp_path / "go_file.txt", "w") as in_file:
         in_file.write(lines)
 
-    # read go map
-    contact_map = read_go_map(tmp_path / "go_file.txt")
-    assert contact_map == contacts
+    system = vermouth.System()
+    system.add_molecule(test_molecule)
 
-def test_go_error(tmp_path):
+    # read go map
+    read_go_map(system, tmp_path / "go_file.txt")
+    assert system.go_params["go_map"][0] == contacts
+
+def test_go_error(test_molecule, tmp_path):
     lines="""
           ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count Model
           ============================================================================================
@@ -74,5 +79,8 @@ def test_go_error(tmp_path):
     with open(tmp_path / "go_file.txt", "w") as in_file:
         in_file.write(lines)
 
+    system = vermouth.System()
+    system.add_molecule(test_molecule)
+
     with pytest.raises(IOError):
-        read_go_map(tmp_path / "go_file.txt")
+        read_go_map(system, tmp_path / "go_file.txt")

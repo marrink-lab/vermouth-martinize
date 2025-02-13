@@ -136,10 +136,22 @@ def compare_goatomtypes(fileref, filecomp):
     for key in ref.keys(): 
         assert ref[key] == compare[key]  #assert correct atom definition string
 
+def compare_written_contact_map(fileref, filecomp):
+    with open(fileref) as f0:
+        ref_lines = f0.readlines()
+
+    with open(filecomp) as f1:
+        comp_lines = f1.readlines()
+
+    # compare from line 1 otherwise we compare martinize version
+    for (ref, comp) in zip(ref_lines[1:], comp_lines[1:]):
+        assert ref == comp
+
 GOCOMPARERS = {'go_nbparams.itp': compare_nbparams,
                'virtual_sites_nonbond_params.itp': compare_nbparams,
                'go_atomtypes.itp': compare_goatomtypes,
-               'virtual_sites_atomtypes.itp': compare_goatomtypes}
+               'virtual_sites_atomtypes.itp': compare_goatomtypes,
+               'martinize_contact_map.out': compare_written_contact_map}
 
 def _interaction_equal(interaction1, interaction2):
     """
@@ -172,7 +184,8 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-1', 'EN_chain'],
     ['tier-1', 'EN_region'],
     ['tier-1', 'hst5'],
-    ['tier-1', '1UBQ']
+    ['tier-1', '1UBQ'],
+    ['tier-1', 'lysozyme_GO_internal']
 #   ['tier-2', 'barnase_barstar'],
 #   ['tier-2', 'dna'],
 #   ['tier-2', 'gpa_dimer'],
