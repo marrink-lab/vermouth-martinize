@@ -367,9 +367,9 @@ HD2
 HE1
 C
 O
-H
+HN
 [ from edges ]
-     N     H
+     N     HN
      N    CA
     CA    HA
     CA    CB
@@ -386,7 +386,7 @@ H
 [ mapping ]
 HD1 SC3
 N    BB
-H    BB
+HN    BB
 CA    BB
 CB   SC1
   CG   SC1
