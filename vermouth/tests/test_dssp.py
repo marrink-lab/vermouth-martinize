@@ -746,3 +746,34 @@ def test_gmx_system_header(test_molecule, resnames, ss_string, secstruc):
     dssp.AnnotateMartiniSecondaryStructures().run_system(system)
 
     assert ss_string in system.meta.get('header', [''])
+
+@pytest.mark.parametrize('modify, expected',
+                         ((True, True),
+                         (False, False)
+))
+def test_gmx_system_header_supplementary(test_molecule, modify, expected):
+
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+    resnames = {0: "ALA", 1: "ALA", 2: "ALA",
+                3: "GLY", 4: "GLY",
+                5: "MET",
+                6: "ARG", 7: "ARG", 8: "ARG"}
+    secstruc ={1: "H", 2: "H", 3: "H", 4: "H"}
+
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="molecule_0",
+                                  secstruc=secstruc,
+                                  defaults={"chain": "A"},
+                                  attrs={"resname": resnames,
+                                         "atype": atypes})
+    if modify:
+        system.molecules[0].meta['modified_cgsecstruct'] = True
+
+    dssp.AnnotateResidues(attribute="secstruct",
+                          sequence="HHHH").run_system(system)
+    dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+
+    assert expected == any(["IDR" in i for i in system.meta.get('header', [''])])
