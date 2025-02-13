@@ -1147,25 +1147,6 @@ def entry():
 
     # Write the topology if requested
 
-    supp_ss_seq = list(
-        itertools.chain(
-            *(
-                dssp.sequence_from_residues(molecule, "cgsecstruct")
-                for molecule in system.molecules
-                if selectors.is_protein(molecule)
-            )
-        )
-    )
-    if any([molecule.meta.get('modified_cgsecstruct', False) for molecule in system.molecules]):
-        LOGGER.info(("Secondary structure assignment changed between dssp and martinize. "
-                     "Check files for details."), type="general")
-        header += [
-            "The assigned secondary structure conflicted with ",
-            "annotated IDRs. The following sequence of Martini secondary ",
-            "structure was actually applied to the system:",
-            "".join([dssp.SS_CG[i] for i in supp_ss_seq])
-        ]
-
     if args.top_path is not None:
         write_gmx_topology(system,
                            args.top_path,
