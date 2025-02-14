@@ -14,9 +14,6 @@
 """
 Test the ApplyPosres processor and the related functions.
 """
-import pytest
-import vermouth
-import vermouth.forcefield
 from vermouth import selectors
 from vermouth.processors import apply_posres
 from vermouth.tests.helper_functions import test_molecule, create_sys_all_attrs
