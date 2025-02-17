@@ -10,21 +10,25 @@ of simulation setup. The statements in the ``define`` statement of the input mol
 of the molecule. For more examples of ``#ifdef`` statements, see the
 `gromacs manual <https://manual.gromacs.org/2024.2/reference-manual/topologies/topology-file-formats.html#ifdef-statements>`_.
 
+Note that the ``define`` statement in the .mdp file is only given once, with arguments delineated by the ``-D``
+prefix on the same line.
 
 FLEXIBLE
 ========
 
 The FLEXIBLE defines is used to switch some bonds between harmonic bonds and constraints. This is important for
-minimization purposes.
+minimization purposes. Flexible bonds are activated through the ``.mdp`` file using::
 
+    define = -DFLEXIBLE
 
 POSRES
 ======
 
 The POSRES defines is used to activate any position restraints defined in system topologies. Position restraints
 are applied to beads by Martinize2 via the ``-p`` flag. Position restraints may be useful for minimization and
-equilibration purposes.
+equilibration purposes. Position restraints are applied to the system using::
 
+ define = -DPOSRES
 
 POSRES_FC
 =========
@@ -34,6 +38,6 @@ several successive simulations. In Martinize2, the strength of the position rest
 ``-pf`` flag, and is 1000 kJ/mol/nm^2 by default. However, as position restraints are written as a ``ifndef``
 statement in topology files, its exact value can be passed from the mdp file. For example::
 
- define = -DPOSRES_FC=500
+ define = -DPOSRES -DPOSRES_FC=500
 
 will reduce the position restraint to 500 kJ/mol/nm^2 directly.
