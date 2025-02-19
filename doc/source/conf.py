@@ -51,7 +51,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
-    'sphinxcontrib.apidoc',
+    'sphinx.ext.apidoc',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -174,10 +174,13 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
-apidoc_module_dir = '../../vermouth'
-apidoc_output_dir = 'api'
-apidoc_separate_modules = True
-apidoc_excluded_paths = ['tests', 'redistributed']
+apidoc_modules = [
+    {'path': '../../vermouth',
+     'destination': 'api',
+     'separate_modules': True,
+     'exclude_patterns': ['../../vermouth/tests/*', '../../vermouth/redistributed/*']
+     }
+]
 
 autodoc_inherit_docstrings = False
 autoclass_content = 'both'
@@ -188,17 +191,18 @@ autodoc_default_options = {'members': None,
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_preprocess_types = False
+napoleon_use_param = True
 napoleon_type_aliases = {
-        'Molecule': 'vermouth.molecule.Molecule',
+    "Molecule": "vermouth.molecule.Molecule",
         }
 
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org', None),
-    'networkx': ('https://networkx.github.io/documentation/latest', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy', None),
-    'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
+    'python': ('https://docs.python.org/3', None),
+    'networkx': ('https://networkx.org/documentation/latest', None),
+    'numpy': ('https://numpy.org/doc/stable', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy', None),
 }
 
 
