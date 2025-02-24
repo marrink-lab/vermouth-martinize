@@ -191,8 +191,10 @@ autodoc_default_options = {'members': None,
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_preprocess_types = False
-napoleon_type_aliases = None
-
+napoleon_use_param = True
+napoleon_type_aliases = {
+        'Molecule': 'vermouth.molecule.Molecule',
+        }
 # -- Options for intersphinx extension ---------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
