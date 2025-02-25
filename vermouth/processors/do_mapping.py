@@ -478,6 +478,8 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
                 graph_out.nodes[out_idx]['_old_resid'] = resid_old
                 graph_out.nodes[out_idx]['resid'] = resid_new
                 break
+        if not resid_new:  # Last found resid is *still* None....
+            raise ValueError(f"No resid found for {format_atom_string(graph_out.nodes[out_idx])}")
 
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():
