@@ -21,6 +21,7 @@ from itertools import product
 from vermouth.file_writer import deferred_open
 from collections import defaultdict
 from vermouth import __version__ as VERSION
+from pathlib import Path
 
 # BOND TYPE
 # Types of contacts:
@@ -769,7 +770,7 @@ def do_contacts(molecule, write_file):
                             res_idx,
                             mol_graph)
 
-    if isinstance(write_file, str):
+    if isinstance(write_file, Path):
         _write_contacts(write_file, all_contacts, ca_pos, mol_graph)
 
     return contacts
