@@ -27,6 +27,7 @@ from vermouth.rcsu.contact_map import GenerateContactMap
 from vermouth.tests.helper_functions import test_molecule, equal_graphs, create_sys_all_attrs
 from vermouth.tests.datafiles import TEST_MOLECULE_CONTACT_MAP
 from vermouth.file_writer import DeferredFileWriter
+from pathlib import Path
 
 @pytest.mark.parametrize('resname, atomname, expected',
                          (
@@ -398,7 +399,7 @@ def test_write_contacts(test_molecule, tmp_path):
 def test_do_contacts(test_molecule, tmp_path, write_out):
 
     if write_out:
-        outpath = str(tmp_path / 'contacts.out')
+        outpath = Path(tmp_path / 'contacts.out')
     else:
         outpath = False
 
