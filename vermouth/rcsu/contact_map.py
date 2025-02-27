@@ -770,7 +770,7 @@ def do_contacts(molecule, write_file):
                             res_idx,
                             mol_graph)
 
-    if isinstance(write_file, Path):
+    if isinstance(write_file, (str, Path)):
         _write_contacts(write_file, all_contacts, ca_pos, mol_graph)
 
     return contacts
