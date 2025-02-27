@@ -250,6 +250,10 @@ class ITPDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         self._parse_block_atom(tokens, self.current_block)
 
+
+    @SectionLineParser.section_parser('moleculetype', 'cmap')
+    def _skip(self, line, lineno=0):
+        pass
     @SectionLineParser.section_parser('moleculetype', 'bonds')
     @SectionLineParser.section_parser('moleculetype', 'angles')
     @SectionLineParser.section_parser('moleculetype', 'dihedrals')
