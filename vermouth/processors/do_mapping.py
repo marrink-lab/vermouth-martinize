@@ -408,7 +408,6 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
     mol_to_mod, modification, references = match
     LOGGER.info('Applying modification mapping {}', modification.name, type='general')
     graph_out.citations.update(modification.citations)
-
     mod_to_mol = defaultdict(dict)
     for mol_idx, mod_idxs in mol_to_mod.items():
         for mod_idx in mod_idxs:
@@ -464,6 +463,23 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
         out_idx = mod_to_out[mod_idx]
         if 'charge_group' not in graph_out.nodes[out_idx]:
             graph_out.nodes[out_idx]['charge_group'] = charge_group
+
+    # FIXME we need to assing updated resids to the modification atoms
+    # the block mapping does this for the unmodified atoms
+    for mod_idx, out_idx in mod_to_out.items():
+        if mod_idx in anchors:
+            continue
+        neighbors = modification.neighbors(mod_idx)
+        for mod_idx_neigh in neighbors:
+            anchor = mod_to_out[mod_idx_neigh]
+            resid_new = graph_out.nodes[anchor].get('resid', None)
+            resid_old = graph_out.nodes[anchor].get('_old_resid', None)
+            if resid_new:
+                graph_out.nodes[out_idx]['_old_resid'] = resid_old
+                graph_out.nodes[out_idx]['resid'] = resid_new
+                break
+        if not resid_new:  # Last found resid is *still* None....
+            raise ValueError(f"No resid found for {format_atom_string(graph_out.nodes[out_idx])}")
 
     for mol_idx in mol_to_mod:
         for mod_idx, weight in mol_to_mod[mol_idx].items():
@@ -609,7 +625,6 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
     # One to many - e.g. CG to AA. This mostly works, but we don't know how to
     #               make sure the "many" should be connected together. Gives a
     #               warning if it's disconnected.
-
     mol_to_out = defaultdict(dict)
     out_to_mol = defaultdict(dict)
     overlapping_mappings = set()
@@ -641,6 +656,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
     # At this point, we should have created graph_out at the desired
     # resolution, *and* have the associated correspondence in mol_to_out and
     # out_to_mol.
+
 
     # Set node attributes based on what the original atoms are.
     to_remove = set()
@@ -712,6 +728,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=(), 
             for out_idx, out_jdx in product(out_idxs, out_jdxs):
                 if out_idx != out_jdx:
                     graph_out.add_edge(out_idx, out_jdx)
+
 
     ############################
     # Sanity check the results #
