@@ -97,6 +97,7 @@ class FFDirector(SectionLineParser):
             ('link', ): self._new_link,
             ('modification', ): self._new_modification,
         }
+        self.macros = {}
 
     def parse_header(self, line, lineno=0):
         """
@@ -203,6 +204,12 @@ class FFDirector(SectionLineParser):
 
     def _new_modification(self):
         self.current_modification = Modification(force_field=self.force_field)
+
+    @SectionLineParser.section_parser('macros')
+    def _macros(self, line, lineno=0):
+        tokens = collections.deque(_tokenize(line))
+        _parse_macro(tokens, self.macros)
+        self.force_field.macros = self.macros
 
     @SectionLineParser.section_parser('variables')
     def _variables(self, line, lineno=0):

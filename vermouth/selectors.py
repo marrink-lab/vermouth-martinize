@@ -52,19 +52,18 @@ def is_protein(molecule):
     )
 
 
-def select_all(_):
+def select_all(_,__):
     """
     Returns True for all particles.
     """
     return True
 
 
-# TODO: Have the backbone definition be force field specific.
-def select_backbone(node):
+def select_backbone(node, bb_atomname="BB"):
     """
     Returns True if `node` is in a protein backbone.
     """
-    return node.get('atomname') == 'BB'
+    return node.get('atomname') == bb_atomname
 
 
 def selector_has_position(atom):
