@@ -52,7 +52,7 @@ def is_protein(molecule):
     )
 
 
-def select_all(_,__):
+def select_all(_, __="_"):
     """
     Returns True for all particles.
     """
