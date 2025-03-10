@@ -1370,6 +1370,13 @@ resname $protein_resnames
 -BB {"cgsecstruct": "T", "resname": $protein_resnames_non_pro} BB +BB 
 -BB  BB +BB {"cgsecstruct": "T", "resname": $protein_resnames_non_pro}
 
+; If there is a helical proline *at the middle* of the angle, then it takes
+; over, in case that has been overriden since the helical Pro-angle assignments.
+[ link ]
+[ angles ]
+; (Modified by Paulo)
+-BB BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} +BB 10 98 100 {"group": "BBB angles"}
+
 ;; Backbone dihedrals.
 [ link ]
 resname $protein_resnames
