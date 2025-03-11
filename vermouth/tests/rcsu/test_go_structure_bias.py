@@ -143,6 +143,7 @@ def test_contact_selector(test_molecule,
                                   defaults={"chain": "A"}, 
                                   attrs={"resname": resnames,
                                          "atype": atypes})
+    test_molecule.force_field.macros['bb_atomname'] = 'BB'
 
     # generate the virtual sites
     VirtualSiteCreator().run_system(system)
@@ -190,6 +191,7 @@ def test_correct_chains(test_molecule, cmap, expected, caplog):
                                   defaults={"chain": "A"},
                                   attrs={"resname": resnames,
                                          "atype": atypes})
+    test_molecule.force_field.macros['bb_atomname'] = 'BB'
 
     # generate the virtual sites
     VirtualSiteCreator().run_system(system)
