@@ -31,8 +31,7 @@ def apply_posres(molecule, selector, atomnames, force_constant, functype=1, ifde
 class ApplyPosres(Processor):
     def __init__(self, selector, force_constant, functype=1, ifdef='POSRES'):
         super().__init__()
-        self.selector = selector[0]
-        self.atomnames = selector[1]
+        self.selector, self.atomnames = selector
         self.force_constant = force_constant
         self.functype = functype
         self.ifdef = ifdef
