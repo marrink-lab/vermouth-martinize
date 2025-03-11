@@ -185,12 +185,19 @@ class ComputeStructuralGoBias(Processor):
             if (resA is not None) and (resB is not None):
                 if resB not in connected_pairs[resA]:
                     # now we lookup the backbone nodes within the residue contact
-                    bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'],
-                                                    select_backbone,
-                                                    bb_atomname=self.backbone))
-                    bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'],
-                                                    select_backbone,
-                                                    bb_atomname=self.backbone))
+                    try:
+                        bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'],
+                                                        select_backbone,
+                                                        bb_atomname=self.backbone))
+                        bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'],
+                                                        select_backbone,
+                                                        bb_atomname=self.backbone))
+                    except StopIteration:
+                        LOGGER.warning(f'No backbone atoms with name "{self.backbone}" found in molecule. '
+                                       'Check -go-backbone argument if your forcefield does not use this name for '
+                                       'backbone bead atoms. Go model cannot be generated. Will exit now.')
+                        exit()
+
                     # compute the distance between bb-beads
                     dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
                                           molecule.nodes[bb_node_B]['position'])
