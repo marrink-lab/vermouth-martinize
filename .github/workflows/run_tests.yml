@@ -10,13 +10,12 @@ on:
     branches: [ master ]
 
 env:
-  VERMOUTH_TEST_DSSP: mkdssp
   SKIP_GENERATE_AUTHORS: 1
   SKIP_WRITE_GIT_CHANGELOG: 1
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     
     strategy:
       matrix:
@@ -44,7 +43,6 @@ jobs:
           **/pyproject.toml
     - name: Install dependencies part I
       run: |
-        sudo apt-get install dssp
         pip install --upgrade setuptools pip
     - name: Install package and requirements
       run: |
