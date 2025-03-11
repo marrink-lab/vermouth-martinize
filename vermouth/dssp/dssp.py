@@ -24,6 +24,7 @@ import subprocess
 import tempfile
 import re
 import itertools
+import mdtraj
 
 from ..file_writer import deferred_open
 from ..pdb import pdb
@@ -34,125 +35,12 @@ from ..selectors import is_protein, selector_has_position, filter_minimal, selec
 from .. import utils
 from ..log_helpers import StyleAdapter, get_logger
 
-try:
-    import mdtraj
-except ImportError:
-    HAVE_MDTRAJ = False
-else:
-    HAVE_MDTRAJ = True
-
 LOGGER = StyleAdapter(get_logger(__name__))
-SUPPORTED_DSSP_VERSIONS = ("2.2.1", "3.0.0")
-
 
 class DSSPError(Exception):
     """
     Exception raised if DSSP fails.
     """
-
-
-def read_dssp2(lines):
-    """
-    Read the secondary structure from a DSSP output.
-
-    Only the first column of the "STRUCTURE" block is read. See the
-    `documentation of the DSSP format`_ for more details.
-
-    The secondary structures that can be read are:
-
-    :H: α-helix
-    :B: residue in isolated β-bridge
-    :E: extended strand, participates in β ladder
-    :G: 3-helix (3-10 helix)
-    :I: 5 helix (π-helix)
-    :T: hydrogen bonded turn
-    :S: bend
-    :C: loop or irregular
-
-    The "C" code for loops and random coil is translated from the gap used in
-    the DSSP file for an improved readability.
-
-    Only the version 2 and 3 of DSSP is supported. If the format is not
-    recognized as comming from that version of DSSP, then a :exc:`IOError` is
-    raised.
-
-    .. _`documentation of the DSSP format`: http://swift.cmbi.ru.nl/gv/dssp/DSSP_3.html
-
-    Parameters
-    ----------
-    lines:
-        An iterable over the lines of the DSSP output. This can be *e.g.* a
-        list of lines, or a file handler. The new line character is ignored.
-
-    Returns
-    -------
-    secstructs: list[str]
-        The secondary structure assigned by DSSP as a list of one-letter
-        secondary structure code.
-
-    Raises
-    ------
-    IOError
-        When a line could not be parsed, or if the version of DSSP
-        is not supported.
-    """
-    secstructs = []
-    # We use the line number for the error messages. It is more natural for a
-    # user to count lines in a file starting from 1 rather than 0.
-    numbered_lines = enumerate(lines, start=1)
-
-    # The function can only read output from DSSP version 2 and 3. Hopefully, if
-    # the input file is not in this format, then the parser will break as it
-    # reads the file; we can expect that the end of the header will not be found
-    # or the secondary structure will be an unexpected character.
-    # We could predict from the first line that the format is not the one we
-    # expect if it does not start with "===="; however, the first lines of the
-    # file are non-essential and could have been trimmed. (For instance, the
-    # first line of a DSSPv2 file contains the date of execution of the
-    # program, which is annoying when comparing files.) Failing at the
-    # first line is likely unnecessary.
-    # Yet, we can identify files from DSSP v1 from the first line. These files
-    # start with "****" instead of "====". If we identify such a file, we can
-    # fail with a useful error message.
-    _, first_line = next(numbered_lines)
-    if first_line and first_line.startswith('****'):
-        msg = ('Based on its header, the input file could come from a '
-               'pre-July 1995 version of DSSP (or the compatibility mode '
-               'of a more recent version). Only output from the version 2 and 3'
-               'of DSSP are supported.')
-        raise IOError(msg)
-
-    # First we skip the header and the histogram.
-    for line_num, line in numbered_lines:
-        if line.startswith('  #  RESIDUE AA'):
-            break
-    else:  # no break
-        msg = ('No secondary structure assignation could be read because the '
-               'file is not formated correctly. No line was found that starts '
-               'with "  #  RESIDUE AA".')
-        raise IOError(msg)
-
-    # Now, every line should be a secondary structure assignation.
-    for line_num, line in numbered_lines:
-        if '!' in line or not line:
-            # This is a TER record or an empty line, we ignore it.
-            continue
-        elif len(line) >= 17:
-            secondary_structure = line[16]
-            if secondary_structure not in 'HBEGITS ':
-                msg = 'Unrecognize secondary structure "{}" in line {}: "{}"'
-                raise IOError(msg.format(secondary_structure, line_num, line))
-            # DSSP represents the coil with a space. While this works in a
-            # column based file, it is much less convenient to handle in
-            # our code, and it is much less readable in our debug logs.
-            # We translate the space to "C" in our representation.
-            if secondary_structure == ' ':
-                secondary_structure = 'C'
-            secstructs.append(secondary_structure)
-        else:
-            raise IOError('Line {} is too short: "{}".'.format(line_num, line))
-
-    return secstructs
 
 
 def run_mdtraj(system):
@@ -201,130 +89,6 @@ def run_mdtraj(system):
         if LOGGER.getEffectiveLevel() > logging.DEBUG:
             os.remove(tmpfile_name)
     return dssp
-
-
-def _savefile_path(system, savedir=None):
-    savefile = None
-    if savedir is not None:
-        chains = set()
-        for molecule in system.molecules:
-            first_atom = list(molecule.nodes.keys())[0]
-            chain = molecule.nodes[first_atom].get('chain')
-            if chain is not None:
-                chains.add(chain)
-        if not chains:
-            msg = 'The "savedir" argument can only be used if chains are set.'
-            raise ValueError(msg)
-        savefile = os.path.join(savedir, 'chain_{}.ssd'.format(','.join(sorted(chains))))
-    return savefile
-
-
-def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
-    """
-    Run DSSP on a system and return the assigned secondary structures.
-
-    Run DSSP using the path (or name in the research PATH) given by
-    "executable". Return the secondary structure parsed from the output of the
-    program.
-
-    In order to call DSSP, a PDB file is produced. Therefore, all the molecules
-    in the system must contain the required attributes for such a file to be
-    generated. Also, the atom names are assumed to be compatible with the
-    'charmm' force field for DSSP to recognize them.
-    However, the molecules do not require the edges to be defined.
-
-    DSSP is assumed to be in version 2 or 3. The secondary structure codes are
-    described in :func:`read_dssp2`.
-
-    Parameters
-    ----------
-    system: System
-    executable: str
-        Where to find the DSSP executable.
-    savefile: None or str or pathlib.Path
-        If set to a path, the output of DSSP is written in this directory.
-    defer_writing: bool
-        Whether to use :meth:`~vermouth.file_writer.DeferredFileWriter.write` for writing data
-
-    Returns
-    -------
-    list[str]
-        The assigned secondary structures as a list of one-letter codes.
-        The secondary structure sequences of all the molecules are combined
-        in a single list without delimitation.
-
-    Raises
-    ------
-    DSSPError
-        DSSP failed to run.
-    IOError
-        The output of DSSP could not be parsed.
-
-    See Also
-    --------
-    read_dssp2
-        Parse a DSSP output.
-    """
-    if savedir:
-        # I don't love this. A system could contain multiple molecules, a mol
-        # could contain multiple chains. Adapt _savefile_path to iterate over
-        # all atoms to collect all chains sounds expensive though.
-        savefile = _savefile_path(system, savedir)
-    else:
-        savefile = None
-
-    try:
-        # check version
-        process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except FileNotFoundError:
-        raise DSSPError("DSSP executable not found. Perhaps MDTraj was not installed in the environment?")
-
-    match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
-    version = match[0] if match else None
-    if not version:
-        raise DSSPError('Failed to get DSSP version information.')
-    if not version in SUPPORTED_DSSP_VERSIONS:
-        LOGGER.warning("Vermouth is tested only with DSSP versions {}. "
-                       "The provided DSSP (version {}) may result in inaccurate "
-                       "secondary structure assignments. As alternative you can "
-                       "provide a secondary structure assignment string using "
-                       "the `-ss` option.",
-                       SUPPORTED_DSSP_VERSIONS, version,
-                       type='DSSP-version')
-
-    tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
-                                                    dir='.', prefix='dssp_in_')
-    tmpfile_handle = os.fdopen(tmpfile_handle, mode='w')
-    tmpfile_handle.write(pdb.write_pdb_string(system, conect=False))
-    tmpfile_handle.close()
-
-    process = subprocess.run(
-        [executable, '-i', tmpfile_name],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        universal_newlines=True
-    )
-
-    status = process.returncode
-    # If an error is encountered, or the loglevel is low enough, preserve the
-    # DSSP input file, and print a nice message.
-    if not status and LOGGER.getEffectiveLevel() > logging.DEBUG:
-        os.remove(tmpfile_name)
-    if status:
-        message = 'DSSP encountered an error. The message was {err}. The input' \
-                  ' file provided to DSSP can be found at {file}.'
-        raise DSSPError(message.format(err=process.stderr, file=tmpfile_name))
-    else:
-        LOGGER.debug('DSSP input file written to {}', tmpfile_name)
-
-    if savefile is not None:
-        if defer_writing:
-            open = deferred_open
-        with open(str(savefile), 'w') as outfile:
-            outfile.write(process.stdout)
-
-    return read_dssp2(process.stdout.split('\n'))
 
 
 def annotate_dssp(molecule, callable=None, attribute='secstruct'):
@@ -563,20 +327,11 @@ def gmx_system_header(system):
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
-    def __init__(self, executable=None, savedir=None):
+    def __init__(self):
         super().__init__()
-        if executable is None:
-            if HAVE_MDTRAJ:
-                self.dssp = run_mdtraj
-            else:
-                self.dssp = partial(run_dssp, executable='dssp', savedir=savedir)
-        elif isinstance(executable, str):
-            self.dssp = partial(run_dssp, executable=executable, savedir=savedir)
-        else:
-            self.dssp = executable
 
     def run_molecule(self, molecule):
-        annotate_dssp(molecule, self.dssp)
+        annotate_dssp(molecule, run_mdtraj)
         molecule.citations.add('MDTraj')
         return molecule
 
