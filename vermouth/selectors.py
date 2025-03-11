@@ -147,7 +147,7 @@ def proto_multi_templates(node, templates, ignore_keys=()):
     )
 
 
-def filter_minimal(molecule, selector):
+def filter_minimal(molecule, selector, **kwargs):
     """
     Yield the atom keys that match the selector.
 
@@ -175,5 +175,9 @@ def filter_minimal(molecule, selector):
         Keys of the atoms that match the selection.
     """
     for name, atom in molecule.nodes.items():
-        if selector(atom):
-            yield name
+        if kwargs:
+            if selector(atom, kwargs['bb_atomname']):
+                yield name
+        else:
+            if selector(atom):
+                yield name

@@ -181,8 +181,12 @@ class ComputeStructuralGoBias(Processor):
             if (resA is not None) and (resB is not None):
                 if resB not in connected_pairs[resA]:
                     # now we lookup the backbone nodes within the residue contact
-                    bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'], select_backbone))
-                    bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'], select_backbone))
+                    bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'],
+                                                    select_backbone,
+                                                    bb_atomname=molecule.force_field.macros['bb_atomname']))
+                    bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'],
+                                                    select_backbone,
+                                                    bb_atomname=molecule.force_field.macros['bb_atomname']))
                     # compute the distance between bb-beads
                     dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
                                           molecule.nodes[bb_node_B]['position'])

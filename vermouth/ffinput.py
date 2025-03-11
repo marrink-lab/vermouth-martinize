@@ -209,7 +209,7 @@ class FFDirector(SectionLineParser):
     def _macros(self, line, lineno=0):
         tokens = collections.deque(_tokenize(line))
         _parse_macro(tokens, self.macros)
-        self.force_field.macros = self.macros
+        self.force_field.macros.update(self.macros)
 
     @SectionLineParser.section_parser('variables')
     def _variables(self, line, lineno=0):
