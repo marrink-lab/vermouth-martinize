@@ -9,6 +9,7 @@ from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
 from vermouth.tests.test_water_bias import create_sys_all_attrs
 from vermouth.tests.helper_functions import test_molecule
 from vermouth.rcsu.go_structure_bias import ComputeStructuralGoBias
+from contextlib import nullcontext
 
 def test_compute_go_interaction(test_molecule):
     contacts = [("atom_a", "atom_b", 2.3),
@@ -219,3 +220,53 @@ def test_correct_chains(test_molecule, cmap, expected, caplog):
         assert caplog.records == []
 
 
+@pytest.mark.parametrize('bb, expectation, log_expected',(
+        # correct BB atomname
+        ("BB", nullcontext(), False),
+        # made a typo
+        ("VB", pytest.raises(SystemExit), True),
+))
+def test_correct_bb_name(test_molecule, bb, expectation, log_expected, caplog):
+    cmap = [(1, 'A', 4, 'A'), (4, 'A', 1, 'A')]
+    # the molecule atomtypes
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+    # the molecule resnames
+    resnames = {0: "A", 1: "A", 2: "A",
+                3: "B", 4: "B",
+                5: "C",
+                6: "D", 7: "D", 8: "D"}
+
+    secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="mol_0",
+                                  secstruc=secstruc,
+                                  defaults={"chain": "A"},
+                                  attrs={"resname": resnames,
+                                         "atype": atypes})
+    test_molecule.force_field.macros['bb_atomname'] = "BB"
+
+    # generate the virtual sites
+    VirtualSiteCreator().run_system(system)
+    # add the contacts to the system
+    system.go_params["go_map"] = [cmap]
+    # initialize the Go processor
+    with expectation:
+        go_processor = ComputeStructuralGoBias(cutoff_short=0.3,
+                                               cutoff_long=2.0,
+                                               go_eps=2.1,
+                                               res_dist=0,
+                                               moltype="mol_0",
+                                               system=system,
+                                               go_anchor_bead=bb)
+        caplog.clear()
+        go_processor.run_system(system)
+
+    if log_expected:
+        assert any(rec.levelname == 'WARNING' for rec in caplog.records)
+        # makes sure the warning is only printed once
+        assert len(caplog.records) == 1
+    else:
+        assert caplog.records == []

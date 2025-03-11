@@ -23,6 +23,7 @@ from ..selectors import filter_minimal, select_backbone
 from ..gmx.topology import NonbondParam
 from .go_utils import get_go_type_from_attributes
 from ..log_helpers import StyleAdapter, get_logger
+import sys
 LOGGER = StyleAdapter(get_logger(__name__))
 
 class ComputeStructuralGoBias(Processor):
@@ -196,7 +197,7 @@ class ComputeStructuralGoBias(Processor):
                         LOGGER.warning(f'No backbone atoms with name "{self.backbone}" found in molecule. '
                                        'Check -go-backbone argument if your forcefield does not use this name for '
                                        'backbone bead atoms. Go model cannot be generated. Will exit now.')
-                        exit()
+                        sys.exit()
 
                     # compute the distance between bb-beads
                     dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
