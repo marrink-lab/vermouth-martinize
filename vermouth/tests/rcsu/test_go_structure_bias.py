@@ -24,7 +24,8 @@ def test_compute_go_interaction(test_molecule):
                                            cutoff_long=None,
                                            go_eps=2.1,
                                            res_dist=None,
-                                           moltype="molecule_0")
+                                           moltype="molecule_0",
+                                           go_anchor_bead='BB')
     go_processor.system = system
 
     go_processor.compute_go_interaction(contacts)
@@ -155,7 +156,8 @@ def test_contact_selector(test_molecule,
                                            go_eps=2.1,
                                            res_dist=rdist,
                                            moltype="mol_0",
-                                           system=system)
+                                           system=system,
+                                           go_anchor_bead='BB')
     go_processor.res_graph = vermouth.graph_utils.make_residue_graph(test_molecule)
     # run the contact map selector
     contact_matrix = go_processor.contact_selector(test_molecule)
@@ -203,7 +205,8 @@ def test_correct_chains(test_molecule, cmap, expected, caplog):
                                            go_eps=2.1,
                                            res_dist=0,
                                            moltype="mol_0",
-                                           system=system)
+                                           system=system,
+                                           go_anchor_bead='BB')
 
     caplog.clear()
     go_processor.run_system(system)

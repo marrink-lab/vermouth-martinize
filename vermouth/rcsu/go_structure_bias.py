@@ -53,6 +53,7 @@ class ComputeStructuralGoBias(Processor):
                  go_eps,
                  res_dist,
                  moltype,
+                 go_anchor_bead,
                  system=None,
                  res_graph=None):
         """
@@ -86,12 +87,15 @@ class ComputeStructuralGoBias(Processor):
         magic_number: float
             magic number for Go contacts from the old
             GoVirt script.
+        backbone: str
+            name of backbone atom where virtual site is placed
         """
         self.cutoff_short = cutoff_short
         self.cutoff_long = cutoff_long
         self.go_eps = go_eps
         self.res_dist = res_dist
         self.moltype = moltype
+        self.backbone = go_anchor_bead
         # don't modify
         self.res_graph = None
         self.system = system
@@ -183,10 +187,10 @@ class ComputeStructuralGoBias(Processor):
                     # now we lookup the backbone nodes within the residue contact
                     bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'],
                                                     select_backbone,
-                                                    bb_atomname=molecule.force_field.macros['bb_atomname']))
+                                                    bb_atomname=self.backbone))
                     bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'],
                                                     select_backbone,
-                                                    bb_atomname=molecule.force_field.macros['bb_atomname']))
+                                                    bb_atomname=self.backbone))
                     # compute the distance between bb-beads
                     dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
                                           molecule.nodes[bb_node_B]['position'])
