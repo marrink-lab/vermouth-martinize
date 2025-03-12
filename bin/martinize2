@@ -923,7 +923,7 @@ def entry():
     if args.dssp:
         if not isinstance(args.dssp, str):
             args.dssp = None
-        AnnotateDSSP().run_system(system)
+        AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
         AnnotateResidues(
