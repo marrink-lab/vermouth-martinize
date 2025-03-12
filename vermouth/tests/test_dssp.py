@@ -39,6 +39,7 @@ from vermouth.tests.datafiles import (
 )
 from vermouth.tests.helper_functions import test_molecule, create_sys_all_attrs
 
+DSSP_EXECUTABLE = os.environ.get("VERMOUTH_TEST_DSSP", "dssp")
 SECSTRUCT_1BTA = list(
     "CEEEEETTTCCSHHHHHHHHHHHHTCCTTCCCSHHHHHHHHTTT"
     "SCSSEEEEEESTTHHHHTTTSSHHHHHHHHHHHHHTTCCEEEEEC"
@@ -321,6 +322,146 @@ class TestAnnotateResidues:
         assert found[0] is None
 
 
+@pytest.mark.parametrize(
+    "input_file, expected",
+    [
+        (str(DSSP_OUTPUT), "".join(SECSTRUCT_1BTA)),
+        (
+            str(DSSP_SS_OUTPUT / "mini-protein1_betasheet.pdb.v2.2.1-3b2-deb_cv1.ssd"),
+            "CEEEEEETTEEEEEECCCCCCTTCEEEEC",
+        ),
+        (
+            str(DSSP_SS_OUTPUT / "mini-protein1_betasheet.pdb.v3.0.0-3b1-deb_cv1.ssd"),
+            "CEEEEEETTEEEEEECCCCCCTTCEEEEC",
+        ),
+        (
+            str(DSSP_SS_OUTPUT / "mini-protein2_helix.pdb.v2.2.1-3b2-deb_cv1.ssd"),
+            "CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC",
+        ),
+        (
+            str(DSSP_SS_OUTPUT / "mini-protein2_helix.pdb.v3.0.0-3b1-deb_cv1.ssd"),
+            "CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC",
+        ),
+        (
+            str(DSSP_SS_OUTPUT / "mini-protein3_trp-cage.pdb.v2.2.1-3b2-deb_cv1.ssd"),
+            "CHHHHHHHTTGGGGTCCCCC",
+        ),
+        (
+            str(DSSP_SS_OUTPUT / "mini-protein3_trp-cage.pdb.v3.0.0-3b1-deb_cv1.ssd"),
+            "CHHHHHHHTTGGGGTCCCCC",
+        ),
+    ],
+)
+def test_read_dssp2(input_file, expected):
+    """
+    Test that :func:`vermouth.dssp.dssp.read_dssp2` returns the expected
+    secondary structure sequence.
+    """
+    with open(input_file, encoding="utf-8") as infile:
+        secondary_structure = dssp.read_dssp2(infile)
+    assert "".join(secondary_structure) == expected
+
+
+@pytest.mark.parametrize("savefile", [True, False])
+def test_run_dssp(savefile, tmp_path):
+    """
+    Test that :func:`vermouth.molecule.dssp.dssp.run_dssp` runs as expected and
+    generate a save file only if requested.
+    """
+    # The test runs twice, once with the savefile set to True so we test with
+    # saving the DSSP output to file, and once with savefile set t False so we
+    # do not generate the file. The "savefile" argument is set by
+    # pytest.mark.parametrize.
+    # The "tmp_path" argument is set by pytest and is the path to a temporary
+    # directory that exists only for one iteration of the test.
+    if savefile:
+        path = tmp_path
+    else:
+        path = None
+    system = vermouth.System()
+    for molecule in read_pdb(str(PDB_PROTEIN)):
+        system.add_molecule(molecule)
+    secondary_structure = dssp.run_dssp(
+        system, executable=DSSP_EXECUTABLE, savedir=path
+    )
+
+    # Make sure we produced the expected sequence of secondary structures
+    assert secondary_structure == SECSTRUCT_1BTA
+
+    # If we test with savefile, then we need to make sure the file is created
+    # and its content corresponds to the reference (excluding the first lines
+    # that are variable or contain non-essencial data read from the PDB file).
+    # If we test without savefile, then we need to make sure the file is not
+    # created.
+    if savefile:
+        DeferredFileWriter().write()
+        assert path.exists()
+        foundfile = list(path.glob('chain_*.ssd'))
+        assert len(foundfile) == 1
+        foundfile = foundfile[0]
+
+        with open(foundfile, encoding="utf-8") as genfile, open(str(DSSP_OUTPUT), encoding="utf-8") as reffile:
+            # DSSP 3 is outputs mostly the same thing as DSSP2, though there
+            # are some differences in non significant whitespaces, and an extra
+            # field header. We need to normalize these differences to be able
+            # to compare.
+            gen = "\n".join(
+                [
+                    line.strip().replace("            CHAIN", "")
+                    for line in genfile.readlines()[6:]
+                ]
+            )
+            ref = "\n".join([line.strip() for line in reffile.readlines()[6:]])
+            assert gen == ref
+    else:
+        # Is the directory empty?
+        assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize(
+    "pdb, loglevel,expected",
+    [
+        (PDB_PROTEIN, 10, True),  # DEBUG
+        (PDB_PROTEIN, 30, False),  # WARNING
+        # Using a CG pdb will cause a DSSP error, which should preserve the input
+        (PDB_ALA5_CG, 10, True),  # DEBUG
+        (PDB_ALA5_CG, 30, True),  # WARNING
+    ],
+)
+def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
+    """
+    Test that the DSSP input file is preserved (only) in the right conditions
+    """
+    caplog.set_level(loglevel)
+    system = vermouth.System()
+    for molecule in read_pdb(str(pdb)):
+        system.add_molecule(molecule)
+    os.chdir(tmp_path)
+    try:
+        dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
+    except DSSPError:
+        pass
+    if expected:
+        target = 1
+    else:
+        target = 0
+    matches = glob.glob("dssp_in*.pdb")
+    assert len(matches) == target, matches
+    if matches:
+        # Make sure it's a valid PDB file. Mostly anyway.
+        list(read_pdb(matches[0]))
+
+def test_run_dssp_executable():
+    """
+    Test that the executable for dssp is actually found
+    """
+    system = vermouth.System()
+    for molecule in read_pdb(str(PDB_PROTEIN)):
+        system.add_molecule(molecule)
+
+    with pytest.raises(DSSPError):
+        dssp.run_dssp(system, executable='doesnt_exist')
+
 @pytest.mark.parametrize('ss_struct, expected', (
     (list('ABCDE'), list('ABCDE')),
     (list('AB DE'), list('ABCDE')),
@@ -335,7 +476,7 @@ def test_mdtraj(monkeypatch, ss_struct, expected):
     for molecule in read_pdb(str(PDB_ALA5)):
         system.add_molecule(molecule)
 
-    processor = AnnotateDSSP()
+    processor = AnnotateDSSP(executable=None)
     processor.run_system(system)
 
     found = []
@@ -548,7 +689,7 @@ def test_cterm_atomnames():
     system.add_molecule(mol)
     vermouth.processors.RepairGraph().run_system(system)
     vermouth.processors.CanonicalizeModifications().run_system(system)
-    dssp_out = dssp.run_mdtraj(system)
+    dssp_out = dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
     assert dssp_out == list("CC")
 
 
