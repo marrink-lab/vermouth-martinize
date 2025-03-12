@@ -197,7 +197,7 @@ class ComputeStructuralGoBias(Processor):
                         LOGGER.warning(f'No backbone atoms with name "{self.backbone}" found in molecule. '
                                        'Check -go-backbone argument if your forcefield does not use this name for '
                                        'backbone bead atoms. Go model cannot be generated. Will exit now.')
-                        sys.exit()
+                        sys.exit(1)
 
                     # compute the distance between bb-beads
                     dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
