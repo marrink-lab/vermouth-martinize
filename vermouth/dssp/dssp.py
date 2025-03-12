@@ -354,13 +354,13 @@ def annotate_dssp(molecule, callable=None, attribute='secstruct'):
         attributes are not used.
     callable: Callable
         The function to call to generate DSSP secondary structure assignments.
-        See also:  :func:`run_mdtraj`
+        See also: :func:`run_dssp`, :func:`run_mdtraj`
     attribute: str
         The name of the atom attribute in which to store the annotation.
 
     See Also
     --------
-    run_mdtraj
+    run_mdtraj, run_dssp, read_dssp2
     """
     if not is_protein(molecule):
         return
