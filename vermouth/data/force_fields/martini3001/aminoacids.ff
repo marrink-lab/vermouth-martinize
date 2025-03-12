@@ -1276,14 +1276,15 @@ resname $protein_resnames
 -BB {"cgsecstruct": "F"} BB +BB 
 -BB  BB +BB {"cgsecstruct": "F"}
 
+; Weaker helix angles centered on or around Pro must be protected
+; from reaching 180 deg, since the helix dihedral is still imposed.
 [ link ]
 [ angles ]
--BB BB +BB 2 98 100 {"group": "BBB angles"}
+-BB BB +BB 10 98 100 {"group": "BBB angles"}
 [ patterns ]
 -BB BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} +BB 
 -BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"} BB +BB 
 -BB  BB +BB {"cgsecstruct": "H|1|2|3", "resname": "PRO|HYP"}
-
 
 [ link ]
 resname $protein_resnames
@@ -1371,7 +1372,7 @@ resname $protein_resnames
 -BB  BB +BB {"cgsecstruct": "T", "resname": $protein_resnames_non_pro}
 
 ; If there is a helical proline *at the middle* of the angle, then it takes
-; over.
+; over, in case that has been overriden since the helical Pro-angle assignments.
 [ link ]
 [ angles ]
 ; (Modified by Paulo)
