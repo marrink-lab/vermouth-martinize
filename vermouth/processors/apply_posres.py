@@ -15,10 +15,28 @@
 from .processor import Processor
 
 
-def apply_posres(molecule, selector, force_constant, functype=1, ifdef='POSRES'):
+def apply_posres(molecule, selector, atomnames, force_constant, functype=1, ifdef='POSRES'):
+    """
+    Apply position restraint interactions to a molecule.
+    Position restraints are written as a constant to be processed by gmx grompp
+    from a default force constant.
+
+    molecule: vermouth.molecule.Molecule
+        molecule to which to apply position restraints
+    selector: vermouth.selector
+        selector to use for node selection for interaction application
+    atomnames: str
+        name of target atom to use in selector
+    force_constant: int
+        default force constant to be used
+    functype: int
+        gromacs function type for position restraint
+    ifdef: str
+        ifdef statement for interaction meta
+    """
     for key, node in molecule.nodes.items():
-        if selector(node):
-            parameters = [functype, ] + ["POSRES_FC", ] *3
+        if selector(node, atomnames):
+            parameters = [functype, ] + ["POSRES_FC", ] * 3
             if ifdef is not None:
                 meta = {'ifdef': ifdef}
             else:
@@ -32,7 +50,7 @@ def apply_posres(molecule, selector, force_constant, functype=1, ifdef='POSRES')
 class ApplyPosres(Processor):
     def __init__(self, selector, force_constant, functype=1, ifdef='POSRES'):
         super().__init__()
-        self.selector = selector
+        self.selector, self.atomnames = selector
         self.force_constant = force_constant
         self.functype = functype
         self.ifdef = ifdef
@@ -41,6 +59,7 @@ class ApplyPosres(Processor):
         return apply_posres(
             molecule,
             self.selector,
+            self.atomnames,
             self.force_constant,
             functype=self.functype,
             ifdef=self.ifdef,

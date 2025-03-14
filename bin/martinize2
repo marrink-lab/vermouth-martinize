@@ -1003,13 +1003,12 @@ def entry():
         idrs=args.idr_tune,
         disordered_regions=args.water_idrs
     )
-
     # Apply position restraints if required.
     if args.posres != "none":
         LOGGER.info("Applying position restraints.", type="step")
         node_selectors = {
-            "all": selectors.select_all,
-            "backbone": selectors.select_backbone,
+            "all": (selectors.select_all, None),
+            "backbone": (selectors.select_backbone, system.force_field.variables['bb_atomname'])
         }
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
