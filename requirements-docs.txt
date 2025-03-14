@@ -1,4 +1,4 @@
-sphinx
+sphinx >= 8.2.1
 pbr
 setuptools >= 30.3.0
 
