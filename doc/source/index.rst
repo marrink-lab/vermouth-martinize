@@ -16,6 +16,7 @@ Welcome to VerMoUTH's documentation!
    file_formats
    tutorials/index
    api/modules
+   gromacs_variables
 
 
 Indices and tables
