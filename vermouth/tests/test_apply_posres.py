@@ -24,6 +24,7 @@ def test_apply_posres(test_molecule):
 
     mol = apply_posres.apply_posres(molecule=test_molecule,
                                     selector=selector,
+                                    atomnames='BB',
                                     force_constant=1000)
 
     expected_interaction_sites = [i for i in mol.nodes if selector(mol.nodes[i])]
@@ -50,7 +51,7 @@ def test_ApplyPosres(test_molecule):
                                   attrs={"resname": resnames,
                                          "atype": atypes})
 
-    apply_posres.ApplyPosres(selectors.select_backbone, 1000).run_system(system)
+    apply_posres.ApplyPosres((selectors.select_backbone, "BB"), 1000).run_system(system)
 
     assert all(mol.interactions.get('position_restraints') for mol in system.molecules)
     assert all(mol.meta.get('define').get('POSRES_FC') == 1000 for mol in system.molecules)
