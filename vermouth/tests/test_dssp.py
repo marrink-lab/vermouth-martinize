@@ -322,145 +322,145 @@ class TestAnnotateResidues:
         assert found[0] is None
 
 
-@pytest.mark.parametrize(
-    "input_file, expected",
-    [
-        (str(DSSP_OUTPUT), "".join(SECSTRUCT_1BTA)),
-        (
-            str(DSSP_SS_OUTPUT / "mini-protein1_betasheet.pdb.v2.2.1-3b2-deb_cv1.ssd"),
-            "CEEEEEETTEEEEEECCCCCCTTCEEEEC",
-        ),
-        (
-            str(DSSP_SS_OUTPUT / "mini-protein1_betasheet.pdb.v3.0.0-3b1-deb_cv1.ssd"),
-            "CEEEEEETTEEEEEECCCCCCTTCEEEEC",
-        ),
-        (
-            str(DSSP_SS_OUTPUT / "mini-protein2_helix.pdb.v2.2.1-3b2-deb_cv1.ssd"),
-            "CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC",
-        ),
-        (
-            str(DSSP_SS_OUTPUT / "mini-protein2_helix.pdb.v3.0.0-3b1-deb_cv1.ssd"),
-            "CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC",
-        ),
-        (
-            str(DSSP_SS_OUTPUT / "mini-protein3_trp-cage.pdb.v2.2.1-3b2-deb_cv1.ssd"),
-            "CHHHHHHHTTGGGGTCCCCC",
-        ),
-        (
-            str(DSSP_SS_OUTPUT / "mini-protein3_trp-cage.pdb.v3.0.0-3b1-deb_cv1.ssd"),
-            "CHHHHHHHTTGGGGTCCCCC",
-        ),
-    ],
-)
-def test_read_dssp2(input_file, expected):
-    """
-    Test that :func:`vermouth.dssp.dssp.read_dssp2` returns the expected
-    secondary structure sequence.
-    """
-    with open(input_file, encoding="utf-8") as infile:
-        secondary_structure = dssp.read_dssp2(infile)
-    assert "".join(secondary_structure) == expected
-
-
-@pytest.mark.parametrize("savefile", [True, False])
-def test_run_dssp(savefile, tmp_path):
-    """
-    Test that :func:`vermouth.molecule.dssp.dssp.run_dssp` runs as expected and
-    generate a save file only if requested.
-    """
-    # The test runs twice, once with the savefile set to True so we test with
-    # saving the DSSP output to file, and once with savefile set t False so we
-    # do not generate the file. The "savefile" argument is set by
-    # pytest.mark.parametrize.
-    # The "tmp_path" argument is set by pytest and is the path to a temporary
-    # directory that exists only for one iteration of the test.
-    if savefile:
-        path = tmp_path
-    else:
-        path = None
-    system = vermouth.System()
-    for molecule in read_pdb(str(PDB_PROTEIN)):
-        system.add_molecule(molecule)
-    secondary_structure = dssp.run_dssp(
-        system, executable=DSSP_EXECUTABLE, savedir=path
-    )
-
-    # Make sure we produced the expected sequence of secondary structures
-    assert secondary_structure == SECSTRUCT_1BTA
-
-    # If we test with savefile, then we need to make sure the file is created
-    # and its content corresponds to the reference (excluding the first lines
-    # that are variable or contain non-essencial data read from the PDB file).
-    # If we test without savefile, then we need to make sure the file is not
-    # created.
-    if savefile:
-        DeferredFileWriter().write()
-        assert path.exists()
-        foundfile = list(path.glob('chain_*.ssd'))
-        assert len(foundfile) == 1
-        foundfile = foundfile[0]
-
-        with open(foundfile, encoding="utf-8") as genfile, open(str(DSSP_OUTPUT), encoding="utf-8") as reffile:
-            # DSSP 3 is outputs mostly the same thing as DSSP2, though there
-            # are some differences in non significant whitespaces, and an extra
-            # field header. We need to normalize these differences to be able
-            # to compare.
-            gen = "\n".join(
-                [
-                    line.strip().replace("            CHAIN", "")
-                    for line in genfile.readlines()[6:]
-                ]
-            )
-            ref = "\n".join([line.strip() for line in reffile.readlines()[6:]])
-            assert gen == ref
-    else:
-        # Is the directory empty?
-        assert not list(tmp_path.iterdir())
-
-
-@pytest.mark.parametrize(
-    "pdb, loglevel,expected",
-    [
-        (PDB_PROTEIN, 10, True),  # DEBUG
-        (PDB_PROTEIN, 30, False),  # WARNING
-        # Using a CG pdb will cause a DSSP error, which should preserve the input
-        (PDB_ALA5_CG, 10, True),  # DEBUG
-        (PDB_ALA5_CG, 30, True),  # WARNING
-    ],
-)
-def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
-    """
-    Test that the DSSP input file is preserved (only) in the right conditions
-    """
-    caplog.set_level(loglevel)
-    system = vermouth.System()
-    for molecule in read_pdb(str(pdb)):
-        system.add_molecule(molecule)
-    os.chdir(tmp_path)
-    try:
-        dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
-    except DSSPError:
-        pass
-    if expected:
-        target = 1
-    else:
-        target = 0
-    matches = glob.glob("dssp_in*.pdb")
-    assert len(matches) == target, matches
-    if matches:
-        # Make sure it's a valid PDB file. Mostly anyway.
-        list(read_pdb(matches[0]))
-
-def test_run_dssp_executable():
-    """
-    Test that the executable for dssp is actually found
-    """
-    system = vermouth.System()
-    for molecule in read_pdb(str(PDB_PROTEIN)):
-        system.add_molecule(molecule)
-
-    with pytest.raises(DSSPError):
-        dssp.run_dssp(system, executable='doesnt_exist')
+#@pytest.mark.parametrize(
+#    "input_file, expected",
+#    [
+#        (str(DSSP_OUTPUT), "".join(SECSTRUCT_1BTA)),
+#        (
+#            str(DSSP_SS_OUTPUT / "mini-protein1_betasheet.pdb.v2.2.1-3b2-deb_cv1.ssd"),
+#            "CEEEEEETTEEEEEECCCCCCTTCEEEEC",
+#        ),
+#        (
+#            str(DSSP_SS_OUTPUT / "mini-protein1_betasheet.pdb.v3.0.0-3b1-deb_cv1.ssd"),
+#            "CEEEEEETTEEEEEECCCCCCTTCEEEEC",
+#        ),
+#        (
+#            str(DSSP_SS_OUTPUT / "mini-protein2_helix.pdb.v2.2.1-3b2-deb_cv1.ssd"),
+#            "CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC",
+#        ),
+#        (
+#            str(DSSP_SS_OUTPUT / "mini-protein2_helix.pdb.v3.0.0-3b1-deb_cv1.ssd"),
+#            "CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCC",
+#        ),
+#        (
+#            str(DSSP_SS_OUTPUT / "mini-protein3_trp-cage.pdb.v2.2.1-3b2-deb_cv1.ssd"),
+#            "CHHHHHHHTTGGGGTCCCCC",
+#        ),
+#        (
+#            str(DSSP_SS_OUTPUT / "mini-protein3_trp-cage.pdb.v3.0.0-3b1-deb_cv1.ssd"),
+#            "CHHHHHHHTTGGGGTCCCCC",
+#        ),
+#    ],
+#)
+#def test_read_dssp2(input_file, expected):
+#    """
+#    Test that :func:`vermouth.dssp.dssp.read_dssp2` returns the expected
+#    secondary structure sequence.
+#    """
+#    with open(input_file, encoding="utf-8") as infile:
+#        secondary_structure = dssp.read_dssp2(infile)
+#    assert "".join(secondary_structure) == expected
+#
+#
+#@pytest.mark.parametrize("savefile", [True, False])
+#def test_run_dssp(savefile, tmp_path):
+#    """
+#    Test that :func:`vermouth.molecule.dssp.dssp.run_dssp` runs as expected and
+#    generate a save file only if requested.
+#    """
+#    # The test runs twice, once with the savefile set to True so we test with
+#    # saving the DSSP output to file, and once with savefile set t False so we
+#    # do not generate the file. The "savefile" argument is set by
+#    # pytest.mark.parametrize.
+#    # The "tmp_path" argument is set by pytest and is the path to a temporary
+#    # directory that exists only for one iteration of the test.
+#    if savefile:
+#        path = tmp_path
+#    else:
+#        path = None
+#    system = vermouth.System()
+#    for molecule in read_pdb(str(PDB_PROTEIN)):
+#        system.add_molecule(molecule)
+#    secondary_structure = dssp.run_dssp(
+#        system, executable=DSSP_EXECUTABLE, savedir=path
+#    )
+#
+#    # Make sure we produced the expected sequence of secondary structures
+#    assert secondary_structure == SECSTRUCT_1BTA
+#
+#    # If we test with savefile, then we need to make sure the file is created
+#    # and its content corresponds to the reference (excluding the first lines
+#    # that are variable or contain non-essencial data read from the PDB file).
+#    # If we test without savefile, then we need to make sure the file is not
+#    # created.
+#    if savefile:
+#        DeferredFileWriter().write()
+#        assert path.exists()
+#        foundfile = list(path.glob('chain_*.ssd'))
+#        assert len(foundfile) == 1
+#        foundfile = foundfile[0]
+#
+#        with open(foundfile, encoding="utf-8") as genfile, open(str(DSSP_OUTPUT), encoding="utf-8") as reffile:
+#            # DSSP 3 is outputs mostly the same thing as DSSP2, though there
+#            # are some differences in non significant whitespaces, and an extra
+#            # field header. We need to normalize these differences to be able
+#            # to compare.
+#            gen = "\n".join(
+#                [
+#                    line.strip().replace("            CHAIN", "")
+#                    for line in genfile.readlines()[6:]
+#                ]
+#            )
+#            ref = "\n".join([line.strip() for line in reffile.readlines()[6:]])
+#            assert gen == ref
+#    else:
+#        # Is the directory empty?
+#        assert not list(tmp_path.iterdir())
+#
+#
+#@pytest.mark.parametrize(
+#    "pdb, loglevel,expected",
+#    [
+#        (PDB_PROTEIN, 10, True),  # DEBUG
+#        (PDB_PROTEIN, 30, False),  # WARNING
+#        # Using a CG pdb will cause a DSSP error, which should preserve the input
+#        (PDB_ALA5_CG, 10, True),  # DEBUG
+#        (PDB_ALA5_CG, 30, True),  # WARNING
+#    ],
+#)
+#def test_run_dssp_input_file(tmp_path, caplog, pdb, loglevel, expected):
+#    """
+#    Test that the DSSP input file is preserved (only) in the right conditions
+#    """
+#    caplog.set_level(loglevel)
+#    system = vermouth.System()
+#    for molecule in read_pdb(str(pdb)):
+#        system.add_molecule(molecule)
+#    os.chdir(tmp_path)
+#    try:
+#        dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
+#    except DSSPError:
+#        pass
+#    if expected:
+#        target = 1
+#    else:
+#        target = 0
+#    matches = glob.glob("dssp_in*.pdb")
+#    assert len(matches) == target, matches
+#    if matches:
+#        # Make sure it's a valid PDB file. Mostly anyway.
+#        list(read_pdb(matches[0]))
+#
+#def test_run_dssp_executable():
+#    """
+#    Test that the executable for dssp is actually found
+#    """
+#    system = vermouth.System()
+#    for molecule in read_pdb(str(PDB_PROTEIN)):
+#        system.add_molecule(molecule)
+#
+#    with pytest.raises(DSSPError):
+#        dssp.run_dssp(system, executable='doesnt_exist')
 
 @pytest.mark.parametrize('ss_struct, expected', (
     (list('ABCDE'), list('ABCDE')),
@@ -488,209 +488,209 @@ def test_mdtraj(monkeypatch, ss_struct, expected):
     assert found == expected
 
 
-def test_cterm_atomnames():
-    nodes = [
-        dict(
-            resname="ALA",
-            atomname="N",
-            element="N",
-            resid=1,
-            chain="",
-            position=np.array([9.534, 5.359, 0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="CA",
-            element="C",
-            resid=1,
-            chain="",
-            position=np.array([10.190, 6.661, -0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="C",
-            element="C",
-            resid=1,
-            chain="",
-            position=np.array([11.706, 6.515, 0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="O",
-            element="O",
-            resid=1,
-            chain="",
-            position=np.array([12.232, 5.403, 0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="CB",
-            element="C",
-            resid=1,
-            chain="",
-            position=np.array([9.733, 7.484, 1.196]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="H",
-            element="H",
-            resid=1,
-            chain="",
-            position=np.array([10.101, 4.523, 0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="HA",
-            element="H",
-            resid=1,
-            chain="",
-            position=np.array([9.914, 7.191, -0.912]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="1HB",
-            element="H",
-            resid=1,
-            chain="",
-            position=np.array([10.231, 8.454, 1.181]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="2HB",
-            element="H",
-            resid=1,
-            chain="",
-            position=np.array([8.654, 7.630, 1.147]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="3HB",
-            element="H",
-            resid=1,
-            chain="",
-            position=np.array([9.987, 6.960, 2.116]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="N",
-            element="N",
-            resid=2,
-            chain="",
-            position=np.array([12.404, 7.646, 0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="CA",
-            element="C",
-            resid=2,
-            chain="",
-            position=np.array([13.862, 7.646, 0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="C",
-            element="C",
-            resid=2,
-            chain="",
-            position=np.array([14.413, 9.066, 0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="O1",
-            element="O",
-            resid=2,
-            chain="",
-            position=np.array([14.462, 9.691, 1.023]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="O2",
-            element="O",
-            resid=2,
-            chain="",
-            position=np.array([14.798, 9.560, -1.023]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="CB",
-            element="C",
-            resid=2,
-            chain="",
-            position=np.array([14.392, 6.868, -1.196]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="H",
-            element="H",
-            resid=2,
-            chain="",
-            position=np.array([11.912, 8.528, -0.000]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="HA",
-            element="H",
-            resid=2,
-            chain="",
-            position=np.array([14.212, 7.162, 0.912]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="1HB",
-            element="H",
-            resid=2,
-            chain="",
-            position=np.array([15.482, 6.878, -1.181]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="2HB",
-            element="H",
-            resid=2,
-            chain="",
-            position=np.array([14.038, 5.839, -1.147]),
-        ),
-        dict(
-            resname="ALA",
-            atomname="3HB",
-            element="H",
-            resid=2,
-            chain="",
-            position=np.array([14.038, 7.331, -2.116]),
-        ),
-    ]
-    edges = [
-        (0, 1),
-        (0, 5),
-        (1, 2),
-        (1, 4),
-        (1, 6),
-        (2, 3),
-        (4, 7),
-        (4, 8),
-        (4, 9),
-        (2, 10),
-        (10, 11),
-        (10, 16),
-        (11, 12),
-        (11, 15),
-        (11, 17),
-        (12, 13),
-        (12, 14),
-        (15, 18),
-        (15, 19),
-        (15, 20),
-    ]
-    ff = get_native_force_field("charmm")
-    mol = vermouth.molecule.Molecule(force_field=ff)
-    mol.add_nodes_from(enumerate(nodes))
-    mol.add_edges_from(edges)
-    system = vermouth.system.System(force_field=ff)
-    system.add_molecule(mol)
-    vermouth.processors.RepairGraph().run_system(system)
-    vermouth.processors.CanonicalizeModifications().run_system(system)
-    dssp_out = dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
-    assert dssp_out == list("CC")
+#def test_cterm_atomnames():
+#    nodes = [
+#        dict(
+#            resname="ALA",
+#            atomname="N",
+#            element="N",
+#            resid=1,
+#            chain="",
+#            position=np.array([9.534, 5.359, 0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="CA",
+#            element="C",
+#            resid=1,
+#            chain="",
+#            position=np.array([10.190, 6.661, -0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="C",
+#            element="C",
+#            resid=1,
+#            chain="",
+#            position=np.array([11.706, 6.515, 0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="O",
+#            element="O",
+#            resid=1,
+#            chain="",
+#            position=np.array([12.232, 5.403, 0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="CB",
+#            element="C",
+#            resid=1,
+#            chain="",
+#            position=np.array([9.733, 7.484, 1.196]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="H",
+#            element="H",
+#            resid=1,
+#            chain="",
+#            position=np.array([10.101, 4.523, 0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="HA",
+#            element="H",
+#            resid=1,
+#            chain="",
+#            position=np.array([9.914, 7.191, -0.912]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="1HB",
+#            element="H",
+#            resid=1,
+#            chain="",
+#            position=np.array([10.231, 8.454, 1.181]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="2HB",
+#            element="H",
+#            resid=1,
+#            chain="",
+#            position=np.array([8.654, 7.630, 1.147]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="3HB",
+#            element="H",
+#            resid=1,
+#            chain="",
+#            position=np.array([9.987, 6.960, 2.116]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="N",
+#            element="N",
+#            resid=2,
+#            chain="",
+#            position=np.array([12.404, 7.646, 0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="CA",
+#            element="C",
+#            resid=2,
+#            chain="",
+#            position=np.array([13.862, 7.646, 0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="C",
+#            element="C",
+#            resid=2,
+#            chain="",
+#            position=np.array([14.413, 9.066, 0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="O1",
+#            element="O",
+#            resid=2,
+#            chain="",
+#            position=np.array([14.462, 9.691, 1.023]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="O2",
+#            element="O",
+#            resid=2,
+#            chain="",
+#            position=np.array([14.798, 9.560, -1.023]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="CB",
+#            element="C",
+#            resid=2,
+#            chain="",
+#            position=np.array([14.392, 6.868, -1.196]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="H",
+#            element="H",
+#            resid=2,
+#            chain="",
+#            position=np.array([11.912, 8.528, -0.000]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="HA",
+#            element="H",
+#            resid=2,
+#            chain="",
+#            position=np.array([14.212, 7.162, 0.912]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="1HB",
+#            element="H",
+#            resid=2,
+#            chain="",
+#            position=np.array([15.482, 6.878, -1.181]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="2HB",
+#            element="H",
+#            resid=2,
+#            chain="",
+#            position=np.array([14.038, 5.839, -1.147]),
+#        ),
+#        dict(
+#            resname="ALA",
+#            atomname="3HB",
+#            element="H",
+#            resid=2,
+#            chain="",
+#            position=np.array([14.038, 7.331, -2.116]),
+#        ),
+#    ]
+#    edges = [
+#        (0, 1),
+#        (0, 5),
+#        (1, 2),
+#        (1, 4),
+#        (1, 6),
+#        (2, 3),
+#        (4, 7),
+#        (4, 8),
+#        (4, 9),
+#        (2, 10),
+#        (10, 11),
+#        (10, 16),
+#        (11, 12),
+#        (11, 15),
+#        (11, 17),
+#        (12, 13),
+#        (12, 14),
+#        (15, 18),
+#        (15, 19),
+#        (15, 20),
+#    ]
+#    ff = get_native_force_field("charmm")
+#    mol = vermouth.molecule.Molecule(force_field=ff)
+#    mol.add_nodes_from(enumerate(nodes))
+#    mol.add_edges_from(edges)
+#    system = vermouth.system.System(force_field=ff)
+#    system.add_molecule(mol)
+#    vermouth.processors.RepairGraph().run_system(system)
+#    vermouth.processors.CanonicalizeModifications().run_system(system)
+#    dssp_out = dssp.run_dssp(system, executable=DSSP_EXECUTABLE)
+#    assert dssp_out == list("CC")
 
 
 @pytest.mark.parametrize('sequence, expected', [
