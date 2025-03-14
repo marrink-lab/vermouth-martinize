@@ -17,14 +17,16 @@ from .processor import Processor
 
 def apply_posres(molecule, selector, atomnames, force_constant, functype=1, ifdef='POSRES'):
     for key, node in molecule.nodes.items():
-        if selector(node, atomnames):
-            parameters = [functype, ] + [force_constant, ] * 3
+
+        if selector(node):
+            parameters = [functype, ] + ["POSRES_FC", ] *3
             if ifdef is not None:
                 meta = {'ifdef': ifdef}
             else:
                 meta = {}
             molecule.add_interaction('position_restraints',
                                      (key, ), parameters, meta)
+    molecule.meta['define'] = {'POSRES_FC': force_constant}
     return molecule
 
 
