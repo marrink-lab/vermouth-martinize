@@ -1,5 +1,4 @@
 sphinx
-sphinxcontrib-apidoc
 pbr
 setuptools >= 30.3.0
 
