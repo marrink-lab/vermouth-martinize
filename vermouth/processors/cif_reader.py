@@ -42,7 +42,7 @@ class CIFInput(Processor):
 
     See also
     --------
-    :func:`~vermouth.pdb.cif.read_cif`
+    :func:`~vermouth.pdb.cif.read_cif_file`
 
     """
     def __init__(self, filename, exclude=(), ignh=False):
