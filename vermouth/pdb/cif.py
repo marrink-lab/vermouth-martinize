@@ -129,5 +129,5 @@ class CIFReader():
             molecules = read_cif_file(self.input_file, self.exclude, self.ignh)
             return molecules
         else:
-            raise ImportError("PyCifRW library not found")
+            raise ImportError("The PyCifRW library must be installed to read .cif files with Vermouth.")
 
