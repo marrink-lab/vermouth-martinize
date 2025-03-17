@@ -16,7 +16,13 @@
 Provides functionality to read CIF files.
 """
 
-from CifFile import ReadCif
+try:
+    from CifFile import ReadCif
+except ImportError:
+    HAVE_READCIF = False
+else:
+    HAVE_READCIF= True
+
 import numpy as np
 
 from ..molecule import Molecule
@@ -34,7 +40,7 @@ def _cell(cf, modelname):
 
     return np.array([a, b, c, alpha, beta, gamma])
 
-def read_cif(file_name, exclude=('SOL', 'HOH'), ignh=False):
+def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
     """
     Parse a CIF file to create a molecule using the PyCIFRW library
 
@@ -112,9 +118,16 @@ def read_cif(file_name, exclude=('SOL', 'HOH'), ignh=False):
 
     return molecules
 
+class CIFReader():
+    def __init__(self, file, exclude, ignh):
+        self.input_file = file
+        self.exclude = exclude
+        self.ignh = ignh
 
-
-
-
-
+    def reader(self):
+        if HAVE_READCIF:
+            molecules = read_cif_file(self.input_file, self.exclude, self.ignh)
+            return molecules
+        else:
+            raise ImportError("PyCifRW library not found")
 

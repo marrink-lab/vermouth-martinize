@@ -22,7 +22,7 @@ See also
 """
 
 
-from ..pdb import read_cif
+from ..pdb import CIFReader
 from .processor import Processor
 
 
@@ -52,6 +52,6 @@ class CIFInput(Processor):
         self.ignh = ignh
 
     def run_system(self, system):
-        molecules = read_cif(self.filename, self.exclude, self.ignh)
+        molecules = CIFReader(self.filename, self.exclude, self.ignh).reader()
         for molecule in molecules:
             system.add_molecule(molecule)
