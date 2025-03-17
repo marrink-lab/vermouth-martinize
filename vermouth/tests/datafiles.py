@@ -54,6 +54,9 @@ MAP_UNIVERSAL_TEST_PEPPLANE = TEST_DATA / 'mappings' / 'universal-test'
 # contact map
 TEST_MOLECULE_CONTACT_MAP = TEST_DATA / 'test_molecule_contacts.out'
 
+# cif file
+CIF_PROTEIN = TEST_DATA / '1UBQ.cif'
+
 # Clean the namespace so only the data file variables can be imported.
 # An other option would be to define __all__, but it is easy to forget to add
 # a variable in that list.

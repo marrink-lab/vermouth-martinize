@@ -38,7 +38,7 @@ def _cell(cf, modelname):
     beta = cf[modelname]['_cell.angle_beta']
     gamma = cf[modelname]['_cell.angle_gamma']
 
-    return np.array([a, b, c, alpha, beta, gamma])
+    return np.array([a, b, c, alpha, beta, gamma], dtype=np.float32)
 
 def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
     """
@@ -109,7 +109,7 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
             properties['position'] = np.array([properties['x'],
                                                properties['y'],
                                                properties['z'],
-                                               ], dtype=float) / 10
+                                               ], dtype=np.float32) / 10
 
             molecule.add_node(idx, **properties)
 
