@@ -34,7 +34,7 @@ def _cell(cf, modelname):
 
     return np.array([a, b, c, alpha, beta, gamma])
 
-def read_cif(file_name, exclude=('SOL',), ignh=False):
+def read_cif(file_name, exclude=('SOL', 'HOH'), ignh=False):
     """
     Parse a CIF file to create a molecule using the PyCIFRW library
 
@@ -88,7 +88,8 @@ def read_cif(file_name, exclude=('SOL',), ignh=False):
     for model in cf.keys():
 
         molecule = Molecule()
-        number_atoms = int(cf[model]['_refine_hist.number_atoms_total'])
+        # annoyingly _refine_hist.number_atoms_total is not a mandatory entry
+        number_atoms = len(cf[model]['_atom_site.cartn_x'])
 
         for idx in range(number_atoms):
             properties = {}
