@@ -93,8 +93,10 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     cif_category_types = [int, str, str, str, int, str,
                           float, float, float,
                           float, float,
-                          str, str,
-                          int]
+                          str, float, int]
+
+    # e.g. resid = . or charge = ?
+    alternative_categories = {'resid': str, 'charge': str}
 
     cf = ReadCif(str(file_name))
 
@@ -112,12 +114,13 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
             properties = {}
 
             for attr, attr_type, cif_key in zip(cif_category_names, cif_category_types, cif_categories):
-                print(attr)
-
                 # try reading everything, but it doesn't really matter if not all the cif_categories are present
                 try:
                     properties[attr] = attr_type(cf[model][cif_key][i])
                 except KeyError:
+                    pass
+                except ValueError:
+                    properties[attr] = alternative_categories[attr](cf[model][cif_key][i])
                     pass
 
             if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):

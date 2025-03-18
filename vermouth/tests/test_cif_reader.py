@@ -24,6 +24,6 @@ from vermouth.tests.datafiles import CIF_PROTEIN
 def test_CIFInput():
 
     system = vermouth.System()
-    CIFInput(filename=CIF_PROTEIN, exclude='HOH', ignh=False).run_system(system)
+    CIFInput(filename=CIF_PROTEIN, exclude='HOH', ignh=False, modelidx=1).run_system(system)
 
     assert len(system.molecules) == 1

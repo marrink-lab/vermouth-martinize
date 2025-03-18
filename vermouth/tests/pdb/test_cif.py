@@ -65,12 +65,16 @@ ATOM   17  N NE2 . GLN A 1 2  ? 25.562 32.733 1.806  1.00 19.49 ? 2   GLN A NE2 
         resname = tokens[-4]
         chain = tokens[-3]
         resid = tokens[-5]
+        insert_code = tokens[9]
         x = tokens[10]
         y = tokens[11]
         z = tokens[12]
         position = np.array([tokens[10], tokens[11], tokens[12]], dtype=np.float32) / 10
         element = tokens[2]
         charge = tokens[-6]
+        occupancy = tokens[13]
+        temp_factor = tokens[14]
+        model = tokens[-1]
         data.append({"atomid": int(anum),
                      "atomname": str(aname),
                      "resname": str(resname),
@@ -81,7 +85,11 @@ ATOM   17  N NE2 . GLN A 1 2  ? 25.562 32.733 1.806  1.00 19.49 ? 2   GLN A NE2 
                      "resid": int(resid),
                      "position": position,
                      "element": str(element),
-                     "charge": str(charge)})
+                     "charge": str(charge),
+                     "insertion_code": str(insert_code),
+                     "occupancy": float(occupancy),
+                     "temp_factor": float(temp_factor),
+                     "model": int(model)})
 
     return data
 
@@ -96,6 +104,7 @@ def test_read_cif_file():
         assert all([all([j in molecule.nodes[i].keys() for j in reference_data[i].keys()])])
 
         for key, value in molecule.nodes[i].items():
+            print(key)
             assert value == pytest.approx(reference_data[i][key])
 
 def test_CIFReader():
