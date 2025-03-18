@@ -30,6 +30,15 @@ from ..log_helpers import StyleAdapter, get_logger
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
+
+def casting(value, typeto):
+    try:
+        return typeto(value)
+    # except a ValueError. The two known ones are resid = '.' or charge = '?' which must be a str.
+    # may cause an error if more are added
+    except ValueError:
+        return str(value)
+
 def _cell(cf, modelname):
     """
     get the cell dimensions from a cif file as a list
@@ -70,7 +79,7 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     """
 
     # list of categories from the read cif file to read into a molecule
-    cif_categories = [
+    cif_categories_all = [
     '_atom_site.id',  # atomid
     '_atom_site.label_atom_id',  # atomname
     '_atom_site.label_comp_id',  # resname
@@ -95,47 +104,52 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
                           float, float,
                           str, float, int]
 
-    # e.g. resid = . or charge = ?
-    alternative_categories = {'resid': str, 'charge': str}
-
     cf = ReadCif(str(file_name))
+    fname = list(cf.keys())[0]
+
+    # first filter the data by which categories are present
+    # make list of the category names which are present
+    names = []
+    # make a list of the lists of the data
+    all_data = []
+    for category, name, cattype in zip(cif_categories_all, cif_category_names, cif_category_types):
+        if category in cf[fname]:
+            # cast the data to its correct type
+            data = [casting(i, cattype) for i in cf[fname][category]]
+            all_data.append(data)
+            names.append(name)
+
+    # transform the data into an atom by atom list
+    data_zipped = [i for i in zip(*all_data)]
+    # for each atom, make a dictionary with its associated name
+    properties_dict_list = []
+    for i in data_zipped:
+        properties_dict_list.append(dict(zip(names, i)))
 
     molecules = []
 
-    for model in cf.keys():
+    molecule = Molecule()
 
-        molecule = Molecule()
+    # find the indices in the data which are actually from the model that we're after.
+    model_atom_indices = np.where(np.array(cf[fname]['_atom_site.pdbx_PDB_model_num'], dtype=int) == modelidx)[0]
 
-        # find the indices in the data which are actually from the model that we're after.
-        model_atom_indices = np.where(np.array(cf[model]['_atom_site.pdbx_PDB_model_num'], dtype=int) == modelidx)[0]
+    idx = 0  # add nodes by separate index in case we skip some atoms
+    for i in model_atom_indices:
+        properties = properties_dict_list[i]
 
-        idx = 0  # add nodes by separate index in case we skip some atoms
-        for i in model_atom_indices:
-            properties = {}
+        if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):
+            continue
 
-            for attr, attr_type, cif_key in zip(cif_category_names, cif_category_types, cif_categories):
-                # try reading everything, but it doesn't really matter if not all the cif_categories are present
-                try:
-                    properties[attr] = attr_type(cf[model][cif_key][i])
-                except KeyError:
-                    pass
-                except ValueError:
-                    properties[attr] = alternative_categories[attr](cf[model][cif_key][i])
-                    pass
+        properties['position'] = np.array([properties['x'],
+                                           properties['y'],
+                                           properties['z'],
+                                           ], dtype=float) / 10
 
-            if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):
-                continue
+        molecule.add_node(idx, **properties)
+        idx += 1
 
-            properties['position'] = np.array([properties['x'],
-                                               properties['y'],
-                                               properties['z'],
-                                               ], dtype=float) / 10
-
-            molecule.add_node(idx, **properties)
-            idx += 1
-
-        molecule.box = _cell(cf, model)
-        molecules.append(molecule)
+    molecule.box = _cell(cf, fname)
+    molecules.append(molecule)
 
     return molecules
 

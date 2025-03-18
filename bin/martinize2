@@ -98,7 +98,8 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
             system
         )
     elif file_extension in ["CIF"]:
-        vermouth.CIFInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(system)
+        vermouth.CIFInput(str(path), exclude=ignore_resnames, ignh=ignh,
+                          modelidx=modelidx).run_system(system)
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
