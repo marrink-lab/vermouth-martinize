@@ -159,7 +159,16 @@ def _interaction_equal(interaction1, interaction2):
     interaction parameters.
     """
     p1 = list(map(float, interaction1.parameters))
-    p2 = list(map(float, interaction2.parameters))
+    try:
+        p2 = list(map(float, interaction2.parameters))
+    # position restraints are now defined using #ifndef statements, which do not map to floats.
+    # i.e. interaction2.parameters = ['1', 'POSRES_FC', 'POSRES_FC', 'POSRES_FC']
+    # except the error and write out the interaction explicitly iff the current interaction is a position restraint
+    # TODO parse define statements in itps properly
+    except ValueError:
+        if interaction2.parameters[1] == 'POSRES_FC':
+            p2 = list(map(float, ['1', '1000', '1000', '1000']))
+
     return interaction1.atoms == interaction2.atoms \
            and interaction1.meta == interaction2.meta \
            and pytest.approx(p1) == p2
