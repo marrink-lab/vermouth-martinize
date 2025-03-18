@@ -24,13 +24,19 @@ import pytest
 from CifFile import ReadCif
 
 import vermouth.pdb.cif as cif
-from vermouth.tests.datafiles import CIF_PROTEIN
+from vermouth.tests.datafiles import CIF_PROTEIN, CIF_NO_CELL
 
-def test_cell():
-    input_data = ReadCif(str(CIF_PROTEIN))
+
+@pytest.mark.parametrize('input, expected',
+                         (
+                                 (CIF_PROTEIN, np.array([50.840, 42.770, 28.950, 90, 90, 90])),
+                                 (CIF_NO_CELL, np.array([1, 1, 1, 90, 90, 90])),
+
+                         )
+                         )
+def test_cell(input, expected):
+    input_data = ReadCif(str(input))
     model_name = '1UBQ'
-
-    expected = np.array([50.840, 42.770, 28.950, 90, 90, 90])
 
     assert cif._cell(input_data, model_name) == pytest.approx(expected)
 
