@@ -45,7 +45,7 @@ class CIFInput(Processor):
     :func:`~vermouth.pdb.cif.read_cif_file`
 
     """
-    def __init__(self, filename, exclude=(), ignh=False, modelidx=1):
+    def __init__(self, filename, exclude=(), ignh=False, modelidx=0):
         super().__init__()
         self.filename = filename
         self.exclude = exclude
