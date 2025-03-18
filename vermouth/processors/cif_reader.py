@@ -45,13 +45,14 @@ class CIFInput(Processor):
     :func:`~vermouth.pdb.cif.read_cif_file`
 
     """
-    def __init__(self, filename, exclude=(), ignh=False):
+    def __init__(self, filename, exclude=(), ignh=False, modelidx=1):
         super().__init__()
         self.filename = filename
         self.exclude = exclude
         self.ignh = ignh
+        self.modelidx = modelidx
 
     def run_system(self, system):
-        molecules = CIFReader(self.filename, self.exclude, self.ignh).reader()
+        molecules = CIFReader(self.filename, self.exclude, self.ignh, self.modelidx).reader()
         for molecule in molecules:
             system.add_molecule(molecule)

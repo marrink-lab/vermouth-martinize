@@ -26,21 +26,29 @@ else:
 import numpy as np
 
 from ..molecule import Molecule
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 def _cell(cf, modelname):
     """
     get the cell dimensions from a cif file as a list
     """
-    a = cf[modelname]['_cell.length_a']
-    b = cf[modelname]['_cell.length_b']
-    c = cf[modelname]['_cell.length_c']
-    alpha = cf[modelname]['_cell.angle_alpha']
-    beta = cf[modelname]['_cell.angle_beta']
-    gamma = cf[modelname]['_cell.angle_gamma']
+    try:
+        a = cf[modelname]['_cell.length_a']
+        b = cf[modelname]['_cell.length_b']
+        c = cf[modelname]['_cell.length_c']
+        alpha = cf[modelname]['_cell.angle_alpha']
+        beta = cf[modelname]['_cell.angle_beta']
+        gamma = cf[modelname]['_cell.angle_gamma']
+        dims = np.array([a, b, c, alpha, beta, gamma], dtype=float)
+    except KeyError:
+        LOGGER.info("_cell information missing from .cif file. Will write default dimensions")
+        dims = np.array([1, 1, 1, 90, 90, 90])
 
-    return np.array([a, b, c, alpha, beta, gamma], dtype=np.float32)
+    return dims
 
-def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
+def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     """
     Parse a CIF file to create a molecule using the PyCIFRW library
 
@@ -58,34 +66,35 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
     Returns
     -------
     list[vermouth.molecule.Molecule]
-        The parsed molecules. Will only contain edges if the PDB file has
-        CONECT records. Either way, the molecules might be disconnected. Entries
-        separated by TER, ENDMDL, and END records will result in separate
-        molecules.
+        The parsed molecules. Will not contain edges
     """
 
     # list of categories from the read cif file to read into a molecule
     cif_categories = [
-    '_atom_site.id', # atomid
-    '_atom_site.auth_atom_id', # atomname
-    '_atom_site.auth_comp_id', # resname
-    '_atom_site.auth_asym_id', # chain
-    '_atom_site.auth_seq_id', # resid
-    #'_atom_site.pdbx_pdb_ins_code', # insertion_code
-    '_atom_site.cartn_x', # x
-    '_atom_site.cartn_y', # y
-    '_atom_site.cartn_z', # z
-    #'_atom_site.occupancy', # occupancy
-    #'_atom_site.b_iso_or_equiv', # temp_factor
-    '_atom_site.type_symbol', # element
-    '_atom_site.pdbx_formal_charge', # charge
+    '_atom_site.id',  # atomid
+    '_atom_site.label_atom_id',  # atomname
+    '_atom_site.label_comp_id',  # resname
+    '_atom_site.label_asym_id',  # chain
+    '_atom_site.label_seq_id',  # resid
+    '_atom_site.pdbx_pdb_ins_code',  # insertion_code
+    '_atom_site.cartn_x',  # x
+    '_atom_site.cartn_y',  # y
+    '_atom_site.cartn_z',  # z
+    '_atom_site.occupancy',  # occupancy
+    '_atom_site.b_iso_or_equiv',  # temp_factor
+    '_atom_site.type_symbol',  # element
+    '_atom_site.pdbx_formal_charge',  # charge (nb not added by AF3)
+    '_atom_site.pdbx_PDB_model_num'  # model
     ]
-    cif_category_names = ['atomid', 'atomname', 'resname', 'chain', 'resid',
+    cif_category_names = ['atomid', 'atomname', 'resname', 'chain', 'resid', 'insertion_code',
                           'x', 'y', 'z',
-                          'element', 'charge']
-    cif_category_types = [int, str, str, str, int,
+                          'occupancy', 'temp_factor',
+                          'element', 'charge', 'model']
+    cif_category_types = [int, str, str, str, int, str,
                           float, float, float,
-                          str, str]
+                          float, float,
+                          str, str,
+                          int]
 
     cf = ReadCif(str(file_name))
 
@@ -94,14 +103,22 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
     for model in cf.keys():
 
         molecule = Molecule()
-        # annoyingly _refine_hist.number_atoms_total is not a mandatory entry
-        number_atoms = len(cf[model]['_atom_site.cartn_x'])
 
-        for idx in range(number_atoms):
+        # find the indices in the data which are actually from the model that we're after.
+        model_atom_indices = np.where(np.array(cf[model]['_atom_site.pdbx_PDB_model_num'], dtype=int) == modelidx)[0]
+
+        idx = 0  # add nodes by separate index in case we skip some atoms
+        for i in model_atom_indices:
             properties = {}
 
             for attr, attr_type, cif_key in zip(cif_category_names, cif_category_types, cif_categories):
-                properties[attr] = attr_type(cf[model][cif_key][idx])
+                print(attr)
+
+                # try reading everything, but it doesn't really matter if not all the cif_categories are present
+                try:
+                    properties[attr] = attr_type(cf[model][cif_key][i])
+                except KeyError:
+                    pass
 
             if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):
                 continue
@@ -109,9 +126,10 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
             properties['position'] = np.array([properties['x'],
                                                properties['y'],
                                                properties['z'],
-                                               ], dtype=np.float32) / 10
+                                               ], dtype=float) / 10
 
             molecule.add_node(idx, **properties)
+            idx += 1
 
         molecule.box = _cell(cf, model)
         molecules.append(molecule)
@@ -119,14 +137,15 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False):
     return molecules
 
 class CIFReader():
-    def __init__(self, file, exclude, ignh):
+    def __init__(self, file, exclude, ignh, modelidx=1):
         self.input_file = file
         self.exclude = exclude
         self.ignh = ignh
+        self.modelidx = modelidx
 
     def reader(self):
         if HAVE_READCIF:
-            molecules = read_cif_file(self.input_file, self.exclude, self.ignh)
+            molecules = read_cif_file(self.input_file, self.exclude, self.ignh, self.modelidx)
             return molecules
         else:
             raise ImportError("The PyCifRW library must be installed to read .cif files with Vermouth.")
