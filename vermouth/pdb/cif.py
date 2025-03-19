@@ -57,20 +57,21 @@ def _cell(cf, modelname):
 
     return dims
 
+
 def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     """
     Parse a CIF file to create a molecule using the PyCIFRW library
 
     Parameters
     ----------
-    filename: str
+    file_name: str
         The file to read.
     exclude: collections.abc.Container[str]
         Atoms that have one of these residue names will not be included.
     ignh: bool
         Whether hydrogen atoms should be ignored.
-    model: int
-        If the PDB file contains multiple models, which one to select.
+    modelidx: int
+        If the cif file contains multiple models, which one to select.
 
     Returns
     -------
