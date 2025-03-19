@@ -119,12 +119,8 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
             all_data.append(data)
             names.append(name)
 
-    # transform the data into an atom by atom list
-    data_zipped = [i for i in zip(*all_data)]
     # for each atom, make a dictionary with its associated name
-    properties_dict_list = []
-    for i in data_zipped:
-        properties_dict_list.append(dict(zip(names, i)))
+    properties_dict_list = [dict(zip(names, v)) for v in zip(*all_data)]
 
     molecules = []
 
