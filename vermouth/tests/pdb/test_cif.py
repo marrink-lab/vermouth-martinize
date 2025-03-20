@@ -17,7 +17,6 @@
 Unittests for the CIF reader.
 """
 
-
 import numpy as np
 import pytest
 import sys
@@ -28,9 +27,11 @@ import subprocess
 from vermouth.forcefield import ForceField
 from vermouth.gmx import read_itp
 import vermouth.pdb.cif as cif
-from vermouth.tests.datafiles import CIF_PROTEIN, CIF_NO_CELL, CIF_PDB_COMPARE
+from vermouth.tests.datafiles import (CIF_PROTEIN, CIF_NO_CELL, CIF_PDB_COMPARE, CIF_MULTI, CIF_MISSING_RESNAME,
+                                      CIF_MISSING_ATOMNAME)
 from ..helper_functions import find_in_path
 from ..integration_tests.test_integration import compare_pdb, assert_equal_blocks
+
 
 @pytest.mark.parametrize('input, expected',
                          (
@@ -44,6 +45,7 @@ def test_cell(input, expected):
     model_name = '1UBQ'
 
     assert cif._cell(input_data, model_name) == pytest.approx(expected)
+
 
 def cif_lines():
     """
@@ -106,7 +108,6 @@ ATOM   17  N NE2 . GLN A 1 2  ? 25.562 32.733 1.806  1.00 19.49 ? 2   GLN A NE2 
 
 
 def test_read_cif_file():
-
     molecule = cif.read_cif_file(CIF_PROTEIN)[0]
 
     reference_data = cif_lines()
@@ -117,16 +118,16 @@ def test_read_cif_file():
         for key, value in molecule.nodes[i].items():
             assert value == pytest.approx(reference_data[i][key])
 
-def test_CIFReader():
 
+def test_CIFReader():
     processor = cif.CIFReader(file=CIF_PROTEIN, exclude=('HOH'), ignh=False)
 
     molecules = processor.reader()
 
     assert len(molecules) == 1
 
-def test_equal_output(tmp_path):
 
+def test_equal_output(tmp_path):
     martinize2 = find_in_path()
 
     command0 = [
@@ -175,3 +176,17 @@ def test_equal_output(tmp_path):
                         dummy_ff2.blocks['pdb_0'],
                         blocknames_equal=False)
 
+
+def test_multiple_entries(caplog):
+    cif.read_cif_file(CIF_MULTI)
+    assert any([rec.levelname == 'WARNING' for rec in caplog.records])
+
+
+def test_missing_resnames(caplog):
+    cif.read_cif_file(CIF_MISSING_RESNAME)
+    assert any([rec.levelname == 'WARNING' for rec in caplog.records])
+
+
+def test_missing_atomnames(caplog):
+    cif.read_cif_file(CIF_MISSING_ATOMNAME)
+    assert any([rec.levelname == 'WARNING' for rec in caplog.records])

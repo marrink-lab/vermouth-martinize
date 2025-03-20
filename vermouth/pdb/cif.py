@@ -130,7 +130,7 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
 
     # if we don't have atomnames but do have element information, copy it.
     if ('atomname' not in names) and ('element' in names):
-        LOGGER.info("atomname data missing from input file. Will attempt to continue using element data.")
+        LOGGER.warning("atomname data missing from input file. Will attempt to continue using element data.")
         names.append('atomname')
         all_data.append([casting(i, str) for i in cf[fname]['_atom_site.type_symbol']])
 
