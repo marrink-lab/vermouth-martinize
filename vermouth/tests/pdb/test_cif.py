@@ -20,12 +20,17 @@ Unittests for the CIF reader.
 
 import numpy as np
 import pytest
-
+import sys
 from CifFile import ReadCif
+import os.path
+import subprocess
 
+from vermouth.forcefield import ForceField
+from vermouth.gmx import read_itp
 import vermouth.pdb.cif as cif
-from vermouth.tests.datafiles import CIF_PROTEIN, CIF_NO_CELL
-
+from vermouth.tests.datafiles import CIF_PROTEIN, CIF_NO_CELL, CIF_PDB_COMPARE
+from ..helper_functions import find_in_path
+from ..integration_tests.test_integration import compare_pdb, assert_equal_blocks
 
 @pytest.mark.parametrize('input, expected',
                          (
@@ -75,7 +80,7 @@ ATOM   17  N NE2 . GLN A 1 2  ? 25.562 32.733 1.806  1.00 19.49 ? 2   GLN A NE2 
         x = tokens[10]
         y = tokens[11]
         z = tokens[12]
-        position = np.array([tokens[10], tokens[11], tokens[12]], dtype=np.float32) / 10
+        position = np.array([tokens[10], tokens[11], tokens[12]], dtype=float) / 10
         element = tokens[2]
         charge = tokens[-6]
         occupancy = tokens[13]
@@ -91,7 +96,7 @@ ATOM   17  N NE2 . GLN A 1 2  ? 25.562 32.733 1.806  1.00 19.49 ? 2   GLN A NE2 
                      "resid": int(resid),
                      "position": position,
                      "element": str(element),
-                     "charge": str(charge),
+                     "charge": None,
                      "insertion_code": str(insert_code),
                      "occupancy": float(occupancy),
                      "temp_factor": float(temp_factor),
@@ -106,11 +111,10 @@ def test_read_cif_file():
 
     reference_data = cif_lines()
 
-    for i in list(molecule.nodes)[None:17:None]:
-        assert all([all([j in molecule.nodes[i].keys() for j in reference_data[i].keys()])])
+    for i in sorted(molecule.nodes)[:len(reference_data)]:
+        assert all(j in molecule.nodes[i].keys() for j in reference_data[i].keys())
 
         for key, value in molecule.nodes[i].items():
-            print(key)
             assert value == pytest.approx(reference_data[i][key])
 
 def test_CIFReader():
@@ -121,7 +125,53 @@ def test_CIFReader():
 
     assert len(molecules) == 1
 
+def test_equal_output(tmp_path):
 
+    martinize2 = find_in_path()
 
+    command0 = [
+        sys.executable,
+        martinize2,
+        '-f', str(CIF_PROTEIN),
+        '-o', 'cif.top',
+        '-x', 'cif.pdb',
+        '-ignore', 'HOH', '-name', 'cif'
+    ]
+    command1 = [
+        sys.executable,
+        martinize2,
+        '-f', str(CIF_PDB_COMPARE),
+        '-o', 'pdb.top',
+        '-x', 'pdb.pdb',
+        '-ignore', 'HOH', '-name', 'pdb'
+    ]
+    # run commands
+    proc0 = subprocess.run(command0, cwd=tmp_path, timeout=90, check=False)
+    assert proc0.returncode == 0
+    proc1 = subprocess.run(command1, cwd=tmp_path, timeout=90, check=False)
+    assert proc1.returncode == 0
 
+    # find files and assert only 2 files of each
+    itp_files = sorted(os.path.abspath(fname) for fname in tmp_path.glob('*.itp'))
+    pdb_files = sorted(os.path.abspath(fname) for fname in tmp_path.glob('*.pdb'))
+    assert len(itp_files) == 2
+    assert len(pdb_files) == 2
+
+    # compare pdb. easily read in
+    compare_pdb(pdb_files[0], pdb_files[1])
+
+    # need to take care with itps because we have to use different names to make sure we don't overwrite in tmp_path.
+    cif_itp = [file for file in itp_files if 'cif' in file][0]
+    pdb_itp = [file for file in itp_files if 'pdb' in file][0]
+
+    dummy_ff = ForceField(name='dummy')
+    with open(cif_itp) as fn1:
+        read_itp(fn1, dummy_ff)
+    dummy_ff2 = ForceField(name='dummy')
+    with open(pdb_itp) as fn2:
+        read_itp(fn2, dummy_ff2)
+
+    assert_equal_blocks(dummy_ff.blocks['cif_0'],
+                        dummy_ff2.blocks['pdb_0'],
+                        blocknames_equal=False)
 

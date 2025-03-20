@@ -39,6 +39,8 @@ class CIFInput(Processor):
         from the final molecule(s)
     ignh: bool
         If True, hydrogens will be discarded from the input structure.
+    modelidx: int
+        If the cif file contains multiple models, which one to select.
 
     See also
     --------

@@ -57,6 +57,7 @@ TEST_MOLECULE_CONTACT_MAP = TEST_DATA / 'test_molecule_contacts.out'
 # cif file
 CIF_PROTEIN = TEST_DATA / '1UBQ.cif'
 CIF_NO_CELL = TEST_DATA / '1UBQ_nocell_occupancy.cif'
+CIF_PDB_COMPARE = TEST_DATA / '1UBQ.pdb'
 
 # Clean the namespace so only the data file variables can be imported.
 # An other option would be to define __all__, but it is easy to forget to add

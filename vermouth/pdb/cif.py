@@ -37,7 +37,7 @@ def casting(value, typeto):
     # except a ValueError. The two known ones are resid = '.' or charge = '?' which must be a str.
     # may cause an error if more are added
     except ValueError:
-        return str(value)
+        return None
 
 def _cell(cf, modelname):
     """
@@ -81,20 +81,20 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
 
     # list of categories from the read cif file to read into a molecule
     cif_categories_all = [
-    '_atom_site.id',  # atomid
-    '_atom_site.label_atom_id',  # atomname
-    '_atom_site.label_comp_id',  # resname
-    '_atom_site.label_asym_id',  # chain
-    '_atom_site.label_seq_id',  # resid
-    '_atom_site.pdbx_pdb_ins_code',  # insertion_code
-    '_atom_site.cartn_x',  # x
-    '_atom_site.cartn_y',  # y
-    '_atom_site.cartn_z',  # z
-    '_atom_site.occupancy',  # occupancy
-    '_atom_site.b_iso_or_equiv',  # temp_factor
-    '_atom_site.type_symbol',  # element
-    '_atom_site.pdbx_formal_charge',  # charge (nb not added by AF3)
-    '_atom_site.pdbx_PDB_model_num'  # model
+        '_atom_site.id',  # atomid
+        '_atom_site.label_atom_id',  # atomname
+        '_atom_site.label_comp_id',  # resname
+        '_atom_site.label_asym_id',  # chain
+        '_atom_site.label_seq_id',  # resid
+        '_atom_site.pdbx_pdb_ins_code',  # insertion_code
+        '_atom_site.cartn_x',  # x
+        '_atom_site.cartn_y',  # y
+        '_atom_site.cartn_z',  # z
+        '_atom_site.occupancy',  # occupancy
+        '_atom_site.b_iso_or_equiv',  # temp_factor
+        '_atom_site.type_symbol',  # element
+        '_atom_site.pdbx_formal_charge',  # charge (nb not added by AF3)
+        '_atom_site.pdbx_PDB_model_num'  # model
     ]
     cif_category_names = ['atomid', 'atomname', 'resname', 'chain', 'resid', 'insertion_code',
                           'x', 'y', 'z',
@@ -104,8 +104,13 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
                           float, float, float,
                           float, float,
                           str, float, int]
+    essential_properties = ['resname', 'resid']
 
     cf = ReadCif(str(file_name))
+    # PyCifRW seems to store everything from the file it reads in a top level key from _entry.id
+    # which ~ corresponds to the pdb code. From a single file we should only have one key.
+    if len(cf.keys()) > 1:
+        LOGGER.warning("This cif file contains multiple entries. Will parse the first one.")
     fname = list(cf.keys())[0]
 
     # first filter the data by which categories are present
@@ -119,6 +124,15 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
             data = [casting(i, cattype) for i in cf[fname][category]]
             all_data.append(data)
             names.append(name)
+        # if we're missing one of the essential categories, raise a warning
+        elif name in essential_properties:
+            LOGGER.warning(f"{name} data is missing from the input file, and is a required field.")
+
+    # if we don't have atomnames but do have element information, copy it.
+    if ('atomname' not in names) and ('element' in names):
+        LOGGER.info("atomname data missing from input file. Will attempt to continue using element data.")
+        names.append('atomname')
+        all_data.append([casting(i, str) for i in cf[fname]['_atom_site.type_symbol']])
 
     # for each atom, make a dictionary with its associated name
     properties_dict_list = [dict(zip(names, v)) for v in zip(*all_data)]
@@ -128,13 +142,14 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     molecule = Molecule()
 
     # find the indices in the data which are actually from the model that we're after.
-    model_atom_indices = np.where(np.array(cf[fname]['_atom_site.pdbx_PDB_model_num'], dtype=int) == modelidx)[0]
+    model_atom_indices = [i for i, x in enumerate([int(j) == modelidx for
+                                                   j in cf[fname]['_atom_site.pdbx_PDB_model_num']]) if x]
 
     idx = 0  # add nodes by separate index in case we skip some atoms
-    for i in model_atom_indices:
-        properties = properties_dict_list[i]
+    for _ in model_atom_indices:
+        properties = properties_dict_list[_]
 
-        if properties['resname'] in exclude or (ignh and properties['element'] == 'H'):
+        if properties.get('resname', None) in exclude or (ignh and properties['element'] == 'H'):
             continue
 
         properties['position'] = np.array([properties['x'],
