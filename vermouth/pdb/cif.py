@@ -142,12 +142,14 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     molecule = Molecule()
 
     # find the indices in the data which are actually from the model that we're after.
-    model_atom_indices = [i for i, x in enumerate([int(j) == modelidx for
-                                                   j in cf[fname]['_atom_site.pdbx_PDB_model_num']]) if x]
+    model_atom_indices = [index for index, value in
+                          enumerate([int(model) == modelidx for
+                                     model in cf[fname]['_atom_site.pdbx_PDB_model_num']])
+                          if value]
 
     idx = 0  # add nodes by separate index in case we skip some atoms
-    for _ in model_atom_indices:
-        properties = properties_dict_list[_]
+    for index in model_atom_indices:
+        properties = properties_dict_list[index]
 
         if properties.get('resname', None) in exclude or (ignh and properties['element'] == 'H'):
             continue
