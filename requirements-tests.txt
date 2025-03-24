@@ -8,4 +8,4 @@ hypothesis
 hypothesis-networkx
 codecov
 mdtraj
-pycifrw<5.0.0 # seems to be a version problem detailed here https://github.com/jamesrhester/pycifrw/issues/14
+pycifrw
