@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2018 University of Groningen
+# Copyright 2025 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Provides a processor that reads a PDB file.
+Provides a processor that reads a CIF file.
 
 See also
 --------
-:mod:`vermouth.pdb.pdb`
+:mod:`vermouth.pdb.cif`
 """
 
 
-from ..pdb import read_pdb
+from ..pdb import CIFReader
 from .processor import Processor
 
 
-class PDBInput(Processor):
+class CIFInput(Processor):
     """
-    Reads PDB files.
+    Reads CIF files.
 
     Attributes
     ----------
@@ -40,15 +40,14 @@ class PDBInput(Processor):
     ignh: bool
         If True, hydrogens will be discarded from the input structure.
     modelidx: int
-        The model number to parse/use.
+        If the cif file contains multiple models, which one to select.
 
     See also
     --------
-    :func:`~vermouth.pdb.pdb.read_pdb`
-    :func:`~vermouth.pdb.pdb.PDBParser`
+    :func:`~vermouth.pdb.cif.read_cif_file`
 
     """
-    def __init__(self, filename, exclude=(), ignh=False, modelidx=1):
+    def __init__(self, filename, exclude=(), ignh=False, modelidx=0):
         super().__init__()
         self.filename = filename
         self.exclude = exclude
@@ -56,7 +55,6 @@ class PDBInput(Processor):
         self.modelidx = modelidx
 
     def run_system(self, system):
-        molecules = read_pdb(self.filename, exclude=self.exclude,
-                             ignh=self.ignh, modelidx=self.modelidx)
+        molecules = CIFReader(self.filename, self.exclude, self.ignh, self.modelidx).reader()
         for molecule in molecules:
             system.add_molecule(molecule)
