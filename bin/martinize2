@@ -78,7 +78,6 @@ LOGGER = StyleAdapter(LOGGER)
 
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 
-
 def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
     """
     Read a system from a PDB or GRO file.
@@ -930,7 +929,7 @@ def entry():
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
         AnnotateResidues(
-            attribute="secstruct",
+            attribute="aasecstruct",
             sequence=args.ss,
             molecule_selector=selectors.is_protein,
         ).run_system(system)
@@ -980,6 +979,7 @@ def entry():
             LOGGER.warning('Improved IDR potentials are not implemented '
                            'for this force field',
                            type="missing-feature")
+
 
     if args.cystein_bridge == "none":
         vermouth.RemoveCysteinBridgeEdges().run_system(system)
@@ -1032,6 +1032,12 @@ def entry():
         defines = ("GO_VIRT",)
         itp_paths = {"atomtypes": "go_atomtypes.itp",
                      "nonbond_params": "go_nbparams.itp"}
+        if not args.water_bias:
+            # this ensures that disordered-folded go bonds get removed regardless of force field.
+            vermouth.processors.ComputeWaterBias(args.water_bias,
+                                                 {s: float(eps) for s, eps in args.water_bias_eps},
+                                                 [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                                ).run_system(system)
     else:
         # don't write non-bonded interactions
         itp_paths = []
