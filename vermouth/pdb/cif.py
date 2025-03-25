@@ -58,6 +58,73 @@ def _cell(cf, modelname):
     return dims
 
 
+def cif_entry_reader(cf, entry, cif_categories_all, cif_category_names, cif_category_types, essential_properties,
+                     modelidx, exclude, ignh):
+    """
+    cf: CifFile.CifFile_module.CifFile
+        CIF file object parsed by PyCifRW
+    entry: str
+        Key of the cf dict
+    cif_categories_all: list
+        List of valid category keys contained within a cif file entry
+    cif_category_names: list
+        Common name for category entries
+    cif_category_types: list
+        Type to cast CIF data to
+    essential_properties: list
+        List of properties which must be contained
+    """
+    # first filter the data by which categories are present
+    # make list of the category names which are present
+    names = []
+    # make a list of the lists of the data
+    all_data = []
+    for category, name, cattype in zip(cif_categories_all, cif_category_names, cif_category_types):
+        if category in cf[entry]:
+            # cast the data to its correct type
+            data = [casting(i, cattype) for i in cf[entry][category]]
+            all_data.append(data)
+            names.append(name)
+        # if we're missing one of the essential categories, raise a warning
+        elif name in essential_properties:
+            LOGGER.warning(f"{name} data is missing from the input file, and is a required field.")
+
+    # if we don't have atomnames but do have element information, copy it.
+    if ('atomname' not in names) and ('element' in names):
+        LOGGER.warning("atomname data missing from input file. Will attempt to continue using element data.")
+        names.append('atomname')
+        all_data.append([casting(i, str) for i in cf[entry]['_atom_site.type_symbol']])
+
+    # for each atom, make a dictionary with its associated name
+    properties_dict_list = [dict(zip(names, v)) for v in zip(*all_data)]
+
+    molecule = Molecule()
+
+    # find the indices in the data which are actually from the model that we're after.
+    model_atom_indices = [index for index, value in
+                          enumerate([int(model) == modelidx for
+                                     model in cf[entry]['_atom_site.pdbx_PDB_model_num']])
+                          if value]
+
+    idx = 0  # add nodes by separate index in case we skip some atoms
+    for index in model_atom_indices:
+        properties = properties_dict_list[index]
+
+        if properties.get('resname', None) in exclude or (ignh and properties['element'] == 'H'):
+            continue
+
+        properties['position'] = np.array([properties['x'],
+                                           properties['y'],
+                                           properties['z'],
+                                           ], dtype=float) / 10
+
+        molecule.add_node(idx, **properties)
+        idx += 1
+
+    molecule.box = _cell(cf, entry)
+
+    return molecule
+
 def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     """
     Parse a CIF file to create a molecule using the PyCIFRW library
@@ -110,60 +177,14 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     # PyCifRW seems to store everything from the file it reads in a top level key from _entry.id
     # which ~ corresponds to the pdb code. From a single file we should only have one key.
     if len(cf.keys()) > 1:
-        LOGGER.warning("This cif file contains multiple entries. Will parse the first one.")
-    fname = list(cf.keys())[0]
-
-    # first filter the data by which categories are present
-    # make list of the category names which are present
-    names = []
-    # make a list of the lists of the data
-    all_data = []
-    for category, name, cattype in zip(cif_categories_all, cif_category_names, cif_category_types):
-        if category in cf[fname]:
-            # cast the data to its correct type
-            data = [casting(i, cattype) for i in cf[fname][category]]
-            all_data.append(data)
-            names.append(name)
-        # if we're missing one of the essential categories, raise a warning
-        elif name in essential_properties:
-            LOGGER.warning(f"{name} data is missing from the input file, and is a required field.")
-
-    # if we don't have atomnames but do have element information, copy it.
-    if ('atomname' not in names) and ('element' in names):
-        LOGGER.warning("atomname data missing from input file. Will attempt to continue using element data.")
-        names.append('atomname')
-        all_data.append([casting(i, str) for i in cf[fname]['_atom_site.type_symbol']])
-
-    # for each atom, make a dictionary with its associated name
-    properties_dict_list = [dict(zip(names, v)) for v in zip(*all_data)]
+        LOGGER.info("This cif file contains multiple entries. Will parse the first one.")
 
     molecules = []
-
-    molecule = Molecule()
-
-    # find the indices in the data which are actually from the model that we're after.
-    model_atom_indices = [index for index, value in
-                          enumerate([int(model) == modelidx for
-                                     model in cf[fname]['_atom_site.pdbx_PDB_model_num']])
-                          if value]
-
-    idx = 0  # add nodes by separate index in case we skip some atoms
-    for index in model_atom_indices:
-        properties = properties_dict_list[index]
-
-        if properties.get('resname', None) in exclude or (ignh and properties['element'] == 'H'):
-            continue
-
-        properties['position'] = np.array([properties['x'],
-                                           properties['y'],
-                                           properties['z'],
-                                           ], dtype=float) / 10
-
-        molecule.add_node(idx, **properties)
-        idx += 1
-
-    molecule.box = _cell(cf, fname)
-    molecules.append(molecule)
+    for entry in cf.keys():
+        molecule = cif_entry_reader(cf, entry, cif_categories_all,
+                                    cif_category_names, cif_category_types, essential_properties,
+                                    modelidx, exclude, ignh)
+        molecules.append(molecule)
 
     return molecules
 

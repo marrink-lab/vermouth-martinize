@@ -177,11 +177,6 @@ def test_equal_output(tmp_path):
                         blocknames_equal=False)
 
 
-def test_multiple_entries(caplog):
-    cif.read_cif_file(CIF_MULTI)
-    assert any([rec.levelname == 'WARNING' for rec in caplog.records])
-
-
 def test_missing_resnames(caplog):
     cif.read_cif_file(CIF_MISSING_RESNAME)
     assert any([rec.levelname == 'WARNING' for rec in caplog.records])
