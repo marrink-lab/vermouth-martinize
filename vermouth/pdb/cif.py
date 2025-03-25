@@ -32,6 +32,11 @@ LOGGER = StyleAdapter(get_logger(__name__))
 
 
 def casting(value, typeto):
+    """
+    Cast a value to its correct type with an exception
+    value: value to cast
+    type: the expected output type of the value
+    """
     try:
         return typeto(value)
     # except a ValueError. The two known ones are resid = '.' or charge = '?' which must be a str.
@@ -39,17 +44,29 @@ def casting(value, typeto):
     except ValueError:
         return None
 
-def _cell(cf, modelname):
+def _cell(cf, entry):
     """
     get the cell dimensions from a cif file as a list
+
+    Parameters
+    ----------
+    cf: CifFile.CifFile_module.CifFile
+        CIF file object parsed by PyCifRW
+    entry: str
+        Key of the cf dict
+
+    Returns
+    -------
+    dims: np.array
+        array of len(6) containing the dimensions of the cell
     """
     try:
-        a = cf[modelname]['_cell.length_a']
-        b = cf[modelname]['_cell.length_b']
-        c = cf[modelname]['_cell.length_c']
-        alpha = cf[modelname]['_cell.angle_alpha']
-        beta = cf[modelname]['_cell.angle_beta']
-        gamma = cf[modelname]['_cell.angle_gamma']
+        a = cf[entry]['_cell.length_a']
+        b = cf[entry]['_cell.length_b']
+        c = cf[entry]['_cell.length_c']
+        alpha = cf[entry]['_cell.angle_alpha']
+        beta = cf[entry]['_cell.angle_beta']
+        gamma = cf[entry]['_cell.angle_gamma']
         dims = np.array([a, b, c, alpha, beta, gamma], dtype=float)
     except KeyError:
         LOGGER.info("_cell information missing from .cif file. Will write default dimensions")
@@ -58,9 +75,14 @@ def _cell(cf, modelname):
     return dims
 
 
-def cif_entry_reader(cf, entry, cif_categories_all, cif_category_names, cif_category_types, essential_properties,
+def cif_entry_reader(cf, entry,
+                     cif_categories_all, cif_category_names, cif_category_types, essential_properties,
                      modelidx, exclude, ignh):
     """
+    Read a single entry of a parsed cif file
+
+    Parameters
+    ----------
     cf: CifFile.CifFile_module.CifFile
         CIF file object parsed by PyCifRW
     entry: str
@@ -73,6 +95,18 @@ def cif_entry_reader(cf, entry, cif_categories_all, cif_category_names, cif_cate
         Type to cast CIF data to
     essential_properties: list
         List of properties which must be contained
+    modelidx: int
+        If the cif file contains multiple models, which one to select.
+    exclude: collections.abc.Container[str]
+        Atoms that have one of these residue names will not be included.
+    ignh: bool
+        Whether hydrogen atoms should be ignored.
+
+    Returns
+    -------
+    vermouth.molecule.Molecule
+        A parsed molecule. Will not contain edges
+
     """
     # first filter the data by which categories are present
     # make list of the category names which are present
@@ -127,7 +161,7 @@ def cif_entry_reader(cf, entry, cif_categories_all, cif_category_names, cif_cate
 
 def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     """
-    Parse a CIF file to create a molecule using the PyCIFRW library
+    Parse a CIF file to create a list of molecules using the PyCIFRW library
 
     Parameters
     ----------
