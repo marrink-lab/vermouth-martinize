@@ -19,6 +19,7 @@ Unittests for the CIF reader.
 
 import numpy as np
 import pytest
+import logging
 import sys
 from CifFile import ReadCif
 import os.path
@@ -176,7 +177,6 @@ def test_equal_output(tmp_path):
                         dummy_ff2.blocks['pdb_0'],
                         blocknames_equal=False)
 
-
 def test_missing_resnames(caplog):
     cif.read_cif_file(CIF_MISSING_RESNAME)
     assert any([rec.levelname == 'WARNING' for rec in caplog.records])
@@ -185,3 +185,9 @@ def test_missing_resnames(caplog):
 def test_missing_atomnames(caplog):
     cif.read_cif_file(CIF_MISSING_ATOMNAME)
     assert any([rec.levelname == 'WARNING' for rec in caplog.records])
+
+
+def test_multiple_entries(caplog):
+    caplog.set_level(logging.INFO)
+    cif.read_cif_file(CIF_MULTI)
+    assert any([rec.levelname == 'INFO' for rec in caplog.records])
