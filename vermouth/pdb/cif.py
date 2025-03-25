@@ -83,7 +83,7 @@ def cif_entry_reader(cf, entry,
 
     Parameters
     ----------
-    cf: CifFile.CifFile_module.CifFile
+    cf: :func: `<CifFile.CifFile_module.CifFile>`
         CIF file object parsed by PyCifRW
     entry: str
         Key of the cf dict
