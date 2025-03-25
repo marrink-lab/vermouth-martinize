@@ -211,7 +211,7 @@ def read_cif_file(file_name, exclude=('SOL', 'HOH'), ignh=False, modelidx=1):
     # PyCifRW seems to store everything from the file it reads in a top level key from _entry.id
     # which ~ corresponds to the pdb code. From a single file we should only have one key.
     if len(cf.keys()) > 1:
-        LOGGER.info("This cif file contains multiple entries. Will parse the first one.")
+        LOGGER.info("This cif file contains multiple entries. Check output carefully.")
 
     molecules = []
     for entry in cf.keys():
