@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 University of Groningen
+# Copyright 2025 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
-Provides functionality to read and write PDB files.
+Unittests for the CIF reader.
 """
 
-from .pdb import read_pdb, write_pdb
-from .cif import CIFReader
+import vermouth
+from vermouth import CIFInput
+from vermouth.tests.datafiles import CIF_PROTEIN
+
+def test_CIFInput():
+
+    system = vermouth.System()
+    CIFInput(filename=CIF_PROTEIN, exclude='HOH', ignh=False, modelidx=1).run_system(system)
+
+    assert len(system.molecules) == 1

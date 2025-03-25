@@ -39,12 +39,13 @@ PATTERN = '{path}/{tier}/{protein}/martinize2/'
 MARTINIZE2 = find_in_path()
 
 
-def assert_equal_blocks(block1, block2):
+def assert_equal_blocks(block1, block2, blocknames_equal=True):
     """
     Asserts that two blocks are equal to gain the pytest rich comparisons,
     which is lost when doing `assert block1 == block2`
     """
-    assert block1.name == block2.name
+    if blocknames_equal:
+        assert block1.name == block2.name
     assert block1.nrexcl == block2.nrexcl
     assert block1.force_field == block2.force_field  # Set to be equal
     # Assert the order to be equal as well...
