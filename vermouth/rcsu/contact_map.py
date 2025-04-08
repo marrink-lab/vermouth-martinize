@@ -913,12 +913,13 @@ def read_go_map2(system, file_path):
                     OV_contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
                 if tokens[11] == "0" and tokens[14] == "1":
                     rCSU_contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
-
+                  
+        contacts = OV_contacts + rCSU_contacts # combine contacts, so that first OV and then rCSU contacts
+      
         if len(contacts) == 0:
-            raise IOError("You contact map is empty. Are you sure it has the right formatting?")
+            raise IOError("Your contact map is empty. Are you sure it has the right formatting?")
 
-    system.go_params["go_map_ov"].append(OV_contacts)
-    system.go_params["go_map_rcsu"].append(rCSU_contacts)
+    system.go_params["go_map"].append(contacts)
 
 
 def calculate_go_contacts(molecule, write_file):
