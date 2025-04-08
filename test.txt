@@ -1,1 +1,0 @@
-Hi, this is a test for me to get familiar with git commit, push and pull 
