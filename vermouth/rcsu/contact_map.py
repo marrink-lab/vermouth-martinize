@@ -879,6 +879,47 @@ def read_go_map(system, file_path):
 
     system.go_params["go_map"].append(contacts)
 
+def read_go_map2(system, file_path):
+    """
+    Read a OVRCSU contact map from the c code as published in
+    doi:10.5281/zenodo.3817447. The format requires all
+    contacts to have 18 columns and the first column to be
+    a capital R.
+
+    Parameters
+    ----------
+    system: vermouth.system.System
+        The system to process. Is modified in-place.
+    file_path: :class:`pathlib.Path`
+        path to the contact map file
+
+    Returns
+    -------
+    list(tuple)
+        contact as chain id, res id, chain id, res id
+    """
+    with open(file_path, "r", encoding='UTF-8') as _file:
+        OV_contacts = []
+        rCSU_contacts = []
+        for line in _file:
+            tokens = line.strip().split()
+            if len(tokens) == 0:
+                continue
+                
+            if tokens[0] == "R" and len(tokens) == 18:
+                # this is a bad place to filter but follows
+                # the old script
+                if tokens[11] == "1":
+                    OV_contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
+                if tokens[11] == "0" and tokens[14] == "1":
+                    rCSU_contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
+
+        if len(contacts) == 0:
+            raise IOError("You contact map is empty. Are you sure it has the right formatting?")
+
+    system.go_params["go_map_ov"].append(OV_contacts)
+    system.go_params["go_map_rcsu"].append(rCSU_contacts)
+
 
 def calculate_go_contacts(molecule, write_file):
     '''
