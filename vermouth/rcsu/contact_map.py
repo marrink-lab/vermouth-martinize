@@ -922,6 +922,9 @@ def read_go_map2(system, file_path):
     system.go_params["go_map"].append(contacts)
 
 
+    k = 'jsl'
+
+
 def calculate_go_contacts(molecule, write_file):
     '''
     master function to calculate Go contacts
