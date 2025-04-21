@@ -16,6 +16,7 @@
 Test for the tune idp bonds processor.
 """
 import pytest
+from vermouth.dssp import dssp
 from vermouth.processors.annotate_idrs import AnnotateIDRs
 from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
 
@@ -115,3 +116,33 @@ def test_ss_reassign(test_molecule, idr_regions, secstruc, write_sec, expected):
 
     assert system.molecules[0].meta.get("modified_cgsecstruct", False) == expected[1]
 
+@pytest.mark.parametrize('modify, expected',
+                         ((True, True),
+                         (False, False)
+))
+def test_gmx_system_header_supplementary(test_molecule, modify, expected):
+
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+    resnames = {0: "ALA", 1: "ALA", 2: "ALA",
+                3: "GLY", 4: "GLY",
+                5: "MET",
+                6: "ARG", 7: "ARG", 8: "ARG"}
+    secstruc ={1: "H", 2: "H", 3: "H", 4: "H"}
+
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="molecule_0",
+                                  secstruc=secstruc,
+                                  defaults={"chain": "A"},
+                                  attrs={"resname": resnames,
+                                         "atype": atypes})
+    if modify:
+        AnnotateIDRs(id_regions=[(0,1)]).run_system(system)
+
+    dssp.AnnotateResidues(attribute="aasecstruct",
+                          sequence="HHHH").run_system(system)
+    dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+
+    assert expected == any(["IDR" in i for i in system.meta.get('header', [''])])
