@@ -548,7 +548,7 @@ def gmx_system_header(system):
     ss_sequence = list(
         itertools.chain(
             *(
-                sequence_from_residues(molecule, "secstruct")
+                sequence_from_residues(molecule, "aasecstruct")
                 for molecule in system.molecules
                 if is_protein(molecule)
             )
@@ -560,26 +560,6 @@ def gmx_system_header(system):
                                       "was used for the full system:",
                                       "".join(ss_sequence),
                                      ))
-
-    if any([molecule.meta.get('modified_cgsecstruct', False) for molecule in system.molecules]):
-        supplementary_ss_seq = list(
-            itertools.chain(
-                *(
-                    sequence_from_residues(molecule, "cgsecstruct")
-                    for molecule in system.molecules
-                    if is_protein(molecule)
-                )
-            )
-        )
-
-        LOGGER.info(("Secondary structure assignment changed between dssp and martinize. "
-                     "Check files for details."), type="general")
-        system.meta["header"].extend((
-            "The assigned secondary structure conflicted with ",
-            "annotated IDRs. The following sequence of Martini secondary ",
-            "structure was actually applied to the system:",
-            "".join([SS_CG[i] for i in supplementary_ss_seq])
-        ))
 
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
