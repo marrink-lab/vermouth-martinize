@@ -64,8 +64,8 @@ PROTEIN_MAP = {
         'CD':       {'vrad': 1.88, 'atype': 7},
         'NE':       {'vrad': 1.64, 'atype': 3},
         'CZ':       {'vrad': 1.61, 'atype': 6},
-        'NH1':      {'vrad': 1.64, 'atype': 3},
-        'NH2':      {'vrad': 1.64, 'atype': 3},
+        'NH1':      {'vrad': 1.64, 'atype': 9},
+        'NH2':      {'vrad': 1.64, 'atype': 9},
         'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0}
     },
@@ -88,8 +88,8 @@ PROTEIN_MAP = {
         'O':        {'vrad': 1.42, 'atype': 2},
         'CB':       {'vrad': 1.88, 'atype': 4},
         'CG':       {'vrad': 1.61, 'atype': 6},
-        'OD1':      {'vrad': 1.46, 'atype': 2},
-        'OD2':      {'vrad': 1.42, 'atype': 2},
+        'OD1':      {'vrad': 1.46, 'atype': 10},
+        'OD2':      {'vrad': 1.42, 'atype': 10},
         'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
@@ -126,8 +126,8 @@ PROTEIN_MAP = {
         'CB':       {'vrad': 1.88, 'atype': 4},
         'CG':       {'vrad': 1.88, 'atype': 4},
         'CD':       {'vrad': 1.61, 'atype': 6},
-        'OE1':      {'vrad': 1.46, 'atype': 2},
-        'OE2':      {'vrad': 1.42, 'atype': 2},
+        'OE1':      {'vrad': 1.46, 'atype': 10},
+        'OE2':      {'vrad': 1.42, 'atype': 10},
         'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
@@ -188,7 +188,7 @@ PROTEIN_MAP = {
         'CG':       {'vrad': 1.88, 'atype': 4},
         'CD':       {'vrad': 1.88, 'atype': 4},
         'CE':       {'vrad': 1.88, 'atype': 7},
-        'NZ':       {'vrad': 1.64, 'atype': 3},
+        'NZ':       {'vrad': 1.64, 'atype': 9},
         'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
@@ -636,13 +636,13 @@ def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, res
         cont = contacts[i1, i2]
         stab = stabilisers[i1, i2]
         dest = destabilisers[i1, i2]
-        rcsu = (stab - dest) > 0
+        rcsu = (stab - dest)
 
-        if (over > 0 or cont > 0):
+        if over > 0 or cont > 0:
             a = np.where(res_idx == i1)[0][0]
             b = np.where(res_idx == i2)[0][0]
             all_contacts.append([i1+1, i2+1, a, b, over, cont, stab, rcsu])
-            if over == 1 or (over == 0 and rcsu):
+            if over == 1 or ((over == 0) and (rcsu > 0)):
                 # this is a OV or rCSU contact we take it
                 contacts_list.append((int(G.nodes[a]['resid']), G.nodes[a]['chain'],
                                       int(G.nodes[b]['resid']), G.nodes[b]['chain']))
@@ -677,9 +677,10 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
                   "           (CSU does not take into account chemical properties of atoms)\n"
                   "rCSU     - net contact from rCSU\n"
                   "Count    - number of contacts between residues\n"
+                  "Model    - Model ID"
                   "\n"
-                  "      ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count \n"
-                  "=======================================================================================\n")
+                  "      ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count Model\n"
+                  "============================================================================================\n")
 
     msgs = []
     count = 0
@@ -692,8 +693,8 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
                f"{G.nodes[contact[3]]['chain']:1s} {int(G.nodes[contact[3]]['resid']):4d}    "
                f"{euclidean(ca_pos[contact[2]], ca_pos[contact[3]])*10:9.4f}     "
                f"{int(contact[4]):1d} {1 if contact[5] != 0 else 0} "
-               f"{1 if contact[6] != 0 else 0} {1 if contact[7] else 0}"
-               f"{int(contact[7]): 6d}  {int(contact[5]): 6d}\n")
+               f"{1 if contact[6] != 0 else 0} {1 if contact[7] > 0 else 0}"
+               f"{int(contact[7]): 6d}  {int(contact[5]): 6d}  {G.nodes[contact[2]]['mol_idx']+1}\n")
         msgs.append(msg)
     message_out = ''.join(msgs)
     with deferred_open(fout, "w") as f:
