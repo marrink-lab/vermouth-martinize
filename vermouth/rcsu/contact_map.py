@@ -51,7 +51,6 @@ PROTEIN_MAP = {
         'C':        {'vrad': 1.61, 'atype': 6},
         'O':        {'vrad': 1.42, 'atype': 2},
         'CB':       {'vrad': 1.88, 'atype': 4},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0}
     },
     "ARG": {
@@ -66,7 +65,6 @@ PROTEIN_MAP = {
         'CZ':       {'vrad': 1.61, 'atype': 6},
         'NH1':      {'vrad': 1.64, 'atype': 9},
         'NH2':      {'vrad': 1.64, 'atype': 9},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0}
     },
     "ASN": {
@@ -78,7 +76,6 @@ PROTEIN_MAP = {
         'CG':       {'vrad': 1.61, 'atype': 6},
         'OD1':      {'vrad': 1.42, 'atype': 2},
         'ND2':      {'vrad': 1.64, 'atype': 3},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "ASP": {
@@ -90,7 +87,6 @@ PROTEIN_MAP = {
         'CG':       {'vrad': 1.61, 'atype': 6},
         'OD1':      {'vrad': 1.46, 'atype': 10},
         'OD2':      {'vrad': 1.42, 'atype': 10},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "CYM": {},
@@ -102,7 +98,6 @@ PROTEIN_MAP = {
         'O':        {'vrad': 1.42, 'atype': 2},
         'CB':       {'vrad': 1.88, 'atype': 4},
         'SG':       {'vrad': 1.77, 'atype': 6},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "GLN": {
@@ -115,7 +110,6 @@ PROTEIN_MAP = {
         'CD':       {'vrad': 1.61, 'atype': 6},
         'OE1':      {'vrad': 1.42, 'atype': 2},
         'NE2':      {'vrad': 1.64, 'atype': 3},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "GLU": {
@@ -128,7 +122,6 @@ PROTEIN_MAP = {
         'CD':       {'vrad': 1.61, 'atype': 6},
         'OE1':      {'vrad': 1.46, 'atype': 10},
         'OE2':      {'vrad': 1.42, 'atype': 10},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "GLY": {
@@ -136,7 +129,6 @@ PROTEIN_MAP = {
         'CA':        {'vrad': 1.88, 'atype': 6},
         'C':        {'vrad': 1.61, 'atype': 6},
         'O':        {'vrad': 1.42, 'atype': 2},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "HIE": {},
@@ -152,7 +144,6 @@ PROTEIN_MAP = {
         'CD2':      {'vrad': 1.76, 'atype': 5},
         'CE1':      {'vrad': 1.76, 'atype': 5},
         'NE2':      {'vrad': 1.64, 'atype': 1},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "ILE": {
@@ -164,7 +155,6 @@ PROTEIN_MAP = {
         'CG1':      {'vrad': 1.88, 'atype': 4},
         'CG2':      {'vrad': 1.88, 'atype': 4},
         'CD':       {'vrad': 1.88, 'atype': 4},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "LEU": {
@@ -176,7 +166,6 @@ PROTEIN_MAP = {
         'CG':       {'vrad': 1.88, 'atype': 4},
         'CD1':      {'vrad': 1.88, 'atype': 4},
         'CD2':      {'vrad': 1.88, 'atype': 4},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "LYS": {
@@ -189,7 +178,6 @@ PROTEIN_MAP = {
         'CD':       {'vrad': 1.88, 'atype': 4},
         'CE':       {'vrad': 1.88, 'atype': 7},
         'NZ':       {'vrad': 1.64, 'atype': 9},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "MET": {
@@ -201,7 +189,6 @@ PROTEIN_MAP = {
         'CG':       {'vrad': 1.88, 'atype': 4},
         'SD':       {'vrad': 1.77, 'atype': 8},
         'CE':       {'vrad': 1.88, 'atype': 4},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "PHE": {
@@ -216,7 +203,6 @@ PROTEIN_MAP = {
         'CE1':      {'vrad': 1.76, 'atype': 5},
         'CE2':      {'vrad': 1.76, 'atype': 5},
         'CZ':       {'vrad': 1.76, 'atype': 5},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "PRO": {
@@ -227,7 +213,6 @@ PROTEIN_MAP = {
         'CB':       {'vrad': 1.88, 'atype': 4},
         'CG':       {'vrad': 1.88, 'atype': 4},
         'CD':       {'vrad': 1.88, 'atype': 4},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "SER": {
@@ -237,7 +222,6 @@ PROTEIN_MAP = {
         'O':        {'vrad': 1.42, 'atype': 2},
         'CB':       {'vrad': 1.88, 'atype': 6},
         'OG':       {'vrad': 1.46, 'atype': 1},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "THR": {
@@ -248,7 +232,6 @@ PROTEIN_MAP = {
         'CB':       {'vrad': 1.88, 'atype': 6},
         'OG1':      {'vrad': 1.46, 'atype': 1},
         'CG2':      {'vrad': 1.88, 'atype': 4},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "TRP": {
@@ -266,7 +249,6 @@ PROTEIN_MAP = {
         'CZ2':      {'vrad': 1.76, 'atype': 5},
         'CZ3':      {'vrad': 1.76, 'atype': 5},
         'CH2':      {'vrad': 1.76, 'atype': 5},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "TYR": {
@@ -282,7 +264,6 @@ PROTEIN_MAP = {
         'CE2':      {'vrad': 1.76, 'atype': 5},
         'CZ':       {'vrad': 1.61, 'atype': 5},
         'OH':       {'vrad': 1.46, 'atype': 1},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     },
     "VAL": {
@@ -293,7 +274,6 @@ PROTEIN_MAP = {
         'CB':       {'vrad': 1.88, 'atype': 4},
         'CG1':      {'vrad': 1.88, 'atype': 4},
         'CG2':      {'vrad': 1.88, 'atype': 4},
-        'OXT':      {'vrad': 1.42, 'atype': 2},
         'default':  {'vrad': 0.00, 'atype': 0},
     }
 }
