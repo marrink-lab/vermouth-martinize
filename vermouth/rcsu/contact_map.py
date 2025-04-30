@@ -360,7 +360,7 @@ def atom2res(arrin, nresidues, atom_map, norm=False):
 
 def _contact_info(molecule):
     """
-    get the atom attributes that we need to calculate the contacts
+    Generate lists of atom attributes required to calculate contact maps
     """
 
     G = make_residue_graph(molecule)
@@ -502,7 +502,7 @@ def _contact_types(hit_results, natoms, atypes):
     From CSU contacts, establish contact types from atomtypes
 
     hit_results: NxM ndarray
-        array for N atoms in molecule for M fibonnaci points on each atom.
+        array for N atoms in molecule for M fibonacci points on each atom.
         Each i,j entry is the index of the atom which is the closest contact to i
     natoms: int
         number of atoms in the molecule
@@ -730,10 +730,10 @@ def do_contacts(molecule, write_file):
     '''
     master function to calculate Go contacts
 
-    molecule: vermouth.Molecule
+    molecule: vermouth.Molecule.molecule
         molecule to calculate contacts for
-    write_file: bool
-        write the file of the contacts out
+    write_file: str, Path, None
+        if str or Path, write contacts to file
     '''
     vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, mol_graph = _contact_info(
         molecule)
@@ -766,12 +766,12 @@ class GenerateContactMap(Processor):
 
     def run_molecule(self, molecule):
         """
-        Process `system`.
+        Add contacts to molecule running the contact map pipeline.
 
         Parameters
         ----------
-        system: vermouth.system.System
-            The system to process. Is modified in-place.
+        molecule: vermouth.molecule.Molecule
+            The molecule to process. Is modified in-place.
         """
         return do_contacts(molecule, self.write_file)
 
