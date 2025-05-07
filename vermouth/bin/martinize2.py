@@ -17,7 +17,7 @@
 """
 High level API for Martinize2
 """
-
+import copy
 import argparse
 import functools
 import logging
@@ -565,6 +565,21 @@ def entry():
              "or just provide the flag to calculate as part of Martinize."
     )
     go_group.add_argument(
+        "-go-method",
+        dest="go_method",
+        type=int,
+        default=0,
+        help=("The go method used for the system 1 (inter and intra are set independently, only works with martini3 forcefield as target), "
+        "or 0 (inter and intra bonds are handeled the same)"),
+    )
+    go_group.add_argument(
+        "-go-ff",
+        dest="go_ff",
+        type=Path,
+        default=None,
+        help=("Path to martini_v3.0.0.itp"),
+    )
+    go_group.add_argument(
         "-go-eps",
         dest="go_eps",
         type=float,
@@ -584,6 +599,48 @@ def entry():
         type=float,
         default=1.1,
         help=("Maximum distance (nm) above which contacts are removed."),
+    )
+    go_group.add_argument(
+        "-go-eps-inter",
+        dest="go_eps_inter",
+        type=float,
+        default=9.414,
+        help=("Optional when using go-method 1: the strength of the Go model structural bias in kJ/mol for intermolecular go bonds."),
+    )
+    go_group.add_argument(
+        "-go-low-inter",
+        dest="go_low_inter",
+        type=float,
+        default=0.3,
+        help=("Optional when using go-method 1: minimum distance (nm) below which contacts are removed for intermolecular go bonds."),
+    )
+    go_group.add_argument(
+        "-go-up-inter",
+        dest="go_up_inter",
+        type=float,
+        default=1.1,
+        help=("Optional when using go-method 1: maximum distance (nm) above which contacts are removed for intermolecular go bonds."),
+    )
+    go_group.add_argument(
+        "-go-eps-intra",
+        dest="go_eps_intra",
+        type=float,
+        default=9.414,
+        help=("Optional when using go-method 1: the strength of the Go model structural bias in kJ/mol for intramolecular go bonds."),
+    )
+    go_group.add_argument(
+        "-go-low-intra",
+        dest="go_low_intra",
+        type=float,
+        default=0.3,
+        help=("Optional when using go-method 1: minimum distance (nm) below which contacts are removed for intramolecular go bonds."),
+    )
+    go_group.add_argument(
+        "-go-up-intra",
+        dest="go_up_intra",
+        type=float,
+        default=1.1,
+        help=("Optional when using go-method 1: maximum distance (nm) above which contacts are removed for intramolecular go bonds."),
     )
     go_group.add_argument(
         "-go-res-dist",
@@ -1017,15 +1074,62 @@ def entry():
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
     if args.go:
-        system = vermouth.MergeAllMolecules().run_system(system)
+        original_resids = [
+            (node['chain'], node['resid'], node['atomid']) 
+            for mol in system.molecules 
+            for node in mol.nodes.values()
+        ]
+
+        merged_system = vermouth.MergeAllMolecules().run_system(copy.deepcopy(system))
+
         # need this here because have to get contact map at atomistic resolution
         if isinstance(args.go, Path):
+            if args.go_method == 0:
+                system = copy.deepcopy(merged_system)
+                merged_system = None
             LOGGER.info("Reading Go model contact map.", type="step")
             read_go_map(system=system, file_path=args.go)
+
         else:
             LOGGER.info("Generating Go model contact map.", type="step")
-            GenerateContactMap(write_file=args.go_write_file).run_system(system)
+            GenerateContactMap(write_file=args.go_write_file, original_resids=original_resids, go_method=args.go_method).run_system(merged_system)
+            if args.go_method == 0:
+                system = copy.deepcopy(merged_system)
+                merged_system = None
+            elif args.go_method == 1:
+                system.go_params['go_map'] = merged_system.go_params['go_map']
 
+                old_resid_map = {
+                    (atomid, old_chain): old_resid
+                    for old_chain, old_resid, atomid in original_resids
+                }
+
+                map_after_martinize = {}
+                for mol in merged_system.molecules:
+                    for node in mol.nodes.values():
+                        atomid = node['atomid']
+                        chain = node['chain']
+                        if (atomid, chain) in old_resid_map:
+                            old_resid = old_resid_map[(atomid, chain)]
+                            map_after_martinize[node['resid']] = old_resid
+
+                merged_system = martinize(
+                    merged_system,
+                    mappings=known_mappings,
+                    to_ff=known_force_fields[args.to_ff],
+                    delete_unknown=True,
+                    idrs=args.idr_tune,
+                    disordered_regions=args.water_idrs
+                )
+
+                for mol in merged_system.molecules:
+                    for node in mol.nodes.values():
+                        old_resid = node['_old_resid']
+                        if old_resid in map_after_martinize:
+                            resid = map_after_martinize[old_resid]
+                            node['resid_before_merge'] = resid
+                        else:
+                            print(f"Warning: residue {old_resid} not found in original system")
 
     # Run martinize on the system.
     system = martinize(
@@ -1050,22 +1154,39 @@ def entry():
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
     # Generate the Go model if required
-    if system.go_params["go_map"]:
-        go_name_prefix = args.molname
-        LOGGER.info("Generating the Go model.", type="step")
-        GoPipeline.run_system(system,
-                              moltype=go_name_prefix,
-                              cutoff_short=args.go_low,
-                              cutoff_long=args.go_up,
-                              go_eps=args.go_eps,
-                              res_dist=args.go_res_dist,
-                              go_anchor_bead=args.go_backbone,
-                              go_atomname=args.go_atomname)
+    if args.go:
+        if system.go_params["go_map"]:
+            go_name_prefix = args.molname
+            LOGGER.info("Generating the Go model.", type="step")
+            GoPipeline.run_system(system,
+                                go_map_system=system,
+                                all_molecule_system=merged_system,
+                                moltype=go_name_prefix,
+                                cutoff_short=args.go_low,
+                                cutoff_long=args.go_up,
+                                go_eps=args.go_eps,
+                                cutoff_short_inter=args.go_low_inter,
+                                cutoff_long_inter=args.go_up_inter,
+                                go_eps_inter=args.go_eps_inter,
+                                cutoff_short_intra=args.go_low_intra,
+                                cutoff_long_intra=args.go_up_intra,
+                                go_eps_intra=args.go_eps_intra,
+                                res_dist=args.go_res_dist,
+                                go_anchor_bead=args.go_backbone,
+                                go_method=args.go_method,
+                                go_ff=args.go_ff)
 
-        defines = ("GO_VIRT",)
-        itp_paths = {"atomtypes": "go_atomtypes.itp",
-                     "nonbond_params": "go_nbparams.itp"}
-
+            defines = ("GO_VIRT",)
+            itp_paths = {"atomtypes": "go_atomtypes.itp",
+                        "nonbond_params": "go_nbparams.itp"}
+            if not args.water_bias:
+                # this ensures that disordered-folded go bonds get removed regardless of force field.
+                vermouth.processors.ComputeWaterBias(args.water_bias,
+                                                    {s: float(eps) for s, eps in args.water_bias_eps},
+                                                    [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                                    ).run_system(system)
+        else:
+            raise ValueError('No system has been found that has the go contact information ["go_map"]')
     else:
         # don't write non-bonded interactions
         itp_paths = []
