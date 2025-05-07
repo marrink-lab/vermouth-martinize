@@ -227,7 +227,7 @@ def partition_graph(graph, partitions):
                 new_graph.add_edge(new_idx, new_jdx, **edge_attrs)
     return new_graph
 
-def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_code')):
+def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_code'), go=False):
     """
     Create a new graph based on `graph`, where nodes with identical attribute
     values for the attribute names in `attrs` will be contracted into a single,
@@ -250,6 +250,8 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
         The resulting coarser graph, where equivalent nodes are contracted to a
         single node.
     """
+    if go:
+        attrs=('atomid', 'chain', 'resid', 'resname', 'insertion_code', 'resid_before_merge')
     # Create partitions. These will contain all nodes, even those without e.g.
     # a resname, since those will get resname None
     residue_idxs = collect_residues(graph, attrs)
