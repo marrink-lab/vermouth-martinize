@@ -40,10 +40,12 @@ class VirtualSiteCreator(Processor):
         Assign molecule type names to the molecules in a system.
     :func:`add_virtual_sites`
     """
-    def __init__(self, go_anchor_bead='BB', go_atomname='CA'):
+    def __init__(self, go_method, moltype, go_anchor_bead='BB', go_atomname='CA'):
         self.system = None
         self.backbone = go_anchor_bead
         self.atomname = go_atomname
+        self.method = go_method
+
 
     def run_molecule(self, molecule):
         moltype = molecule.meta.get('moltype')
@@ -66,6 +68,7 @@ class VirtualSiteCreator(Processor):
         self.system = system
         LOGGER.info("Adding Virtual Sites to backbone beads.", type="step")
         super().run_system(system)
+
 
     def add_virtual_sites(self, molecule, prefix, backbone, atomname, charge=0):
         """
@@ -108,29 +111,68 @@ class VirtualSiteCreator(Processor):
         new_charge_group = max(charge_groups) if charge_groups else 0
         for node_id, atom in molecule.nodes(data=True):
             if atom.get('atomname') == backbone:
-                new_node_id += 1
-                new_charge_group += 1
+                if self.method == 0:
+                    new_node_id += 1
+                    new_charge_group += 1
 
-                virtual_site_nodes.append((new_node_id, {
-                    'resid': atom['resid'],
-                    'resname': atom['resname'],
-                    'atype': '{}_{}'.format(prefix, atom['resid']),
-                    'charge_group': new_charge_group,
-                    'chain': atom['chain'],
-                    'position': atom['position'],
-                    'atomname': atomname,
-                    'charge': charge,
-                    'mass': 0.0,
-                    'cgsecstruct': atom.get('cgsecstruct', None),
-                    'stash': atom.get('stash', None)
-                }))
-                virtual_sites.append(Interaction(
-                    atoms=[new_node_id, node_id],
-                    parameters=['1'],
-                    meta={'go_vs': True, 'group': 'Virtual go site'},
-                ))
-                vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
-                self.system.gmx_topology_params['atomtypes'].append(vs_params)
+                    virtual_site_nodes.append((new_node_id, {
+                        'resid': atom['resid'],
+                        '_old_resid': atom['_old_resid'],
+                        'resname': atom['resname'],
+                        'atype': '{}_{}'.format(prefix, atom['resid']),
+                        'charge_group': new_charge_group,
+                        'chain': atom['chain'],
+                        'position': atom['position'],
+                        'atomname': atomname,
+                        'charge': charge,
+                        'mass': 0.0,
+                        'cgsecstruct': atom.get('cgsecstruct', None),
+                    }))
+                    virtual_sites.append(Interaction(
+                        atoms=[new_node_id, node_id],
+                        parameters=['1'],
+                        meta={'go_vs': True, 'group': 'Virtual go site'},
+                    ))
+                    vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
+                    self.system.gmx_topology_params['atomtypes'].append(vs_params)
+
+                elif self.method == 1:
+                    for vs in ['a', 'b', 'c', 'd']:
+                        new_node_id += 1
+                        new_charge_group += 1
+
+                        virtual_site_nodes.append((new_node_id, {
+                            'node_id': new_node_id,
+                            'resid': atom['resid'],
+                            '_old_resid': atom['_old_resid'],
+                            'resname': atom['resname'],
+                            'atype': '{}_{}_{}'.format(prefix, atom['resid'], vs),
+                            'charge_group': new_charge_group,
+                            'chain': atom['chain'],
+                            'position': atom['position'],
+                            'atomname': atomname,
+                            'charge': charge,
+                            'mass': 0.0,
+                            'cgsecstruct': atom.get('cgsecstruct', None),
+                        }))
+                        virtual_sites.append(Interaction(
+                            atoms=[new_node_id, node_id],
+                            parameters=['1'],
+                            meta={'go_vs': True, 'group': 'Virtual go site {}'.format(vs)},
+                        ))
+                        vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
+
+                        # Use a stable identifier from the molecule's meta
+                        mol_id = molecule.meta.get("moltype")
+
+                        existing_nodes = {
+                            (a.node, a.molecule.meta.get("moltype")) for a in self.system.gmx_topology_params['atomtypes']
+                        }
+
+                        if (new_node_id, mol_id) not in existing_nodes:
+                            self.system.gmx_topology_params['atomtypes'].append(vs_params)
+
+
 
         molecule.add_nodes_from(virtual_site_nodes)
 
