@@ -383,12 +383,37 @@ def _aggregate_atoms_to_residues(arrin, nresidues, atom_map, norm=False):
     return out
 
 
-def _extract_contact_inputs(molecule):
+def _extract_contact_inputs(molecule, original_resids, go_method):
     """
     get the atom attributes that we need to calculate the contacts
     """
-
     G = make_residue_graph(molecule)
+    # if go_method == 0:
+    #     G = make_residue_graph(molecule)
+    # if go_method == 1:
+    #     G = make_residue_graph(molecule, go=True)
+    # first_node = next(iter(G.nodes))
+    # attributes = G.nodes[first_node]
+    # print(attributes)
+    # atomid_to_resinfo = {
+    #     atomid: (chain, resid)
+    #     for chain, resid, atomid in original_resids
+    # }
+
+    # if go_method == 1:
+    #     for node in G.nodes.values():
+    #         atomid = node['atomid']
+    #         if atomid in atomid_to_resinfo:
+    #             chain, resid = atomid_to_resinfo[atomid]
+    #             node['contact_resid'] = node['resid']
+    #             if chain != node['chain']:
+    #                 print(chain, node['chain'])
+    #                 print('oh no')
+    #                 node['chain'] = chain
+    #             node['resid'] = resid
+    #         else:
+    #             print(f"Warning: atomid {atomid} not found in original mapping.")
+
 
     resids = []
     chains = []
@@ -865,12 +890,15 @@ def read_go_map(system, file_path):
         for line in _file:
             tokens = line.strip().split()
             if len(tokens) == 0:
+                print('no lines', line)
                 continue
 
             if tokens[0] == "R" and len(tokens) == 18:
+                print('in R')
                 # this is a bad place to filter but follows
                 # the old script
                 if tokens[11] == "1" or (tokens[11] == "0" and tokens[14] == "1"):
+                    print('tokens')
                     # this is a OV or rCSU contact we take it
                     contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
 
@@ -879,51 +907,8 @@ def read_go_map(system, file_path):
 
     system.go_params["go_map"].append(contacts)
 
-def read_go_map2(system, file_path):
-    """
-    Read a OVRCSU contact map from the c code as published in
-    doi:10.5281/zenodo.3817447. The format requires all
-    contacts to have 18 columns and the first column to be
-    a capital R.
 
-    Parameters
-    ----------
-    system: vermouth.system.System
-        The system to process. Is modified in-place.
-    file_path: :class:`pathlib.Path`
-        path to the contact map file
-
-    Returns
-    -------
-    list(tuple)
-        contact as chain id, res id, chain id, res id
-    """
-    with open(file_path, "r", encoding='UTF-8') as _file:
-        OV_contacts = []
-        rCSU_contacts = []
-        for line in _file:
-            tokens = line.strip().split()
-            if len(tokens) == 0:
-                continue
-                
-            if tokens[0] == "R" and len(tokens) == 18:
-                # this is a bad place to filter but follows
-                # the old script
-                if tokens[11] == "1":
-                    OV_contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
-                if tokens[11] == "0" and tokens[14] == "1":
-                    rCSU_contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
-                  
-        contacts = OV_contacts + rCSU_contacts # combine contacts, so that first OV and then rCSU contacts
-      
-        if len(contacts) == 0:
-            raise IOError("Your contact map is empty. Are you sure it has the right formatting?")
-
-    system.go_params["go_map"].append(contacts)
-
-
-
-def calculate_go_contacts(molecule, write_file):
+def calculate_go_contacts(molecule, write_file, original_resids, go_method):
     '''
     master function to calculate Go contacts
 
@@ -933,7 +918,7 @@ def calculate_go_contacts(molecule, write_file):
         write the file of the contacts out
     '''
     vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, mol_graph = _extract_contact_inputs(
-        molecule)
+        molecule, original_resids, go_method)
 
     LOGGER.info("Calculating Go contacts for {} residues ({} atoms)", nresidues, len(coords))
 
@@ -959,8 +944,10 @@ class GenerateContactMap(Processor):
     """
     Processor to generate the contact rCSU contact map for a protein from an atomistic structure
     """
-    def __init__(self, write_file):
+    def __init__(self, write_file, original_resids, go_method):
         self.write_file = write_file
+        self.original_resids = original_resids
+        self.go_method = go_method
 
     def run_molecule(self, molecule):
         """
@@ -971,7 +958,7 @@ class GenerateContactMap(Processor):
         system: vermouth.system.System
             The system to process. Is modified in-place.
         """
-        return calculate_go_contacts(molecule, self.write_file)
+        return calculate_go_contacts(molecule, self.write_file, self.original_resids, self.go_method)
 
     def run_system(self, system):
         for molecule in system.molecules:
