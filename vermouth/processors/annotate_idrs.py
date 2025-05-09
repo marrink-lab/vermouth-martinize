@@ -17,6 +17,9 @@
 Provides processors that can add and remove IDR specific bonds
 """
 
+from itertools import chain
+from ..dssp.dssp import SS_CG, sequence_from_residues
+from ..selectors import is_protein
 from .processor import Processor
 from ..rcsu.go_utils import _in_resid_region
 from ..log_helpers import StyleAdapter, get_logger
@@ -39,6 +42,13 @@ def annotate_disorder(molecule, id_regions, annotation="cgidr"):
         _old_resid = node['_old_resid']
         if _in_resid_region(_old_resid, id_regions):
             molecule.nodes[key][annotation] = True
+            if "cgsecstruct" in molecule.nodes[key] and molecule.nodes[key]["cgsecstruct"] != "C":
+                    molecule.nodes[key]["cgsecstruct"] = "C"
+                    molecule.meta['modified_cgsecstruct'] = True
+        else:
+            molecule.nodes[key][annotation] = False
+
+
 
 class AnnotateIDRs(Processor):
     """
@@ -80,5 +90,25 @@ class AnnotateIDRs(Processor):
         """
         if not self.id_regions:
             return system
-        LOGGER.info("Annotating disordered regions", type="step")
+        LOGGER.info("Annotating disordered regions.", type="step")
         super().run_system(system)
+
+        if any([molecule.meta.get('modified_cgsecstruct', False) for molecule in system.molecules]):
+            supplementary_ss_seq = list(
+                chain(
+                    *(
+                        sequence_from_residues(molecule, "cgsecstruct")
+                        for molecule in system.molecules
+                        if is_protein(molecule)
+                    )
+                )
+            )
+
+            LOGGER.info(("Secondary structure assignment changed between dssp and martinize. "
+                         "Check files for details."), type="general")
+            system.meta["header"].extend((
+                "The assigned secondary structure conflicted with ",
+                "annotated IDRs. The following sequence of Martini secondary ",
+                "structure was actually applied to the system:",
+                "".join([SS_CG[i] for i in supplementary_ss_seq])
+            ))

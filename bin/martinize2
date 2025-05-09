@@ -78,7 +78,6 @@ LOGGER = StyleAdapter(LOGGER)
 
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 
-
 def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
     """
     Read a system from a PDB or GRO file.
@@ -97,6 +96,9 @@ def read_system(path, ignore_resnames=(), ignh=None, modelidx=None):
         vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(
             system
         )
+    elif file_extension in ["CIF"]:
+        vermouth.CIFInput(str(path), exclude=ignore_resnames, ignh=ignh,
+                          modelidx=modelidx).run_system(system)
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
@@ -927,7 +929,7 @@ def entry():
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
         AnnotateResidues(
-            attribute="secstruct",
+            attribute="aasecstruct",
             sequence=args.ss,
             molecule_selector=selectors.is_protein,
         ).run_system(system)
@@ -978,6 +980,7 @@ def entry():
                            'for this force field',
                            type="missing-feature")
 
+
     if args.cystein_bridge == "none":
         vermouth.RemoveCysteinBridgeEdges().run_system(system)
     elif args.cystein_bridge != "auto":
@@ -1011,8 +1014,8 @@ def entry():
     if args.posres != "none":
         LOGGER.info("Applying position restraints.", type="step")
         node_selectors = {
-            "all": selectors.select_all,
-            "backbone": selectors.select_backbone,
+            "all": (selectors.select_all, None),
+            "backbone": (selectors.select_backbone, system.force_field.variables['bb_atomname'])
         }
         node_selector = node_selectors[args.posres]
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
@@ -1033,6 +1036,12 @@ def entry():
         defines = ("GO_VIRT",)
         itp_paths = {"atomtypes": "go_atomtypes.itp",
                      "nonbond_params": "go_nbparams.itp"}
+        if not args.water_bias:
+            # this ensures that disordered-folded go bonds get removed regardless of force field.
+            vermouth.processors.ComputeWaterBias(args.water_bias,
+                                                 {s: float(eps) for s, eps in args.water_bias_eps},
+                                                 [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                                ).run_system(system)
     else:
         # don't write non-bonded interactions
         itp_paths = []

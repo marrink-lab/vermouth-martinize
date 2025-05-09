@@ -209,6 +209,23 @@ def test_pre_post_section_lines(pre_meta, post_meta):
                        post_section_lines=arg_post, pre_section_lines=arg_pre)
     itp_content = outfile.getvalue()
     # This could be a assert all(...), but it makes it more difficult to
-    # understant what is happening in case of a failure.
+    # understand what is happening in case of a failure.
     for segment in expected_segments:
         assert textwrap.dedent(segment)[:-1] in itp_content
+
+
+@pytest.mark.parametrize('defines, expected',
+                         ((True, ['#ifndef POSRES_FC', '#define POSRES_FC 1000', '#endif']),
+                         (False, [])
+                          ))
+def test_defines(dummy_molecule, defines, expected):
+    mol = dummy_molecule
+
+    if defines:
+        mol.meta['define'] = {'POSRES_FC': 1000}
+
+    outfile = io.StringIO()
+    write_molecule_itp(mol, outfile, moltype='test')
+    itp_content = outfile.getvalue().split('\n')
+
+    assert (itp_content[:3] == expected) == defines

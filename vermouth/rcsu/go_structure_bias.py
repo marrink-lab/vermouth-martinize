@@ -23,6 +23,7 @@ from ..selectors import filter_minimal, select_backbone
 from ..gmx.topology import NonbondParam
 from .go_utils import get_go_type_from_attributes
 from ..log_helpers import StyleAdapter, get_logger
+import sys
 LOGGER = StyleAdapter(get_logger(__name__))
 
 class ComputeStructuralGoBias(Processor):
@@ -53,6 +54,7 @@ class ComputeStructuralGoBias(Processor):
                  go_eps,
                  res_dist,
                  moltype,
+                 go_anchor_bead,
                  system=None,
                  res_graph=None):
         """
@@ -86,12 +88,15 @@ class ComputeStructuralGoBias(Processor):
         magic_number: float
             magic number for Go contacts from the old
             GoVirt script.
+        backbone: str
+            name of backbone atom where virtual site is placed
         """
         self.cutoff_short = cutoff_short
         self.cutoff_long = cutoff_long
         self.go_eps = go_eps
         self.res_dist = res_dist
         self.moltype = moltype
+        self.backbone = go_anchor_bead
         # don't modify
         self.res_graph = None
         self.system = system
@@ -181,8 +186,19 @@ class ComputeStructuralGoBias(Processor):
             if (resA is not None) and (resB is not None):
                 if resB not in connected_pairs[resA]:
                     # now we lookup the backbone nodes within the residue contact
-                    bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'], select_backbone))
-                    bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'], select_backbone))
+                    try:
+                        bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'],
+                                                        select_backbone,
+                                                        bb_atomname=self.backbone))
+                        bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'],
+                                                        select_backbone,
+                                                        bb_atomname=self.backbone))
+                    except StopIteration:
+                        LOGGER.warning(f'No backbone atoms with name "{self.backbone}" found in molecule. '
+                                       'Check -go-backbone argument if your forcefield does not use this name for '
+                                       'backbone bead atoms. Go model cannot be generated. Will exit now.')
+                        sys.exit(1)
+
                     # compute the distance between bb-beads
                     dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
                                           molecule.nodes[bb_node_B]['position'])

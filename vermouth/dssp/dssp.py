@@ -34,6 +34,9 @@ from ..selectors import is_protein, selector_has_position, filter_minimal, selec
 from .. import utils
 from ..log_helpers import StyleAdapter, get_logger
 
+SS_CG = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
+           'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
+
 try:
     import mdtraj
 except ImportError:
@@ -327,7 +330,7 @@ def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
     return read_dssp2(process.stdout.split('\n'))
 
 
-def annotate_dssp(molecule, callable=None, attribute='secstruct'):
+def annotate_dssp(molecule, callable=None, attribute='aasecstruct'):
     """
     Adds the DSSP assignation to the atoms of a molecule.
 
@@ -417,15 +420,13 @@ def convert_dssp_to_martini(sequence):
         A sequence of secondary structures usable for martini. One letter per
         residue.
     """
-    ss_cg = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
-             'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
     patterns = collections.OrderedDict([
         ('.H.', '.3.'), ('.HH.', '.33.'), ('.HHH.', '.333.'),
         ('.HHHH.', '.3333.'), ('.HHHHH.', '.13332.'),
         ('.HHHHHH.', '.113322.'), ('.HHHHHHH.', '.1113222.'),
         ('.HHHH', '.1111'), ('HHHH.', '2222.'),
     ])
-    cg_sequence = ''.join(ss_cg[secstruct] for secstruct in sequence)
+    cg_sequence = ''.join(SS_CG[secstruct] for secstruct in sequence)
     wildcard_sequence = ''.join('H' if secstruct == 'H' else '.'
                                 for secstruct in cg_sequence)
     # Flank the sequence with dots. Otherwise in a sequence consisting of only
@@ -504,7 +505,7 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
 
 
 def convert_dssp_annotation_to_martini(
-        molecule, from_attribute='secstruct', to_attribute='cgsecstruct'):
+        molecule, from_attribute='aasecstruct', to_attribute='cgsecstruct'):
     """
     For every node in `molecule`, translate the `from_attribute` with
     :func:`convert_dssp_to_martini`, and assign it to the attribute
@@ -547,7 +548,7 @@ def gmx_system_header(system):
     ss_sequence = list(
         itertools.chain(
             *(
-                sequence_from_residues(molecule, "secstruct")
+                sequence_from_residues(molecule, "aasecstruct")
                 for molecule in system.molecules
                 if is_protein(molecule)
             )

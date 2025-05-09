@@ -162,6 +162,12 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     if has_header:
         outfile.write('\n')
 
+    # write features (eg POSRES_FC) that are defined through global define statements
+    for name, val in molecule.meta.get('define', {}).items():
+        outfile.write(f'#ifndef {name}\n')
+        outfile.write(f'#define {name} {val}\n')
+        outfile.write(f'#endif\n\n')
+
     outfile.write('[ moleculetype ]\n')
     outfile.write('{} {}\n\n'.format(moltype, molecule.nrexcl))
 
