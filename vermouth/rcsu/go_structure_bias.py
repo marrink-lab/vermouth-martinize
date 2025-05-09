@@ -136,9 +136,7 @@ class ComputeStructuralGoBias(Processor):
             for resnode in self.res_graph.nodes:
                 chain_key = self.res_graph.nodes[resnode].get('chain', None)
                 # in vermouth within a molecule all resid are unique
-                # when merging multiple chains we store the old resid
-                # the go model always references the input resid i.e.
-                # the _old_resid
+                # for a merged system the original resid of each node is preserved in the stash
                 resid_key = self.res_graph.nodes[resnode]['stash'].get('resid')
                 self.__chain_id_to_resnode[(chain_key, resid_key)] = resnode
 
