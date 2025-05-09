@@ -391,12 +391,12 @@ def same_chain(graph, left, right):
 
 def make_same_region_criterion(regions):
     """
-    Returns ``True`` is the nodes are part of the same region.
+    Returns ``True`` if the nodes are part of the same region.
 
     Nodes are considered part of the same region if their value
     under the "resid" attribute are within the same residue range.
-    By default the resids of the input file are used (i.e. "_old_resid"
-    attribute).
+    By default the resids of the input file are used from the
+    stashed value
 
     Parameters
     ----------
@@ -420,8 +420,11 @@ def make_same_region_criterion(regions):
     def same_region(graph, left, right):
         node_left = graph.nodes[left]
         node_right = graph.nodes[right]
-        left_resid = node_left.get('_old_resid', node_left['resid'])
-        right_resid = node_right.get('_old_resid', node_right['resid'])
+        left_resid = node_left.get('stash', node_left['resid'])
+        right_resid = node_right.get('stash', node_right['resid'])
+        if isinstance(left_resid, dict) and isinstance(right_resid, dict):
+            left_resid = left_resid['resid']
+            right_resid = right_resid['resid']
         for region in regions:
             lower = min(region)
             upper = max(region)

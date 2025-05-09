@@ -644,8 +644,8 @@ def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, res
             all_contacts.append([i1+1, i2+1, a, b, over, cont, stab, rcsu])
             if over == 1 or (over == 0 and rcsu):
                 # this is a OV or rCSU contact we take it
-                contacts_list.append((int(G.nodes[a]['resid']), G.nodes[a]['chain'],
-                                      int(G.nodes[b]['resid']), G.nodes[b]['chain']))
+                contacts_list.append((int(G.nodes[a]['stash']['resid']), G.nodes[a]['chain'],
+                                      int(G.nodes[b]['stash']['resid']), G.nodes[b]['chain']))
 
     return contacts_list, all_contacts
 
@@ -687,9 +687,9 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
         count += 1
         msg = (f"R {int(count):6d} "
                f"{int(contact[0]):5d}  {G.nodes[contact[2]]['resname']:3s} "
-               f"{G.nodes[contact[2]]['chain']:1s} {int(G.nodes[contact[2]]['resid']):4d}    "
+               f"{G.nodes[contact[2]]['chain']:1s} {int(G.nodes[contact[2]]['stash']['resid']):4d}    "
                f"{int(contact[1]):5d}  {G.nodes[contact[3]]['resname']:3s} "
-               f"{G.nodes[contact[3]]['chain']:1s} {int(G.nodes[contact[3]]['resid']):4d}    "
+               f"{G.nodes[contact[3]]['chain']:1s} {int(G.nodes[contact[3]]['stash']['resid']):4d}    "
                f"{euclidean(ca_pos[contact[2]], ca_pos[contact[3]])*10:9.4f}     "
                f"{int(contact[4]):1d} {1 if contact[5] != 0 else 0} "
                f"{1 if contact[6] != 0 else 0} {1 if contact[7] else 0}"
