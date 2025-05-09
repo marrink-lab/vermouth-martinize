@@ -169,14 +169,14 @@ def pdb_to_universal(
 
 def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disordered_regions=None):
     """
-    Convert a system from one force field to an other at lower resolution.
+    Convert a system from one force field to another at lower resolution.
     """
     LOGGER.info("Creating the graph at the target resolution.", type="step")
     vermouth.DoMapping(
         mappings=mappings,
         to_ff=to_ff,
         delete_unknown=delete_unknown,
-        attribute_keep=("cgsecstruct", "chain", "secstruct"),
+        attribute_keep=("cgsecstruct", "chain", "secstruct", "stash"),
         attribute_must=("resname",),
         attribute_stash=("resid",),
     ).run_system(system)
@@ -913,6 +913,7 @@ def entry():
         write_repair=args.write_repair,
         write_canon=args.write_canon,
     )
+    vermouth.StashAttributes(attributes=("resid",)).run_system(system)
     system.meta["header"].extend(("This file was generated using the following command:",
                                   " ".join(sys.argv),
                                   VERSION,
