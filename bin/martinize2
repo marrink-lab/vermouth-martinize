@@ -1129,7 +1129,7 @@ def entry():
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
         for molecule in system.molecules:
-            old_resids = nx.get_node_attributes(molecule, "_old_resid")
+            old_resids = {node: molecule.nodes[node]["stash"].get("resid") for node in molecule.nodes}
             nx.set_node_attributes(molecule, old_resids, "resid")
 
     # The Martini Go model assumes that we do not mess with the order of

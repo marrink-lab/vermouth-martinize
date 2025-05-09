@@ -27,6 +27,13 @@ LOGGER = StyleAdapter(get_logger(__name__))
 def stash_attributes(molecule, attributes):
     """
     For each node in molecule, add the attributes to a stash dictionary
+
+    Parameters
+    ----------
+    molecule: :class:`~vermouth.molecule.Molecule`
+        The molecule to transform.
+    attributes: tuple[str]
+        Attributes to store in the nodes that may otherwise be modified
     """
     for attr in attributes:
         for node in molecule.nodes:
@@ -44,6 +51,8 @@ class StashAttributes(Processor):
     """
     Processor for storing current attributes of a node in a new "stash" attribute
 
+    attributes: tuple[str]
+        Attributes to be stashed for later use.
     """
     def __init__(self, attributes = ()):
         self.attributes = attributes

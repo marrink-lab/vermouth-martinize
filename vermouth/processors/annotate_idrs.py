@@ -39,7 +39,7 @@ def annotate_disorder(molecule, id_regions, annotation="cgidr"):
     """
 
     for key, node in molecule.nodes.items():
-        _old_resid = node['_old_resid']
+        _old_resid = node['stash']['resid']
         if _in_resid_region(_old_resid, id_regions):
             molecule.nodes[key][annotation] = True
             if "cgsecstruct" in molecule.nodes[key] and molecule.nodes[key]["cgsecstruct"] != "C":

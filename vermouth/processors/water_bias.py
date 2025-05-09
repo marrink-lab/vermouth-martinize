@@ -84,7 +84,7 @@ class ComputeWaterBias(Processor):
         """
         for res_node in res_graph.nodes:
             resid = res_graph.nodes[res_node]['resid']
-            _old_resid = res_graph.nodes[res_node]['_old_resid']
+            _old_resid = res_graph.nodes[res_node]['stash']['resid']
             chain = res_graph.nodes[res_node]['chain']
             resname = res_graph.nodes[res_node]['resname']
 
