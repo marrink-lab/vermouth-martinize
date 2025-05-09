@@ -46,3 +46,4 @@ from .annotate_mut_mod import AnnotateMutMod
 from .water_bias import ComputeWaterBias
 from .annotate_idrs import AnnotateIDRs
 from .cif_reader import CIFInput
+from .stash_attributes import StashAttributes
