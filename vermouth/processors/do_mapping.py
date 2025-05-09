@@ -464,12 +464,13 @@ def apply_mod_mapping(match, molecule, graph_out, mol_to_out, out_to_mol):
         if 'charge_group' not in graph_out.nodes[out_idx]:
             graph_out.nodes[out_idx]['charge_group'] = charge_group
 
-    # FIXME we need to assing updated resids to the modification atoms
+    # FIXME we need to assign updated resids to the modification atoms
     # the block mapping does this for the unmodified atoms
     for mod_idx, out_idx in mod_to_out.items():
         if mod_idx in anchors:
             continue
         neighbors = modification.neighbors(mod_idx)
+        resid_new = None
         for mod_idx_neigh in neighbors:
             anchor = mod_to_out[mod_idx_neigh]
             resid_new = graph_out.nodes[anchor].get('resid', None)
