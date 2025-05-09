@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2018 University of Groningen
+# Copyright 2025 University of Groningen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,10 @@ Provides a processor that stores attributes
 """
 
 from .processor import Processor
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
+
 
 def stash_attributes(molecule, attributes):
     """
@@ -29,7 +33,11 @@ def stash_attributes(molecule, attributes):
             # create the stash if not already there
             if not molecule.nodes[node].get("stash"):
                 molecule.nodes[node]["stash"] = {}
-            molecule.nodes[node]["stash"][attr] = molecule.nodes[node].get(attr, None)
+            # stash the attribute if it hasn't already been. Otherwise raise warning.
+            if not molecule.nodes[node]["stash"].get(attr):
+                molecule.nodes[node]["stash"][attr] = molecule.nodes[node].get(attr, None)
+            else:
+                LOGGER.warning("Trying to stash an already stashed attribute to molecule. Will not stash.")
 
 
 class StashAttributes(Processor):
