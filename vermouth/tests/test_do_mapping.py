@@ -337,28 +337,43 @@ def modifications():
     mods = {}
     mod_a = Link(force_field=FF_UNIVERSAL, name='mA')
     mod_a.add_node('mA', atomname='mA', PTM_atom=True, modifications=[mod_a])
+    mod_a.add_node('A', atomname='A', PTM_atom=False, modifications=[mod_a])
+    mod_a.add_edge('mA', 'A')
     mods['mA'] = mod_a
 
     mod_c = Link(force_field=FF_UNIVERSAL, name='mC')
     mod_c.add_node('mC', atomname='mC', PTM_atom=True, modifications=[mod_c])
+    mod_c.add_node('C', atomname='C', PTM_atom=False, modifications=[mod_c])
+    mod_c.add_edge('C', 'mC')
     mods['mC'] = mod_c
 
     mod_d = Link(force_field=FF_UNIVERSAL, name='mD')
     mod_d.add_node('mD', atomname='mD', PTM_atom=True, modifications=[mod_d])
+    mod_d.add_node('D', atomname='D', PTM_atom=False, modifications=[mod_d])
+    mod_d.add_edge('D', 'mD')
     mods['mD'] = mod_d
 
     mod_fg = Link(force_field=FF_UNIVERSAL, name='mFG')
+    mod_fg.add_node('F', atomname='F', PTM_atom=False, modifications=[mod_fg])
     mod_fg.add_node('mF', atomname='mF', PTM_atom=True, modifications=[mod_fg])
+    mod_fg.add_node('G', atomname='G', PTM_atom=False, modifications=[mod_fg])
     mod_fg.add_node('mG', atomname='mG', PTM_atom=True, modifications=[mod_fg])
+    mod_fg.add_edge('mF', 'F')
     mod_fg.add_edge('mF', 'mG')
+    mod_fg.add_edge('G', 'mG')
+    mod_fg.add_edge('F', 'G')
     mod_fg.add_interaction('bond', ['mF', 'mG'], (3, 4))
     mods['mFG'] = mod_fg
 
     mod_i = Link(force_field=FF_UNIVERSAL, name='mI')
     mod_i.add_node('mI', atomname='mI', PTM_atom=True, modifications=[mod_i])
+    mod_i.add_node('I', atomname='I', PTM_atom=False, modifications=[mod_i])
+    mod_i.add_edge('I', 'mI')
     mods['mI'] = mod_i
     mod_i2 = Link(force_field=FF_UNIVERSAL, name='mI2')
     mod_i2.add_node('mI2', atomname='mI2', PTM_atom=True, modifications=[mod_i2])
+    mod_i2.add_node('I', atomname='I', PTM_atom=False, modifications=[mod_i2])
+    mod_i2.add_edge('I', 'mI2')
     mods['mI2'] = mod_i2
 
     mod_j = Link(force_field=FF_UNIVERSAL, name='mJ')
@@ -388,23 +403,23 @@ def modified_molecule(modifications):
         {'atomname': 'mA', 'resid': 1, 'PTM_atom': True, 'modifications': [modifications['mA']]},
         {'atomname': 'B', 'resid': 2},  # Spacer
         # Two PTMs on neighbouring residues
-        {'atomname': 'C', 'resid': 3, 'modifications': [modifications['mC']]},
+        {'atomname': 'C', 'resid': 3, 'modifications': [modifications['mC']]},  # 3
         {'atomname': 'mC', 'resid': 3, 'PTM_atom': True, 'modifications': [modifications['mC']]},
         {'atomname': 'D', 'resid': 4, 'modifications': [modifications['mD']]},
         {'atomname': 'mD', 'resid': 4, 'PTM_atom': True, 'modifications': [modifications['mD']]},
         {'atomname': 'E', 'resid': 5},  # Spacer
         # Bridging PTMs
-        {'atomname': 'F', 'resid': 6, 'modifications': [modifications['mFG']]},
+        {'atomname': 'F', 'resid': 6, 'modifications': [modifications['mFG']]},  # 8
         {'atomname': 'mF', 'resid': 6, 'PTM_atom': True, 'modifications': [modifications['mFG']]},
         {'atomname': 'G', 'resid': 7, 'modifications': [modifications['mFG']]},
         {'atomname': 'mG', 'resid': 7, 'PTM_atom': True, 'modifications': [modifications['mFG']]},
         {'atomname': 'H', 'resid': 8},  # Spacer
         # Two PTMs for one residue
-        {'atomname': 'I', 'resid': 9, 'modifications': [modifications['mI'], modifications['mI2']]},
+        {'atomname': 'I', 'resid': 9, 'modifications': [modifications['mI'], modifications['mI2']]},  #  13
         {'atomname': 'mI', 'resid': 9, 'PTM_atom': True, 'modifications': [modifications['mI']]},
         {'atomname': 'mI2', 'resid': 9, 'PTM_atom': True, 'modifications': [modifications['mI2']]},
         # Two PTMs for one residue, but a single mod mapping
-        {'atomname': 'J', 'resid': 10, 'modifications': [modifications['mJ'], modifications['mJ2']]},
+        {'atomname': 'J', 'resid': 10, 'modifications': [modifications['mJ'], modifications['mJ2']]},  # 16
         {'atomname': 'mJ', 'resid': 10, 'PTM_atom': True, 'modifications': [modifications['mJ']]},
         {'atomname': 'mJ2', 'resid': 10, 'PTM_atom': True, 'modifications': [modifications['mJ2']]}
     )))
@@ -444,12 +459,12 @@ def test_mod_matches(modified_molecule, modifications):
     print([m.names for m in mappings])
     found = list(modification_matches(modified_molecule, mappings))
     expected = [
-        ({1: {'mA': 1}}, modifications['mA'], {}),
-        ({4: {'mC': 1}}, modifications['mC'], {}),
-        ({6: {'mD': 1}}, modifications['mD'], {}),
-        ({9: {'mF': 1}, 11: {'mG': 1}}, modifications['mFG'], {}),
-        ({14: {'mI': 1}}, modifications['mI'], {}),
-        ({15: {'mI2': 1}}, modifications['mI2'], {}),
+        ({1: {'mA': 1}, 0: {'A': 1}}, modifications['mA'], {}),
+        ({4: {'mC': 1}, 3: {'C': 1}}, modifications['mC'], {}),
+        ({6: {'mD': 1}, 5: {'D': 1}}, modifications['mD'], {}),
+        ({9: {'mF': 1}, 11: {'mG': 1}, 8: {'F': 1}, 10: {'G': 1}}, modifications['mFG'], {}),
+        ({14: {'mI': 1}, 13: {'I': 1}}, modifications['mI'], {}),
+        ({15: {'mI2': 1}, 13: {'I': 1}}, modifications['mI2'], {}),
         ({16: {'J': 1}, 17: {'mJ': 1}, 18: {'mJ2': 1}}, modifications['mJ', 'mJ2'], {}),
     ]
     pprint.pprint(found)
@@ -479,7 +494,7 @@ def test_apply_mod_mapping(modified_molecule, modifications):
     ])
     mol_to_out = {0: {0: 1}}
     out_to_mol = {0: {0: 1}}
-    match = ({1: {'mA': 1}}, modifications['mA'], {})
+    match = ({1: {'mA': 1}, 0: {'A': 1}}, modifications['mA'], {})
 
     out = apply_mod_mapping(match, modified_molecule, graph_out, mol_to_out, out_to_mol)
     print(mol_to_out)
@@ -540,4 +555,4 @@ def test_do_mapping_mods(modified_molecule, modifications):
     pprint.pprint(list(expected.edges))
 
     assert equal_graphs(expected, out, node_attrs=['atomname', 'resid', 'mapping_weights'])
-    assert out.interactions['bond'] == [Interaction(atoms=(10, 11), parameters=(3, 4), meta={})]
+    assert out.interactions['bond'] == [Interaction(atoms=(11, 12), parameters=(3, 4), meta={})]
