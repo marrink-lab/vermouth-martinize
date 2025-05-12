@@ -178,7 +178,6 @@ def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disorde
         delete_unknown=delete_unknown,
         attribute_keep=("cgsecstruct", "chain", "secstruct", "stash"),
         attribute_must=("resname",),
-        attribute_stash=("resid",),
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)

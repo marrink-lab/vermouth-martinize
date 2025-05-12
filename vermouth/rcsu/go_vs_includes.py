@@ -113,7 +113,6 @@ class VirtualSiteCreator(Processor):
 
                 virtual_site_nodes.append((new_node_id, {
                     'resid': atom['resid'],
-                    '_old_resid': atom['_old_resid'],
                     'resname': atom['resname'],
                     'atype': '{}_{}'.format(prefix, atom['resid']),
                     'charge_group': new_charge_group,
