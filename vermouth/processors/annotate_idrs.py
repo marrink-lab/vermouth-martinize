@@ -69,8 +69,8 @@ def annotate_disorder(molecule, id_regions, annotation="cgidr"):
         for key, node in molecule.nodes.items():
             _old_resid = node['_old_resid']
             chain = node['chain']
-            # make sure we have the correct chain and are in the right region. If no chain in resspec assume True.
-            if (chain == region.get('chain', True)) and _in_resid_region(_old_resid, region.get('resids')):
+            # make sure we have the correct chain and are in the right region. If no chain in region assume single chain system.
+            if (region.get('chain') is None or region.get('chain') == chain) and _in_resid_region(_old_resid, region.get('resids')):
                 molecule.nodes[key][annotation] = True
                 if "cgsecstruct" in molecule.nodes[key] and molecule.nodes[key]["cgsecstruct"] != "C":
                         molecule.nodes[key]["cgsecstruct"] = "C"

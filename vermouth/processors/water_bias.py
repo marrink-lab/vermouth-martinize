@@ -85,43 +85,46 @@ class ComputeWaterBias(Processor):
         res_graph: :class:`vermouth.molecule.Molecule`
             the residue graph of the molecule
         """
-        for region in self.idr_regions:
-            for res_node in res_graph.nodes:
-                resid = res_graph.nodes[res_node]['resid']
-                _old_resid = res_graph.nodes[res_node]['_old_resid']
-                chain = res_graph.nodes[res_node]['chain']
-                resname = res_graph.nodes[res_node]['resname']
+        for res_node in res_graph.nodes:
+            resid = res_graph.nodes[res_node]['resid']
+            _old_resid = res_graph.nodes[res_node]['_old_resid']
+            chain = res_graph.nodes[res_node]['chain']
+            resname = res_graph.nodes[res_node]['resname']
+            eps = 0.0
 
-                if (chain == region.get('chain', True)) and (_in_resid_region(_old_resid, region.get('resids'))):
-                    eps = self.water_bias.get('idr', 0.0)
-                    sec_struc = res_graph.nodes[res_node]['cgsecstruct']
-                elif self.auto_bias:
-                    sec_struc = res_graph.nodes[res_node]['cgsecstruct']
-                    eps = self.water_bias.get(sec_struc, 0.0)
-                else:
-                    continue
+            if len(self.idr_regions)>0:
+                for region in self.idr_regions:
+                    if (region.get('chain') is None or region.get('chain') == chain) and _in_resid_region(_old_resid,
+                                                                                                          region.get(
+                                                                                                                  'resids')):
+                        eps = self.water_bias.get('idr', 0.0)
+                        sec_struc = res_graph.nodes[res_node]['cgsecstruct']
+            elif self.auto_bias:
+                sec_struc = res_graph.nodes[res_node]['cgsecstruct']
+                eps = self.water_bias.get(sec_struc, 0.0)
+            else:
+                continue
+            if abs(eps) <= 1e-12:
+                continue
 
-                if abs(eps) <= 1e-12:
-                    continue
+            vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
+                                                          resid=resid,
+                                                          chain=chain,
+                                                          prefix=molecule.meta.get('moltype')))
 
-                vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
-                                                              resid=resid,
-                                                              chain=chain,
-                                                              prefix=molecule.meta.get('moltype')))
-
-                # what is the blocks bb-type
-                bb_type = molecule.force_field.blocks[resname].nodes['BB']['atype']
-                size = _get_bead_size(bb_type)
-                # bead sizes are defined in the force-field file as
-                # regular, small and tiny
-                sigma = float(molecule.force_field.variables[size])
-                # update interaction parameters
-                atoms = (molecule.force_field.variables['water_type'], vs_go_node)
-                water_bias = NonbondParam(atoms=atoms,
-                                          sigma=sigma,
-                                          epsilon=eps,
-                                          meta={"comment": ["water bias", sec_struc]})
-                self.system.gmx_topology_params["nonbond_params"].append(water_bias)
+            # what is the blocks bb-type
+            bb_type = molecule.force_field.blocks[resname].nodes['BB']['atype']
+            size = _get_bead_size(bb_type)
+            # bead sizes are defined in the force-field file as
+            # regular, small and tiny
+            sigma = float(molecule.force_field.variables[size])
+            # update interaction parameters
+            atoms = (molecule.force_field.variables['water_type'], vs_go_node)
+            water_bias = NonbondParam(atoms=atoms,
+                                      sigma=sigma,
+                                      epsilon=eps,
+                                      meta={"comment": ["water bias", sec_struc]})
+            self.system.gmx_topology_params["nonbond_params"].append(water_bias)
 
     def remove_cross_nb_interactions(self, molecule, res_graph):
         """
@@ -144,8 +147,9 @@ class ComputeWaterBias(Processor):
                 resid = res_graph.nodes[res_node]['resid']
                 _old_resid = res_graph.nodes[res_node]['_old_resid']
                 chain = res_graph.nodes[res_node]['chain']
-
-                if (region.get('chain', True) == chain) and (_in_resid_region(_old_resid, region.get('resids'))):
+                if (region.get('chain') is None or region.get('chain') == chain) and _in_resid_region(_old_resid,
+                                                                                                      region.get(
+                                                                                                              'resids')):
                     vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
                                                                   resid=resid,
                                                                   chain=chain,
