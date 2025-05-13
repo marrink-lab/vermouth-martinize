@@ -16,6 +16,7 @@ from .processor import Processor
 from ..graph_utils import make_residue_graph
 from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size, _in_resid_region
 from ..gmx.topology import NonbondParam
+from .annotate_idrs import parse_residues
 import numpy as np
 
 class ComputeWaterBias(Processor):
@@ -65,7 +66,9 @@ class ComputeWaterBias(Processor):
         """
         self.water_bias = water_bias
         self.auto_bias = auto_bias
-        self.idr_regions = idr_regions
+        self.idr_regions = []
+        for region in idr_regions:
+            self.idr_regions.append(parse_residues(region))
         self.system = None
 
     def assign_residue_water_bias(self, molecule, res_graph):
@@ -82,42 +85,43 @@ class ComputeWaterBias(Processor):
         res_graph: :class:`vermouth.molecule.Molecule`
             the residue graph of the molecule
         """
-        for res_node in res_graph.nodes:
-            resid = res_graph.nodes[res_node]['resid']
-            _old_resid = res_graph.nodes[res_node]['_old_resid']
-            chain = res_graph.nodes[res_node]['chain']
-            resname = res_graph.nodes[res_node]['resname']
+        for region in self.idr_regions:
+            for res_node in res_graph.nodes:
+                resid = res_graph.nodes[res_node]['resid']
+                _old_resid = res_graph.nodes[res_node]['_old_resid']
+                chain = res_graph.nodes[res_node]['chain']
+                resname = res_graph.nodes[res_node]['resname']
 
-            if _in_resid_region(_old_resid, self.idr_regions):
-                eps = self.water_bias.get('idr', 0.0)
-                sec_struc = res_graph.nodes[res_node]['cgsecstruct']
-            elif self.auto_bias:
-                sec_struc = res_graph.nodes[res_node]['cgsecstruct']
-                eps = self.water_bias.get(sec_struc, 0.0)
-            else:
-                continue
+                if (chain == region.get('chain', True)) and (_in_resid_region(_old_resid, region.get('resids'))):
+                    eps = self.water_bias.get('idr', 0.0)
+                    sec_struc = res_graph.nodes[res_node]['cgsecstruct']
+                elif self.auto_bias:
+                    sec_struc = res_graph.nodes[res_node]['cgsecstruct']
+                    eps = self.water_bias.get(sec_struc, 0.0)
+                else:
+                    continue
 
-            if abs(eps) <= 1e-12:
-                continue
+                if abs(eps) <= 1e-12:
+                    continue
 
-            vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
-                                                          resid=resid,
-                                                          chain=chain,
-                                                          prefix=molecule.meta.get('moltype')))
+                vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
+                                                              resid=resid,
+                                                              chain=chain,
+                                                              prefix=molecule.meta.get('moltype')))
 
-            # what is the blocks bb-type
-            bb_type = molecule.force_field.blocks[resname].nodes['BB']['atype']
-            size = _get_bead_size(bb_type)
-            # bead sizes are defined in the force-field file as
-            # regular, small and tiny
-            sigma = float(molecule.force_field.variables[size])
-            # update interaction parameters
-            atoms = (molecule.force_field.variables['water_type'], vs_go_node)
-            water_bias = NonbondParam(atoms=atoms,
-                                      sigma=sigma,
-                                      epsilon=eps,
-                                      meta={"comment": ["water bias", sec_struc]})
-            self.system.gmx_topology_params["nonbond_params"].append(water_bias)
+                # what is the blocks bb-type
+                bb_type = molecule.force_field.blocks[resname].nodes['BB']['atype']
+                size = _get_bead_size(bb_type)
+                # bead sizes are defined in the force-field file as
+                # regular, small and tiny
+                sigma = float(molecule.force_field.variables[size])
+                # update interaction parameters
+                atoms = (molecule.force_field.variables['water_type'], vs_go_node)
+                water_bias = NonbondParam(atoms=atoms,
+                                          sigma=sigma,
+                                          epsilon=eps,
+                                          meta={"comment": ["water bias", sec_struc]})
+                self.system.gmx_topology_params["nonbond_params"].append(water_bias)
 
     def remove_cross_nb_interactions(self, molecule, res_graph):
         """
@@ -135,17 +139,18 @@ class ComputeWaterBias(Processor):
         # list to record which items we don't want. cross = go potential between folded and disordered domain.
         all_cross_pairs = []
 
-        for res_node in res_graph.nodes:
-            resid = res_graph.nodes[res_node]['resid']
-            _old_resid = res_graph.nodes[res_node]['_old_resid']
-            chain = res_graph.nodes[res_node]['chain']
+        for region in self.idr_regions:
+            for res_node in res_graph.nodes:
+                resid = res_graph.nodes[res_node]['resid']
+                _old_resid = res_graph.nodes[res_node]['_old_resid']
+                chain = res_graph.nodes[res_node]['chain']
 
-            if _in_resid_region(_old_resid, self.idr_regions):
-                vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
-                                                              resid=resid,
-                                                              chain=chain,
-                                                              prefix=molecule.meta.get('moltype')))
-                all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
+                if (region.get('chain', True) == chain) and (_in_resid_region(_old_resid, region.get('resids'))):
+                    vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
+                                                                  resid=resid,
+                                                                  chain=chain,
+                                                                  prefix=molecule.meta.get('moltype')))
+                    all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
 
         # make sure we only have one entry in case a site has more than one interaction
         all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])
