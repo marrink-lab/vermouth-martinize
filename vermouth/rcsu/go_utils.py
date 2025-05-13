@@ -16,7 +16,7 @@ Utilities for Go model processors.
 """
 from vermouth.molecule import attributes_match
 
-def get_go_type_from_attributes(molecule, prefix, method, **kwargs):
+def get_go_type_from_attributes(molecule, prefix, **kwargs):
     """
     Find all nodes that satisfy a number of attributes specified
     as kwargs and have a specific atomtype prefix.
@@ -29,11 +29,13 @@ def get_go_type_from_attributes(molecule, prefix, method, **kwargs):
     kwargs:
         any number of attributes
 
-    Yields
+    Returns
     ------
-    str
-        the atom-type
-
+    list
+        sorted list of virtual sites
+    list
+        sorted list of the node ids of the virtual sites that need to be excluded
+    
     Raises
     ------
     KeyError
@@ -41,23 +43,20 @@ def get_go_type_from_attributes(molecule, prefix, method, **kwargs):
         and prefix an KeyError is raised.
     """
     all_virt_sites = []
+    exclusions = []
     for node in molecule.nodes:
         attrs = molecule.nodes[node]
         if attributes_match(attrs, kwargs) and attrs['atype'].startswith(prefix):
-            if method == 0:
-                all_virt_sites.append(attrs['atype'])
-                break
-            if method == 1:
-                all_virt_sites.append(attrs['atype'])
-                if attrs['atype'][-1] == 'b' or attrs['atype'][-1] == 'd':
-                    all_virt_sites.append(attrs['node_id'])
+            all_virt_sites.append(attrs['atype'])
+            if attrs['atype'][-1] == 'b' or attrs['atype'][-1] == 'd':
+                exclusions.append(attrs['node_id'])
 
     if not all_virt_sites:
         resid = kwargs['resid']
         chain = kwargs['chain']
         raise KeyError(f"Could not find GoVs with resid {resid} in chain {chain}.")
     
-    return all_virt_sites
+    return sorted(all_virt_sites), sorted(exclusions)
     
 
 def _in_resid_region(resid, regions):
