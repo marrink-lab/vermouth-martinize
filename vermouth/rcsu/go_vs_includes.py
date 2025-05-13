@@ -40,11 +40,10 @@ class VirtualSiteCreator(Processor):
         Assign molecule type names to the molecules in a system.
     :func:`add_virtual_sites`
     """
-    def __init__(self, go_method, moltype, go_anchor_bead='BB', go_atomname='CA'):
+    def __init__(self, moltype, go_anchor_bead='BB', go_atomname='CA'):
         self.system = None
         self.backbone = go_anchor_bead
         self.atomname = go_atomname
-        self.method = go_method
 
 
     def run_molecule(self, molecule):
@@ -74,7 +73,7 @@ class VirtualSiteCreator(Processor):
         """
         Add the virtual sites for GoMartini in the molecule.
 
-        One virtual site is added per backbone bead of the Martini protein.
+        Four virtual sites are added per backbone bead of the Martini protein.
         Each virtual site copies the resid, resname, and chain of the backbone
         bead. It also copies the *reference* to the position array, so the virtual
         site position follows if the backbone bead is translated. The virtual sites
@@ -82,9 +81,10 @@ class VirtualSiteCreator(Processor):
         charge group, with "CA" as atomname, and a charge of 0. The atomname and
         charge can be set with the `atomname` and `charge` argument, respectively.
 
-        The bead type of the virtual sites is names "<prefix>_<resid>". Where
+        The bead type of the virtual sites is names "<prefix>_<resid>_<vs>". Where
         `prefix` is provided as an argument of the function, and is expected to be
-        the molecule type name.
+        the molecule type name. And where 'vs' is either a, b, c or d (the four
+        virtual sites per backbone bead)
 
         Parameters
         ----------
@@ -105,21 +105,21 @@ class VirtualSiteCreator(Processor):
             return
         virtual_site_nodes = []
         virtual_sites = []
-        atomtypes = {}
         new_node_id = max(molecule.nodes)
         charge_groups = nx.get_node_attributes(molecule, 'charge_group').values()
         new_charge_group = max(charge_groups) if charge_groups else 0
         for node_id, atom in molecule.nodes(data=True):
             if atom.get('atomname') == backbone:
-                if self.method == 0:
+                for vs in ['a', 'b', 'c', 'd']:
                     new_node_id += 1
                     new_charge_group += 1
 
                     virtual_site_nodes.append((new_node_id, {
+                        'node_id': new_node_id,
                         'resid': atom['resid'],
                         '_old_resid': atom['_old_resid'],
                         'resname': atom['resname'],
-                        'atype': '{}_{}'.format(prefix, atom['resid']),
+                        'atype': '{}_{}_{}'.format(prefix, atom['resid'], vs),
                         'charge_group': new_charge_group,
                         'chain': atom['chain'],
                         'position': atom['position'],
@@ -127,50 +127,24 @@ class VirtualSiteCreator(Processor):
                         'charge': charge,
                         'mass': 0.0,
                         'cgsecstruct': atom.get('cgsecstruct', None),
+                        'mol_idx': atom['mol_idx']
                     }))
                     virtual_sites.append(Interaction(
                         atoms=[new_node_id, node_id],
                         parameters=['1'],
-                        meta={'go_vs': True, 'group': 'Virtual go site'},
+                        meta={'go_vs': True, 'group': 'Virtual go site {}'.format(vs)},
                     ))
                     vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
-                    self.system.gmx_topology_params['atomtypes'].append(vs_params)
 
-                elif self.method == 1:
-                    for vs in ['a', 'b', 'c', 'd']:
-                        new_node_id += 1
-                        new_charge_group += 1
+                    # Use a stable identifier from the molecule's meta
+                    mol_id = molecule.meta.get("moltype")
 
-                        virtual_site_nodes.append((new_node_id, {
-                            'node_id': new_node_id,
-                            'resid': atom['resid'],
-                            '_old_resid': atom['_old_resid'],
-                            'resname': atom['resname'],
-                            'atype': '{}_{}_{}'.format(prefix, atom['resid'], vs),
-                            'charge_group': new_charge_group,
-                            'chain': atom['chain'],
-                            'position': atom['position'],
-                            'atomname': atomname,
-                            'charge': charge,
-                            'mass': 0.0,
-                            'cgsecstruct': atom.get('cgsecstruct', None),
-                        }))
-                        virtual_sites.append(Interaction(
-                            atoms=[new_node_id, node_id],
-                            parameters=['1'],
-                            meta={'go_vs': True, 'group': 'Virtual go site {}'.format(vs)},
-                        ))
-                        vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
+                    existing_nodes = {
+                        (a.node, a.molecule.meta.get("moltype")) for a in self.system.gmx_topology_params['atomtypes']
+                    }
 
-                        # Use a stable identifier from the molecule's meta
-                        mol_id = molecule.meta.get("moltype")
-
-                        existing_nodes = {
-                            (a.node, a.molecule.meta.get("moltype")) for a in self.system.gmx_topology_params['atomtypes']
-                        }
-
-                        if (new_node_id, mol_id) not in existing_nodes:
-                            self.system.gmx_topology_params['atomtypes'].append(vs_params)
+                    if (new_node_id, mol_id) not in existing_nodes:
+                        self.system.gmx_topology_params['atomtypes'].append(vs_params)
 
 
 
