@@ -177,7 +177,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False, disordered_regions=
         mappings=mappings,
         to_ff=to_ff,
         delete_unknown=delete_unknown,
-        attribute_keep=("cgsecstruct", "chain", "aasecstruct", "resname", "stash"),
+        attribute_keep=("cgsecstruct", "chain", "aasecstruct", "resname", "stash", "mol_idx"),
         attribute_must=("resname", "atype"),
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
@@ -563,14 +563,6 @@ def entry():
         type=Path,
         help="Use Martini Go model. Accepts either an input file from the server, "
              "or just provide the flag to calculate as part of Martinize."
-    )
-    go_group.add_argument(
-        "-go-method",
-        dest="go_method",
-        type=int,
-        default=0,
-        help=("The go method used for the system 1 (inter and intra are set independently, only works with martini3 forcefield as target), "
-        "or 0 (inter and intra bonds are handeled the same)"),
     )
     go_group.add_argument(
         "-go-ff",
@@ -1074,62 +1066,13 @@ def entry():
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
     if args.go:
-        original_resids = [
-            (node['chain'], node['resid'], node['atomid']) 
-            for mol in system.molecules 
-            for node in mol.nodes.values()
-        ]
-
-        merged_system = vermouth.MergeAllMolecules().run_system(copy.deepcopy(system))
-
-        # need this here because have to get contact map at atomistic resolution
         if isinstance(args.go, Path):
-            if args.go_method == 0:
-                system = copy.deepcopy(merged_system)
-                merged_system = None
             LOGGER.info("Reading Go model contact map.", type="step")
-            read_go_map(system=system, file_path=args.go)
+            read_go_map(system=system, file_path=args.go) ##### this needs to be changed so that it also gives the mol_idx as output into the 'go_params'
 
         else:
             LOGGER.info("Generating Go model contact map.", type="step")
-            GenerateContactMap(write_file=args.go_write_file, original_resids=original_resids, go_method=args.go_method).run_system(merged_system)
-            if args.go_method == 0:
-                system = copy.deepcopy(merged_system)
-                merged_system = None
-            elif args.go_method == 1:
-                system.go_params['go_map'] = merged_system.go_params['go_map']
-
-                old_resid_map = {
-                    (atomid, old_chain): old_resid
-                    for old_chain, old_resid, atomid in original_resids
-                }
-
-                map_after_martinize = {}
-                for mol in merged_system.molecules:
-                    for node in mol.nodes.values():
-                        atomid = node['atomid']
-                        chain = node['chain']
-                        if (atomid, chain) in old_resid_map:
-                            old_resid = old_resid_map[(atomid, chain)]
-                            map_after_martinize[node['resid']] = old_resid
-
-                merged_system = martinize(
-                    merged_system,
-                    mappings=known_mappings,
-                    to_ff=known_force_fields[args.to_ff],
-                    delete_unknown=True,
-                    idrs=args.idr_tune,
-                    disordered_regions=args.water_idrs
-                )
-
-                for mol in merged_system.molecules:
-                    for node in mol.nodes.values():
-                        old_resid = node['_old_resid']
-                        if old_resid in map_after_martinize:
-                            resid = map_after_martinize[old_resid]
-                            node['resid_before_merge'] = resid
-                        else:
-                            print(f"Warning: residue {old_resid} not found in original system")
+            GenerateContactMap(write_file=args.go_write_file).run_system(system)
 
     # Run martinize on the system.
     system = martinize(
@@ -1159,12 +1102,7 @@ def entry():
             go_name_prefix = args.molname
             LOGGER.info("Generating the Go model.", type="step")
             GoPipeline.run_system(system,
-                                go_map_system=system,
-                                all_molecule_system=merged_system,
                                 moltype=go_name_prefix,
-                                cutoff_short=args.go_low,
-                                cutoff_long=args.go_up,
-                                go_eps=args.go_eps,
                                 cutoff_short_inter=args.go_low_inter,
                                 cutoff_long_inter=args.go_up_inter,
                                 go_eps_inter=args.go_eps_inter,
@@ -1173,7 +1111,6 @@ def entry():
                                 go_eps_intra=args.go_eps_intra,
                                 res_dist=args.go_res_dist,
                                 go_anchor_bead=args.go_backbone,
-                                go_method=args.go_method,
                                 go_ff=args.go_ff)
 
             defines = ("GO_VIRT",)
