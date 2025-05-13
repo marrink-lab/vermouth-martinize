@@ -255,11 +255,6 @@ def make_bonds(system, allow_name=True, allow_dist=True, fudge=1.2):
     """
     force_field = system.force_field
 
-    # Separate molecules should remain separate molecules, even if they have
-    # poorly chosen chain/resname/resid combinations. So add a mol_idx attribute
-    for mol_idx, molecule in enumerate(system.molecules):
-        nx.set_node_attributes(molecule, mol_idx, 'mol_idx')
-
     system = nx.disjoint_union_all(system.molecules)
     non_edges = set()
 
@@ -358,4 +353,10 @@ class MakeBonds(Processor):
         # Restore the force field in each molecule. Setting the force field
         # at the system level propagates it to all the molecules.
         system.force_field = system.force_field
+
         LOGGER.info('{} molecules after guessing bonds', len(system.molecules))
+
+        # Separate molecules should remain separate molecules, even if they have
+        # poorly chosen chain/resname/resid combinations. So add a mol_idx attribute
+        for mol_idx, molecule in enumerate(system.molecules):
+            nx.set_node_attributes(molecule, mol_idx, 'mol_idx')
