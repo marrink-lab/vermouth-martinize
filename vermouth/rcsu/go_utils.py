@@ -79,3 +79,29 @@ def _get_bead_size(atype):
     else:
         bead_size = "regular"
     return bead_size
+
+def _in_chain_and_resid_region(region, resid, chain):
+    """
+    Check if a chain and resid match
+
+    Parameters
+    ----------
+    region: dict
+        dictionary containing chain and resids of annotated region
+    resid: int
+        resid of residue
+    chain: str
+        chain of residue
+
+    Returns
+    -------
+    bool
+    """
+    condition0 = (region.get('chain') is None or region.get('chain') == chain)
+    condition1 = _in_resid_region(resid, region.get('resids'))
+
+    if condition0 and condition1:
+        return True
+    else:
+        return False
+

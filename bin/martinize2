@@ -633,7 +633,7 @@ def entry():
         nargs='+',
         help=("Intrinsically disordered regions specified by resid."
               "These parts are biased differently when applying a water bias."
-              "format: <chain>-<start_resid_1>:<end_resid_1> <chain>-<start_resid_2>:<end_resid_2> ..."
+              "format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ..."
              ),
     )
     idr_tuning = water_group.add_argument(

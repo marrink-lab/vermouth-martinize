@@ -14,7 +14,7 @@
 
 from .processor import Processor
 from ..graph_utils import make_residue_graph
-from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size, _in_resid_region
+from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size, _in_chain_and_resid_region
 from ..gmx.topology import NonbondParam
 from .annotate_idrs import parse_residues
 import numpy as np
@@ -92,18 +92,13 @@ class ComputeWaterBias(Processor):
             resname = res_graph.nodes[res_node]['resname']
             eps = 0.0
 
-            if len(self.idr_regions)>0:
-                for region in self.idr_regions:
-                    if (region.get('chain') is None or region.get('chain') == chain) and _in_resid_region(_old_resid,
-                                                                                                          region.get(
-                                                                                                                  'resids')):
-                        eps = self.water_bias.get('idr', 0.0)
-                        sec_struc = res_graph.nodes[res_node]['cgsecstruct']
-            elif self.auto_bias:
+            if self.auto_bias:
                 sec_struc = res_graph.nodes[res_node]['cgsecstruct']
                 eps = self.water_bias.get(sec_struc, 0.0)
-            else:
-                continue
+            for region in self.idr_regions:
+                if _in_chain_and_resid_region(region, _old_resid, chain):
+                    eps = self.water_bias.get('idr', 0.0)
+                    sec_struc = res_graph.nodes[res_node]['cgsecstruct']
             if abs(eps) <= 1e-12:
                 continue
 
@@ -147,9 +142,7 @@ class ComputeWaterBias(Processor):
                 resid = res_graph.nodes[res_node]['resid']
                 _old_resid = res_graph.nodes[res_node]['_old_resid']
                 chain = res_graph.nodes[res_node]['chain']
-                if (region.get('chain') is None or region.get('chain') == chain) and _in_resid_region(_old_resid,
-                                                                                                      region.get(
-                                                                                                              'resids')):
+                if _in_chain_and_resid_region(region, _old_resid, chain):
                     vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
                                                                   resid=resid,
                                                                   chain=chain,
