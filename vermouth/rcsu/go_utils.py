@@ -100,8 +100,5 @@ def _in_chain_and_resid_region(region, resid, chain):
     condition0 = (region.get('chain') is None or region.get('chain') == chain)
     condition1 = _in_resid_region(resid, region.get('resids'))
 
-    if condition0 and condition1:
-        return True
-    else:
-        return False
+    return condition0 and condition1
 
