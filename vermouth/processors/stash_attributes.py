@@ -20,11 +20,11 @@ Provides a processor that stores attributes
 
 from .processor import Processor
 from ..log_helpers import StyleAdapter, get_logger
-
+import copy
 LOGGER = StyleAdapter(get_logger(__name__))
 
 
-def stash_attributes(molecule, attributes):
+def stash_attributes(molecule, attributes, stash_name="stash"):
     """
     For each node in molecule, add the attributes to a stash dictionary
 
@@ -34,17 +34,19 @@ def stash_attributes(molecule, attributes):
         The molecule to transform.
     attributes: tuple[str]
         Attributes to store in the nodes that may otherwise be modified
+    stash_name: str
+        Name of top level node dictionary to store attributes to
     """
-    for attr in attributes:
-        for node in molecule.nodes:
+    for node in molecule.nodes:
+        for attr in attributes:
             # create the stash if not already there
-            if not molecule.nodes[node].get("stash"):
-                molecule.nodes[node]["stash"] = {}
+            stash = molecule.nodes[node].get(stash_name)
+            molecule.nodes[node][stash_name] = stash
             # stash the attribute if it hasn't already been. Otherwise raise warning.
-            if not molecule.nodes[node]["stash"].get(attr):
-                molecule.nodes[node]["stash"][attr] = molecule.nodes[node].get(attr, None)
+            if attr not in stash:
+                stash[attr] = copy.deepcopy(molecule.nodes[node].get(attr, None))
             else:
-                LOGGER.warning("Trying to stash an already stashed attribute to molecule. Will not stash.")
+                LOGGER.warning("Trying to stash already stashed attribute {attr} to molecule. Will not stash.", attr)
 
 
 class StashAttributes(Processor):
@@ -53,14 +55,18 @@ class StashAttributes(Processor):
 
     attributes: tuple[str]
         Attributes to be stashed for later use.
+    stash_name: str
+        Name of top level node dictionary in which to store existing attributes
     """
-    def __init__(self, attributes = ()):
+    def __init__(self, attributes=(), stash_name='stash'):
         self.attributes = attributes
+        self.stash_name = stash_name
 
     def run_molecule(self, molecule):
         stash_attributes(
             molecule,
-            self.attributes
+            self.attributes,
+            self.stash_name
         )
         return molecule
 

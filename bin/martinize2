@@ -912,7 +912,7 @@ def entry():
         write_repair=args.write_repair,
         write_canon=args.write_canon,
     )
-    vermouth.StashAttributes(attributes=("resid",)).run_system(system)
+    vermouth.StashAttributes(attributes=("resid",), stash_name="stash").run_system(system)
     system.meta["header"].extend(("This file was generated using the following command:",
                                   " ".join(sys.argv),
                                   VERSION,

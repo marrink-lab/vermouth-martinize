@@ -140,7 +140,7 @@ class ComputeStructuralGoBias(Processor):
                 resid_key = self.res_graph.nodes[resnode]['stash'].get('resid')
                 self.__chain_id_to_resnode[(chain_key, resid_key)] = resnode
 
-            if self.__chain_id_to_resnode.get((chain, resid), None) is not None:
+            if (chain, resid) in self.__chain_id_to_resnode:
                 return self.__chain_id_to_resnode[(chain, resid)]
             else:
                 LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')

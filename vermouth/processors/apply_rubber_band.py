@@ -420,11 +420,14 @@ def make_same_region_criterion(regions):
     def same_region(graph, left, right):
         node_left = graph.nodes[left]
         node_right = graph.nodes[right]
-        left_resid = node_left.get('stash', node_left['resid'])
-        right_resid = node_right.get('stash', node_right['resid'])
-        if isinstance(left_resid, dict) and isinstance(right_resid, dict):
-            left_resid = left_resid['resid']
-            right_resid = right_resid['resid']
+        try:
+            left_resid = node_left['stash']['resid']
+        except KeyError:
+            left_resid = node_left['resid']
+        try:
+            right_resid = node_right['stash']['resid']
+        except KeyError:
+            right_resid = node_right['resid']
         for region in regions:
             lower = min(region)
             upper = max(region)
