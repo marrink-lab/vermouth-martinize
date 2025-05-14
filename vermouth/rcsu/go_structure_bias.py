@@ -138,8 +138,6 @@ class ComputeStructuralGoBias(Processor):
             if self.__chain_id_to_resnode.get((chain, resid, molid), None) is not None:
                 return self.__chain_id_to_resnode[(chain, resid, molid)]
             else:
-                print('do not see in dict')
-                print(chain, resid, molid, type(molid))
                 LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')
 
         # for each residue collect the chain and residue in a dict
@@ -158,7 +156,6 @@ class ComputeStructuralGoBias(Processor):
         if self.__chain_id_to_resnode.get((chain, resid, molid), None) is not None:
             return self.__chain_id_to_resnode[(chain, resid, molid)]
         else:
-            print('ook niet goed')
             LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')
 
 
@@ -191,14 +188,18 @@ class ComputeStructuralGoBias(Processor):
 
         connected_pairs = {}
 
+        # make connected pairs so the contacts are not selected if they are 
+        # in self.resdist 'graph distance' of each other
         for mol_idx, mol_graph in self.molecule_graphs.items():
             connected_pairs_mol = dict(nx.all_pairs_shortest_path_length(mol_graph, cutoff=self.res_dist))
             connected_pairs[mol_idx] = connected_pairs_mol
-            # each mol graph combined in connected_pairs please
 
         bad_chains_warning = False
 
+        # go through all contacts that were generated or read in contact_map.py
         for contact in self.system.go_params["go_map"][0]:
+            # identify what the node ids (resA, resB) are in their respective molecule graphs
+            # with the self._chain_id_to_resnode() function/dictionary
             resIDA, chainA, molIDA, resIDB, chainB, molIDB = contact
             molIDA, molIDB = int(molIDA), int(molIDB)
             resA = self._chain_id_to_resnode(chainA, resIDA, molIDA)
@@ -236,16 +237,16 @@ class ComputeStructuralGoBias(Processor):
                                     'backbone bead atoms. Go model cannot be generated. Will exit now.')
                         sys.exit(1)
 
+                    # compute distance between nodes/backbone beads
                     dist = np.linalg.norm(self.system.molecules[molIDA].nodes[bb_node_A]['position'] -
                                         self.system.molecules[molIDB].nodes[bb_node_B]['position'])
                     
-                    # verify that the distance between BB-beads satisfies the
-                    # cut-off criteria
-                    if molIDA == molIDB: # intra
+                    # set the low and high cutoff, based on the bondtype of the contact
+                    if molIDA == molIDB:
                         low = self.cutoff_short_intra
                         high = self.cutoff_long_intra
                         bond_type = 'intra'
-                    elif molIDA != molIDB:
+                    elif molIDA != molIDB: 
                         low = self.cutoff_short_inter
                         high = self.cutoff_long_inter
                         if molIDA in mol_id_map[molIDB]:
@@ -253,6 +254,7 @@ class ComputeStructuralGoBias(Processor):
                         else:
                             bond_type = 'other'
 
+                    # check if the distance satisfies the cutoff conditions
                     if high > dist > low:
                         if self.molecule_graphs[molIDA]:
                             vs_a, excl_a = get_go_type_from_attributes(self.molecule_graphs[molIDA].nodes[resA]['graph'],
@@ -260,7 +262,7 @@ class ComputeStructuralGoBias(Processor):
                                                                     chain=chainA,
                                                                     prefix=self.moltype)
                         else:
-                            print(f'Warning there no graph generated for the chain: {chainA}')
+                            print(f'Warning there no graph generated with mol_id: {molIDA}')
 
                         if self.molecule_graphs[molIDB]:
                             vs_b, excl_b = get_go_type_from_attributes(self.molecule_graphs[molIDB].nodes[resB]['graph'],
@@ -268,13 +270,15 @@ class ComputeStructuralGoBias(Processor):
                                                                     chain=chainB,
                                                                     prefix=self.moltype)
                         else:
-                            print(f'Warning there no graph generated for the chain: {chainB}')
+                            print(f'Warning there no graph generated with mol_id: {molIDB}')
                         
-
+                        # here the contact (vs_b, vs_a, beadB, beadA, dist) is checked, if the
+                        # contact was already seen before (in contact_matrix) and if the contact
+                        # was not already added as interaction (not in added_contacts)
                         if (vs_b, vs_a, beadB, beadA, dist) in contact_matrix and ((bond_type, vs_b, vs_a, beadB, beadA) not in added_contacts and (bond_type, vs_a, vs_b, beadA, beadB) not in added_contacts):
                             added_contacts.append((bond_type, vs_b, vs_a, beadB, beadA))
-                            # generate backbone-backbone exclusions
-                            # perhaps one day can be its own function
+                            # generate backbone-backbone exclusions if the contact
+                            # is between homologous molecules
                             if bond_type == 'intra':
                                 molecule = self.system.molecules[molIDA]
                                 excl_site_b = Interaction(atoms=(excl_a[0], excl_b[0]),
@@ -286,7 +290,6 @@ class ComputeStructuralGoBias(Processor):
 
                             elif bond_type == 'inter':
                                 ref_molIDA = reference_mol_map[molIDA]
-                                # print('ref mol =', ref_molIDA, '\n', 'mol id =', molIDA)
                                 molecule = self.system.molecules[ref_molIDA]
                                 excl_site_b = Interaction(atoms=(excl_a[0], excl_b[0]),
                                                 parameters=[], meta={"group": "Go model exclusion for virtual sites 'b'"})
@@ -295,9 +298,13 @@ class ComputeStructuralGoBias(Processor):
                                 molecule.interactions['exclusions'].append(excl_site_b)
                                 molecule.interactions['exclusions'].append(excl_site_d)
 
-                            elif bond_type == 'other': # other type of molecule
+                            elif bond_type == 'other':
                                 pass
 
+                            # here the required information to compute the sigma and epsilon
+                            # values of the interactions are added to self.symetrical_matrix
+                            # and the bead types (beadA, beadB) of the backbone bead are added
+                            # to the self.lennard_jones list
                             key_without_dist = (vs_a, vs_b, beadA, beadB, bond_type)
                             if all(entry[:5] != key_without_dist for entry in self.symmetrical_matrix): # might give problems, due to the appending of all go interactions of each homologous molecule
                                 self.symmetrical_matrix.append((vs_a, vs_b, beadA, beadB, bond_type, dist))
@@ -307,7 +314,11 @@ class ComputeStructuralGoBias(Processor):
                         else:
                             contact_matrix.append((vs_a, vs_b, beadA, beadB, dist))
             else:
-                pass # can add ensureance that every connection is done maybe
+                if bad_chains_warning == False:
+                    LOGGER.warning("Mismatch between chain IDs in pdb and contact map. This probably means the "
+                                   "chain IDs are missing in the pdb and the contact map has all chains = Z.")
+                    bad_chains_warning = True
+
 
         return
 
@@ -330,13 +341,14 @@ class ComputeStructuralGoBias(Processor):
         looking up the normal martini3 interaction, 
         for cancellation of that interaction. bond_type is
         intra, inter or other. intra-molecular inter-molecular
-        or inter-molecular (between non-homogeneous molecules), 
+        or inter-molecular (between non-homologous molecules), 
         respectively. dist is the distance between the backbone
         beads.
 
         The gmx_topology_params for each virtual site are
         set based on the values of these tuples.
         """
+
         contacts = self.symmetrical_matrix
         LJ_combies = self.lennard_jones
         LJ_sigma_epsilon_dict = {}
