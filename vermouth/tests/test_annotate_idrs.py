@@ -17,7 +17,7 @@ Test for the tune idp bonds processor.
 """
 import pytest
 from vermouth.dssp import dssp
-from vermouth.processors.annotate_idrs import AnnotateIDRs
+from vermouth.processors.annotate_idrs import AnnotateIDRs, parse_residues
 from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
 
 @pytest.mark.parametrize('idr_regions, expected', [
@@ -146,3 +146,23 @@ def test_gmx_system_header_supplementary(test_molecule, modify, expected):
     dssp.AnnotateMartiniSecondaryStructures().run_system(system)
 
     assert expected == any(["IDR" in i for i in system.meta.get('header', [''])])
+
+@pytest.mark.parametrize('resspec, expected',
+                         ((['A-10:20'],
+                           [{'chain': 'A', 'resids': [(10, 20)]}]),
+                          (['10:20'],
+                           [{'chain': None, 'resids': [(10, 20)]}]),
+                         (['10:20', 'A-50:65'],
+                          [{'chain': None, 'resids': [(10, 20)]}, {'chain': 'A', 'resids': [(50, 65)]}])
+
+                          ))
+def test_parse_disorder_resspec(resspec, expected):
+    parsed = []
+    for spec in resspec:
+        parsed.append(parse_residues(spec))
+    assert len(parsed) == len(expected)
+
+    for i,j in zip(parsed, expected):
+        for key in i.keys():
+            assert i[key] == j[key]
+

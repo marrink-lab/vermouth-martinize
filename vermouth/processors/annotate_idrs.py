@@ -52,6 +52,8 @@ def parse_residues(resspec):
         out['resids'] = [(int(res_start), int(res_end))]
     if chain:
         out['chain'] = chain[0]
+    else:
+        out['chain'] = None
     return out
 
 def annotate_disorder(molecule, id_regions, annotation="cgidr"):
