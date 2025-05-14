@@ -46,7 +46,7 @@ def stash_attributes(molecule, attributes, stash_name="stash"):
             if attr not in stash:
                 stash[attr] = copy.deepcopy(molecule.nodes[node].get(attr, None))
             else:
-                LOGGER.warning(f"Trying to stash already stashed attribute {attr} to molecule. Will not stash.", attr)
+                LOGGER.warning("Trying to stash already stashed attribute {} to molecule. Will not stash.", attr)
 
 
 class StashAttributes(Processor):
