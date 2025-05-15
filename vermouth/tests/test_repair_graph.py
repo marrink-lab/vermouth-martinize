@@ -285,7 +285,7 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations,
             if mutations:
                 mol.nodes[node_idx]['mutation'] = mutations
             if modifications:
-                mol.nodes[node_idx]['modification'] = modifications
+                mol.nodes[node_idx]['annotated_modifications'] = modifications
     mol = vermouth.RepairGraph().run_molecule(mol)
     resid1_atomnames = set()
     for node_idx in mol:
@@ -293,7 +293,7 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations,
             if mutations:
                 assert mol.nodes[node_idx]['resname'] == mutations[0]
             if modifications:
-                assert mol.nodes[node_idx].get('modification') == modifications
+                assert mol.nodes[node_idx].get('annotated_modifications') == modifications
             resid1_atomnames.add(mol.nodes[node_idx]['atomname'])
     assert resid1_atomnames == set(atomnames.split())
 
@@ -312,7 +312,7 @@ def test_repair_graph_with_mutation_modification_error(system_mod, caplog,
             if mutations:
                 mol.nodes[node_idx]['mutation'] = mutations
             if modifications:
-                mol.nodes[node_idx]['modification'] = modifications
+                mol.nodes[node_idx]['annotated_modifications'] = modifications
     with pytest.raises(ValueError), caplog.at_level(logging.WARNING):
         assert not caplog.records
         mol = vermouth.RepairGraph().run_molecule(mol)
