@@ -250,7 +250,7 @@ def allowed_ptms(residue, res_ptms, known_ptms):
 
 def fix_ptm(molecule):
     '''
-    Canonizes all PTM atoms in molecule, and labels the relevant residues with
+    Canonicalizes all PTM atoms in molecule, and labels the relevant residues with
     which PTMs were recognized. Modifies ``molecule`` such that atom names of
     PTM atoms are corrected, and the relevant residues have been labeled with
     which PTMs were recognized.
@@ -361,9 +361,9 @@ def fix_ptm(molecule):
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
                 node = molecule.nodes[n_idx]
-                if not ('modification' in node and ptm in node.get('modifications', [])):
+                if not ('annotated_modifications' in node and ptm in node.get('modifications', [])):
                     # These nodes already had the modification annotated.
-                    # Also note that 'modification' != 'modifications'. Yes,
+                    # Also note that 'annotated_modifications' != 'modifications'. Yes,
                     # this is an issue. No, I'm not fixing that.
                     node['modifications'] = node.get('modifications', [])
                     node['modifications'].append(ptm)
