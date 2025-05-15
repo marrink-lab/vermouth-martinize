@@ -50,9 +50,8 @@ HA  CA
 C   O
 C   AA2:N
 AA2:N   CA
-N   AA2:HN
-AA1:C   AA1:CA
-AA2:C   AA2:CA
+N   HN
+C   CA
 HA  CA
 C   O
 
