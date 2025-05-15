@@ -18,15 +18,15 @@ jobs:
     
     strategy:
       matrix:
-       py_version: ["3.9", "3.10", "3.11", "3.12"]
+       py_version: ["3.10", "3.11", "3.12", "3.13"]
        include:
-         - py_version: "3.9"
-           WITH_CODECOV: true
          - py_version: "3.10"
            WITH_CODECOV: true
          - py_version: "3.11"
            WITH_CODECOV: true
          - py_version: "3.12"
+           WITH_CODECOV: true
+         - py_version: "3.13"
            WITH_CODECOV: true
 
     steps:
@@ -131,7 +131,7 @@ jobs:
     - name: Set up Python 3
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.13'
         cache: pip
         cache-dependency-path: |
           **/setup.cfg
