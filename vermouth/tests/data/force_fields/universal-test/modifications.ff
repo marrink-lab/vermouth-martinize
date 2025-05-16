@@ -27,12 +27,14 @@ C OXT
 [ modification ]
 N-ter
 [ atoms ]
+C {"element": "C"}
 CA {"element": "C"}
 N {"element": "N"}
 HN {"element": "H", "replace": {"atomname": "HN1"}}
 HN2 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN2"}}
 HN3 {"element": "H", "PTM_atom": true, "replace": {"atomname": "HN3"}}
 [ edges ]
+C CA
 N CA
 N HN
 N HN2
@@ -73,9 +75,12 @@ NE1 {"resname": "HIS", "element": "N"}
 HE1 {"resname": "HIS", "element": "H", "PTM_atom": true}
 ND1 {"resname": "HIS", "element": "N"}
 HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
+CE1 {"resname": "HIS", "element": "C"}
 [ edges ]
 NE1 HE1
 ND1 HD1
+CE1 NE1
+CE1 ND1
 
 [ modification ]
 ASP0
