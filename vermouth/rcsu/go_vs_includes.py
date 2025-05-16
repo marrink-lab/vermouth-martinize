@@ -113,7 +113,6 @@ class VirtualSiteCreator(Processor):
 
                 virtual_site_nodes.append((new_node_id, {
                     'resid': atom['resid'],
-                    '_old_resid': atom['_old_resid'],
                     'resname': atom['resname'],
                     'atype': '{}_{}'.format(prefix, atom['resid']),
                     'charge_group': new_charge_group,
@@ -123,6 +122,7 @@ class VirtualSiteCreator(Processor):
                     'charge': charge,
                     'mass': 0.0,
                     'cgsecstruct': atom.get('cgsecstruct', None),
+                    'stash': atom.get('stash', None)
                 }))
                 virtual_sites.append(Interaction(
                     atoms=[new_node_id, node_id],

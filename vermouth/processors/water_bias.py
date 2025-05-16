@@ -87,7 +87,7 @@ class ComputeWaterBias(Processor):
         """
         for res_node in res_graph.nodes:
             resid = res_graph.nodes[res_node]['resid']
-            _old_resid = res_graph.nodes[res_node]['_old_resid']
+            _old_resid = res_graph.nodes[res_node]['stash']['resid']
             chain = res_graph.nodes[res_node]['chain']
             resname = res_graph.nodes[res_node]['resname']
             eps = 0.0
@@ -140,7 +140,7 @@ class ComputeWaterBias(Processor):
         for region in self.idr_regions:
             for res_node in res_graph.nodes:
                 resid = res_graph.nodes[res_node]['resid']
-                _old_resid = res_graph.nodes[res_node]['_old_resid']
+                _old_resid = res_graph.nodes[res_node]['stash']['resid']
                 chain = res_graph.nodes[res_node]['chain']
                 if _in_chain_and_resid_region(region, _old_resid, chain):
                     vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
@@ -148,6 +148,7 @@ class ComputeWaterBias(Processor):
                                                                   chain=chain,
                                                                   prefix=molecule.meta.get('moltype')))
                     all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
+
 
         # make sure we only have one entry in case a site has more than one interaction
         all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])
