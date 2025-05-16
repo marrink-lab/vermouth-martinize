@@ -14,8 +14,9 @@
 
 from .processor import Processor
 from ..graph_utils import make_residue_graph
-from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size, _in_resid_region
+from ..rcsu.go_utils import get_go_type_from_attributes, _get_bead_size, _in_chain_and_resid_region
 from ..gmx.topology import NonbondParam
+from .annotate_idrs import parse_residues
 import numpy as np
 
 class ComputeWaterBias(Processor):
@@ -65,7 +66,9 @@ class ComputeWaterBias(Processor):
         """
         self.water_bias = water_bias
         self.auto_bias = auto_bias
-        self.idr_regions = idr_regions
+        self.idr_regions = []
+        for region in idr_regions:
+            self.idr_regions.append(parse_residues(region))
         self.system = None
 
     def assign_residue_water_bias(self, molecule, res_graph):
@@ -87,16 +90,15 @@ class ComputeWaterBias(Processor):
             _old_resid = res_graph.nodes[res_node]['stash']['resid']
             chain = res_graph.nodes[res_node]['chain']
             resname = res_graph.nodes[res_node]['resname']
+            eps = 0.0
 
-            if _in_resid_region(_old_resid, self.idr_regions):
-                eps = self.water_bias.get('idr', 0.0)
-                sec_struc = res_graph.nodes[res_node]['cgsecstruct']
-            elif self.auto_bias:
+            if self.auto_bias:
                 sec_struc = res_graph.nodes[res_node]['cgsecstruct']
                 eps = self.water_bias.get(sec_struc, 0.0)
-            else:
-                continue
-
+            for region in self.idr_regions:
+                if _in_chain_and_resid_region(region, _old_resid, chain):
+                    eps = self.water_bias.get('idr', 0.0)
+                    sec_struc = res_graph.nodes[res_node]['cgsecstruct']
             if abs(eps) <= 1e-12:
                 continue
 
@@ -135,17 +137,18 @@ class ComputeWaterBias(Processor):
         # list to record which items we don't want. cross = go potential between folded and disordered domain.
         all_cross_pairs = []
 
-        for res_node in res_graph.nodes:
-            resid = res_graph.nodes[res_node]['resid']
-            _old_resid = res_graph.nodes[res_node]['stash']['resid']
-            chain = res_graph.nodes[res_node]['chain']
+        for region in self.idr_regions:
+            for res_node in res_graph.nodes:
+                resid = res_graph.nodes[res_node]['resid']
+                _old_resid = res_graph.nodes[res_node]['stash']['resid']
+                chain = res_graph.nodes[res_node]['chain']
+                if _in_chain_and_resid_region(region, _old_resid, chain):
+                    vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
+                                                                  resid=resid,
+                                                                  chain=chain,
+                                                                  prefix=molecule.meta.get('moltype')))
+                    all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
 
-            if _in_resid_region(_old_resid, self.idr_regions):
-                vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
-                                                              resid=resid,
-                                                              chain=chain,
-                                                              prefix=molecule.meta.get('moltype')))
-                all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
 
         # make sure we only have one entry in case a site has more than one interaction
         all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])

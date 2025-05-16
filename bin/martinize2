@@ -183,7 +183,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disorde
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
     if idrs:
         LOGGER.info("Annotating IDRs.", type="step")
-        vermouth.AnnotateIDRs(id_regions=[(int(start), int(stop)) for start, stop in disordered_regions]).run_system(system)
+        vermouth.AnnotateIDRs(id_regions=disordered_regions).run_system(system)
     LOGGER.info("Applying the links.", type="step")
     vermouth.DoLinks().run_system(system)
     LOGGER.info("Placing the charge dummies.", type="step")
@@ -628,12 +628,11 @@ def entry():
     water_group.add_argument(
         "-id-regions",
         dest="water_idrs",
-        type=lambda s: s.split(":"),
         default=[],
         nargs='+',
         help=("Intrinsically disordered regions specified by resid."
               "These parts are biased differently when applying a water bias."
-              "format: <start_resid_1>:<end_resid_1> <start_resid_2>:<end_resid_2>..."
+              "format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ..."
              ),
     )
     idr_tuning = water_group.add_argument(
@@ -1036,7 +1035,7 @@ def entry():
             # this ensures that disordered-folded go bonds get removed regardless of force field.
             vermouth.processors.ComputeWaterBias(args.water_bias,
                                                  {s: float(eps) for s, eps in args.water_bias_eps},
-                                                 [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                                 args.water_idrs,
                                                 ).run_system(system)
     else:
         # don't write non-bonded interactions
@@ -1122,7 +1121,7 @@ def entry():
         # now we add a bias by defining specific virtual-site water interactions
         vermouth.processors.ComputeWaterBias(args.water_bias,
                                              { s:float(eps) for s, eps in args.water_bias_eps},
-                                             [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                             args.water_idrs,
                                             ).run_system(system)
 
     # Here we need to add the resids from the PDB back if that is needed
