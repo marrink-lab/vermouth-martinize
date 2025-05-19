@@ -176,8 +176,8 @@ def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disorde
         mappings=mappings,
         to_ff=to_ff,
         delete_unknown=delete_unknown,
-        attribute_keep=("cgsecstruct", "chain", "secstruct", "stash"),
-        attribute_must=("resname",),
+        attribute_keep=("cgsecstruct", "chain", "aasecstruct", "resname", "stash"),
+        attribute_must=("resname", "atype"),
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
@@ -687,11 +687,17 @@ def entry():
         default=[],
         help="Add a modification to a residue. Desired "
         "modification is specified as, e.g. A-ASP45:ASP0. "
-        "The format is <chain>-<resname><resid>:<modification>."
+        "The format is <chain>-<resname><resid>:[+]<modification>."
         " Elements of the specification can be omitted as "
         "required. e.g. ASP45:ASP0 will modify all ASP with "
         "resid 45 to ASP0, A-ASP:ASP0 will modify all ASP on "
-        "chain A to ASP0",
+        "chain A to ASP0. By default the modifications specified this way will "
+        "override any modifications found in the input file. If instead you "
+        "want to *add* modifications in addition to what's already in the "
+        "input file, add '+' to the modification specification. For example, "
+        "'A-HIS1:+HSE' to add the HSE modification to any automatically "
+        "determined terminal modifications."
+        ,
     )
     prot_group.add_argument(
         "-nter",
@@ -876,17 +882,17 @@ def entry():
         ignore_res.update(*grp)
 
     if args.neutral_termini:
-        args.modifications.append(["cter", "COOH-ter"])
-        args.modifications.append(["nter", "NH2-ter"])
+        args.modifications.append(["cter", "+COOH-ter"])
+        args.modifications.append(["nter", "+NH2-ter"])
     else:
         if args.modifications:
             resspecs, mods = zip(*args.modifications)
         else:
             resspecs, mods = [], []
         if not any("cter" in resspec for resspec in resspecs):
-            args.modifications.append(["cter", "C-ter"])
+            args.modifications.append(["cter", "+C-ter"])
         if not any("nter" in resspec for resspec in resspecs):
-            args.modifications.append(["nter", "N-ter"])
+            args.modifications.append(["nter", "+N-ter"])
 
     # Reading the input structure.
     # So far, we assume we only go from atomistic to martini. We want the
@@ -1005,6 +1011,10 @@ def entry():
         idrs=args.idr_tune,
         disordered_regions=args.water_idrs
     )
+    if 'bondedtypes' in known_force_fields[args.to_ff].variables:
+        LOGGER.info("Generating implicit interactions for RTP force field", type='step')
+        vermouth.RTPPolisher().run_system(system)
+
     # Apply position restraints if required.
     if args.posres != "none":
         LOGGER.info("Applying position restraints.", type="step")
