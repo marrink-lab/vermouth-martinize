@@ -21,10 +21,40 @@ from itertools import chain
 from ..dssp.dssp import SS_CG, sequence_from_residues
 from ..selectors import is_protein
 from .processor import Processor
-from ..rcsu.go_utils import _in_resid_region
+from ..rcsu.go_utils import _in_chain_and_resid_region
 from ..log_helpers import StyleAdapter, get_logger
+
 LOGGER = StyleAdapter(get_logger(__name__))
 
+
+def parse_residues(resspec):
+    """
+    Parse a residue specification: [<chain>-][<resid_start>]:[<resid_end>] where
+    resid is /[0-9]+/.
+    Returns a dictionary with keys 'chain', 'resid_start', and 'resid_end' for the
+    fields that are specified. Resids will be ints.
+
+    Parameters
+    ----------
+    resspec: str
+
+    Returns
+    -------
+    dict
+
+    """
+    # <chain>-<resid>
+    *chain, resids = resspec.split('-', 1)
+    res_start, res_end = resids.split(':', 1)
+
+    out = {}
+    if resids:
+        out['resids'] = [(int(res_start), int(res_end))]
+    if chain:
+        out['chain'] = chain[0]
+    else:
+        out['chain'] = None
+    return out
 
 def annotate_disorder(molecule, id_regions, annotation="cgidr"):
     """
@@ -33,20 +63,24 @@ def annotate_disorder(molecule, id_regions, annotation="cgidr"):
     molecule: :class:`vermouth.molecule.Molecule`
             the molecule
     idr_regions: list
-        list of tuples defining the resids of the idrs in the molecule
+        dictionaries defining the disordered regions to annotate
     annotation: str
         name of the annotation in the node
     """
 
-    for key, node in molecule.nodes.items():
-        _old_resid = node['_old_resid']
-        if _in_resid_region(_old_resid, id_regions):
-            molecule.nodes[key][annotation] = True
-            if "cgsecstruct" in molecule.nodes[key] and molecule.nodes[key]["cgsecstruct"] != "C":
-                    molecule.nodes[key]["cgsecstruct"] = "C"
-                    molecule.meta['modified_cgsecstruct'] = True
-        else:
-            molecule.nodes[key][annotation] = False
+    for region in id_regions:
+        for key, node in molecule.nodes.items():
+            _old_resid = node['stash']['resid']
+            chain = node['chain']
+            # make sure we have the correct chain and are in the right region. If no chain in region assume single chain system.
+            if _in_chain_and_resid_region(region, _old_resid, chain):
+                molecule.nodes[key][annotation] = True
+                if "cgsecstruct" in molecule.nodes[key] and molecule.nodes[key]["cgsecstruct"] != "C":
+                        molecule.nodes[key]["cgsecstruct"] = "C"
+                        molecule.meta['modified_cgsecstruct'] = True
+            else:
+                molecule.nodes[key][annotation] = False
+
 
 
 
@@ -67,15 +101,15 @@ class AnnotateIDRs(Processor):
         id_regions:
             regions defining the IDRs
         """
-        self.id_regions = id_regions
+        self.id_regions = []
+        for region in id_regions:
+            self.id_regions.append(parse_residues(region))
 
     def run_molecule(self, molecule):
         """
         Assign disordered regions for a single molecule
         """
-
         annotate_disorder(molecule, self.id_regions)
-
         return molecule
 
     def run_system(self, system):

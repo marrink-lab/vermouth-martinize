@@ -17,12 +17,12 @@ Test for the tune idp bonds processor.
 """
 import pytest
 from vermouth.dssp import dssp
-from vermouth.processors.annotate_idrs import AnnotateIDRs
+from vermouth.processors.annotate_idrs import AnnotateIDRs, parse_residues
 from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
 
 @pytest.mark.parametrize('idr_regions, expected', [
     (
-    [(1,2)],
+    ["1:2"],
     [True, True, True, True, True, False, False, False, False]
     ),
     (
@@ -61,28 +61,28 @@ def test_make_disorder_string(test_molecule,
     assert result == expected
 
 @pytest.mark.parametrize('idr_regions, secstruc, write_sec, expected',(
-        ([(1, 4)],
+        (["1:4"],
          {1: "H", 2: "H", 3: "H", 4: "H"},
          True,
          [{0: "C", 1: "C", 2: "C",
           3: "C", 4: "C",
           5: "C",
           6: "C", 7: "C", 8: "C"}, True]),
-        ([(1, 2)],
+        (["1:2"],
          {1: "H", 2: "H", 3: "H", 4: "H"},
          True,
          [{0: "C", 1: "C", 2: "C",
           3: "C", 4: "C",
           5: "H",
           6: "H", 7: "H", 8: "H"}, True]),
-        ([(1, 2)],
+        (["1:2"],
          {1: "H", 2: "H", 3: "H", 4: "H"},
          False,
          [{0: None, 1: None, 2: None,
           3: None, 4: None,
           5: None,
           6: None, 7: None, 8: None}, False]),
-        ([(1, 2)],
+        (["1:2"],
          {1: "C", 2: "C", 3: "C", 4: "C"},
          True,
          [{0: "C", 1: "C", 2: "C",
@@ -139,10 +139,30 @@ def test_gmx_system_header_supplementary(test_molecule, modify, expected):
                                   attrs={"resname": resnames,
                                          "atype": atypes})
     if modify:
-        AnnotateIDRs(id_regions=[(0,1)]).run_system(system)
+        AnnotateIDRs(id_regions=["1:2"]).run_system(system)
 
     dssp.AnnotateResidues(attribute="aasecstruct",
                           sequence="HHHH").run_system(system)
     dssp.AnnotateMartiniSecondaryStructures().run_system(system)
 
     assert expected == any(["IDR" in i for i in system.meta.get('header', [''])])
+
+@pytest.mark.parametrize('resspec, expected',
+                         ((['A-10:20'],
+                           [{'chain': 'A', 'resids': [(10, 20)]}]),
+                          (['10:20'],
+                           [{'chain': None, 'resids': [(10, 20)]}]),
+                         (['10:20', 'A-50:65'],
+                          [{'chain': None, 'resids': [(10, 20)]}, {'chain': 'A', 'resids': [(50, 65)]}])
+
+                          ))
+def test_parse_disorder_resspec(resspec, expected):
+    parsed = []
+    for spec in resspec:
+        parsed.append(parse_residues(spec))
+    assert len(parsed) == len(expected)
+
+    for i,j in zip(parsed, expected):
+        for key in i.keys():
+            assert i[key] == j[key]
+

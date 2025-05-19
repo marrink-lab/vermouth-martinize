@@ -128,23 +128,22 @@ class ComputeStructuralGoBias(Processor):
                 return self.__chain_id_to_resnode[(chain, resid)]
             else:
                 LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')
-
-        # for each residue collect the chain and residue in a dict
-        # we use this later for identifying the residues from the
-        # contact map
-        for resnode in self.res_graph.nodes:
-            chain_key = self.res_graph.nodes[resnode].get('chain', None)
-            # in vermouth within a molecule all resid are unique
-            # when merging multiple chains we store the old resid
-            # the go model always references the input resid i.e.
-            # the _old_resid
-            resid_key = self.res_graph.nodes[resnode].get('_old_resid')
-            self.__chain_id_to_resnode[(chain_key, resid_key)] = resnode
-
-        if self.__chain_id_to_resnode.get((chain, resid), None) is not None:
-            return self.__chain_id_to_resnode[(chain, resid)]
+        # make sure we only generate self.__chain_id_to_resnode only once
         else:
-            LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')
+            # for each residue collect the chain and residue in a dict
+            # we use this later for identifying the residues from the
+            # contact map
+            for resnode in self.res_graph.nodes:
+                chain_key = self.res_graph.nodes[resnode].get('chain', None)
+                # in vermouth within a molecule all resid are unique
+                # for a merged system the original resid of each node is preserved in the stash
+                resid_key = self.res_graph.nodes[resnode]['stash'].get('resid')
+                self.__chain_id_to_resnode[(chain_key, resid_key)] = resnode
+
+            if (chain, resid) in self.__chain_id_to_resnode:
+                return self.__chain_id_to_resnode[(chain, resid)]
+            else:
+                LOGGER.debug(stacklevel=5, msg='chain-resid pair not found in molecule')
 
 
     def contact_selector(self, molecule):
@@ -206,11 +205,11 @@ class ComputeStructuralGoBias(Processor):
                     # cut-off criteria
                     if self.cutoff_long > dist > self.cutoff_short:
                         atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
-                                                                   _old_resid=resIDA,
+                                                                   stash=self.res_graph.nodes[resA]['stash'],
                                                                    chain=chainA,
                                                                    prefix=self.moltype))
                         atype_b = next(get_go_type_from_attributes(self.res_graph.nodes[resB]['graph'],
-                                                                   _old_resid=resIDB,
+                                                                   stash=self.res_graph.nodes[resB]['stash'],
                                                                    chain=chainB,
                                                                    prefix=self.moltype))
                         # Check if symmetric contact has already been processed before
