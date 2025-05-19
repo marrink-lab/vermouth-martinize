@@ -678,7 +678,7 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
                 # attribute_must we transfer only if they're not already in the
                 # created node
                 if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
-                    graph_out.nodes[out_idx][attr] = new_attrs[attr]
+                    node_attrs[attr] = new_attrs[attr]
         else:
             attrs = defaultdict(list)
             attrs_not_sane = []
@@ -690,13 +690,13 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
             for attr, vals in attrs.items():
                 if attr in attribute_keep or attr not in graph_out.nodes[out_idx]:
                     if vals:
-                        graph_out.nodes[out_idx][attr] = vals[0]
+                        node_attrs[attr] = vals[0]
                     else:
                         # No nodes had the attribute.
-                        graph_out.nodes[out_idx][attr] = None
+                        node_attrs[attr] = None
 
-                if not are_all_equal(vals):
-                    attrs_not_sane.append(attr)
+                    if not are_all_equal(vals):
+                        attrs_not_sane.append(attr)
 
             if attrs_not_sane:
                 LOGGER.warning('The attributes {} for atom {} are going to'
