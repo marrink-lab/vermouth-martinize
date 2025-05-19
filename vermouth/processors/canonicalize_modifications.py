@@ -175,11 +175,11 @@ def identify_ptms(residue, residue_ptms, known_ptms):
                 gm = nx.isomorphism.GraphMatcher(residue.subgraph(ptm_atoms), mod,
                                                  node_match=nx.isomorphism.categorical_node_match('atomname', ''))
                 match = list(gm.subgraph_isomorphisms_iter())
-                assert len(match) == 1
-                match = match[0]
-                cover.append((mod, match))
-                # (That would be here)
-                known_matched.update(match)
+                if len(match) == 1:
+                    match = match[0]
+                    cover.append((mod, match))
+                    # (That would be here)
+                    known_matched.update(match)
             ptm_atoms -= known_matched
             assert not ptm_atoms
         else:
@@ -361,10 +361,8 @@ def fix_ptm(molecule):
                             mol_node[attr_name] = val
             for n_idx in n_idxs:
                 node = molecule.nodes[n_idx]
-                if not ('annotated_modifications' in node and ptm in node.get('modifications', [])):
+                if ('annotated_modifications' not in node or '+' in node['annotated_modifications']) or ptm not in node.get('modifications', []):
                     # These nodes already had the modification annotated.
-                    # Also note that 'annotated_modifications' != 'modifications'. Yes,
-                    # this is an issue. No, I'm not fixing that.
                     node['modifications'] = node.get('modifications', [])
                     node['modifications'].append(ptm)
 

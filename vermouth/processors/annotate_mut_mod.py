@@ -199,6 +199,11 @@ def _resiter(mod, residue_graph, resspec, library, key, molecule):
     for res_idx in residue_graph:
         if residue_matches(resspec, residue_graph, res_idx):
             mod_found = True
+            if mod.startswith('+'):
+                mod = mod[1:]
+                detect_modifications = True
+            else:
+                detect_modifications = False
             if mod != 'none' and mod not in library:
                 raise NameError('{} is not known as a {} for '
                                 'force field {}'
@@ -208,6 +213,8 @@ def _resiter(mod, residue_graph, resspec, library, key, molecule):
                          _format_resname(res), key, mod)
             for node_idx in res['graph']:
                 molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
+                if detect_modifications:
+                    molecule.nodes[node_idx][key].append('+')
     return mod_found
 
 def annotate_modifications(molecule, modifications, mutations, resspec_counts):

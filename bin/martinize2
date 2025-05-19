@@ -687,11 +687,17 @@ def entry():
         default=[],
         help="Add a modification to a residue. Desired "
         "modification is specified as, e.g. A-ASP45:ASP0. "
-        "The format is <chain>-<resname><resid>:<modification>."
+        "The format is <chain>-<resname><resid>:[+]<modification>."
         " Elements of the specification can be omitted as "
         "required. e.g. ASP45:ASP0 will modify all ASP with "
         "resid 45 to ASP0, A-ASP:ASP0 will modify all ASP on "
-        "chain A to ASP0",
+        "chain A to ASP0. By default the modifications specified this way will "
+        "override any modifications found in the input file. If instead you "
+        "want to *add* modifications in addition to what's already in the "
+        "input file, add '+' to the modification specification. For example, "
+        "'A-HIS1:+HSE' to add the HSE modification to any automatically "
+        "determined terminal modifications."
+        ,
     )
     prot_group.add_argument(
         "-nter",

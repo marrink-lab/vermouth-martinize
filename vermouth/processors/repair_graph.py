@@ -142,7 +142,7 @@ def _get_reference_residue(residue, force_field):
         for mod_name in modifications:
             LOGGER.info('Applying modification {} to residue {}-{}{}',
                         mod_name, residue['chain'], resname, residue['resid'])
-            if mod_name != 'none':
+            if mod_name not in ('none', '+'):
                 mod = force_field.modifications[mod_name]
                 reference_block = _patch_modification(reference_block, mod)
         for node_idx in reference_block:
@@ -454,7 +454,7 @@ def repair_graph(molecule, reference_graph, include_graph=True):
     for residx in reference_graph:
         residue = reference_graph.nodes[residx]
         repair_residue(molecule, residue, include_graph=include_graph)
-        # Atomnames are canonized, and missing atoms added
+        # Atomnames are canonicalized, and missing atoms added
         found = reference_graph.nodes[residx]['found']
         match = reference_graph.nodes[residx]['match']
 
@@ -469,7 +469,7 @@ def repair_graph(molecule, reference_graph, include_graph=True):
         for idx in extra:
             molecule.nodes[idx]['PTM_atom'] = True
             found.nodes[idx]['PTM_atom'] = True
-            if molecule.nodes[idx].get('mutation') or molecule.nodes[idx].get('annotated_modifications'):
+            if molecule.nodes[idx].get('mutation') or (molecule.nodes[idx].get('annotated_modifications') and '+' not in molecule.nodes[idx]['annotated_modifications']):
                 molecule.remove_node(idx)
 
     return molecule
