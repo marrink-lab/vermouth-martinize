@@ -579,60 +579,46 @@ def entry():
         help=("The strength of the Go model structural bias in kJ/mol."),
     )
     go_group.add_argument(
-        "-go-low",
-        dest="go_low",
-        type=float,
-        default=0.3,
-        help=("Minimum distance (nm) below which contacts are removed."),
-    )
-    go_group.add_argument(
-        "-go-up",
-        dest="go_up",
-        type=float,
-        default=1.1,
-        help=("Maximum distance (nm) above which contacts are removed."),
-    )
-    go_group.add_argument(
         "-go-eps-inter",
         dest="go_eps_inter",
         type=float,
         default=9.414,
-        help=("Optional when using go-method 1: the strength of the Go model structural bias in kJ/mol for intermolecular go bonds."),
+        help=("The strength of the Go model structural bias in kJ/mol for intermolecular go bonds."),
     )
     go_group.add_argument(
         "-go-low-inter",
         dest="go_low_inter",
         type=float,
         default=0.3,
-        help=("Optional when using go-method 1: minimum distance (nm) below which contacts are removed for intermolecular go bonds."),
+        help=("Minimum distance (nm) below which contacts are removed for intermolecular go bonds."),
     )
     go_group.add_argument(
         "-go-up-inter",
         dest="go_up_inter",
         type=float,
         default=1.1,
-        help=("Optional when using go-method 1: maximum distance (nm) above which contacts are removed for intermolecular go bonds."),
+        help=("Maximum distance (nm) above which contacts are removed for intermolecular go bonds."),
     )
     go_group.add_argument(
         "-go-eps-intra",
         dest="go_eps_intra",
         type=float,
         default=9.414,
-        help=("Optional when using go-method 1: the strength of the Go model structural bias in kJ/mol for intramolecular go bonds."),
+        help=("The strength of the Go model structural bias in kJ/mol for intramolecular go bonds."),
     )
     go_group.add_argument(
         "-go-low-intra",
         dest="go_low_intra",
         type=float,
         default=0.3,
-        help=("Optional when using go-method 1: minimum distance (nm) below which contacts are removed for intramolecular go bonds."),
+        help=("Minimum distance (nm) below which contacts are removed for intramolecular go bonds."),
     )
     go_group.add_argument(
         "-go-up-intra",
         dest="go_up_intra",
         type=float,
         default=1.1,
-        help=("Optional when using go-method 1: maximum distance (nm) above which contacts are removed for intramolecular go bonds."),
+        help=("Maximum distance (nm) above which contacts are removed for intramolecular go bonds."),
     )
     go_group.add_argument(
         "-go-res-dist",

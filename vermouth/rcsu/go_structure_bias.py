@@ -181,7 +181,8 @@ class ComputeStructuralGoBias(Processor):
 
         mol_id_map = self.system.go_params['unique_mols_map']
         reference_mol_map = self.system.go_params['reference_mol_map']
-        added_contacts = []
+        added_contacts = {}
+        added_exclusions = {}
 
         # distance_matrix of eligible pairs as tuple(node, node, dist)
         contact_matrix = []
@@ -273,52 +274,61 @@ class ComputeStructuralGoBias(Processor):
                             print(f'Warning there no graph generated with mol_id: {molIDB}')
                         
                         # here the contact (vs_b, vs_a, beadB, beadA, dist) is checked, if the
-                        # contact was already seen before (in contact_matrix) and if the contact
-                        # was not already added as interaction (not in added_contacts)
-                        if (vs_b, vs_a, beadB, beadA, dist) in contact_matrix and ((bond_type, vs_b, vs_a, beadB, beadA) not in added_contacts and (bond_type, vs_a, vs_b, beadA, beadB) not in added_contacts):
-                            added_contacts.append((bond_type, vs_b, vs_a, beadB, beadA))
+                        # contact was already seen before (in contact_matrix)
+                        if (molIDB, molIDA, vs_b, vs_a, beadB, beadA, dist) in contact_matrix:
+
+                            if (bond_type, tuple(vs_b), tuple(vs_a), beadB, beadA) in added_contacts:
+                                added_contacts[(bond_type, tuple(vs_b), tuple(vs_a), beadB, beadA)].append(dist)
+                            elif (bond_type, tuple(vs_a), tuple(vs_b), beadA, beadB) in added_contacts:
+                                added_contacts[(bond_type, tuple(vs_a), tuple(vs_b), beadA, beadB)].append(dist)
+                            else:
+                                added_contacts[(bond_type, tuple(vs_b), tuple(vs_a), beadB, beadA)] = [dist]
+                            
                             # generate backbone-backbone exclusions if the contact
                             # is between homologous molecules
-                            if bond_type == 'intra':
-                                molecule = self.system.molecules[molIDA]
-                                excl_site_b = Interaction(atoms=(excl_a[0], excl_b[0]),
-                                                parameters=[], meta={"group": "Go model exclusion for virtual sites 'b'"})
-                                excl_site_d = Interaction(atoms=(excl_a[1], excl_b[1]),
-                                                parameters=[], meta={"group": "Go model exclusion for virtual sites 'd'"})
-                                molecule.interactions['exclusions'].append(excl_site_b)
-                                molecule.interactions['exclusions'].append(excl_site_d)
-
-                            elif bond_type == 'inter':
+                            if bond_type == 'intra' or bond_type == 'inter':
                                 ref_molIDA = reference_mol_map[molIDA]
                                 molecule = self.system.molecules[ref_molIDA]
-                                excl_site_b = Interaction(atoms=(excl_a[0], excl_b[0]),
-                                                parameters=[], meta={"group": "Go model exclusion for virtual sites 'b'"})
-                                excl_site_d = Interaction(atoms=(excl_a[1], excl_b[1]),
-                                                parameters=[], meta={"group": "Go model exclusion for virtual sites 'd'"})
-                                molecule.interactions['exclusions'].append(excl_site_b)
-                                molecule.interactions['exclusions'].append(excl_site_d)
+
+                                if ref_molIDA not in added_exclusions:
+                                    added_exclusions[ref_molIDA] = []
+
+                                if (excl_a, excl_b) not in added_exclusions[ref_molIDA] and (excl_b, excl_a) not in added_exclusions[ref_molIDA]:
+                                    if excl_a != excl_b:
+                                        added_exclusions[ref_molIDA].append((excl_a, excl_b))
 
                             elif bond_type == 'other':
                                 pass
 
-                            # here the required information to compute the sigma and epsilon
-                            # values of the interactions are added to self.symetrical_matrix
-                            # and the bead types (beadA, beadB) of the backbone bead are added
+                            # The bead types (beadA, beadB) of the backbone bead are added
                             # to the self.lennard_jones list
-                            key_without_dist = (vs_a, vs_b, beadA, beadB, bond_type)
-                            if all(entry[:5] != key_without_dist for entry in self.symmetrical_matrix): # might give problems, due to the appending of all go interactions of each homologous molecule
-                                self.symmetrical_matrix.append((vs_a, vs_b, beadA, beadB, bond_type, dist))
                             if (beadA, beadB) not in self.lennard_jones and (beadB, beadA) not in self.lennard_jones:
                                 self.lennard_jones.append((beadA, beadB))
 
                         else:
-                            contact_matrix.append((vs_a, vs_b, beadA, beadB, dist))
+                            contact_matrix.append((molIDA, molIDB, vs_a, vs_b, beadA, beadB, dist))
             else:
                 if bad_chains_warning == False:
                     LOGGER.warning("Mismatch between chain IDs in pdb and contact map. This probably means the "
                                    "chain IDs are missing in the pdb and the contact map has all chains = Z.")
                     bad_chains_warning = True
 
+        for mol_id, all_exclusions in added_exclusions.items():
+            for exclusions in all_exclusions:
+                excl_a, excl_b = exclusions
+                excl_site_b = Interaction(atoms=(excl_a[0], excl_b[0]),
+                                parameters=[], meta={"group": "Go model exclusion for virtual sites 'b'"})
+                excl_site_d = Interaction(atoms=(excl_a[1], excl_b[1]),
+                                parameters=[], meta={"group": "Go model exclusion for virtual sites 'd'"})
+                molecule.interactions['exclusions'].append(excl_site_b)
+                molecule.interactions['exclusions'].append(excl_site_d)
+
+        for keys, dists in added_contacts.items():
+            if int(max(dists) - min(dists)) >= 0.2:
+                print("Warning: the distance between a pair of backbone beads vary more than 0.2 nm")
+            average_dist = sum(dists) / len(dists)
+            keys = keys + (average_dist,)
+            self.symmetrical_matrix.append(keys)
 
         return
 
@@ -371,7 +381,7 @@ class ComputeStructuralGoBias(Processor):
                         epsilon = tokens[4]
                         LJ_sigma_epsilon_dict[LJ_combi] = (sigma, epsilon)
 
-        for vs_a, vs_b, beadA, beadB, bond_type, dist in contacts:
+        for bond_type, vs_a, vs_b, beadA, beadB, dist in contacts:
             
             if (beadA, beadB) in LJ_sigma_epsilon_dict:
                 LJ_sigma, LJ_epsilon = LJ_sigma_epsilon_dict[(beadA, beadB)]
@@ -381,6 +391,7 @@ class ComputeStructuralGoBias(Processor):
                 LJ_sigma, LJ_epsilon = float(LJ_sigma), float(LJ_epsilon)
             else:
                 print('Warning there is a bead combi that is not in the LJ_sigma_epsilon_dict')
+                print(beadA, beadB)
 
             if bond_type == 'intra':
                 go_epsilon = self.go_eps_intra
