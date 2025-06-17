@@ -164,6 +164,7 @@ def pdb_to_universal(
             defer_writing=False,
         )
     vermouth.AttachMass(attribute="mass").run_system(canonicalized)
+    vermouth.SortMoleculeAtoms().run_system(canonicalized)
     return canonicalized
 
 
