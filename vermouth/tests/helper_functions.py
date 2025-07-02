@@ -85,7 +85,7 @@ def find_in_path(names=('martinize2', 'martinize2.py')):
             if os.path.isfile(fullpath):
                 return fullpath
           
-def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs):
+def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs, write_secstruct=True):
     """
     Generate a test system from a molecule
     with all attributes set and blocks in
@@ -138,7 +138,8 @@ def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs):
         resid = res_graph.nodes[node]['resid']
         # assign secondary structure
         for mol_node in mol_nodes:
-            molecule.nodes[mol_node]['cgsecstruct'] = secstruc[resid]
+            if write_secstruct:
+                molecule.nodes[mol_node]['cgsecstruct'] = secstruc[resid]
             block.add_node(molecule.nodes[mol_node]['atomname'],
                            atype=molecule.nodes[mol_node]['atype'])
 
@@ -190,27 +191,36 @@ def test_molecule(scope='function'):
     molecule.meta['test'] = True
     # The node keys should not be in a sorted order as it would mask any issue
     # due to the keys being accidentally sorted.
-    molecule.add_node(2, atomname='SC2',
-                      position=np.array([0., 1.0, 0.0]), resid=1)
-    molecule.add_node(0, atomname='BB',
-                      position=np.array([0., 0., 0.]), resid=1)
-    molecule.add_node(1, atomname='SC1',
-                      position=np.array([0., 0.5, 0.0]), resid=1)
+    molecule.add_node(2, atomname='SC2', resname='res0', chain='A',
+                      position=np.array([0., 1.0, 0.0]), resid=1,
+                      _res_serial=0, stash={'resid': 1})
+    molecule.add_node(0, atomname='BB', resname='res0', chain='A',
+                      position=np.array([0., 0., 0.]), resid=1,
+                      _res_serial=0, stash={'resid': 1})
+    molecule.add_node(1, atomname='SC1', resname='res0', chain='A',
+                      position=np.array([0., 0.5, 0.0]), resid=1,
+                      _res_serial=0, stash={'resid': 1})
 
-    molecule.add_node(3, atomname='BB', position=np.array(
-        [0.5, 0.0, 0.0]), resid=2)
-    molecule.add_node(4, atomname='SC1', position=np.array(
-        [0.5, 0.5, 0.0]), resid=2)
+    molecule.add_node(3, atomname='BB', resname='res1', chain='A',
+                      position=np.array([0.5, 0.0, 0.0]), resid=2,
+                      _res_serial=1, stash={'resid': 2})
+    molecule.add_node(4, atomname='SC1', resname='res1', chain='A',
+                      position=np.array([0.5, 0.5, 0.0]), resid=2,
+                      _res_serial=1, stash={'resid': 2})
 
-    molecule.add_node(5, atomname='BB', position=np.array(
-        [1.0, 0.0, 0.0]), resid=3)
+    molecule.add_node(5, atomname='BB', resname='res2', chain='A',
+                      position=np.array([1.0, 0.0, 0.0]), resid=3,
+                      _res_serial=2, stash={'resid': 3})
 
-    molecule.add_node(6, atomname='BB', position=np.array(
-        [1.5, 0.0, 0.0]), resid=4)
-    molecule.add_node(7, atomname='SC1', position=np.array(
-        [1.5, 0.5, 0.0]), resid=4)
-    molecule.add_node(8, atomname='SC2', position=np.array(
-        [1.5, 1.0, 0.0]), resid=4)
+    molecule.add_node(6, atomname='BB', resname='res0', chain='A',
+                      position=np.array([1.5, 0.0, 0.0]), resid=4,
+                      _res_serial=3, stash={'resid': 4})
+    molecule.add_node(7, atomname='SC1', resname='res0', chain='A',
+                      position=np.array([1.5, 0.5, 0.0]), resid=4,
+                      _res_serial=3, stash={'resid': 4})
+    molecule.add_node(8, atomname='SC2', resname='res0', chain='A',
+                      position=np.array([1.5, 1.0, 0.0]), resid=4,
+                      _res_serial=3, stash={'resid': 4})
 
     molecule.add_edge(0, 1)
     molecule.add_edge(0, 2)

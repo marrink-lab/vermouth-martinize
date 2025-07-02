@@ -126,13 +126,13 @@ class ITPDirector(SectionLineParser):
             if self.current_meta is not None:
                 self.current_meta = None
             elif self.current_meta is None:
-                raise IOError("Your #ifdef section is orderd incorrectly."
+                raise IOError("Your #ifdef section is ordered incorrectly."
                               "At line {} I read #endif but I haven not read"
                               "a ifdef before.".format(lineno))
 
         elif line.startswith("#else"):
             if self.current_meta is None:
-               raise IOError("Your #ifdef section is orderd incorrectly."
+               raise IOError("Your #ifdef section is ordered incorrectly."
                              "At line {} I read #endif but I haven not read"
                              "a ifdef before.".format(lineno))
 
@@ -146,13 +146,15 @@ class ITPDirector(SectionLineParser):
                 condition, tag = line.split()
                 self.current_meta = {'tag': tag, 'condition': condition.replace("#", "")}
             elif self.current_meta is not None:
-                raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
+                raise IOError("Your #ifdef/#ifndef section is ordered incorrectly."
                               "At line {} I read {} but there is still"
                               "an open #ifdef/#ifndef section from"
                               "before.".format(lineno, line.split()[0]))
+        elif line.startswith("#define"):
+            pass
         # Guard against unkown pragmas like #if or #include
         else:
-            raise IOError("Don't know how to parse pargma {} at"
+            raise IOError("Don't know how to parse pragma {} at"
                           "line {}.".format(line, lineno))
 
     def parse_header(self, line, lineno=0):
@@ -225,7 +227,7 @@ class ITPDirector(SectionLineParser):
         before calling the parent method.
         """
         if self.current_meta is not None:
-            raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
+            raise IOError("Your #ifdef/#ifndef section is ordered incorrectly."
                           "There is no #endif for the last pragma.")
 
         super().finalize()

@@ -23,14 +23,19 @@ import os
 import subprocess
 import tempfile
 import re
+import itertools
 
 from ..file_writer import deferred_open
 from ..pdb import pdb
 from ..system import System
 from ..processors.processor import Processor
+from ..processors import SortMoleculeAtoms
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 from .. import utils
 from ..log_helpers import StyleAdapter, get_logger
+
+SS_CG = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
+           'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
 
 try:
     import mdtraj
@@ -176,10 +181,14 @@ def run_mdtraj(system):
         The secondary structure sequences of all the molecules are combined
         in a single list without delimitation.
     """
+    sys_copy = system.copy()
+    # precaution for large systems; mdtraj requires all residues to be
+    # grouped together otherwise dssp fails
+    SortMoleculeAtoms(target_attr='atomid').run_system(sys_copy)
     tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
                                                     dir='.', prefix='dssp_in_')
     tmpfile_handle = os.fdopen(tmpfile_handle, mode='w')
-    tmpfile_handle.write(pdb.write_pdb_string(system, conect=False))
+    tmpfile_handle.write(pdb.write_pdb_string(sys_copy, conect=False))
     tmpfile_handle.close()
 
     try:
@@ -266,8 +275,13 @@ def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
         savefile = _savefile_path(system, savedir)
     else:
         savefile = None
-    # check version
-    process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    try:
+        # check version
+        process = subprocess.run([executable, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except FileNotFoundError:
+        raise DSSPError("DSSP executable not found. Perhaps MDTraj was not installed in the environment?")
+
     match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
     version = match[0] if match else None
     if not version:
@@ -316,7 +330,7 @@ def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
     return read_dssp2(process.stdout.split('\n'))
 
 
-def annotate_dssp(molecule, callable=None, attribute='secstruct'):
+def annotate_dssp(molecule, callable=None, attribute='aasecstruct'):
     """
     Adds the DSSP assignation to the atoms of a molecule.
 
@@ -406,15 +420,13 @@ def convert_dssp_to_martini(sequence):
         A sequence of secondary structures usable for martini. One letter per
         residue.
     """
-    ss_cg = {'1': 'H', '2': 'H', '3': 'H', 'H': 'H', 'G': 'H', 'I': 'H',
-             'B': 'E', 'E': 'E', 'T': 'T', 'S': 'S', 'C': 'C'}
     patterns = collections.OrderedDict([
         ('.H.', '.3.'), ('.HH.', '.33.'), ('.HHH.', '.333.'),
         ('.HHHH.', '.3333.'), ('.HHHHH.', '.13332.'),
         ('.HHHHHH.', '.113322.'), ('.HHHHHHH.', '.1113222.'),
         ('.HHHH', '.1111'), ('HHHH.', '2222.'),
     ])
-    cg_sequence = ''.join(ss_cg[secstruct] for secstruct in sequence)
+    cg_sequence = ''.join(SS_CG[secstruct] for secstruct in sequence)
     wildcard_sequence = ''.join('H' if secstruct == 'H' else '.'
                                 for secstruct in cg_sequence)
     # Flank the sequence with dots. Otherwise in a sequence consisting of only
@@ -493,7 +505,7 @@ def annotate_residues_from_sequence(molecule, attribute, sequence):
 
 
 def convert_dssp_annotation_to_martini(
-        molecule, from_attribute='secstruct', to_attribute='cgsecstruct'):
+        molecule, from_attribute='aasecstruct', to_attribute='cgsecstruct'):
     """
     For every node in `molecule`, translate the `from_attribute` with
     :func:`convert_dssp_to_martini`, and assign it to the attribute
@@ -531,6 +543,24 @@ def convert_dssp_annotation_to_martini(
         raise ValueError('Not all residues have a DSSP assignation.')
 
 
+def gmx_system_header(system):
+
+    ss_sequence = list(
+        itertools.chain(
+            *(
+                sequence_from_residues(molecule, "aasecstruct")
+                for molecule in system.molecules
+                if is_protein(molecule)
+            )
+        )
+    )
+
+    if None not in ss_sequence and ss_sequence:
+        system.meta["header"].extend(("The following sequence of secondary structure ",
+                                      "was used for the full system:",
+                                      "".join(ss_sequence),
+                                     ))
+
 class AnnotateDSSP(Processor):
     name = 'AnnotateDSSP'
 
@@ -559,6 +589,10 @@ class AnnotateMartiniSecondaryStructures(Processor):
     def run_molecule(molecule):
         convert_dssp_annotation_to_martini(molecule)
         return molecule
+
+    def run_system(self, system):
+        gmx_system_header(system)
+        super().run_system(system)
 
 
 class AnnotateResidues(Processor):

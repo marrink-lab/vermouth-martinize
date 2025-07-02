@@ -52,19 +52,18 @@ def is_protein(molecule):
     )
 
 
-def select_all(_):
+def select_all(_, __="_"):
     """
     Returns True for all particles.
     """
     return True
 
 
-# TODO: Have the backbone definition be force field specific.
-def select_backbone(node):
+def select_backbone(node, bb_atomname="BB"):
     """
     Returns True if `node` is in a protein backbone.
     """
-    return node.get('atomname') == 'BB'
+    return node.get('atomname') == bb_atomname
 
 
 def selector_has_position(atom):
@@ -148,7 +147,7 @@ def proto_multi_templates(node, templates, ignore_keys=()):
     )
 
 
-def filter_minimal(molecule, selector):
+def filter_minimal(molecule, selector, *args, **kwargs):
     """
     Yield the atom keys that match the selector.
 
@@ -176,5 +175,5 @@ def filter_minimal(molecule, selector):
         Keys of the atoms that match the selection.
     """
     for name, atom in molecule.nodes.items():
-        if selector(atom):
+        if selector(atom, *args, **kwargs):
             yield name

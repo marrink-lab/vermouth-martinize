@@ -19,7 +19,7 @@ Unit tests for the Go contact map reader.
 import pytest
 import hypothesis
 import hypothesis.strategies as st
-from vermouth.rcsu.go_utils import _get_bead_size, _in_resid_region, get_go_type_from_attributes
+from vermouth.rcsu.go_utils import _get_bead_size, _in_resid_region, get_go_type_from_attributes, _in_chain_and_resid_region
 from vermouth.tests.molecule_strategies import random_molecule
 
 @pytest.mark.parametrize('atype, size', (
@@ -56,3 +56,20 @@ def test_get_go_type_from_attributes(mol):
     mol.add_node(vs_node, atype="prefix_0", chain="A", resid=5)
     found_atype = next(get_go_type_from_attributes(mol, prefix="prefix", chain="A", resid=5))
     assert found_atype == "prefix_0"
+
+@pytest.mark.parametrize('regions, resid, chain, result', (
+        # single region true
+        ({'chain': "A", 'resids': [(101, 120)]}, 115, 'A', True),
+        # single region false resid
+        ({'chain': "A", 'resids': [(101, 120)]}, 125, 'A', False),
+        # single region false chain
+        ({'chain': "A", 'resids': [(101, 120)]}, 115, 'B', False),
+        # two regions true
+        ({'chain': "A", 'resids': [(101, 120), (130, 150)]}, 115, 'A', True),
+        # two regions false chain
+        ({'chain': "A", 'resids': [(101, 120), (130, 150)]}, 115, 'B', False),
+        # two regions false resid
+        ({'chain': "A", 'resids': [(101, 120), (130, 150)]}, 125, 'A', False)
+))
+def test_in_chain_and_resid_region(regions, resid, chain, result):
+    assert result == _in_chain_and_resid_region(regions, resid, chain)

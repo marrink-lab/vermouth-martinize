@@ -39,12 +39,13 @@ PATTERN = '{path}/{tier}/{protein}/martinize2/'
 MARTINIZE2 = find_in_path()
 
 
-def assert_equal_blocks(block1, block2):
+def assert_equal_blocks(block1, block2, blocknames_equal=True):
     """
     Asserts that two blocks are equal to gain the pytest rich comparisons,
     which is lost when doing `assert block1 == block2`
     """
-    assert block1.name == block2.name
+    if blocknames_equal:
+        assert block1.name == block2.name
     assert block1.nrexcl == block2.nrexcl
     assert block1.force_field == block2.force_field  # Set to be equal
     # Assert the order to be equal as well...
@@ -136,10 +137,22 @@ def compare_goatomtypes(fileref, filecomp):
     for key in ref.keys(): 
         assert ref[key] == compare[key]  #assert correct atom definition string
 
+def compare_written_contact_map(fileref, filecomp):
+    with open(fileref) as f0:
+        ref_lines = f0.readlines()
+
+    with open(filecomp) as f1:
+        comp_lines = f1.readlines()
+
+    # compare from line 1 otherwise we compare martinize version
+    for (ref, comp) in zip(ref_lines[1:], comp_lines[1:]):
+        assert ref == comp
+
 GOCOMPARERS = {'go_nbparams.itp': compare_nbparams,
                'virtual_sites_nonbond_params.itp': compare_nbparams,
                'go_atomtypes.itp': compare_goatomtypes,
-               'virtual_sites_atomtypes.itp': compare_goatomtypes}
+               'virtual_sites_atomtypes.itp': compare_goatomtypes,
+               'martinize_contact_map.out': compare_written_contact_map}
 
 def _interaction_equal(interaction1, interaction2):
     """
@@ -147,7 +160,16 @@ def _interaction_equal(interaction1, interaction2):
     interaction parameters.
     """
     p1 = list(map(float, interaction1.parameters))
-    p2 = list(map(float, interaction2.parameters))
+    try:
+        p2 = list(map(float, interaction2.parameters))
+    # position restraints are now defined using #ifndef statements, which do not map to floats.
+    # i.e. interaction2.parameters = ['1', 'POSRES_FC', 'POSRES_FC', 'POSRES_FC']
+    # except the error and write out the interaction explicitly iff the current interaction is a position restraint
+    # TODO parse define statements in itps properly
+    except ValueError:
+        if interaction2.parameters[1] == 'POSRES_FC':
+            p2 = list(map(float, ['1', '1000', '1000', '1000']))
+
     return interaction1.atoms == interaction2.atoms \
            and interaction1.meta == interaction2.meta \
            and pytest.approx(p1) == p2
@@ -172,6 +194,8 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-1', 'EN_chain'],
     ['tier-1', 'EN_region'],
     ['tier-1', 'hst5'],
+    ['tier-1', '1UBQ'],
+    ['tier-1', 'lysozyme_GO_internal']
 #   ['tier-2', 'barnase_barstar'],
 #   ['tier-2', 'dna'],
 #   ['tier-2', 'gpa_dimer'],

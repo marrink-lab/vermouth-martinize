@@ -1,0 +1,510 @@
+; Copyright 2018 University of Groningen
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;    http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+[ bondedtypes ] 
+; Column 1 : default bondtype
+; Column 2 : default angletype
+; Column 3 : default proper dihedraltype
+; Column 4 : default improper dihedraltype
+; Column 5 : This controls the generation of dihedrals from the bonding.
+;            All possible dihedrals are generated automatically. A value of
+;            1 here means that all these are retained. A value of
+;            0 here requires generated dihedrals be removed if
+;              * there are any dihedrals on the same central atoms
+;                specified in the residue topology, or
+;              * there are other identical generated dihedrals
+;                sharing the same central atoms, or
+;              * there are other generated dihedrals sharing the
+;                same central bond that have fewer hydrogen atoms
+; Column 6 : number of neighbors to exclude from non-bonded interactions
+; Column 7 : 1 = generate 1,4 interactions between pairs of hydrogen atoms
+;            0 = do not generate such
+; Column 8 : 1 = remove proper dihedrals if found centered on the same
+;                bond as an improper dihedral
+;            0 = do not generate such
+; bondtype angletype dihedraltype impropertype all_dih nrexcl HH14 bRemoveDih
+     1       5            9            2         1       3     1       0
+
+[ CYSF ]
+; Cysteine-Farnesyl
+  [ atoms ]
+        N      NH1 -0.4700   1
+       HN        H  0.3100   2
+       CA      CT1  0.0700   3
+       HA      HB1  0.0900   4
+        C        C  0.5100   5
+        O        O -0.5100   6
+       CB      CT2 -0.1300   7
+      HB1      HA2  0.0900   8
+      HB2      HA2  0.0900   9
+       SG        S -0.1000  10
+       C1    CG321 -0.1300  11
+      H1A     HGA2  0.0900  12
+      H1B     HGA2  0.0900  13
+       C2    CG2D1 -0.1500  14
+      H2A     HGA4  0.1500  15
+       C3    CG2D1  0.0000  16
+       C4    CG331 -0.2700  17
+      H4A     HGA3  0.0900  18
+      H4B     HGA3  0.0900  19
+      H4C     HGA3  0.0900  20
+       C5    CG321 -0.1800  21
+      H5A     HGA2  0.0900  22
+      H5B     HGA2  0.0900  23
+       C6    CG321 -0.1800  24
+      H6A     HGA2  0.0900  25
+      H6B     HGA2  0.0900  26
+       C7    CG2D1 -0.1500  27
+      H7A     HGA4  0.1500  28
+       C8    CG2D1  0.0000  29
+       C9    CG331 -0.2700  30
+      H9A     HGA3  0.0900  31
+      H9B     HGA3  0.0900  32
+      H9C     HGA3  0.0900  33
+      C10    CG321 -0.1800  34
+     H10A     HGA2  0.0900  35
+     H10B     HGA2  0.0900  36
+      C11    CG321 -0.1800  37
+     H11A     HGA2  0.0900  38
+     H11B     HGA2  0.0900  39
+      C12    CG2D1 -0.1500  40
+     H12A     HGA4  0.1500  41
+      C13    CG2D1  0.0000  42
+      C14    CG331 -0.2700  43
+     H14A     HGA3  0.0900  44
+     H14B     HGA3  0.0900  45
+     H14C     HGA3  0.0900  46
+      C15    CG331 -0.2700  47
+     H15A     HGA3  0.0900  48
+     H15B     HGA3  0.0900  49
+     H15C     HGA3  0.0900  50
+  [ bonds ]
+       CB    CA
+       SG    CB
+        N    HN
+        N    CA
+        C    CA
+        C    +N
+       CA    HA
+       CB   HB1
+       CB   HB2
+       SG    C1
+        O     C
+       C1    C2
+       C3    C4
+       C3    C5
+       C2    C3
+       C1   H1A
+       C1   H1B
+       C2   H2A
+       C4   H4A
+       C4   H4B
+       C4   H4C
+       C5   H5A
+       C5   H5B
+       C5    C6
+       C6    C7
+       C8    C9
+       C8   C10
+       C7    C8
+       C6   H6A
+       C6   H6B
+       C7   H7A
+       C9   H9A
+       C9   H9B
+       C9   H9C
+      C10  H10A
+      C10  H10B
+      C10   C11
+      C11   C12
+      C13   C14
+      C13   C15
+      C12   C13
+      C11  H11A
+      C11  H11B
+      C12  H12A
+      C14  H14A
+      C14  H14B
+      C14  H14C
+      C15  H15A
+      C15  H15B
+      C15  H15C
+ [ impropers ]
+        N       -C      CA      HN
+        C       CA      +N      O
+ [ cmap ]
+        -C      N       CA      C       +N
+
+[ CYSG ]
+; Cysteine-Geranyl
+  [ atoms ]
+        N      NH1 -0.4700   1
+       HN        H  0.3100   1
+       CA      CT1  0.0700   1
+       HA      HB1  0.0900   1
+        C        C  0.5100   2
+        O        O -0.5100   2
+       CB      CT2 -0.1300   3
+      HB1      HA2  0.0900   3
+      HB2      HA2  0.0900   3
+       SG        S -0.1000   3
+       C1    CG321 -0.1300   3
+      H1A     HGA2  0.0900   3
+      H1B     HGA2  0.0900   3
+       C2    CG2D1 -0.1500   4
+      H2A     HGA4  0.1500   4
+       C3    CG2D1  0.0000   5
+       C4    CG331 -0.2700   6
+      H4A     HGA3  0.0900   6
+      H4B     HGA3  0.0900   6
+      H4C     HGA3  0.0900   6
+       C5    CG321 -0.1800   7
+      H5A     HGA2  0.0900   7
+      H5B     HGA2  0.0900   7
+       C6    CG321 -0.1800   8
+      H6A     HGA2  0.0900   8
+      H6B     HGA2  0.0900   8
+       C7    CG2D1 -0.1500   9
+      H7A     HGA4  0.1500   9
+       C8    CG2D1  0.0000  10
+       C9    CG331 -0.2700  11
+      H9A     HGA3  0.0900  11
+      H9B     HGA3  0.0900  11
+      H9C     HGA3  0.0900  11
+      C10    CG321 -0.1800  12
+     H10A     HGA2  0.0900  12
+     H10B     HGA2  0.0900  12
+      C11    CG321 -0.1800  13
+     H11A     HGA2  0.0900  13
+     H11B     HGA2  0.0900  13
+      C12    CG2D1 -0.1500  14
+     H12A     HGA4  0.1500  14
+      C13    CG2D1  0.0000  15
+      C14    CG331 -0.2700  16
+     H14A     HGA3  0.0900  16
+     H14B     HGA3  0.0900  16
+     H14C     HGA3  0.0900  16
+      C15    CG321 -0.1800  17
+     H15A     HGA2  0.0900  17
+     H15B     HGA2  0.0900  17
+      C16    CG321 -0.1800  18
+     H16A     HGA2  0.0900  18
+     H16B     HGA2  0.0900  18
+      C17    CG2D1 -0.1500  19
+     H17A     HGA4  0.1500  19
+      C18    CG2D1  0.0000  20
+      C19    CG331 -0.2700  21
+     H19A     HGA3  0.0900  21
+     H19B     HGA3  0.0900  21
+     H19C     HGA3  0.0900  21
+      C20    CG331 -0.2700  22
+     H20A     HGA3  0.0900  22
+     H20B     HGA3  0.0900  22
+     H20C     HGA3  0.0900  22
+  [ bonds ]
+       CB    CA
+       SG    CB
+        N    HN
+        N    CA
+        C    CA
+        C    +N
+       CA    HA
+       CB   HB1
+       CB   HB2
+       SG    C1
+        O     C
+       C1    C2
+       C3    C4
+       C3    C5
+       C2    C3
+       C1   H1A
+       C1   H1B
+       C2   H2A
+       C4   H4A
+       C4   H4B
+       C4   H4C
+       C5   H5A
+       C5   H5B
+       C5    C6
+       C6    C7
+       C8    C9
+       C8   C10
+       C7    C8
+       C6   H6A
+       C6   H6B
+       C7   H7A
+       C9   H9A
+       C9   H9B
+       C9   H9C
+      C10  H10A
+      C10  H10B
+      C10   C11
+      C11   C12
+      C13   C14
+      C13   C15
+      C12   C13
+      C11  H11A
+      C11  H11B
+      C12  H12A
+      C14  H14A
+      C14  H14B
+      C14  H14C
+      C15  H15A
+      C15  H15B
+      C15   C16
+      C16   C17
+      C18   C19
+      C18   C20
+      C17   C18
+      C16  H16A
+      C16  H16B
+      C17  H17A
+      C19  H19A
+      C19  H19B
+      C19  H19C
+      C20  H20A
+      C20  H20B
+      C20  H20C
+
+[ CYSP ]
+; Cysteine-Palmitate
+  [ atoms ]
+        N      NH1 -0.4700   1
+       HN        H  0.3100   1
+       CA      CT1  0.0700   1
+       HA      HB1  0.0900   1
+        C        C  0.5100   2
+        O        O -0.5100   2
+       CB      CT2 -0.0500   3
+      HB1      HA2  0.0900   3
+      HB2      HA2  0.0900   3
+       SG        S -0.3400   3
+       C1       CL  0.6300   3
+       O1      OBL -0.5200   3
+       C2     CTL2 -0.0800   3
+      H2A     HAL2  0.0900   3
+      H2B     HAL2  0.0900   3
+       C3     CTL2 -0.1800   4
+      H3A     HAL2  0.0900   4
+      H3B     HAL2  0.0900   4
+       C4     CTL2 -0.1800   5
+      H4A     HAL2  0.0900   5
+      H4B     HAL2  0.0900   5
+       C5     CTL2 -0.1800   6
+      H5A     HAL2  0.0900   6
+      H5B     HAL2  0.0900   6
+       C6     CTL2 -0.1800   7
+      H6A     HAL2  0.0900   7
+      H6B     HAL2  0.0900   7
+       C7     CTL2 -0.1800   8
+      H7A     HAL2  0.0900   8
+      H7B     HAL2  0.0900   8
+       C8     CTL2 -0.1800   9
+      H8A     HAL2  0.0900   9
+      H8B     HAL2  0.0900   9
+       C9     CTL2 -0.1800  10
+      H9A     HAL2  0.0900  10
+      H9B     HAL2  0.0900  10
+      C10     CTL2 -0.1800  11
+     H10A     HAL2  0.0900  11
+     H10B     HAL2  0.0900  11
+      C11     CTL2 -0.1800  12
+     H11A     HAL2  0.0900  12
+     H11B     HAL2  0.0900  12
+      C12     CTL2 -0.1800  13
+     H12A     HAL2  0.0900  13
+     H12B     HAL2  0.0900  13
+      C13     CTL2 -0.1800  14
+     H13A     HAL2  0.0900  14
+     H13B     HAL2  0.0900  14
+      C14     CTL2 -0.1800  15
+     H14A     HAL2  0.0900  15
+     H14B     HAL2  0.0900  15
+      C15     CTL2 -0.1800  16
+     H15A     HAL2  0.0900  16
+     H15B     HAL2  0.0900  16
+      C16     CTL3 -0.2700  17
+     H16A     HAL3  0.0900  17
+     H16B     HAL3  0.0900  17
+     H16C     HAL3  0.0900  17
+  [ bonds ]
+       CB    CA
+       SG    CB
+        N    HN
+        N    CA
+        C    CA
+        C    +N
+       CA    HA
+       CB   HB1
+       CB   HB2
+       SG    C1
+        O     C
+       C1    O1
+       C1    C2
+       C2   H2A
+       C2   H2B
+       C2    C3
+       C3   H3A
+       C3   H3B
+       C3    C4
+       C4   H4A
+       C4   H4B
+       C4    C5
+       C5   H5A
+       C5   H5B
+       C5    C6
+       C6   H6A
+       C6   H6B
+       C6    C7
+       C7   H7A
+       C7   H7B
+       C7    C8
+       C8   H8A
+       C8   H8B
+       C8    C9
+       C9   H9A
+       C9   H9B
+       C9   C10
+      C10  H10A
+      C10  H10B
+      C10   C11
+      C11  H11A
+      C11  H11B
+      C11   C12
+      C12  H12A
+      C12  H12B
+      C12   C13
+      C13  H13A
+      C13  H13B
+      C13   C14
+      C14  H14A
+      C14  H14B
+      C14   C15
+      C15  H15A
+      C15  H15B
+      C15   C16
+      C16  H16A
+      C16  H16B
+      C16  H16C
+  [ impropers ]
+       C1    O1    SG    C2
+        N    -C    CA    HN
+        C    CA    +N     O
+
+[ GLYM ]
+; Glycine-myristate
+  [ atoms ]
+        N      NH1 -0.4700   1
+       HN        H  0.3100   1
+       CA      CT2 -0.0200   1
+      HA1      HB2  0.0900   1
+      HA2      HB2  0.0900   1
+        C        C  0.5100   2
+        O        O -0.5100   2
+       C1        C  0.5500   3
+       O1        O -0.6000   3
+       C2     CTL2 -0.0700   3
+      H2A     HAL2  0.0600   3
+      H2B     HAL2  0.0600   3
+       C3     CTL2 -0.1800   4
+      H3A     HAL2  0.0900   4
+      H3B     HAL2  0.0900   4
+       C4     CTL2 -0.1800   5
+      H4A     HAL2  0.0900   5
+      H4B     HAL2  0.0900   5
+       C5     CTL2 -0.1800   6
+      H5A     HAL2  0.0900   6
+      H5B     HAL2  0.0900   6
+       C6     CTL2 -0.1800   7
+      H6A     HAL2  0.0900   7
+      H6B     HAL2  0.0900   7
+       C7     CTL2 -0.1800   8
+      H7A     HAL2  0.0900   8
+      H7B     HAL2  0.0900   8
+       C8     CTL2 -0.1800   9
+      H8A     HAL2  0.0900   9
+      H8B     HAL2  0.0900   9
+       C9     CTL2 -0.1800  10
+      H9A     HAL2  0.0900  10
+      H9B     HAL2  0.0900  10
+      C10     CTL2 -0.1800  11
+     H10A     HAL2  0.0900  11
+     H10B     HAL2  0.0900  11
+      C11     CTL2 -0.1800  12
+     H11A     HAL2  0.0900  12
+     H11B     HAL2  0.0900  12
+      C12     CTL2 -0.1800  13
+     H12A     HAL2  0.0900  13
+     H12B     HAL2  0.0900  13
+      C13     CTL2 -0.1800  14
+     H13A     HAL2  0.0900  14
+     H13B     HAL2  0.0900  14
+      C14     CTL3 -0.2700  15
+     H14A     HAL3  0.0900  15
+     H14B     HAL3  0.0900  15
+     H14C     HAL3  0.0900  15
+  [ bonds ]
+        N    HN
+        N    CA
+        C    CA
+        C    +N
+       CA   HA1
+       CA   HA2
+        N    C1
+        O     C
+       C1    O1
+       C1    C2
+       C2   H2A
+       C2   H2B
+       C2    C3
+       C3   H3A
+       C3   H3B
+       C3    C4
+       C4   H4A
+       C4   H4B
+       C4    C5
+       C5   H5A
+       C5   H5B
+       C5    C6
+       C6   H6A
+       C6   H6B
+       C6    C7
+       C7   H7A
+       C7   H7B
+       C7    C8
+       C8   H8A
+       C8   H8B
+       C8    C9
+       C9   H9A
+       C9   H9B
+       C9   C10
+      C10  H10A
+      C10  H10B
+      C10   C11
+      C11  H11A
+      C11  H11B
+      C11   C12
+      C12  H12A
+      C12  H12B
+      C12   C13
+      C13  H13A
+      C13  H13B
+      C13   C14
+      C14  H14A
+      C14  H14B
+      C14  H14C
+  [ impropers ]
+       C1    O1     N    C2
+        N    C1    CA    HN
+        C    CA    +N     O

@@ -8,3 +8,4 @@ hypothesis
 hypothesis-networkx
 codecov
 mdtraj
+pycifrw
