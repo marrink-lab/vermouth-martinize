@@ -45,7 +45,8 @@ class ITPDirector(SectionLineParser):
                  'dihedral_restraints':  [slice(0, 4)],
                  'orientation_restraints': [0, 1],
                  'angle_restraints': [slice(0, 4)],
-                 'angle_restraints_z': [0, 1]}
+                 'angle_restraints_z': [0, 1],
+                 'cmap': [slice(0, 5)]}
 
     def __init__(self, force_field):
         super().__init__()
@@ -270,6 +271,7 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'orientation_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints_z')
+    @SectionLineParser.section_parser('moleculetype', 'cmap')
     def _interactions(self, line, lineno=0):
         """
         Parses all interaction lines that are not directives (i.e. within []).

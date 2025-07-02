@@ -79,7 +79,8 @@ class FFDirector(SectionLineParser):
         'dihedral_restraints': 4,
         'orientation_restraints': 2,
         'angle_restraints': 4,
-        'angle_restraints_z': 2
+        'angle_restraints_z': 2,
+        'cmap': 5,
     }
 
     def __init__(self, force_field):
@@ -294,10 +295,10 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'orientation_restraints', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints', context_type='block')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints_z', context_type='block')
+    @SectionLineParser.section_parser('moleculetype', 'cmap', context_type='block')
     @SectionLineParser.section_parser('link', 'bonds', context_type='link')
     @SectionLineParser.section_parser('link', 'angles', context_type='link')
     @SectionLineParser.section_parser('link', 'impropers', context_type='link')
-
     @SectionLineParser.section_parser('link', 'constraints', context_type='link')
     @SectionLineParser.section_parser('link', 'pairs', context_type='link')
     @SectionLineParser.section_parser('link', 'exclusions', context_type='link')
@@ -312,7 +313,8 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('link', 'dihedral_restraints', context_type='link')
     @SectionLineParser.section_parser('link', 'orientation_restraints', context_type='link')
     @SectionLineParser.section_parser('link', 'angle_restraints', context_type='link')
-    @SectionLineParser.section_parser('link', 'angle_restraints_z', context_type='link')
+    @sectionlineparser.section_parser('link', 'angle_restraints_z', context_type='link')
+    @SectionLineParser.section_parser('link', 'cmap', context_type='link')
     @SectionLineParser.section_parser('link', '!bonds', context_type='link')
     @SectionLineParser.section_parser('link', '!angles', context_type='link')
     @SectionLineParser.section_parser('link', '!impropers', context_type='link')
@@ -331,6 +333,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('link', '!orientation_restraints', context_type='link')
     @SectionLineParser.section_parser('link', '!angle_restraints', context_type='link')
     @SectionLineParser.section_parser('link', '!angle_restraints_z', context_type='link')
+    @SectionLineParser.section_parser('link', '!cmap', context_type='link')
     @SectionLineParser.section_parser('modification', 'bonds', context_type='modification')
     @SectionLineParser.section_parser('modification', 'angles', context_type='modification')
     @SectionLineParser.section_parser('modification', 'impropers', context_type='modification')
@@ -349,6 +352,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('modification', 'orientation_restraints', context_type='modification')
     @SectionLineParser.section_parser('modification', 'angle_restraints', context_type='modification')
     @SectionLineParser.section_parser('modification', 'angle_restraints_z', context_type='modification')
+    @SectionLineParser.section_parser('modification', 'cmap', context_type='modification')
     def _interactions(self, line, lineno=0, context_type=''):
         context = self.get_context(context_type)
         interaction_name = self.section[-1]
