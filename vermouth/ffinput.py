@@ -313,7 +313,7 @@ class FFDirector(SectionLineParser):
     @SectionLineParser.section_parser('link', 'dihedral_restraints', context_type='link')
     @SectionLineParser.section_parser('link', 'orientation_restraints', context_type='link')
     @SectionLineParser.section_parser('link', 'angle_restraints', context_type='link')
-    @SectionLineparser.section_parser('link', 'angle_restraints_z', context_type='link')
+    @SectionLineParser.section_parser('link', 'angle_restraints_z', context_type='link')
     @SectionLineParser.section_parser('link', 'cmap', context_type='link')
     @SectionLineParser.section_parser('link', '!bonds', context_type='link')
     @SectionLineParser.section_parser('link', '!angles', context_type='link')
