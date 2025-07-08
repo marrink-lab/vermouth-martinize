@@ -784,8 +784,10 @@ def entry():
     # Add flag warnings
     if args.dssp is None and args.ss is None:
         LOGGER.warning("topology will be created without secondary structure information,"
-                       "are you confident you do not want to use the -dssp flag? Read question"
-                        "707 for more information.",
+                       " are you confident you do not want to use the -dssp or -ss flag? Read question"
+                        " #707 (https://github.com/marrink-lab/vermouth-martinize/discussions/707)"
+                        " for more information. If you are sure, you can either explicitly provide `-ss C`,"
+                        " or use the -maxwarn flag.",
                         type="missing-flag",
         )
 
