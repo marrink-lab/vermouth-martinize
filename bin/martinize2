@@ -783,7 +783,7 @@ def entry():
 
     if args.dssp is None:
         LOGGER.warning("topology will be created without secondary structure information,"
-                       "are you confident you do not want to use the -dssp flag? Read issue"
+                       "are you confident you do not want to use the -dssp flag? Read question"
                         "707 for more information.",
                         type="missing-flag",
         )
