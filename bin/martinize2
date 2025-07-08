@@ -782,7 +782,7 @@ def entry():
     LOGGER.setLevel(loglevels[args.verbosity])
     
     # Add flag warnings
-    if args.dssp is None:
+    if args.dssp is None and args.ss is None:
         LOGGER.warning("topology will be created without secondary structure information,"
                        "are you confident you do not want to use the -dssp flag? Read question"
                         "707 for more information.",
