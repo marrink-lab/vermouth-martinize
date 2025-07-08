@@ -370,6 +370,8 @@ class Molecule(nx.Graph):
 
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], Molecule):
+            # Create a new molecule from an existing one:
+            # mol = Molecule(old_mol)
             super().__init__(*args, **kwargs)
             other = args[0]
             self.meta = copy.deepcopy(other.meta)
