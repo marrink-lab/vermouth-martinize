@@ -25,6 +25,7 @@ C-ter
 C   BB
 O  BB
 OXT  BB
+CA CA
 [ reference atoms ]
 BB C
 
@@ -38,6 +39,7 @@ N-ter
 [to blocks]
 N-ter
 [mapping]
+C   BB
 CA  CA
 N   CA
 HN CA  0
