@@ -137,16 +137,16 @@ def _get_reference_residue(residue, force_field):
         resname = residue['resname']
     reference_block = force_field.reference_graphs[resname]
 
-    if 'modification' in residue:
-        modifications = residue['modification']
+    if 'annotated_modifications' in residue:
+        modifications = residue['annotated_modifications']
         for mod_name in modifications:
             LOGGER.info('Applying modification {} to residue {}-{}{}',
                         mod_name, residue['chain'], resname, residue['resid'])
-            if mod_name != 'none':
+            if mod_name not in ('none', '+'):
                 mod = force_field.modifications[mod_name]
                 reference_block = _patch_modification(reference_block, mod)
         for node_idx in reference_block:
-            reference_block.nodes[node_idx]['modification'] = modifications
+            reference_block.nodes[node_idx]['annotated_modifications'] = modifications
     if 'mutation' in residue:
         for node_idx in reference_block:
             reference_block.nodes[node_idx]['mutation'] = mutation
@@ -198,7 +198,7 @@ def make_reference(mol):
     for residx in residues:
         # TODO: make separate function for just one residue.
         # TODO: Merge degree 1 nodes (hydrogens!) with the parent node. And
-        # check whether the node degrees match?
+        #       check whether the node degrees match?
 
         resname = residues.nodes[residx]['resname']
         resid = residues.nodes[residx]['resid']
@@ -285,11 +285,11 @@ def make_reference(mol):
                          "reference.", chain, resname, resid, type='inconsistent-data')
             continue
         # TODO: Since we only have one isomorphism we don't know whether the
-        # assigment we're making is ambiguous. So iff the residue is small
-        # enough (or a flag is set, whatever), also find the second isomorphism
-        # and check whether it has the same number of correct atomnames. If so,
-        # issue a warning and carry on. We can't do this for all residues,
-        # since that takes a cup of coffee.
+        #       assigment we're making is ambiguous. So iff the residue is small
+        #       enough (or a flag is set, whatever), also find the second isomorphism
+        #       and check whether it has the same number of correct atomnames. If so,
+        #       issue a warning and carry on. We can't do this for all residues,
+        #       since that takes a cup of coffee.
 
         # "unsort" the matches
         match = {old_ref_names[ref]: old_res_names[res] for ref, res in match.items()}
@@ -454,7 +454,7 @@ def repair_graph(molecule, reference_graph, include_graph=True):
     for residx in reference_graph:
         residue = reference_graph.nodes[residx]
         repair_residue(molecule, residue, include_graph=include_graph)
-        # Atomnames are canonized, and missing atoms added
+        # Atomnames are canonicalized, and missing atoms added
         found = reference_graph.nodes[residx]['found']
         match = reference_graph.nodes[residx]['match']
 
@@ -469,7 +469,7 @@ def repair_graph(molecule, reference_graph, include_graph=True):
         for idx in extra:
             molecule.nodes[idx]['PTM_atom'] = True
             found.nodes[idx]['PTM_atom'] = True
-            if molecule.nodes[idx].get('mutation') or molecule.nodes[idx].get('modification'):
+            if molecule.nodes[idx].get('mutation') or (molecule.nodes[idx].get('annotated_modifications') and '+' not in molecule.nodes[idx]['annotated_modifications']):
                 molecule.remove_node(idx)
 
     return molecule
@@ -480,7 +480,8 @@ class RepairGraph(Processor):
     Repairs a molecule such that it contains all atoms with appropriate atom
     names, as per the blocks in the system's force field, while taking any
     mutations and modification into account. These should be added as 'mutation'
-    and 'modification' attributes to the atoms of the relevant residues.
+    and 'annotated_modifications' attributes to the atoms of the relevant
+    residues.
 
     Attributes
     ----------
