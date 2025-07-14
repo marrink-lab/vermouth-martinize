@@ -1,8 +1,0 @@
-martinize2
--f ../aa.pdb
--ff martini3001
--x cg.pdb
--o topol.top
--ignore HOH
--dssp
--elastic
