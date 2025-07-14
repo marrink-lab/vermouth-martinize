@@ -1,0 +1,26 @@
+; THIO
+[ molecule ]
+THIP
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R2 R3 S1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C3 R3
+2 C2 R2
+3 C1 R2
+4 S5 S1
+5 C4 R3
+6 H3 R3
+7 H2 R2
+8 H1 R2
+9 H4 R3

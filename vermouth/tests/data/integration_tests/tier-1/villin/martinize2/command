@@ -6,3 +6,4 @@ martinize2
 -mutate A-MET53:VAL
 -resid input
 -noscfix
+-maxwarn 1

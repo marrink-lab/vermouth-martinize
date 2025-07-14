@@ -1,0 +1,36 @@
+[ molecule ]
+PHE
+
+[from]
+gromos
+
+[to]
+martini22
+
+[ martini ]
+BB SC1 SC2 SC3
+
+[ mapping ]
+gromos
+
+[ atoms ]
+    1     N    BB
+    2     H    BB
+    3    CA    BB
+    4    CB   SC1 BB
+    5    CG   SC1
+    6   CD1   SC1 SC3
+    7   HD1   SC1
+    8   CD2   SC2 SC1
+    9   HD2   SC2 
+;   10   CE1   SC3 SC3 SC3 SC1 SC2
+   10   CE1   SC3
+   11   HE1   SC3
+;   12   CE2   SC2 SC2 SC2 SC1 SC3 
+   12   CE2   SC2
+   13   HE2   SC2
+   14    CZ   SC3 SC2
+   15    HZ   SC3
+   16     C    BB
+   17     O    BB
+

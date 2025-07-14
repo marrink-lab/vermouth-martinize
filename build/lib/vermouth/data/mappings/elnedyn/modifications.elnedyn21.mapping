@@ -1,0 +1,157 @@
+[ modification ]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+
+[ from blocks ]
+C-ter
+[ to blocks ]
+C-ter
+
+[ from nodes ]
+N
+HN
+
+[ from edges ]
+HN N
+N CA
+
+[ mapping ]
+CA BB
+C  BB 0
+O  BB 0
+OXT BB 0
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+[ from blocks ]
+N-ter
+[ to blocks ]
+N-ter
+
+[ from nodes ]
+C
+O
+
+[ from edges ]
+C O
+CA C
+
+[ mapping ]
+HN2 BB 0
+HN3 BB 0
+N   BB 0
+CA  BB
+C   BB 0
+O   BB 0
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+
+[ from blocks ]
+COOH-ter
+[ to blocks ]
+COOH-ter
+
+[ from nodes ]
+N
+HN
+
+[ from edges ]
+HN N
+N CA
+
+[ mapping ]
+HN BB 0
+N BB 0
+CA BB
+C  BB 0
+O  BB 0
+HO BB 0
+OXT BB 0
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+[ from blocks ]
+NH2-ter
+[ to blocks ]
+NH2-ter
+
+[ from nodes ]
+C
+O
+
+[ from edges ]
+C O
+CA C
+
+[ mapping ]
+HN2 BB 0
+N   BB 0
+CA  BB
+C   BB 0
+O   BB 0
+
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+[ from blocks ]
+LYS-LSN
+[ to blocks ]
+LYS-LSN
+[ from nodes ]
+CE
+HE1
+HE2
+[ from edges ]
+CE NZ
+CE HE1
+CE HE2
+[ mapping ]
+CE  SC2
+HE1 SC2
+HE2 SC2
+NZ  SC2
+HZ1 SC2
+HZ2 SC2
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+[ from blocks ]
+LYS-HZ3
+[ to blocks ]
+LYS-HZ3
+[ from nodes ]
+CE
+HE1
+HE2
+[ from edges ]
+CE NZ
+CE HE1
+CE HE2
+[ mapping ]
+CE  SC2
+HE1 SC2
+HE2 SC2
+NZ  SC2
+HZ1 SC2
+HZ2 SC2
+HZ3 SC2

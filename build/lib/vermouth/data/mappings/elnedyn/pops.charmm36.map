@@ -1,0 +1,192 @@
+; Copyright 2018 University of Groningen
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;    http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+[ molecule ]
+POPS
+
+[from]
+charmm
+
+[to]
+elnedyn
+elnedyn22
+elnedyn22p
+
+[ martini ]
+CNO PO4 GL1 GL2 C1A C2A C3A C4A C1B C2B D3B C4B C5B
+
+[ mapping ]
+charmm27 charmm36
+
+[ atoms ]
+    1     N   CNO
+    2   HN1   CNO
+    3   HN2   CNO
+    4   HN3   CNO
+    5   C12   CNO CNO CNO PO4
+    6  H12A   CNO CNO CNO PO4
+    7   C13   CNO 
+    8  O13A   CNO
+    9  O13B   CNO
+   10   C11   PO4 CNO
+   11  H11A   PO4 CNO
+   12  H11B   PO4 CNO
+   13     P   PO4
+   14   O13   
+   15   O14   
+   16   O12   
+   17   O11   PO4 PO4 GL1
+   18    C1   GL1 GL1 PO4
+   19    HA   GL1 GL1 PO4
+   20    HB   GL1 GL1 PO4
+   21    C2   GL1 GL2
+   22    HS   GL1 GL2
+   23   O21   GL1 GL1 GL1 C1B 
+   24   C21   GL1 C1B
+   25   O22   GL1
+   26   C22   C1B C1B GL1 
+   27   H2R   C1B C1B GL1
+   28   H2S   C1B C1B GL1
+   29    C3   GL2 GL2 GL2 PO4
+   30    HX   GL2 GL2 GL2 PO4
+   31    HY   GL2 GL2 GL2 PO4
+   32   O31   GL2
+   33   C31   GL2 GL2 C1A
+   34   O32   GL2
+   35   C32   C1A C1A GL2
+   36   H2X   C1A C1A GL2
+   37   H2Y   C1A C1A GL2
+   38   C23   C1B
+   39   H3R   C1B
+   40   H3S   C1B
+   41   C24   C1B C1B C2B
+   42   H4R   C1B C1B C2B
+   43   H4S   C1B C1B C2B
+   44   C25   C1B C2B
+   45   H5R   C1B C2B
+   46   H5S   C1B C2B
+   47   C26   C2B C2B C1B
+   48   H6R   C2B C2B C1B
+   49   H6S   C2B C2B C1B
+   50   C27   C2B
+   51   H7R   C2B
+   52   H7S   C2B
+   53   C28   C2B D3B
+   54   H8R   C2B D3B
+   55   H8S   C2B D3B
+   56   C29   D3B D3B C2B
+   57   H91   D3B
+   58  C210   D3B D3B C4B
+   59  H101   D3B
+   60  C211   C4B D3B
+   61  H11R   C4B D3B
+   62  H11S   C4B D3B
+   63  C212   C4B
+   64  H12R   C4B
+   65  H12S   C4B
+   66  C213   C4B C4B C4B C5B
+   67  H13R   C4B C4B C4B C5B
+   68  H13S   C4B C4B C4B C5B
+   69  C214   C4B C4B C5B
+   70  H14R   C4B C4B C5B
+   71  H14S   C4B C4B C5B
+   72  C215   C5B C4B
+   73  H15R   C5B C4B
+   74  H15S   C5B C4B
+   75  C216   C5B C5B C4B
+   76  H16R   C5B C5B C4B
+   77  H16S   C5B C5B C4B
+   78  C217   C5B C5B C5B C4B
+   79  H17R   C5B C5B C5B C4B
+   80  H17S   C5B C5B C5B C4B
+   81  C218   C5B
+   82  H18R   C5B
+   83  H18S   C5B
+   84  H18T   C5B
+   85   C33   C1A
+   86   H3X   C1A
+   87   H3Y   C1A
+   88   C34   C1A C1A C2A
+   89   H4X   C1A C1A C2A
+   90   H4Y   C1A C1A C2A
+   91   C35   C1A C2A
+   92   H5X   C1A C2A
+   93   H5Y   C1A C2A
+   94   C36   C2A C2A C1A
+   95   H6X   C2A C2A C1A
+   96   H6Y   C2A C2A C1A
+   97   C37   C2A 
+   98   H7X   C2A
+   99   H7Y   C2A
+  100   C38   C2A C2A C2A C3A
+  101   H8X   C2A C2A C2A C3A
+  102   H8Y   C2A C2A C2A C3A
+  103   C39   C2A C2A C3A
+  104   H9X   C2A C2A C3A
+  105   H9Y   C2A C2A C3A
+  106  C310   C3A C2A 
+  107  H10X   C3A C2A
+  108  H10Y   C3A C2A
+  109  C311   C3A C3A C2A
+  110  H11X   C3A C3A C2A
+  111  H11Y   C3A C3A C2A
+  112  C312   C3A
+  113  H12X   C3A
+  114  H12Y   C3A
+  115  C313   C3A C3A C4A
+  116  H13X   C3A C3A C4A
+  117  H13Y   C3A C3A C4A
+  118  C314   C4A C3A
+  119  H14X   C4A C3A
+  120  H14Y   C4A C3A
+  121  C315   C4A C4A C3A
+  122  H15X   C4A C4A C3A
+  123  H15Y   C4A C4A C3A
+  124  C316   C4A
+  125  H16X   C4A
+  126  H16Y   C4A
+  127  H16Z   C4A
+
+; making 
+[out]
+ C13  N C3 C11
+[chiral]
+ H12A C12 N C11 C13
+[chiral]
+ C13 C12 H12A C11 N 
+ O13A C12 H12A C11 N
+ O13B C12 H12A C11 N
+
+
+;making R stereoisomer- placing HS
+[chiral]
+HS C2 O21 C1 C3
+
+; acyl esters
+[trans]
+C22 C21 O21 C2
+[ out ]
+O22 C21 O21 C22
+[trans]
+C32 C31 O31 C3
+[out]
+O32 C31 O31 C32
+
+;cis bonds in lipind chains
+[ out ]
+H9R C29 C28 C210
+[ trans ]
+H10R C210 C29 C28
+[ out ]
+C211 C210 C29 H10R

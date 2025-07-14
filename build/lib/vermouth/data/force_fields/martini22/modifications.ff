@@ -1,0 +1,44 @@
+[ modification ]
+C-ter
+[ atoms ]
+BB {"replace": {"atype": "Qa", "charge": -1}}
+
+[ modification ]
+N-ter
+[ atoms ]
+BB {"replace": {"atype": "Qd", "charge": 1}}
+
+[ modification ]
+zwitter
+[ atoms ]
+BB {"replace": {"atype": "Qda"}}
+
+[ modification ]
+COOH-ter
+[ atoms ]
+BB {"replace": {"atype": "P5", "charge": 0}}
+
+[ modification ]
+NH2-ter
+[ atoms ]
+BB {"replace": {"atype": "P5", "charge": 0}}
+
+[ modification ]
+TYRPHOS
+[ atoms ]
+SC3 {"replace": {"atype": "SNda"}}
+PO4 {"atype": "Qa", "charge": "-1", "PTM_atom": true}
+[ bonds ]
+SC3 PO4 1 0.47 1250 {"comment": "phospho"}
+[ edges ]
+SC3 PO4
+
+[ modification ]
+LYS-LSN
+[ atoms ]
+SC2 {"resname": "LYS", "replace": {"atype": "P1", "charge": 0}}
+
+[ modification ]
+LYS-HZ3
+[ atoms ]
+SC2 {"replace": {"resname": "LYS"}}

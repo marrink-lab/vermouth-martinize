@@ -1,0 +1,71 @@
+; Copyright 2018 University of Groningen
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;    http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+[ molecule ]
+TRP
+
+[from]
+universal
+
+[to]
+elnedyn21
+elnedyn22
+elnedyn22p
+
+[ martini ]
+BB SC1 SC2 SC3 SC4
+
+[ mapping ]
+charmm27 charmm36
+
+[ atoms ]
+    1     N    !BB
+    2    HN    !BB
+    3    CA    BB
+    5    CB   SC1
+    8    CG   SC1
+    9   CD1   SC2 
+   10   HD1   SC2
+   11   NE1   SC2
+   12   HE1   SC2
+   13   CE2   SC2
+   14   CD2   SC1
+   15   CE3   SC3
+   16   HE3   SC3
+   17   CZ3   SC3
+   18   HZ3   SC3 
+   19   CZ2   SC4
+   20   HZ2   SC4 
+   21   CH2   SC4
+   22   HH2   SC4
+   23    C    !BB
+   24    O    !BB
+
+[ trans ]
+CB  CG  CD2 CE2  
+HD1 CD1 NE1 CE2
+HE1 NE1 CD1 CG
+HE3 CE3 CD2 CE2
+HZ2 CZ2 CE2 CD2
+HZ3 CZ3 CE3 CD2
+HH2 CH2 CZ3 CE3
+
+[ chiral ]
+  CB     CA    N    C  
+  HB1    CA    N    C
+  HB2    CA    N    C
+
+[ chiral ]
+  HA     CA    N    CB    C ; L-Trp
+; HA     CA    N    C    CB ; D-Trp

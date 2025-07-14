@@ -1,0 +1,23 @@
+[ molecule ]
+ALA
+
+[from]
+gromos
+
+[to]
+martini22
+
+[ martini ]
+BB
+
+[ mapping ]
+gromos
+
+[ atoms ]
+    1     N    BB
+    2     H    BB
+    3    CA    BB
+    4    CB    BB
+    5     C    BB
+    6     O    BB
+

@@ -1,0 +1,10 @@
+martinize2
+-f ../aa.pdb
+-x cg.pdb
+-o topol.top
+-ff elnedyn21
+-ss CCSHHHHHHHHHHCCCCHHHHHHHHHHHTSCHHHHHHHTCCCC
+-nter NH2-ter
+-cter COOH-ter
+-ef 500
+-noscfix

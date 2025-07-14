@@ -1,0 +1,18 @@
+###
+This example checks that all non-physiological protonation
+states of ASP, GLU, LYS, HIS are detected correctly. It also
+checks that the HIS tautomers are correctly identified.
+
+## modifications
+GLU7  -> protonated
+LYS33 -> deprotonated
+ASP18 -> protonated
+HIS15 -> d-tautomer
+## unmodifed residues as control
+LYS96
+LYS97
+LYS116
+GLU35
+ASP48
+ASP48
+ASP52 (... and more)

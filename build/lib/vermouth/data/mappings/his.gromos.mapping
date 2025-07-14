@@ -1,0 +1,27 @@
+[ block ]
+[ from ]
+gromos
+[ to ]
+martini22
+
+[ from blocks ]
+HIS
+
+[ to blocks ]
+HSE
+
+[ mapping ]
+  N    BB
+  H    BB
+ CA    BB
+ CB   SC1
+ CG   SC1
+ND1   SC3
+HD1   SC3
+CD2   SC2
+HD2   SC2
+CE1   SC3
+HE1   SC3
+NE2   SC2
+  C    BB
+  O    BB

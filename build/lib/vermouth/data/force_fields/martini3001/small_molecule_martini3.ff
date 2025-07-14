@@ -1,0 +1,615 @@
+[ citations ]
+Martini3smallmolecules
+Martini3
+
+[ moleculetype ]
+FURA 1
+[ atoms ]
+1 TN2a 1 FURA O1 1 0.0
+2 TC5 1 FURA R2 2 0.0
+3 TC5 1 FURA R3 3 0.0
+[ constraints ]
+0 1 1 0.240 {}
+1 2 1 0.260 {}
+0 2 1 0.240 {}
+[ moleculetype ]
+ZTHZ 1
+[ atoms ]
+1 TC5 1 ZTHZ R1 1 0.0
+2 TC5 1 ZTHZ R2 2 0.0
+3 TC5 1 ZTHZ R3 3 0.0
+4 TC6 1 ZTHZ S4 4 0.0
+5 TN6a 1 ZTHZ N5 5 0.0
+[ constraints ]
+0 1 1 0.292 1000000 {}
+0 3 1 0.367 1000000 {}
+0 4 1 0.481 1000000 {}
+1 4 1 0.434 1000000 {}
+3 4 1 0.210 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+EBEN 1
+[ atoms ]
+1 TC5 1 EBEN R1 1 0.0
+2 TC5 1 EBEN R2 2 0.0
+3 TC5 1 EBEN R3 3 0.0
+4 TC3 1 EBEN R4 4 0.0
+[ constraints ]
+0 1 1 0.291 1000000 {}
+0 2 1 0.291 1000000 {}
+1 2 1 0.291 1000000 {}
+1 3 1 0.320 1000000 {}
+2 3 1 0.320 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+ZTHP 1
+[ atoms ]
+1 TC5 1 ZTHP R1 1 0.0
+2 TC5 1 ZTHP R2 2 0.0
+3 TC5 1 ZTHP R3 3 0.0
+4 TC6 1 ZTHP S4 4 0.0
+5 TC5 1 ZTHP R5 5 0.0
+[ constraints ]
+0 1 1 0.291 1000000 {}
+0 3 1 0.365 1000000 {}
+0 4 1 0.488 1000000 {}
+1 4 1 0.426 1000000 {}
+3 4 1 0.240 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+OXYL 1
+[ atoms ]
+1 SC4 1 OXYL R1 1 0.0
+2 SC4 1 OXYL R2 2 0.0
+3 TC5 1 OXYL R3 3 0.0
+[ constraints ]
+0 1 1 0.331 {}
+1 2 1 0.380 {}
+0 2 1 0.380 {}
+[ moleculetype ]
+INDA 1
+[ atoms ]
+1 TC5 1 INDA R1 1 0.0
+2 TC5 1 INDA R2 2 0.0
+3 TC5 1 INDA R3 3 0.0
+4 TN4a 1 INDA N4 4 0.0
+5 TN4d 1 INDA N5 5 0.0
+[ constraints ]
+0 1 1 0.293 1000000 {}
+0 3 1 0.373 1000000 {}
+0 4 1 0.454 1000000 {}
+1 4 1 0.369 1000000 {}
+3 4 1 0.249 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+BALD 1
+[ atoms ]
+1 TN4a 1 BALD O1 1 0.0
+2 TC5 1 BALD R2 2 0.0
+3 TC5 1 BALD R3 3 0.0
+4 TC5 1 BALD R4 4 0.0
+[ constraints ]
+0 1 1 0.316 1000000 {}
+0 2 1 0.316 1000000 {}
+1 2 1 0.290 1000000 {}
+1 3 1 0.248 1000000 {}
+2 3 1 0.248 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+IMIA 1
+[ atoms ]
+1 TN5a 1 IMIA N1 1 0.0
+2 TN6d 1 IMIA N2 2 0.0
+3 TC5 1 IMIA R3 3 0.0
+[ constraints ]
+0 1 1 0.265 {}
+1 2 1 0.270 {}
+0 2 1 0.265 {}
+[ moleculetype ]
+CPEN 1
+[ atoms ]
+1 TC3 1 CPEN C1 1 0.0
+2 SC3 1 CPEN C2 2 0.0
+[ bonds ]
+0 1 1 0.310 5000 {}
+[ moleculetype ]
+DIOL 1
+[ atoms ]
+1 TC3 1 DIOL O1 1 0.0
+2 SN5a 1 DIOL O2 2 0.0
+[ bonds ]
+0 1 1 0.253 5000 {}
+[ moleculetype ]
+NAFT 1
+[ atoms ]
+1 TC5 0 NAFT R1 1 0.0
+2 TC5 0 NAFT R2 2 0.0
+3 TC5e 0 NAFT R3 3 0.0
+4 TC5 0 NAFT R4 4 0.0
+5 TC5 0 NAFT R5 5 0.0
+[ constraints ]
+0 1 1 0.294 1000000 {}
+0 3 1 0.416 1000000 {}
+0 4 1 0.509 1000000 {}
+1 4 1 0.416 1000000 {}
+3 4 1 0.294 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+PHEN 1
+[ atoms ]
+1 SN6 1 PHEN O1 1 0.0
+2 TC5 1 PHEN R2 2 0.0
+3 TC5 1 PHEN R3 3 0.0
+[ constraints ]
+0 1 1 0.285 {}
+1 2 1 0.295 {}
+0 2 1 0.295 {}
+[ moleculetype ]
+MCPE 1
+[ atoms ]
+1 SC3 1 MCPE C1 1 0.0
+2 SC3 1 MCPE C2 2 0.0
+[ bonds ]
+0 1 1 0.370 5000 {}
+[ moleculetype ]
+TOLU 1
+[ atoms ]
+1 SC4 1 TOLU R1 1 0.0
+2 TC5 1 TOLU R2 2 0.0
+3 TC5 1 TOLU R3 3 0.0
+[ constraints ]
+0 1 1 0.330 {}
+1 2 1 0.295 {}
+0 2 1 0.330 {}
+[ moleculetype ]
+INDO 1
+[ atoms ]
+1 TC5 1 INDO R1 1 0.0
+2 TC5 1 INDO R2 2 0.0
+3 TC5 1 INDO R3 3 0.0
+4 TC5 1 INDO R4 4 0.0
+5 TN6d 1 INDO N5 5 0.0
+[ constraints ]
+0 1 1 0.293 1000000 {}
+0 3 1 0.374 1000000 {}
+0 4 1 0.457 1000000 {}
+1 4 1 0.369 1000000 {}
+3 4 1 0.257 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+MBOA 1
+[ atoms ]
+1 N4a 1 MBOA O1 1 0.0
+2 TC5 1 MBOA R2 2 0.0
+3 TC5 1 MBOA R3 3 0.0
+4 TC5 1 MBOA R4 4 0.0
+[ bonds ]
+0 1 1 0.389 5000 {}
+0 2 1 0.389 5000 {}
+[ constraints ]
+1 2 1 0.290 {}
+1 3 1 0.290 {}
+2 3 1 0.290 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 50 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+PYRD 1
+[ atoms ]
+1 TN1a 1 PYRD NN 1 0.0
+2 TC5 1 PYRD R2 2 0.0
+3 TC5 1 PYRD R3 3 0.0
+[ constraints ]
+0 1 1 0.245 {}
+0 2 1 0.245 {}
+1 2 1 0.285 {}
+[ moleculetype ]
+PCRO 1
+[ atoms ]
+1 TN6 1 PCRO P1 1 0.0
+2 TC5 1 PCRO R2 2 0.0
+3 TC5 1 PCRO R3 3 0.0
+4 TC5 1 PCRO R4 4 0.0
+[ constraints ]
+0 1 1 0.285 1000000 {}
+0 2 1 0.285 1000000 {}
+1 2 1 0.300 1000000 {}
+1 3 1 0.300 1000000 {}
+2 3 1 0.300 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+PXYL 1
+[ atoms ]
+1 TC5 1 PXYL R1 1 0.0
+2 TC5 1 PXYL R2 2 0.0
+3 TC5 1 PXYL R3 3 0.0
+4 TC5 1 PXYL R4 4 0.0
+[ constraints ]
+0 1 1 0.330 1000000 {}
+0 2 1 0.330 1000000 {}
+1 2 1 0.336 1000000 {}
+1 3 1 0.330 1000000 {}
+2 3 1 0.330 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+SM139 1
+[ atoms ]
+1 SN3a 1 SM139 N1 1 0.0
+2 SC4 1 SM139 R2 2 0.0
+3 TC5 1 SM139 R3 3 0.0
+4 TC5 1 SM139 R4 4 0.0
+[ constraints ]
+0 1 1 0.281 1000000 {}
+0 2 1 0.317 1000000 {}
+1 2 1 0.369 1000000 {}
+1 3 1 0.281 1000000 {}
+2 3 1 0.362 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+THF 1
+[ atoms ]
+1 TN4a 1 THF O1 1 0.0
+2 SC3 1 THF R2 2 0.0
+[ bonds ]
+0 1 1 0.290 5000 {}
+[ moleculetype ]
+ANTR 1
+[ atoms ]
+1 TC5 0 ANTR R1 1 0.0
+2 TC5 0 ANTR R2 2 0.0
+3 TC5 0 ANTR R3 3 0.0
+4 TC5e 0 ANTR R4 4 0.0
+5 TC5 0 ANTR R5 5 0.0
+6 TC5 0 ANTR R6 6 0.0
+7 TC5 0 ANTR R7 7 0.0
+[ constraints ]
+1 2 1 0.305 1000000 {}
+1 4 1 0.409 1000000 {}
+1 5 1 0.509 1000000 {}
+2 5 1 0.409 1000000 {}
+4 5 1 0.305 1000000 {}
+[ dihedrals ]
+1 2 4 5 2 180 200 {}
+[ virtual_sites2 ]
+3 1 5 1 0.500 {}
+[ virtual_sites3 ]
+0 3 1 2 1 1.010 1.010 {}
+6 3 4 5 1 1.010 1.010 {}
+[ exclusions ]
+0 1 2 3 4 5 6  {}
+1 2 3 4 5 6  {}
+2 3 4 5 6  {}
+3 4 5 6  {}
+4 5 6  {}
+5 6  {}
+[ moleculetype ]
+PYRM 1
+[ atoms ]
+1 TN5a 1 PYRM N1 1 0.0
+2 TN5a 1 PYRM N2 2 0.0
+3 TC5 1 PYRM R3 3 0.0
+[ constraints ]
+0 1 1 0.263 {}
+1 2 1 0.263 {}
+0 2 1 0.290 {}
+[ moleculetype ]
+QINL 1
+[ atoms ]
+1 TN6a 0 QINL N1 1 0.0
+2 TC5 0 QINL R2 2 0.0
+3 TC5 0 QINL R3 3 0.0
+4 TC5 0 QINL R4 4 0.0
+5 TC5 0 QINL R5 5 0.0
+[ constraints ]
+0 1 1 0.257 1000000 {}
+0 3 1 0.428 1000000 {}
+0 4 1 0.503 1000000 {}
+1 4 1 0.414 1000000 {}
+3 4 1 0.290 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+CHXE 1
+[ atoms ]
+1 SC4 1 CHXE C1 1 0.0
+2 SC3 1 CHXE C2 2 0.0
+[ bonds ]
+0 1 1 0.360 5000 {}
+[ moleculetype ]
+NITB 1
+[ atoms ]
+1 SN3a 1 NITB N1 1 0.0
+2 TC5 1 NITB R2 2 0.0
+3 TC5 1 NITB R3 3 0.0
+4 TC5 1 NITB R4 4 0.0
+[ constraints ]
+0 1 1 0.284 1000000 {}
+0 2 1 0.284 1000000 {}
+1 2 1 0.290 1000000 {}
+1 3 1 0.290 1000000 {}
+2 3 1 0.290 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+PYR1 1
+[ atoms ]
+1 TN6a 1 PYR1 N1 1 0.0
+2 TC5 1 PYR1 R2 2 0.0
+3 TC5 1 PYR1 R3 3 0.0
+[ constraints ]
+0 1 1 0.270 {}
+1 2 1 0.283 {}
+0 2 1 0.270 {}
+[ moleculetype ]
+DIOX 1
+[ atoms ]
+1 SN3a 1 DIOX O1 1 0.0
+2 SN3a 1 DIOX O2 2 0.0
+[ bonds ]
+0 1 1 0.300 5000 {}
+[ moleculetype ]
+MXYL 1
+[ atoms ]
+1 SC4 1 MXYL R1 1 0.0
+2 SC4 1 MXYL R2 2 0.0
+3 TC5 1 MXYL R3 3 0.0
+[ constraints ]
+0 1 1 0.430 {}
+1 2 1 0.347 {}
+0 2 1 0.347 {}
+[ moleculetype ]
+THIP 1
+[ atoms ]
+1 TC6 1 THIP S1 1 0.0
+2 TC5 1 THIP R2 2 0.0
+3 TC5 1 THIP R3 3 0.0
+[ constraints ]
+0 1 1 0.270 {}
+1 2 1 0.280 {}
+0 2 1 0.270 {}
+[ moleculetype ]
+THP 1
+[ atoms ]
+1 SN4a 1 THP O1 1 0.0
+2 SC3 1 THP R2 2 0.0
+[ bonds ]
+0 1 1 0.380 5000 {}
+[ moleculetype ]
+DMAN 1
+[ atoms ]
+1 SN1 1 DMAN N1 1 0.0
+2 TC5 1 DMAN R2 2 0.0
+3 TC5 1 DMAN R3 3 0.0
+4 TC5 1 DMAN R4 4 0.0
+[ constraints ]
+0 1 1 0.330 1000000 {}
+0 2 1 0.330 1000000 {}
+1 2 1 0.285 1000000 {}
+1 3 1 0.285 1000000 {}
+2 3 1 0.285 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+MIND 1
+[ atoms ]
+1 TC5 1 MIND R1 1 0.0
+2 TC5 1 MIND R2 2 0.0
+3 TC5 1 MIND R3 3 0.0
+4 TC4 1 MIND R4 4 0.0
+5 TN6d 1 MIND N5 5 0.0
+[ constraints ]
+0 1 1 0.293 1000000 {}
+0 3 1 0.404 1000000 {}
+0 4 1 0.470 1000000 {}
+1 4 1 0.412 1000000 {}
+3 4 1 0.335 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+STYR 1
+[ atoms ]
+1 TC5 1 STYR R1 1 0.0
+2 TC5 1 STYR R2 2 0.0
+3 TC5 1 STYR R3 3 0.0
+4 TC5 1 STYR R4 4 0.0
+[ constraints ]
+0 1 1 0.385 1000000 {}
+0 2 1 0.345 1000000 {}
+1 2 1 0.290 1000000 {}
+1 3 1 0.290 1000000 {}
+2 3 1 0.290 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+THAZ 1
+[ atoms ]
+1 TN6a 1 THAZ N1 1 0.0
+2 TC6 1 THAZ R2 2 0.0
+3 TC5 1 THAZ R3 3 0.0
+[ constraints ]
+0 1 1 0.214 {}
+1 2 1 0.244 {}
+0 2 1 0.276 {}
+[ moleculetype ]
+PYRL 1
+[ atoms ]
+1 TN6d 1 PYRL N1 1 0.0
+2 TC5 1 PYRL R2 2 0.0
+3 TC5 1 PYRL R3 3 0.0
+[ constraints ]
+0 1 1 0.244 {}
+1 2 1 0.266 {}
+0 2 1 0.244 {}
+[ moleculetype ]
+PHMK 1
+[ atoms ]
+1 SN4a 1 PHMK R1 1 0.0
+2 TC5 1 PHMK R2 2 0.0
+3 TC5 1 PHMK R3 3 0.0
+4 TC5 1 PHMK R4 4 0.0
+[ constraints ]
+0 1 1 0.319 1000000 {}
+0 2 1 0.327 1000000 {}
+1 2 1 0.285 1000000 {}
+1 3 1 0.285 1000000 {}
+2 3 1 0.285 1000000 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 25 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+PRLD 1
+[ atoms ]
+1 TN6d 1 PRLD N1 1 0.0
+2 SC3 1 PRLD R2 2 0.0
+[ bonds ]
+0 1 1 0.290 5000 {}
+[ moleculetype ]
+ZIMI 1
+[ atoms ]
+1 TC5 1 ZIMI R1 1 0.0
+2 TC5 1 ZIMI R2 2 0.0
+3 TC5 1 ZIMI R3 3 0.0
+4 TN4a 1 ZIMI N4 4 0.0
+5 TN4d 1 ZIMI N5 5 0.0
+[ constraints ]
+0 1 1 0.296 1000000 {}
+0 3 1 0.362 1000000 {}
+0 4 1 0.447 1000000 {}
+1 4 1 0.357 1000000 {}
+3 4 1 0.204 1000000 {}
+[ dihedrals ]
+0 1 3 4 2 180 200 {}
+[ virtual_sitesn ]
+2 0 1 3 4 1 {}
+[ exclusions ]
+0 1 2 3 4  {}
+1 2 3 4  {}
+2 3 4  {}
+3 4  {}
+[ moleculetype ]
+MEOB 1
+[ atoms ]
+1 TN2a 1 MEOB O1 1 0.0
+2 TC5 1 MEOB R2 2 0.0
+3 TC5 1 MEOB R3 3 0.0
+4 TC5 1 MEOB R4 4 0.0
+[ bonds ]
+0 1 1 0.320 25000 {}
+0 2 1 0.320 25000 {}
+[ constraints ]
+1 2 1 0.285 {}
+1 3 1 0.285 {}
+2 3 1 0.285 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 75 {}
+[ exclusions ]
+0 3  {}
+[ moleculetype ]
+C3 1
+[ atoms ]
+1 SC3 1 C3 R1 1 0.0
+[ moleculetype ]
+BENZ 1
+[ atoms ]
+1 TC5 1 BENZ R1 1 0.0
+2 TC5 1 BENZ R2 2 0.0
+3 TC5 1 BENZ R3 3 0.0
+[ constraints ]
+0 1 1 0.290 {}
+1 2 1 0.290 {}
+0 2 1 0.290 {}
+[ moleculetype ]
+CUME 1
+[ atoms ]
+1 SC3 1 CUME R1 1 0.0
+2 TC5 1 CUME R2 2 0.0
+3 TC5 1 CUME R3 3 0.0
+4 TC5 1 CUME R4 4 0.0
+[ bonds ]
+0 1 1 0.310 20000 {}
+0 2 1 0.310 20000 {}
+[ constraints ]
+1 2 1 0.290 {}
+1 3 1 0.290 {}
+2 3 1 0.290 {}
+[ dihedrals ]
+0 1 2 3 2 180.00 100 {}
+[ exclusions ]
+0 3  {}

@@ -1,0 +1,10 @@
+### DETAILS: 
+
+# Original PDB CODE:1L2Y 
+# Structure from NMR experiment: select the first model to martinize
+
+### TEST: 
+
+# -ff elnedyn22
+# -dssp
+# -eu 0.7 -ef 800.0

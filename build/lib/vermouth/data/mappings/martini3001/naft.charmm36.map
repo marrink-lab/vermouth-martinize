@@ -1,0 +1,35 @@
+; NAPH
+[ molecule ]
+NAFT
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R4 R1 R5 R2 R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 C3 R2
+2 C2 R1
+3 C1 R1
+4 C10 R3
+5 C9 R4
+6 C8 R4
+7 C7 R5
+8 C6 R5
+9 C5 R3
+10 C4 R2
+11 H3 R2
+12 H2 R1
+13 H1 R1
+14 H9 R4
+15 H8 R4
+16 H7 R5
+17 H6 R5
+18 H4 R2

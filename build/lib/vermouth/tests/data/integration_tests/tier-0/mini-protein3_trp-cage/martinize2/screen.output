@@ -1,0 +1,18 @@
+    INFO - general - Read 1 molecules from PDB file ../aa.pdb
+    INFO - step - Guessing the bonds.
+    INFO - general - 1 molecules after guessing bonds
+    INFO - step - Repairing the graph.
+    INFO - step - Dealing with modifications.
+    INFO - general - Identified the modifications ['N-ter'] on residues ['ASN1']
+    INFO - general - Identified the modifications ['C-ter'] on residues ['SER20']
+    INFO - step - Read input.
+    INFO - step - Creating the graph at the target resolution.
+ WARNING - general - Can't find modification mappings for the modifications ['C-ter']. The following modification mappings are known: {}
+ WARNING - general - Can't find modification mappings for the modifications ['N-ter']. The following modification mappings are known: {}
+ WARNING - unmapped-atom - These atoms are not covered by a mapping. Either your mappings don't describe all atoms (bad idea), or, there's no mapping available for all residues. ['299A-SER20:OXT']
+    INFO - step - Averaging the coordinates.
+    INFO - step - Applying the links.
+    INFO - step - Placing the charge dummies.
+    INFO - step - Writing output.
+    INFO - general - Happiness is a dry martini and a good woman... or a bad woman. -- George Burns
+

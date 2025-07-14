@@ -1,0 +1,46 @@
+[ molecule ]
+TPP
+
+[from]
+gromos
+
+[to]
+martini22
+
+[ martini ]
+THI1 THI2 THI3 THI4 THI5 PO4A PO4B
+
+[ mapping ]
+gromos
+
+[ atoms ]
+    1     N1 THI1
+    2     H1 THI1
+    3     H2 THI1
+    4     C1 THI1
+    5     N2 THI1
+    6     C2 THI2
+    7     C3 THI2
+    8     N3 THI2
+    9     C4 THI3
+   10     H3 THI3
+   11     C5 THI3
+   12     C6 THI3
+   13     N4 THI4
+   14     C7 THI4
+   15     C8 THI4
+   16     C9 THI5
+   17     S1 THI5
+   18    C10 THI4
+   19     H4 THI4
+   20    C11 THI5
+   21    C12 THI5
+   22   O1PA THI5 PO4A
+   23     PA PO4A
+   24   O2PA PO4A
+   25   O3PA PO4A
+   26   O1PG PO4A PO4B
+   27     PG PO4B
+   28   O2PG PO4B
+   29   O3PG PO4B
+   30   O4PG PO4B

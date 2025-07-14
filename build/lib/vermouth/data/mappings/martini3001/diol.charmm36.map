@@ -1,0 +1,28 @@
+; DXLA
+[ molecule ]
+DIOL
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+O2 O1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 O1 O2
+2 C5 O1
+3 C4 O1
+4 O3 O2
+5 C2 O2
+6 H51 O1
+7 H52 O1
+8 H42 O1
+9 H41 O1
+10 H22 O2
+11 H21 O2

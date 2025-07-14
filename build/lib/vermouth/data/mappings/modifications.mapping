@@ -1,0 +1,282 @@
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+
+[ from blocks ]
+C-ter
+[ to blocks ]
+C-ter
+
+[ from nodes ]
+N
+HN
+
+[ from edges ]
+HN N
+N CA
+
+[ mapping ]
+CA BB
+C  BB
+O  BB
+OXT BB
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini22
+[ from blocks ]
+N-ter
+[ to blocks ]
+N-ter
+
+[ from nodes ]
+C
+O
+
+[ from edges ]
+C O
+CA C
+
+[ mapping ]
+HN2 BB
+HN3 BB
+N   BB
+CA  BB
+C   BB
+O   BB
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+
+[ from blocks ]
+COOH-ter
+[ to blocks ]
+COOH-ter
+
+[ from nodes ]
+N
+HN
+
+[ from edges ]
+HN N
+N CA
+
+[ mapping ]
+HN BB
+N BB
+CA BB
+C  BB
+O  BB
+HO BB
+OXT BB
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini22
+[ from blocks ]
+NH2-ter
+[ to blocks ]
+NH2-ter
+
+[ from nodes ]
+C
+O
+
+[ from edges ]
+C O
+CA C
+
+[ mapping ]
+HN2 BB
+N   BB
+CA  BB
+C   BB
+O   BB
+
+;################
+;# Martini 2.2p #
+;################
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22p
+[ from blocks ]
+C-ter
+[ to blocks ]
+C-ter
+[ from nodes ]
+N
+HN
+[ from edges ]
+HN N
+N CA
+[ mapping ]
+CA BB
+C  BB
+O  BB
+OXT BB
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini22p
+[ from blocks ]
+N-ter
+[ to blocks ]
+N-ter
+[ from nodes ]
+C
+O
+[ from edges ]
+C O
+CA C
+[ mapping ]
+HN2 BB
+HN3 BB
+N   BB
+CA  BB
+C   BB
+O   BB
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22p
+[ from blocks ]
+COOH-ter
+[ to blocks ]
+COOH-ter
+[ from nodes ]
+N
+HN
+[ from edges ]
+HN N
+N CA
+[ mapping ]
+HN BB
+N BB
+CA BB
+C  BB
+O  BB
+HO BB
+OXT BB
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+martini22p
+[ from blocks ]
+NH2-ter
+[ to blocks ]
+NH2-ter
+[ from nodes ]
+C
+O
+[ from edges ]
+C O
+CA C
+[ mapping ]
+HN2 BB
+N   BB
+CA  BB
+C   BB
+O   BB
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+
+[ from blocks ]
+TYRPHOS
+[ to blocks ]
+TYRPHOS
+
+[ from nodes ]
+CE1
+HE1
+[ from edges ]
+CE1	HE1
+CE1	CZ
+[ mapping ]
+P1   PO4
+O3   PO4
+O4   PO4
+O2   PO4
+H2   PO4
+CE1  SC3
+HE1  SC3
+CZ   SC3
+OH   SC3
+HH   SC3
+
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+[ from blocks ]
+LYS-LSN
+[ to blocks ]
+LYS-LSN
+[ from nodes ]
+CE
+HE1
+HE2
+[ from edges ]
+CE NZ
+CE HE1
+CE HE2
+[ mapping ]
+CE  SC2
+HE1 SC2
+HE2 SC2
+NZ  SC2
+HZ1 SC2
+HZ2 SC2
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+martini22
+[ from blocks ]
+LYS-HZ3
+[ to blocks ]
+LYS-HZ3
+[ from nodes ]
+CE
+HE1
+HE2
+[ from edges ]
+CE NZ
+CE HE1
+CE HE2
+[ mapping ]
+CE  SC2
+HE1 SC2
+HE2 SC2
+NZ  SC2
+HZ1 SC2
+HZ2 SC2
+HZ3 SC2

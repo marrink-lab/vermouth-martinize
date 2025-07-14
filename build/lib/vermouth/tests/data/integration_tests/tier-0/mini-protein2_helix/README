@@ -1,0 +1,11 @@
+### DETAILS: 
+
+# Original PDB CODE:5UOI 
+# Structure from NMR experiment: select the first model to martinize
+# One of the missing oxygen atoms of the C-terminal was added to make martinize2 to work. 
+
+### TEST: 
+
+# -ff elnedyn
+# -ss
+# neutral terminis

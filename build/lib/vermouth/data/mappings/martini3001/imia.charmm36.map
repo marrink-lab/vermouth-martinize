@@ -1,0 +1,26 @@
+; IMID
+[ molecule ]
+IMIA
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 N2 N1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CG R3
+2 CD2 R3
+3 NE2 N1
+4 CE1 N2
+5 ND1 N2
+6 HD1 N2
+7 HG R3
+8 HD2 R3
+9 HE1 N2

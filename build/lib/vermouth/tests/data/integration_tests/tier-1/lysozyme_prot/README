@@ -1,0 +1,14 @@
+### DETAILS: 
+
+# Original PDB CODE:  3LZT
+# Structure from X-ray crystallography experiment.
+# Select atoms with occupancy higuer than 0.5
+
+### TEST: 
+
+# -ff martini 30 open beta
+# -scfix and elastic
+# adding specific cys bridge as CONECT records
+# contains all protonated AAs for the CHARMM FF
+# thus makes sure GLUP ASP LYN and the Histidines are
+# recognized correctly

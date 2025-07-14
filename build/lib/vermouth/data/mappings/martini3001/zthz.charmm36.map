@@ -1,0 +1,31 @@
+; BZTA
+[ molecule ]
+ZTHZ
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R1 N5 R2 S4 R3
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 N3 N5
+2 C4 R3
+3 C5 R2
+4 C6 R2
+5 C7 R1
+6 C8 R1
+7 C9 R3
+8 S1 S4
+9 C2 N5
+10 H5 R2
+11 H6 R2
+12 H7 R1
+13 H8 R1
+14 H2 N5

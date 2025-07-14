@@ -1,0 +1,32 @@
+; 2NITL
+[ molecule ]
+SM139
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 R4 N1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 CA R2
+2 CG R2
+3 CD1 R2 R4
+4 CE1 R4
+5 CZ R3 R4
+6 CE2 R3
+7 CD2 R2 R3
+8 N1 N1
+9 O1 N1
+10 O2 N1
+11 HA3 R2
+12 HA2 R2
+13 HA R2
+14 HE1 R4
+15 HE2 R3

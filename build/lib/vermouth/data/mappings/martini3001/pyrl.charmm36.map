@@ -1,0 +1,27 @@
+; PYRR
+[ molecule ]
+PYRL
+
+[ from ]
+charmm
+
+[ to ]
+martini3001
+
+[ martini ]
+R3 R2 N1
+
+[ mapping ]
+charmm
+
+[ atoms ]
+1 N5 N1
+2 H5 N1
+3 C1 R2
+4 C2 R2
+5 C3 R3
+6 C4 R3
+7 H1 R2
+8 H2 R2
+9 H3 R3
+10 H4 R3

@@ -1,0 +1,191 @@
+; Copyright 2018 University of Groningen
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;    http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+[ molecule ]
+POPG
+
+[from]
+charmm
+
+[to]
+martini22
+martini22p
+
+
+[ martini ]
+GL0 PO4 GL1 GL2 C1A C2A C3A C4A C1B C2B D3B C4B C5B
+
+[ mapping ]
+charmm27 charmm36
+
+[ atoms ]
+    1   C13   GL0 
+    2  H13A   GL0
+    3  H13B   GL0
+    4   OC3   GL0 
+    5   HO3   GL0
+    6   C12   GL0 GL0 GL0 PO4
+    7  H12A   GL0
+    8   OC2   GL0
+    9   HO2   GL0
+   17   C11   GL0 PO4
+   18  H11A   GL0 PO4
+   19  H11B   GL0 PO4
+   20     P   PO4
+   21   O13   PO4
+   22   O14   PO4
+   23   O12   PO4 PO4 PO4 GL0
+   24   O11   PO4 PO4 GL1
+   25    C1   GL1 GL1 PO4
+   26    HA   GL1 GL1 PO4
+   27    HB   GL1 GL1 PO4
+   28    C2   GL1 GL1 GL2
+   29    HS   GL1 GL1 GL2
+   30   O21   GL1 GL1 GL2 C1B
+   31   C21   GL1 C1B
+   32   O22   GL1
+   33   C22   C1B C1B GL1 
+   34   H2R   C1B C1B GL1
+   35   H2S   C1B C1B GL1
+   36    C3   GL2 GL2 GL2 PO4
+   37    HX   GL2 GL2 GL2 PO4
+   38    HY   GL2 GL2 GL2 PO4
+   39   O31   GL2
+   40   C31   GL2 GL1 C1A
+   41   O32   GL2
+   42   C32   C1A C1A GL2
+   43   H2X   C1A C1A GL2
+   44   H2Y   C1A C1A GL2
+   45   C23   C1B
+   46   H3R   C1B
+   47   H3S   C1B
+   48   C24   C1B C1B C2B
+   49   H4R   C1B C1B C2B
+   50   H4S   C1B C1B C2B
+   51   C25   C1B C2B
+   52   H5R   C1B C2B
+   53   H5S   C1B C2B
+   54   C26   C2B C2B C1B
+   55   H6R   C2B C2B C1B
+   56   H6S   C2B C2B C1B
+   57   C27   C2B
+   58   H7R   C2B
+   59   H7S   C2B
+   60   C28   C2B D3B
+   61   H8R   C2B D3B
+   62   H8S   C2B D3B
+   63   C29   D3B D3B C2B
+   64   H91   D3B
+   65  C210   D3B D3B C4B
+   66  H101   D3B
+   67  C211   C4B D3B
+   68  H11R   C4B D3B
+   69  H11S   C4B D3B
+   70  C212   C4B
+   71  H12R   C4B
+   72  H12S   C4B
+   73  C213   C4B C4B C4B C5B
+   74  H13R   C4B C4B C4B C5B
+   75  H13S   C4B C4B C4B C5B
+   76  C214   C4B C4B C5B
+   77  H14R   C4B C4B C5B
+   78  H14S   C4B C4B C5B
+   79  C215   C5B C4B
+   80  H15R   C5B C4B
+   81  H15S   C5B C4B
+   82  C216   C5B C5B C4B
+   83  H16R   C5B C5B C4B
+   84  H16S   C5B C5B C4B
+   85  C217   C5B C5B C5B C4B
+   86  H17R   C5B C5B C5B C4B
+   87  H17S   C5B C5B C5B C4B
+   88  C218   C5B
+   89  H18R   C5B
+   90  H18S   C5B
+   91  H18T   C5B
+   92   C33   C1A
+   93   H3X   C1A
+   94   H3Y   C1A
+   95   C34   C1A C1A C2A
+   96   H4X   C1A C1A C2A
+   97   H4Y   C1A C1A C2A
+   98   C35   C1A C2A
+   99   H5X   C1A C2A
+  100   H5Y   C1A C2A
+  101   C36   C2A C2A C1A
+  102   H6X   C2A C2A C1A
+  103   H6Y   C2A C2A C1A
+  104   C37   C2A 
+  105   H7X   C2A
+  106   H7Y   C2A
+  107   C38   C2A C2A C2A C3A
+  108   H8X   C2A C2A C2A C3A
+  109   H8Y   C2A C2A C2A C3A
+  110   C39   C2A C2A C3A
+  111   H9X   C2A C2A C3A
+  112   H9Y   C2A C2A C3A
+  113  C310   C3A C2A 
+  114  H10X   C3A C2A
+  115  H10Y   C3A C2A
+  116  C311   C3A C3A C2A
+  117  H11X   C3A C3A C2A
+  118  H11Y   C3A C3A C2A
+  119  C312   C3A
+  120  H12X   C3A
+  121  H12Y   C3A
+  122  C313   C3A C3A C4A
+  123  H13X   C3A C3A C4A
+  124  H13Y   C3A C3A C4A
+  125  C314   C4A C3A
+  126  H14X   C4A C3A
+  127  H14Y   C4A C3A
+  128  C315   C4A C4A C3A
+  129  H15X   C4A C4A C3A
+  130  H15Y   C4A C4A C3A
+  131  C316   C4A
+  132  H16X   C4A
+  133  H16Y   C4A
+  134  H16Z   C4A
+
+;making R stereoisomer- placing HS
+[chiral]
+HS C2 O21 C1 C3
+
+; acyl esters
+[trans]
+C22 C21 O21 C2
+[ out ]
+O22 C21 O21 C22
+[trans]
+C32 C31 O31 C3
+[out]
+O32 C31 O31 C32
+
+;cis bonds in lipid chains
+[ out ]
+H91 C29 C28 C210
+[ trans ]
+H101 C210 C29 C28
+[ out ]
+C211 C210 C29 H101
+
+;;;making a glycerol headgroup
+[trans]
+HO3 OC3 C13 C12
+[out] 
+OC2 C12 HO3 C11
+[chiral]
+H12A C12 OC2 C13 C11
+OC2 C12 C11 C13 H12A 
+HO2 C12 C11 C13 H12A 

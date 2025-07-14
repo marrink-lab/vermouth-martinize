@@ -1,0 +1,105 @@
+[ modification ]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+
+[ from blocks ]
+C-ter
+[ to blocks ]
+C-ter
+
+[ from nodes ]
+N
+HN
+
+[ from edges ]
+HN N
+N CA
+
+[ mapping ]
+CA BB
+C  BB 0
+O  BB 0
+OXT BB 0
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+[ from blocks ]
+N-ter
+[ to blocks ]
+N-ter
+
+[ from nodes ]
+C
+O
+
+[ from edges ]
+C O
+CA C
+
+[ mapping ]
+HN2 BB 0
+HN3 BB 0
+N   BB 0
+CA  BB
+C   BB 0
+O   BB 0
+
+[ modification ]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+
+[ from blocks ]
+COOH-ter
+[ to blocks ]
+COOH-ter
+
+[ from nodes ]
+N
+HN
+
+[ from edges ]
+HN N
+N CA
+
+[ mapping ]
+HN BB 0
+N BB 0
+CA BB
+C  BB 0
+O  BB 0
+HO BB 0
+OXT BB 0
+
+
+[modification]
+[ from ]
+charmm
+[ to ]
+elnedyn21
+[ from blocks ]
+NH2-ter
+[ to blocks ]
+NH2-ter
+
+[ from nodes ]
+C
+O
+
+[ from edges ]
+C O
+CA C
+
+[ mapping ]
+HN2 BB 0
+N   BB 0
+CA  BB
+C   BB 0
+O   BB 0
