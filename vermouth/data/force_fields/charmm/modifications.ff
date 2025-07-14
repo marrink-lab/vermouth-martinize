@@ -151,7 +151,7 @@ HIS-HP
 NE2 {"resname": "HIS", "element": "N"}
 ND1 {"resname": "HIS", "element": "N"}
 HD1 {"resname": "HIS", "element": "H", "PTM_atom": true}
-HE2 {"resname": "HIS", "element": "H", "PTM_atom": true}
+HE2 {"resname": "HIS", "element": "H", "PTM_atom": false}
 CE1 {"resname": "HIS", "element": "C"}
 [ edges ]
 NE2 HE2
@@ -175,7 +175,7 @@ CE1 ND1
 HIS-HE
 [ atoms ]
 NE2 {"resname": "HIS", "element": "N"}
-HE2 {"resname": "HIS", "element": "H", "PTM_atom": true}
+HE2 {"resname": "HIS", "element": "H", "PTM_atom": false}
 ND1 {"resname": "HIS", "element": "N"}
 CE1 {"resname": "HIS", "element": "C"}
 [ edges ]
