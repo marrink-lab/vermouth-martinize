@@ -137,7 +137,7 @@ def test_equal_output(tmp_path):
         '-f', str(CIF_PROTEIN),
         '-o', 'cif.top',
         '-x', 'cif.pdb',
-        '-ignore', 'HOH', '-name', 'cif', '-maxwarn', '1'
+        '-ignore', 'HOH', '-name', 'cif', '-ss', 'C'
     ]
     command1 = [
         sys.executable,
