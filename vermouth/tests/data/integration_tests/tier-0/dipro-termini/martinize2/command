@@ -5,4 +5,4 @@ martinize2
 -ff martini3001
 -nt
 -noscfix
--maxwarn 1
+-maxwarn missing-flag:1
