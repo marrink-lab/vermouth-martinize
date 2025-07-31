@@ -1109,7 +1109,8 @@ def entry():
                 values=args.rb_selection,
             )
         else:
-            selector = selectors.select_backbone
+            selector = functools.partial(selectors.select_backbone,
+                                         bb_atomname=system.force_field.variables['bb_atomname'])
         rubber_band_processor = vermouth.ApplyRubberBand(
             lower_bound=args.rb_lower_bound,
             upper_bound=args.rb_upper_bound,
