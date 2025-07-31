@@ -216,7 +216,6 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
     monkeypatch.chdir(tmp_path)
 
     data_path = Path(PATTERN.format(path=INTEGRATION_DATA, tier=tier, protein=protein))
-
     with open(str(data_path / 'command')) as cmd_file:
         command = cmd_file.read().strip()
     assert command  # Defensive

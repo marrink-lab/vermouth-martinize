@@ -770,9 +770,18 @@ def entry():
     )
 
     args = parser.parse_args()
-
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
     LOGGER.setLevel(loglevels[args.verbosity])
+    
+    # Add flag warnings
+    if args.dssp is None and args.ss is None:
+        LOGGER.warning("topology will be created without secondary structure information,"
+                       " are you confident you do not want to use the -dssp or -ss flag? Read question"
+                        " #707 (https://github.com/marrink-lab/vermouth-martinize/discussions/707)"
+                        " for more information. If you are sure, you can either explicitly provide `-ss C`,"
+                        " or use the -maxwarn flag.",
+                        type="missing-flag",
+        )
 
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / "force_fields"

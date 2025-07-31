@@ -137,7 +137,7 @@ def test_equal_output(tmp_path):
         '-f', str(CIF_PROTEIN),
         '-o', 'cif.top',
         '-x', 'cif.pdb',
-        '-ignore', 'HOH', '-name', 'cif'
+        '-ignore', 'HOH', '-name', 'cif', '-ss', 'C'
     ]
     command1 = [
         sys.executable,
@@ -145,7 +145,7 @@ def test_equal_output(tmp_path):
         '-f', str(CIF_PDB_COMPARE),
         '-o', 'pdb.top',
         '-x', 'pdb.pdb',
-        '-ignore', 'HOH', '-name', 'pdb'
+        '-ignore', 'HOH', '-name', 'pdb', '-maxwarn', 'missing-flag:1'
     ]
     # run commands
     proc0 = subprocess.run(command0, cwd=tmp_path, timeout=90, check=False)
