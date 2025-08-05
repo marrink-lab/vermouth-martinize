@@ -974,7 +974,7 @@ def entry():
         )
     vermouth.SetMoleculeMeta(scfix=scfix).run_system(system)
 
-    idr_tune = True if any(args.water_idrs) else False
+    idr_tune = any(args.water_idrs)
     vermouth.SetMoleculeMeta(idr=idr_tune).run_system(system)
     if idr_tune:
         if not target_ff.has_feature("idr"):
