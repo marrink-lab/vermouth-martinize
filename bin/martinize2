@@ -168,7 +168,7 @@ def pdb_to_universal(
     return canonicalized
 
 
-def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disordered_regions=None):
+def martinize(system, mappings, to_ff, delete_unknown=False, disordered_regions=None):
     """
     Convert a system from one force field to another at lower resolution.
     """
@@ -182,7 +182,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disorde
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
-    if idrs:
+    if any(disordered_regions):
         LOGGER.info("Annotating IDRs.", type="step")
         vermouth.AnnotateIDRs(id_regions=disordered_regions).run_system(system)
     LOGGER.info("Applying the links.", type="step")
@@ -636,14 +636,6 @@ def entry():
               "format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ..."
              ),
     )
-    idr_tuning = water_group.add_argument(
-        "-idr-tune",
-        dest="idr_tune",
-        action="store_true",
-        default=False,
-        help=("Tune the idr regions with specific bonded potentials."),
-    )
-
 
     prot_group = parser.add_argument_group("Protein description")
     prot_group.add_argument(
@@ -982,8 +974,9 @@ def entry():
         )
     vermouth.SetMoleculeMeta(scfix=scfix).run_system(system)
 
-    vermouth.SetMoleculeMeta(idr=args.idr_tune).run_system(system)
-    if args.idr_tune:
+    idr_tune = any(args.water_idrs)
+    vermouth.SetMoleculeMeta(idr=idr_tune).run_system(system)
+    if idr_tune:
         if not target_ff.has_feature("idr"):
             LOGGER.warning('Improved IDR potentials are not implemented '
                            'for this force field',
@@ -1012,7 +1005,6 @@ def entry():
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
-        idrs=args.idr_tune,
         disordered_regions=args.water_idrs
     )
     if 'bondedtypes' in known_force_fields[args.to_ff].variables:
