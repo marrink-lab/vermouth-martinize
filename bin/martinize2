@@ -25,8 +25,6 @@ import itertools
 from pathlib import Path
 import sys
 import networkx as nx
-from mdtraj.utils import deprecated
-
 import vermouth
 import vermouth.forcefield
 from vermouth.file_writer import DeferredFileWriter
@@ -643,7 +641,7 @@ def entry():
         dest="idr_tune",
         action="store_true",
         default=False,
-        help=("Tune the idr regions with specific bonded potentials."),
+        help=("Tune the idr regions with specific bonded potentials. This option is deprecated and should not be used."),
     )
 
     prot_group = parser.add_argument_group("Protein description")
@@ -985,7 +983,7 @@ def entry():
 
     # TODO remove this flag completely in future
     if args.idr_tune:
-        LOGGER.info("The -idr-tune argument has been deprecated. In future IDR parameters "
+        LOGGER.info("The -idr-tune argument has been deprecated since version v0.15.0. IDR parameters "
                     "will automatically be applied when an idr has been specified in the "
                     "-id-regions flag")
     idr_tune = any(args.water_idrs)
