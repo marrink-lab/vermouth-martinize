@@ -50,6 +50,7 @@
     CB   HB3
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -71,6 +72,7 @@
     CA     C
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -101,6 +103,7 @@
     OG    HG
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -136,6 +139,7 @@
    OG1   HG1
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -181,6 +185,7 @@
    CD2  HD23
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -226,6 +231,7 @@
     CD   HD3
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -265,6 +271,7 @@
    CG2  HG23
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -300,6 +307,7 @@
    ND2  HD22
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -343,6 +351,7 @@
    NE2  HE22
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -400,6 +409,7 @@
    NH2  HH22
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -446,6 +456,7 @@
    CD2   HD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -492,6 +503,7 @@
    CD2   HD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -536,6 +548,7 @@
    CD2   HD2
      C     O
     -C     N
+     C    +N
 
 [ HIP ]
  [ atoms ]
@@ -577,6 +590,7 @@
    CD2   HD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -639,6 +653,7 @@
    CE3   CD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -694,6 +709,7 @@
    CD2   HD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -750,6 +766,7 @@
    CD2   HD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -793,6 +810,7 @@
     CD   OE2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -825,6 +843,7 @@
     CG   OD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -877,6 +896,7 @@
     NZ   HZ3
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -922,6 +942,7 @@
     NE   HE3
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -961,6 +982,7 @@
     ND   HD3
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -1010,6 +1032,7 @@
     NZ   HZ2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -1046,6 +1069,7 @@
     CA     C
      C     O
     -C     N
+     C    +N
  [ impropers ]
     CA    +N     C     O
     -C    CD     N    CA
@@ -1084,6 +1108,7 @@
     CA     C
      C     O
     -C     N
+     C    +N
  [ impropers ]
     CA    +N     C     O
     -C   CD2     N    CA
@@ -1113,6 +1138,7 @@
     SG    HG
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -1140,6 +1166,7 @@
     CB    SG
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -1167,6 +1194,7 @@
     CB    SG
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -1208,6 +1236,7 @@
     CE   HE3
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -1243,6 +1272,7 @@
    OD2   HD2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
@@ -1284,6 +1314,7 @@
    OE2   HE2
      C     O
     -C     N
+     C    +N
  [ impropers ]
     -C    CA     N     H
     CA    +N     C     O
