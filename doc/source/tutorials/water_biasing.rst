@@ -18,7 +18,6 @@ The documentation describes these features::
     -id-regions WATER_IDRS [WATER_IDRS ...]
                           Intrinsically disordered regions specified by resid.These parts are biased differently when applying a water bias.format:
                           <chain>-<start_resid_1>:<end_resid_1> <chain>-<start_resid_2>:<end_resid_2>... (default: [])
-    -idr-tune             Tune the idr regions with specific bonded potentials. (default: False)
 
 These flags can be specified in conjunction with the Go model.
 
@@ -60,7 +59,7 @@ known to be disordered:
 Ideally, as the paper describes, these should have their water bias and bonded parameters fixed too.
 This can be done by combining the above command with the ones previously described about water biasing:
 
-``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -id-regions A-1:10 B-65:92 -idr-tune -water-bias -water-bias-eps idr:0.5``
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -id-regions A-1:10 B-65:92 -water-bias -water-bias-eps idr:0.5``
 
 Here, ``-idr-tune`` makes sure that the additional bonded parameters are applied to the region specified by ``-id-regions``,
 while ``-water-bias`` and ``-water-bias-eps idr:0.5`` ensures that for the idr region defined, an additional nonbonded parameter
@@ -69,7 +68,7 @@ with water is written to the nonbond_params.itp file.
 For a single chain, or a homomultimer containing identical disordered regions, the chain specifier on the ``-id-regions`` flag is
 not necessary. The command:
 
-``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -id-regions 50:75 -idr-tune -water-bias -water-bias-eps idr:0.5``
+``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -dssp -id-regions 50:75 -water-bias -water-bias-eps idr:0.5``
 
 will apply disordered parameters and biasing to residues 50:75 of all chains in the system.
 

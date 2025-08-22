@@ -168,7 +168,7 @@ def pdb_to_universal(
     return canonicalized
 
 
-def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disordered_regions=None):
+def martinize(system, mappings, to_ff, delete_unknown=False, disordered_regions=None):
     """
     Convert a system from one force field to another at lower resolution.
     """
@@ -182,7 +182,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False, idrs=False, disorde
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
     vermouth.DoAverageBead(ignore_missing_graphs=True).run_system(system)
-    if idrs:
+    if any(disordered_regions):
         LOGGER.info("Annotating IDRs.", type="step")
         vermouth.AnnotateIDRs(id_regions=disordered_regions).run_system(system)
     LOGGER.info("Applying the links.", type="step")
@@ -636,14 +636,13 @@ def entry():
               "format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ..."
              ),
     )
-    idr_tuning = water_group.add_argument(
+    water_group.add_argument(
         "-idr-tune",
         dest="idr_tune",
         action="store_true",
         default=False,
-        help=("Tune the idr regions with specific bonded potentials."),
+        help=("Tune the idr regions with specific bonded potentials. This option is deprecated and should not be used."),
     )
-
 
     prot_group = parser.add_argument_group("Protein description")
     prot_group.add_argument(
@@ -784,9 +783,18 @@ def entry():
     )
 
     args = parser.parse_args()
-
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
     LOGGER.setLevel(loglevels[args.verbosity])
+    
+    # Add flag warnings
+    if args.dssp is None and args.ss is None:
+        LOGGER.warning("topology will be created without secondary structure information,"
+                       " are you confident you do not want to use the -dssp or -ss flag? Read question"
+                        " #707 (https://github.com/marrink-lab/vermouth-martinize/discussions/707)"
+                        " for more information. If you are sure, you can either explicitly provide `-ss C`,"
+                        " or use the -maxwarn flag.",
+                        type="missing-flag",
+        )
 
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / "force_fields"
@@ -979,8 +987,14 @@ def entry():
         )
     vermouth.SetMoleculeMeta(scfix=scfix).run_system(system)
 
-    vermouth.SetMoleculeMeta(idr=args.idr_tune).run_system(system)
+    # TODO remove this flag completely in future
     if args.idr_tune:
+        LOGGER.info("The -idr-tune argument has been deprecated since version v0.15.0. IDR parameters "
+                    "will automatically be applied when an idr has been specified in the "
+                    "-id-regions flag")
+    idr_tune = any(args.water_idrs)
+    vermouth.SetMoleculeMeta(idr=idr_tune).run_system(system)
+    if idr_tune:
         if not target_ff.has_feature("idr"):
             LOGGER.warning('Improved IDR potentials are not implemented '
                            'for this force field',
@@ -1009,7 +1023,6 @@ def entry():
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
-        idrs=args.idr_tune,
         disordered_regions=args.water_idrs
     )
     if 'bondedtypes' in known_force_fields[args.to_ff].variables:
@@ -1106,7 +1119,8 @@ def entry():
                 values=args.rb_selection,
             )
         else:
-            selector = selectors.select_backbone
+            selector = functools.partial(selectors.select_backbone,
+                                         bb_atomname=system.force_field.variables['bb_atomname'])
         rubber_band_processor = vermouth.ApplyRubberBand(
             lower_bound=args.rb_lower_bound,
             upper_bound=args.rb_upper_bound,
