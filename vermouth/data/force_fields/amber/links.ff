@@ -1,0 +1,11 @@
+[ macros ]
+protein_resnames "CYSG|CYSF|CYSP|GLYM|GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+
+[ link ]
+resname $protein_resnames
+[ impropers ]
+CA    +N     C     O 4
+[ edges ]
+C O
+C CA
+C +N

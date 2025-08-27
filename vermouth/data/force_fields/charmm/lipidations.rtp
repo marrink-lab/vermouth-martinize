@@ -399,7 +399,7 @@
       C16  H16C
   [ impropers ]
        C1    O1    SG    C2
-        N    -C    CA    HN
+;        N    -C    CA    HN  ; Moved to links.ff, since this rtp file doesn't know an edge -C N
         C    CA    +N     O
 
 [ GLYM ]
