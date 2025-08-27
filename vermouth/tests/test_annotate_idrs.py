@@ -22,8 +22,12 @@ from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
 
 @pytest.mark.parametrize('idr_regions, expected', [
     (
-    ["1:2"],
-    [True, True, True, True, True, False, False, False, False]
+            ["1:2"],
+            [True, True, True, True, True, False, False, False, False]
+    ),
+    (
+            ["0:1", "4:5"],
+            [True, True, True, False, False, False, True, True, True,]
     ),
     (
     [],
@@ -58,6 +62,8 @@ def test_make_disorder_string(test_molecule,
             result.append(True)
         else:
             result.append(False)
+    print(result)
+    print(expected)
     assert result == expected
 
 @pytest.mark.parametrize('idr_regions, secstruc, write_sec, expected',(
