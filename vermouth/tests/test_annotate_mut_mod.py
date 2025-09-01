@@ -68,7 +68,7 @@ def example_mol():
     ('PO4#3', {'resname': 'PO4', 'resid': 3}),
     ('PO43', {'resname': 'PO', 'resid': 43}),
     ('A-B-C#D#1', {'chain': 'A', 'resid': 1, 'resname': 'B-C#D'}),
-    ('ter', {'resname': 'ter'})
+    ('ter', {'resname': 'ter'}),
 ])
 def test_parse_residue_spec(spec, expected):
     found = parse_residue_spec(spec)
@@ -147,7 +147,12 @@ def test_subdict(dict1, dict2, expected):
          5: {'annotated_modifications': ['C-ter']},
          6: {'annotated_modifications': ['C-ter']},
          8: {'annotated_modifications': ['HSD']}}  # Not a C-ter mod
-    )
+    ),
+    (
+        [({'resname': 'cter', 'chain': 'B'}, '+C-ter')],
+        {5: {'annotated_modifications': ['C-ter', '+']},
+         6: {'annotated_modifications': ['C-ter', '+']},}
+    ),
 ])
 def test_annotate_modifications(example_mol, modifications, mutations, expected_mod, expected_mut):
     annotate_modifications(example_mol, modifications, mutations,[])

@@ -403,3 +403,19 @@ def test_reference_with_resid(system_mod):
 
     vermouth.processors.RepairGraph().run_system(system)
     assert set(nx.get_node_attributes(system.molecules[0], 'resid').values()) == set(range(1, 6))
+
+
+def test_plus_modificataion_annotation(repaired_graph):
+    system = repaired_graph
+    mol = system.molecules[0]
+    relevant_nodes = set()
+    for idx in mol.nodes:
+        node = mol.nodes[idx]
+        if node['resid'] == 1 and node['resname'] == 'GLU':
+            node['annotated_modifications'] = ['+', 'N-ter']
+            relevant_nodes.add(idx)
+    assert relevant_nodes  # Save guard that we're testing something.
+    vermouth.CanonicalizeModifications().run_system(system)
+    for idx in relevant_nodes:
+        node = system.molecules[0].nodes[idx]
+        assert {mod.name for mod in node['modifications']} == {'N-ter', 'GLU-H'}
