@@ -199,6 +199,11 @@ def _resiter(mod, residue_graph, resspec, library, key, molecule):
     for res_idx in residue_graph:
         if residue_matches(resspec, residue_graph, res_idx):
             mod_found = True
+            if mod.startswith('+'):
+                mod = mod[1:]
+                detect_modifications = True
+            else:
+                detect_modifications = False
             if mod != 'none' and mod not in library:
                 raise NameError('{} is not known as a {} for '
                                 'force field {}'
@@ -208,6 +213,8 @@ def _resiter(mod, residue_graph, resspec, library, key, molecule):
                          _format_resname(res), key, mod)
             for node_idx in res['graph']:
                 molecule.nodes[node_idx][key] = molecule.nodes[node_idx].get(key, []) + [mod]
+                if detect_modifications:
+                    molecule.nodes[node_idx][key].append('+')
     return mod_found
 
 def annotate_modifications(molecule, modifications, mutations, resspec_counts):
@@ -245,7 +252,7 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
     # We need to do very similar but not quite identical things for
     # modifications and mutations. Associate them with the correct name and  FF
     # elements.
-    associations = [(modifications, 'modification', molecule.force_field.modifications),
+    associations = [(modifications, 'annotated_modifications', molecule.force_field.modifications),
                     (mutations, 'mutation', molecule.force_field.blocks)]
 
     residue_graph = make_residue_graph(molecule)
@@ -268,8 +275,8 @@ def annotate_modifications(molecule, modifications, mutations, resspec_counts):
 
 class AnnotateMutMod(Processor):
     """
-    Annotates residues to have the required 'modification' and 'mutation'
-    attributes on all nodes.
+    Annotates residues to have the required 'annotated_modifications' and
+    'mutation' attributes on all nodes.
 
     Attributes
     ----------
@@ -296,6 +303,7 @@ class AnnotateMutMod(Processor):
     def run_molecule(self, molecule):
         annotate_modifications(molecule, self.modifications, self.mutations, self.resspec_counts)
         return molecule
+
     def run_system(self, system):
         super().run_system(system)
         _exit = sum([i['success'] for i in self.resspec_counts])

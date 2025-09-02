@@ -285,7 +285,7 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations,
             if mutations:
                 mol.nodes[node_idx]['mutation'] = mutations
             if modifications:
-                mol.nodes[node_idx]['modification'] = modifications
+                mol.nodes[node_idx]['annotated_modifications'] = modifications
     mol = vermouth.RepairGraph().run_molecule(mol)
     resid1_atomnames = set()
     for node_idx in mol:
@@ -293,7 +293,7 @@ def test_repair_graph_with_mutation_modification(system_mod, resid, mutations,
             if mutations:
                 assert mol.nodes[node_idx]['resname'] == mutations[0]
             if modifications:
-                assert mol.nodes[node_idx].get('modification') == modifications
+                assert mol.nodes[node_idx].get('annotated_modifications') == modifications
             resid1_atomnames.add(mol.nodes[node_idx]['atomname'])
     assert resid1_atomnames == set(atomnames.split())
 
@@ -312,7 +312,7 @@ def test_repair_graph_with_mutation_modification_error(system_mod, caplog,
             if mutations:
                 mol.nodes[node_idx]['mutation'] = mutations
             if modifications:
-                mol.nodes[node_idx]['modification'] = modifications
+                mol.nodes[node_idx]['annotated_modifications'] = modifications
     with pytest.raises(ValueError), caplog.at_level(logging.WARNING):
         assert not caplog.records
         mol = vermouth.RepairGraph().run_molecule(mol)
@@ -403,3 +403,19 @@ def test_reference_with_resid(system_mod):
 
     vermouth.processors.RepairGraph().run_system(system)
     assert set(nx.get_node_attributes(system.molecules[0], 'resid').values()) == set(range(1, 6))
+
+
+def test_plus_modificataion_annotation(repaired_graph):
+    system = repaired_graph
+    mol = system.molecules[0]
+    relevant_nodes = set()
+    for idx in mol.nodes:
+        node = mol.nodes[idx]
+        if node['resid'] == 1 and node['resname'] == 'GLU':
+            node['annotated_modifications'] = ['+', 'N-ter']
+            relevant_nodes.add(idx)
+    assert relevant_nodes  # Save guard that we're testing something.
+    vermouth.CanonicalizeModifications().run_system(system)
+    for idx in relevant_nodes:
+        node = system.molecules[0].nodes[idx]
+        assert {mod.name for mod in node['modifications']} == {'N-ter', 'GLU-H'}

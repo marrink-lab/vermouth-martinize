@@ -68,7 +68,7 @@ def example_mol():
     ('PO4#3', {'resname': 'PO4', 'resid': 3}),
     ('PO43', {'resname': 'PO', 'resid': 43}),
     ('A-B-C#D#1', {'chain': 'A', 'resid': 1, 'resname': 'B-C#D'}),
-    ('ter', {'resname': 'ter'})
+    ('ter', {'resname': 'ter'}),
 ])
 def test_parse_residue_spec(spec, expected):
     found = parse_residue_spec(spec)
@@ -124,30 +124,35 @@ def test_subdict(dict1, dict2, expected):
 ])
 @pytest.mark.parametrize('modifications,expected_mod', [
     ([], {}),
-    ([({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'C-ter')], {0: {'modification': ['C-ter']}}),
+    ([({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'C-ter')], {0: {'annotated_modifications': ['C-ter']}}),
     (
         [({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'C-ter'),
          ({'chain': 'A', 'resname': 'GLY', 'resid': 1}, 'HSD')],
-        {0: {'modification': ['C-ter', 'HSD']}}
+        {0: {'annotated_modifications': ['C-ter', 'HSD']}}
     ),
     ([({'resname': 'PHE', 'resid': 1}, 'C-ter'),], {}),
     (
         [({'resname': 'PHE', 'resid': 2}, 'C-ter'),],
-        {3: {'modification': ['C-ter']},
-         7: {'modification': ['C-ter']},}
+        {3: {'annotated_modifications': ['C-ter']},
+         7: {'annotated_modifications': ['C-ter']},}
     ),
     ([({'resname': 'PHE', 'resid': 1}, 'C-ter'),], {}),
     (
         [({'resname': 'nter'}, 'C-ter')],
-        {0: {'modification': ['C-ter']},},
+        {0: {'annotated_modifications': ['C-ter']},},
     ),
     (
         [({'resname': 'cter', 'chain': 'B'}, 'C-ter'), ({'resname': 'CYS'}, 'HSD')],
-        {7: {'modification': ['C-ter']},
-         5: {'modification': ['C-ter']},
-         6: {'modification': ['C-ter']},
-         8: {'modification': ['HSD']}}  # Not a C-ter mod
-    )
+        {7: {'annotated_modifications': ['C-ter']},
+         5: {'annotated_modifications': ['C-ter']},
+         6: {'annotated_modifications': ['C-ter']},
+         8: {'annotated_modifications': ['HSD']}}  # Not a C-ter mod
+    ),
+    (
+        [({'resname': 'cter', 'chain': 'B'}, '+C-ter')],
+        {5: {'annotated_modifications': ['C-ter', '+']},
+         6: {'annotated_modifications': ['C-ter', '+']},}
+    ),
 ])
 def test_annotate_modifications(example_mol, modifications, mutations, expected_mod, expected_mut):
     annotate_modifications(example_mol, modifications, mutations,[])
@@ -169,8 +174,8 @@ def test_single_residue_mol():
     modification = [({'resname': 'A', 'resid': 2}, 'C-ter'),]
     annotate_modifications(mol, modification, [],[])
 
-    assert mol.nodes[0] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
-    assert mol.nodes[1] == {'modification': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
+    assert mol.nodes[0] == {'annotated_modifications': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
+    assert mol.nodes[1] == {'annotated_modifications': ['C-ter'], 'resname': 'A', 'resid': 2, 'chain': 'A'}
 
 
 @pytest.mark.parametrize('modifications,mutations', [
@@ -211,17 +216,17 @@ def test_unknown_terminus_match():
 ])
 @pytest.mark.parametrize('modifications,expected_mod', [
     ([], {}),
-    ([('A-GLY1', 'C-ter')], {0: {'modification': ['C-ter']}}),
+    ([('A-GLY1', 'C-ter')], {0: {'annotated_modifications': ['C-ter']}}),
     (
         [('A-GLY1', 'C-ter'),
          ('A-GLY1', 'HSD')],
-        {0: {'modification': ['C-ter', 'HSD']}}
+        {0: {'annotated_modifications': ['C-ter', 'HSD']}}
     ),
     ([('PHE1', 'C-ter'),], {}),
     (
         [('PHE2', 'C-ter'),],
-        {3: {'modification': ['C-ter']},
-         7: {'modification': ['C-ter']},}
+        {3: {'annotated_modifications': ['C-ter']},
+         7: {'annotated_modifications': ['C-ter']},}
     ),
     ([('PHE1', 'C-ter'),], {}),
 ])
@@ -298,8 +303,8 @@ def test_nter_cter_modifications(node_data, edge_data, expected):
     found = {}
     for node_idx in mol:
         node = mol.nodes[node_idx]
-        if 'modification' in node:
-            found[node['resid']] = node['modification']
+        if 'annotated_modifications' in node:
+            found[node['resid']] = node['annotated_modifications']
 
     assert found == expected
 
