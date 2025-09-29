@@ -7,4 +7,4 @@ martinize2
 -dssp
 -elastic
 -cys auto
--scfix
+-ef 500

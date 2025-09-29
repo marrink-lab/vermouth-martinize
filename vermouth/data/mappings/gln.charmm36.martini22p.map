@@ -38,10 +38,8 @@ charmm27 charmm36
     8   NE2   SC1
     9  HE21   SC1
    10  HE22   SC1
-   11  HE11   SC1
-   12  HE12   SC1
-   13     C    BB
-   14     O    BB
+   11     C    BB
+   12     O    BB
 
 [ chiral ]
   CB     CA    N    C

@@ -52,7 +52,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ GLY ] ; HAx atoms assigned new ff03 atom type
  [ atoms ]
@@ -73,7 +73,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
 
                         
 [ SER ]
@@ -103,7 +103,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ THR ]
  [ atoms ]
@@ -138,7 +138,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ LEU ]
  [ atoms ]
@@ -183,7 +183,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ ILE ]
  [ atoms ]
@@ -228,7 +228,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ VAL ]
  [ atoms ]
@@ -267,7 +267,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ ASN ]
  [ atoms ]
@@ -302,7 +302,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CB   ND2    CG   OD1
     CG  HD21   ND2  HD22
                         
@@ -345,7 +345,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CG   NE2    CD   OE1
     CD  HE21   NE2  HE22
                         
@@ -402,7 +402,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     NE   NH1    CZ   NH2
     CD    CZ    NE    HE
     CZ  HH11   NH1  HH12
@@ -448,7 +448,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CG   CE1   ND1   HD1
     CG   NE2   CD2   HD2
    ND1   NE2   CE1   HE1
@@ -494,7 +494,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
    CE1   CD2   NE2   HE2
     CG   NE2   CD2   HD2
    ND1   NE2   CE1   HE1
@@ -579,7 +579,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CG   CE1   ND1   HD1
    CE1   CD2   NE2   HE2
     CG   NE2   CD2   HD2
@@ -641,7 +641,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
    CD1   CE2   NE1   HE1
    CE2   CH2   CZ2   HZ2
    CZ2   CZ3   CH2   HH2
@@ -696,7 +696,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CG   CE2   CD2   HD2
     CZ   CD2   CE2   HE2
    CE1   CE2    CZ    HZ
@@ -752,7 +752,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CG   CE2   CD2   HD2
     CZ   CD2   CE2   HE2
    CD1    CZ   CE1   HE1
@@ -795,7 +795,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CG   OE1    CD   OE2
                         
 [ ASP ]
@@ -827,7 +827,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CB   OD1    CG   OD2
                         
 [ LYS ]
@@ -879,7 +879,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
 
 [ ORN ] ; charges taken from amber99.prm of tinker 4.0
  [ atoms ]
@@ -924,7 +924,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
 
 [ DAB ] ; sidechain charges fit to maintain heavy atom charge group trend LYS -> ORN -> DAB
  [ atoms ]
@@ -963,7 +963,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
 
 [ LYN ]
  [ atoms ]
@@ -1012,7 +1012,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ PRO ]
  [ atoms ]
@@ -1047,7 +1047,7 @@
      C     O
     -C     N
  [ impropers ]
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     -C    CD     N    CA
 
 [ HYP ] ; S Park, R J Radmer, T E Klein & V S Pande (submitted).
@@ -1085,7 +1085,7 @@
      C     O
     -C     N
  [ impropers ]
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     -C   CD2     N    CA
                         
 [ CYS ]
@@ -1115,7 +1115,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ CYM ]
  [ atoms ]
@@ -1142,7 +1142,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 [ CYX ]
  [ atoms ]
@@ -1169,7 +1169,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
 
 [ MET ]
  [ atoms ]
@@ -1210,7 +1210,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
                         
 ; non-terminal acidic AA's
        
@@ -1245,7 +1245,7 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CB   OD1    CG   OD2
                    
 
@@ -1286,5 +1286,5 @@
     -C     N
  [ impropers ]
     -C    CA     N     H
-    CA    +N     C     O
+;    CA    +N     C     O  ; Moved to links.ff due to missing edge +N C
     CG   OE1    CD   OE2

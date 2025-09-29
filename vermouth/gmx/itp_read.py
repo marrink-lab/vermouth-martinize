@@ -45,7 +45,8 @@ class ITPDirector(SectionLineParser):
                  'dihedral_restraints':  [slice(0, 4)],
                  'orientation_restraints': [0, 1],
                  'angle_restraints': [slice(0, 4)],
-                 'angle_restraints_z': [0, 1]}
+                 'angle_restraints_z': [0, 1],
+                 'cmap': [slice(0, 5)]}
 
     def __init__(self, force_field):
         super().__init__()
@@ -125,13 +126,13 @@ class ITPDirector(SectionLineParser):
             if self.current_meta is not None:
                 self.current_meta = None
             elif self.current_meta is None:
-                raise IOError("Your #ifdef section is orderd incorrectly."
+                raise IOError("Your #ifdef section is ordered incorrectly."
                               "At line {} I read #endif but I haven not read"
                               "a ifdef before.".format(lineno))
 
         elif line.startswith("#else"):
             if self.current_meta is None:
-               raise IOError("Your #ifdef section is orderd incorrectly."
+               raise IOError("Your #ifdef section is ordered incorrectly."
                              "At line {} I read #endif but I haven not read"
                              "a ifdef before.".format(lineno))
 
@@ -145,13 +146,15 @@ class ITPDirector(SectionLineParser):
                 condition, tag = line.split()
                 self.current_meta = {'tag': tag, 'condition': condition.replace("#", "")}
             elif self.current_meta is not None:
-                raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
+                raise IOError("Your #ifdef/#ifndef section is ordered incorrectly."
                               "At line {} I read {} but there is still"
                               "an open #ifdef/#ifndef section from"
                               "before.".format(lineno, line.split()[0]))
+        elif line.startswith("#define"):
+            pass
         # Guard against unkown pragmas like #if or #include
         else:
-            raise IOError("Don't know how to parse pargma {} at"
+            raise IOError("Don't know how to parse pragma {} at"
                           "line {}.".format(line, lineno))
 
     def parse_header(self, line, lineno=0):
@@ -224,7 +227,7 @@ class ITPDirector(SectionLineParser):
         before calling the parent method.
         """
         if self.current_meta is not None:
-            raise IOError("Your #ifdef/#ifndef section is orderd incorrectly."
+            raise IOError("Your #ifdef/#ifndef section is ordered incorrectly."
                           "There is no #endif for the last pragma.")
 
         super().finalize()
@@ -250,6 +253,10 @@ class ITPDirector(SectionLineParser):
         tokens = collections.deque(_tokenize(line))
         self._parse_block_atom(tokens, self.current_block)
 
+
+    @SectionLineParser.section_parser('moleculetype', 'cmap')
+    def _skip(self, line, lineno=0):
+        pass
     @SectionLineParser.section_parser('moleculetype', 'bonds')
     @SectionLineParser.section_parser('moleculetype', 'angles')
     @SectionLineParser.section_parser('moleculetype', 'dihedrals')
@@ -270,6 +277,7 @@ class ITPDirector(SectionLineParser):
     @SectionLineParser.section_parser('moleculetype', 'orientation_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints')
     @SectionLineParser.section_parser('moleculetype', 'angle_restraints_z')
+    @SectionLineParser.section_parser('moleculetype', 'cmap')
     def _interactions(self, line, lineno=0):
         """
         Parses all interaction lines that are not directives (i.e. within []).

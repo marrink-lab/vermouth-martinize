@@ -2,18 +2,21 @@
 I/O of topology parameters that are not molecules.
 """
 import itertools
-from collections import namedtuple
+from collections import namedtuple, ChainMap
 import textwrap
 import vermouth
 from vermouth.file_writer import deferred_open
 from vermouth.citation_parser import citation_formatter
 from ..log_helpers import StyleAdapter, get_logger
 from .itp import _interaction_sorting_key
-
+from ..data import COMMON_CITATIONS
+from ..dssp.dssp import sequence_from_residues
+from ..selectors import is_protein
 LOGGER = StyleAdapter(get_logger(__name__))
 
 Atomtype = namedtuple('Atomtype', 'molecule node sigma epsilon meta')
 NonbondParam = namedtuple('NonbondParam', 'atoms sigma epsilon meta')
+
 
 def _group_by_conditionals(interactions):
     interactions_group_sorted = sorted(interactions,
@@ -115,8 +118,7 @@ def write_gmx_topology(system,
                        itp_paths={"nonbond_params": "extra_nbparams.itp",
                                   "atomtypes": "extra_atomtypes.itp"},
                        C6C12=False,
-                       defines=(),
-                       header=()):
+                       defines=()):
     """
     Writes a Gromacs .top file for the specified system. Gromacs topology
     files are defined by directives for example `[ atomtypes ]`. However,
@@ -141,8 +143,6 @@ def write_gmx_topology(system,
         C6C12 form
     defines: tuple(str)
         define statments to include in the topology
-    header: tuple(str)
-        any comment lines to include at the beginning
     """
     if not system.molecules:
         raise ValueError("No molecule in the system. Nothing to write.")
@@ -152,12 +152,10 @@ def write_gmx_topology(system,
     if "atomtypes" in system.gmx_topology_params:
         _path = itp_paths['atomtypes']
         write_atomtypes(system, _path, C6C12)
-        include_string += f'\n #include "{_path}"'
     # Next we write the nonbond_params directive
     if "nonbond_params" in system.gmx_topology_params:
         _path = itp_paths['nonbond_params']
         write_nonbond_params(system, _path, C6C12)
-        include_string += f'\n #include "{_path}"\n'
     # Write the ITP files for the molecule types, and prepare writing the
     # [ molecules ] section of the top file.
     # * We write one ITP file for each different moltype in the system, the
@@ -179,8 +177,26 @@ def write_gmx_topology(system,
     molecule_groups = itertools.groupby(
         system.molecules, key=lambda x: x.meta["moltype"]
     )
+
+    # grompp has a limit in the number of character it can read per line
+    # (due to the size limit of a buffer somewhere in its implementation).
+    # The command line can be longer than this limit and therefore
+    # prevent grompp from reading the topology.
+    gromacs_char_limit = 4000  # the limit is actually 4095, but I play safe
+    _header = system.meta.get('header', [])
+    header = []
+    for line in _header:
+        if len(line) > gromacs_char_limit:
+            header.append(line[:gromacs_char_limit] + " ...")
+        else:
+            header.append(line)
+
     for moltype, molecules in molecule_groups:
         molecule = next(molecules)
+        if molecule.force_field is not None:
+            citation_map = ChainMap(molecule.force_field.citations, COMMON_CITATIONS)
+        else:
+            citation_map = COMMON_CITATIONS
         if moltype not in moltype_written:
             # A given moltype can appear more than once in the sequence of
             # molecules, without being uninterupted by other moltypes. Even in
@@ -191,7 +207,7 @@ def write_gmx_topology(system,
                 header.append("Please cite the following papers:")
                 for citation in molecule.citations:
                     cite_string = citation_formatter(
-                        molecule.force_field.citations[citation]
+                        citation_map[citation]
                     )
                     LOGGER.info("Please cite: " + cite_string)
                     header.append(cite_string)

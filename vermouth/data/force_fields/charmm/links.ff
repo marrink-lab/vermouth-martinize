@@ -1,0 +1,7 @@
+[ link ]
+[ impropers ]
+N {"resname": "CYSP"} -C CA HN  2
+[ edges ]
+N HN
+N CA
+N -C

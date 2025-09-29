@@ -610,3 +610,5 @@ resname "CYS"
 SC1 >SC1 1 0.24 {"comment": "Disulfide bridge"}
 ;[ features ]
 ;disulfide
+[ info ]
+Disulfide bridge found between residues {SC1[chain]}-{SC1[resname]}{SC1[resid]} and {>SC1[chain]}-{>SC1[resname]}{>SC1[resid]}

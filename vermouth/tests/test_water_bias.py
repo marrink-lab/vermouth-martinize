@@ -45,17 +45,17 @@ from vermouth.gmx.topology import NonbondParam
         # only idp bias
         ({1: "H", 2: "H", 3: "C", 4: "C"},
         {"idr": 2.1},
-        [(2, 3)],
+        ["2:3"],
         {3: "idr", 5: "idr"}
         ),
         # idp and sec struc bias
         ({1: "H", 2: "H", 3: "C", 4: "C"},
         {"idr": 1.1, "C": 3.1, "H": 2.1},
-        [(2, 3)],
+        ["2:3"],
         {0: "H", 3: "idr", 5: "idr", 6: "C"}
         )
         ))
-def test_assign_residue_water_bias(test_molecule, 
+def test_assign_residue_water_bias(test_molecule,
                                    secstruc,
                                    water_bias,
                                    idr_regions,
@@ -65,12 +65,12 @@ def test_assign_residue_water_bias(test_molecule,
     # the molecule atomtypes
     atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
               3: "SP1", 4: "C1",
-              5: "TP1", 
+              5: "TP1",
               6: "P1", 7: "SN3a", 8: "SP4"}
     # the molecule resnames
     resnames = {0: "A", 1: "A", 2: "A",
                 3: "B", 4: "B",
-                5: "C", 
+                5: "C",
                 6: "D", 7: "D", 8: "D"}
 
     system = create_sys_all_attrs(test_molecule,
@@ -109,12 +109,12 @@ def test_assign_residue_water_bias(test_molecule,
              [[1, 3], [2, 4]]
             ),
             (#central idr to remove bonds from
-             [(2, 3)],
+             ["2:3"],
              [[1, 3], [2, 4], [1, 4]],
              [[1, 4]]
             ),
             (#remove all bonds within a region
-            [(1, 4)],
+            ["1:4"],
             [[1, 2], [2, 3], [3, 4], [1, 4]],
             []
             )
@@ -183,7 +183,7 @@ def test_no_moltype_error(test_molecule):
     # set up processor
     processor = ComputeWaterBias(water_bias={"C": 3.1},
                                  auto_bias=True,
-                                 idr_regions=None)
+                                 idr_regions=[])
     # no moltype set
     system = vermouth.System()
     system.add_molecule(test_molecule)
@@ -198,7 +198,7 @@ def test_no_system_error(test_molecule):
     # set up processor
     processor = ComputeWaterBias(water_bias={"C": 3.1},
                                  auto_bias=True,
-                                 idr_regions=None)
+                                 idr_regions=[])
     test_molecule.meta['moltype'] = "random"
     # no system
     with pytest.raises(IOError):
@@ -208,7 +208,7 @@ def test_clean_return(test_molecule):
     # set up processor
     processor = ComputeWaterBias(water_bias={"C": 3.1},
                                  auto_bias=None,
-                                 idr_regions=None)
+                                 idr_regions=[])
     test_molecule.meta['moltype'] = "random"
     system = vermouth.System()
     system.add_molecule(test_molecule)

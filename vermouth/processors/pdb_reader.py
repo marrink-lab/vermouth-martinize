@@ -48,7 +48,7 @@ class PDBInput(Processor):
     :func:`~vermouth.pdb.pdb.PDBParser`
 
     """
-    def __init__(self, filename, exclude=(), ignh=False, modelidx=0):
+    def __init__(self, filename, exclude=(), ignh=False, modelidx=1):
         super().__init__()
         self.filename = filename
         self.exclude = exclude

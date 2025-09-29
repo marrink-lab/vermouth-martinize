@@ -51,6 +51,17 @@ FF_MARTINI_TEST = TEST_DATA / 'force_fields' / 'martini-test'
 # Mappings
 MAP_UNIVERSAL_TEST_PEPPLANE = TEST_DATA / 'mappings' / 'universal-test'
 
+# contact map
+TEST_MOLECULE_CONTACT_MAP = TEST_DATA / 'test_molecule_contacts.out'
+
+# cif file
+CIF_PROTEIN = TEST_DATA / '1UBQ.cif'
+CIF_NO_CELL = TEST_DATA / '1UBQ_nocell_occupancy.cif'
+CIF_PDB_COMPARE = TEST_DATA / '1UBQ.pdb'
+CIF_MULTI = TEST_DATA / 'multiple.cif'
+CIF_MISSING_RESNAME = TEST_DATA / 'cif_missing_resname.cif'
+CIF_MISSING_ATOMNAME = TEST_DATA / 'cif_missing_atomname.cif'
+
 
 # Clean the namespace so only the data file variables can be imported.
 # An other option would be to define __all__, but it is easy to forget to add

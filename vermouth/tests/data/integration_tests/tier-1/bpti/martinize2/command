@@ -9,3 +9,5 @@ martinize2
 -ep 2
 -modify A-ASP50:ASP-HD2
 -ignore HOH
+-noscfix
+-ef 500

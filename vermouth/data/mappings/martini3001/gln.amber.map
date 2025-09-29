@@ -43,10 +43,8 @@ amber27 amber36
    13   NE2   SC1
    14  HE21   SC1
    15  HE22   SC1
-   16  HE11   SC1
-   17  HE12   SC1
-   18     C    BB
-   19     O    BB
+   16     C    BB
+   17     O    BB
 
 [ chiral ]
   CB     CA    N    C

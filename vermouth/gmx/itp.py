@@ -59,6 +59,21 @@ def _interaction_sorting_key(interaction):
     return (conditional, group)
 
 
+def _sort_atoms(atoms, name):
+    if name[:4] in ('bond', 'pair'):
+        return sorted(atoms)
+    elif name.startswith('angle'):
+        return atoms if atoms[0] < atoms[-1] else list(reversed(atoms))
+    elif name.startswith('dihedral'):
+        return atoms if atoms[1] < atoms[2] else list(reversed(atoms))
+    return atoms
+
+def _sort_interaction(atoms, name):
+    if name.startswith('angle'):
+        return (atoms[1], tuple(atoms))
+    else: return (min(atoms), tuple(atoms))
+
+
 def write_molecule_itp(molecule, outfile, header=(), moltype=None,
                        post_section_lines=None, pre_section_lines=None):
     """
@@ -147,6 +162,12 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     if has_header:
         outfile.write('\n')
 
+    # write features (eg POSRES_FC) that are defined through global define statements
+    for name, val in molecule.meta.get('define', {}).items():
+        outfile.write(f'#ifndef {name}\n')
+        outfile.write(f'#define {name} {val}\n')
+        outfile.write(f'#endif\n\n')
+
     outfile.write('[ moleculetype ]\n')
     outfile.write('{} {}\n\n'.format(moltype, molecule.nrexcl))
 
@@ -203,10 +224,12 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
         # object to distinguish them from the proper dihedrals. Yet, they
         # should be written under the [ dihedrals ] section of the ITP file.
         if name == 'impropers':
-            name = 'dihedrals'
-        outfile.write('[ {} ]\n'.format(name))
+            section_name = 'dihedrals'
+        else:
+            section_name = name
+        outfile.write('[ {} ]\n'.format(section_name))
         seen_sections.add(name)
-        for line in pre_section_lines.get(name, []):
+        for line in pre_section_lines.get(section_name, []):
             outfile.write(line + '\n')
         interactions_group_sorted = sorted(
             interactions,
@@ -222,11 +245,12 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
                 outfile.write('{} {}\n'.format(conditional_key, conditional[0]))
             if group:
                 outfile.write('; {}\n'.format(group))
+            interactions_in_group = sorted(interactions_in_group, key=lambda i: _sort_interaction(_sort_atoms(list(map(correspondence.get, i.atoms)), name), name))
             for interaction in interactions_in_group:
                 atoms = ['{atom_idx:>{max_length[idx]}}'
-                         .format(atom_idx=correspondence[x],
+                         .format(atom_idx=x,
                                  max_length=max_length)
-                         for x in interaction.atoms]
+                         for x in _sort_atoms(list(map(correspondence.get, interaction.atoms)), name)]
                 parameters = ' '.join(str(x) for x in interaction.parameters)
                 comment = ''
                 if 'comment' in interaction.meta:
