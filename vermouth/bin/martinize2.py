@@ -17,7 +17,6 @@
 """
 High level API for Martinize2
 """
-import copy
 import argparse
 import functools
 import logging

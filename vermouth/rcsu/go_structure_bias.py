@@ -150,7 +150,7 @@ class ComputeStructuralGoBias(Processor):
                 resid_key = molecule_graph.nodes[resnode].get('_old_resid')
                 mol_key = molecule_graph.nodes[resnode].get('mol_idx')
                 if mol_key != mol_id:
-                    print('error, mol index is not the same')
+                    LOGGER.warning('mol index is not the same throughout the molecule')
                 self.__chain_id_to_resnode[(chain_key, resid_key, mol_key)] = resnode
 
         if self.__chain_id_to_resnode.get((chain, resid, molid), None) is not None:
@@ -263,7 +263,7 @@ class ComputeStructuralGoBias(Processor):
                                                                     chain=chainA,
                                                                     prefix=self.moltype)
                         else:
-                            print(f'Warning there no graph generated with mol_id: {molIDA}')
+                            LOGGER.warning(f'Warning there no graph generated with mol_id: {molIDA}')
 
                         if self.molecule_graphs[molIDB]:
                             vs_b, excl_b = get_go_type_from_attributes(self.molecule_graphs[molIDB].nodes[resB]['graph'],
@@ -271,7 +271,7 @@ class ComputeStructuralGoBias(Processor):
                                                                     chain=chainB,
                                                                     prefix=self.moltype)
                         else:
-                            print(f'Warning there no graph generated with mol_id: {molIDB}')
+                            LOGGER.warning(f'Warning there no graph generated with mol_id: {molIDB}')
                         
                         # here the contact (vs_b, vs_a, beadB, beadA, dist) is checked, if the
                         # contact was already seen before (in contact_matrix)
@@ -325,7 +325,8 @@ class ComputeStructuralGoBias(Processor):
 
         for keys, dists in added_contacts.items():
             if int(max(dists) - min(dists)) >= 0.2:
-                print("Warning: the distance between a pair of backbone beads vary more than 0.2 nm")
+                LOGGER.warning("The distance between a pair of backbone beads vary more than 0.2 nm," \
+                "models might differ too much to get a reliable Gō model.")
             average_dist = sum(dists) / len(dists)
             keys = keys + (average_dist,)
             self.symmetrical_matrix.append(keys)
@@ -390,8 +391,7 @@ class ComputeStructuralGoBias(Processor):
                 LJ_sigma, LJ_epsilon = LJ_sigma_epsilon_dict[(beadB, beadA)]
                 LJ_sigma, LJ_epsilon = float(LJ_sigma), float(LJ_epsilon)
             else:
-                print('Warning there is a bead combi that is not in the LJ_sigma_epsilon_dict')
-                print(beadA, beadB)
+                LOGGER.warning(f'Warning there is a bead combi that is not recognized in the forcefield file: {beadA}, {beadB}')
 
             if bond_type == 'intra':
                 go_epsilon = self.go_eps_intra
