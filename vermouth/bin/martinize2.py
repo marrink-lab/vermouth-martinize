@@ -572,13 +572,6 @@ def entry():
         help=("Path to martini_v3.0.0.itp"),
     )
     go_group.add_argument(
-        "-go-eps",
-        dest="go_eps",
-        type=float,
-        default=9.414,
-        help=("The strength of the Go model structural bias in kJ/mol."),
-    )
-    go_group.add_argument(
         "-go-eps-inter",
         dest="go_eps_inter",
         type=float,
@@ -1054,7 +1047,7 @@ def entry():
     if args.go:
         if isinstance(args.go, Path):
             LOGGER.info("Reading Go model contact map.", type="step")
-            read_go_map(system=system, file_path=args.go) ##### this needs to be changed so that it also gives the mol_idx as output into the 'go_params'
+            read_go_map(system=system, file_path=args.go)
 
         else:
             LOGGER.info("Generating Go model contact map.", type="step")

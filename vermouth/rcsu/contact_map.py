@@ -902,7 +902,7 @@ def read_go_map(system, file_path):
             resid = (G.nodes[residue]['resid'])
             chain = (G.nodes[residue]['chain'])
             if (resid, chain) in check_dup:
-                print(f'Warning, there are multiple instances of {chain} (chain), {resid} (residue id)')
+                raise IOError(f'Warning, there are multiple instances of {chain} (chain), {resid} (residue id)')
             mol_idx = (G.nodes[residue]['mol_idx'])
             mol_dict[(resid, chain)] = mol_idx
             check_dup.append((resid, chain))
@@ -914,7 +914,7 @@ def read_go_map(system, file_path):
             tokens = line.strip().split()
             if len(tokens) == 0:
                 continue
-            if tokens[0] == "R" and len(tokens) == 18:
+            if tokens[0] == "R" and (len(tokens) == 17 or len(tokens) == 18): # one or more than one models
                 # this is a bad place to filter but follows
                 # the old script
                 if tokens[11] == "1" or (tokens[11] == "0" and tokens[14] == "1"):
