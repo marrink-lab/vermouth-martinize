@@ -677,9 +677,10 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
                   "           (CSU does not take into account chemical properties of atoms)\n"
                   "rCSU     - net contact from rCSU\n"
                   "Count    - number of contacts between residues\n"
+                  "MODEL    - model number\n"
                   "\n"
-                  "      ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count \n"
-                  "=======================================================================================\n")
+                  "      ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count  Model\n"
+                  "=============================================================================================\n")
 
     msgs = []
     count = 0
@@ -693,7 +694,8 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
                f"{euclidean(ca_pos[contact[2]], ca_pos[contact[3]])*10:9.4f}     "
                f"{int(contact[4]):1d} {1 if contact[5] != 0 else 0} "
                f"{1 if contact[6] != 0 else 0} {1 if contact[7] else 0}"
-               f"{int(contact[7]): 6d}  {int(contact[5]): 6d}\n")
+               f"{int(contact[7]): 6d}  {int(contact[5]): 6d}"
+               f"     0\n")
         msgs.append(msg)
     message_out = ''.join(msgs)
     with deferred_open(fout, "w") as f:
