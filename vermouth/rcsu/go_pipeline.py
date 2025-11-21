@@ -21,6 +21,7 @@ from ..processors.processor import Processor
 from .go_vs_includes import VirtualSiteCreator
 from .go_structure_bias import ComputeStructuralGoBias
 from ..processors import SetMoleculeMeta
+from collections import defaultdict
 
 class GoProcessorPipeline(Processor):
     """
@@ -31,19 +32,32 @@ class GoProcessorPipeline(Processor):
         self.kwargs = {}
 
     def prepare_run(self, system, moltype):
-        """
-        Things to do before running the pipeline.
-        """
-        # merge all molecules in the system
-        # this will eventually become deprecated
-        # with the proper Go-model for multimers
-        vermouth.MergeAllMolecules().run_system(system)
-        molecule = system.molecules[0]
-        molecule.meta['moltype'] = moltype
+        structure_map = defaultdict(list)
+        unique_mols_map = {}
+        reference_mol_map = {}
+
+        for mol in system.molecules:
+            mol_id = next(iter(mol.nodes.values()))['mol_idx']
+            resseq = tuple((n['resname'], n['atomname']) for _, n in sorted(mol.nodes.items()))
+            bonds = tuple(sorted((min(a, b), max(a, b)) for a, b in mol.edges))
+            sig = (resseq, bonds)
+            structure_map[sig].append((mol_id, mol))
+
+        for mol_list in structure_map.values():
+            reference_mol_id = mol_list[0][0]  # mol id of the first molecule in the group
+            mol_ids = [mol_id for mol_id, _ in mol_list]
+            for mol_id, mol in mol_list:
+                mol.meta['moltype'] = f"{moltype}_{reference_mol_id}"
+                unique_mols_map[mol_id] = [m_id for m_id in mol_ids if m_id != mol_id]
+                reference_mol_map[mol_id] = reference_mol_id
+
+        system.go_params['reference_mol_map'] = reference_mol_map
+        system.go_params['unique_mols_map'] = unique_mols_map
 
     def run_system(self, system, **kwargs):
         self.kwargs = kwargs
         self.prepare_run(system, moltype=kwargs['moltype'])
+
         for processor in self.processor_list:
             process_args = inspect.getfullargspec(processor).args
             process_args_values = {arg: self.kwargs[arg] for arg in kwargs.keys() if arg in process_args}

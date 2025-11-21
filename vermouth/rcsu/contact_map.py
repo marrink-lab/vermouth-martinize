@@ -378,12 +378,10 @@ def atom2res(arrin, nresidues, atom_map, norm=False):
     return out
 
 
-def _contact_info(molecule):
+def _contact_info(system):
     """
     get the atom attributes that we need to calculate the contacts
     """
-
-    G = make_residue_graph(molecule)
 
     resids = []
     chains = []
@@ -394,28 +392,39 @@ def _contact_info(molecule):
     atypes = []
     res_serial = []
     res_idx = []
-    for residue in G.nodes:
-        # we only need these for writing at the end
-        resnames.append(G.nodes[residue]['resname'])
-        resids.append(G.nodes[residue]['resid'])
-        chains.append(G.nodes[residue]['chain'])
-        res_idx.append(G.nodes[residue]['_res_serial'])
-        subgraph = G.nodes[residue]['graph']
+    mol_idx = []
+    nresidues = 0
+    nodes_list = []
+    G_list = []
 
-        for atom in sorted(subgraph.nodes):
-            position = subgraph.nodes[atom].get('position', [np.nan]*3)
-            if np.isfinite(position).all():
-                res_serial.append(subgraph.nodes[atom]['_res_serial'])
+    for molecule in system.molecules:
+        G = make_residue_graph(molecule)
+        nresidues += len(G)
+        G_list.append(G)
+        for residue in G.nodes:
+            nodes_list.append(residue)
+            # we only need these for writing at the end
+            resnames.append(G.nodes[residue]['resname'])
+            resids.append(G.nodes[residue]['resid'])
+            chains.append(G.nodes[residue]['chain'])
+            res_idx.append(G.nodes[residue]['_res_serial'])
+            mol_idx.append(G.nodes[residue]['mol_idx'])
+            subgraph = G.nodes[residue]['graph']
 
-                positions_all.append(subgraph.nodes[atom]['position'] * 10)
+            for atom in sorted(subgraph.nodes):
+                position = subgraph.nodes[atom].get('position', [np.nan]*3)
+                if np.isfinite(position).all():
+                    res_serial.append(subgraph.nodes[atom]['_res_serial'])
 
-                vdw_list.append(_get_vdw_radius(subgraph.nodes[atom]['resname'],
-                                                subgraph.nodes[atom]['atomname']))
-                atypes.append(_get_atype(subgraph.nodes[atom]['resname'],
-                                         subgraph.nodes[atom]['atomname']))
+                    positions_all.append(subgraph.nodes[atom]['position'] * 10)
 
-                if subgraph.nodes[atom]['atomname'] == 'CA':
-                    ca_pos.append(subgraph.nodes[atom]['position'])
+                    vdw_list.append(_get_vdw_radius(subgraph.nodes[atom]['resname'],
+                                                    subgraph.nodes[atom]['atomname']))
+                    atypes.append(_get_atype(subgraph.nodes[atom]['resname'],
+                                            subgraph.nodes[atom]['atomname']))
+
+                    if subgraph.nodes[atom]['atomname'] == 'CA':
+                        ca_pos.append(subgraph.nodes[atom]['position'])
 
 
     vdw_list = np.array(vdw_list)
@@ -427,11 +436,9 @@ def _contact_info(molecule):
     chains = np.array(chains)
     resnames = np.array(resnames)
     res_idx = np.array(res_idx)
+    mol_idx = np.array(mol_idx)
 
-    # 2) find the number of residues that we have
-    nresidues = len(G)
-
-    return vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, G
+    return vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, mol_idx, ca_pos, nresidues, G_list, nodes_list
 
 def _calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24):
     """
@@ -607,8 +614,13 @@ def _calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
 
     return overlapcounter_2, contactcounter_2, stabilisercounter_2, destabilisercounter_2
 
+def find_node_by_res_idx(G, node, target_idx):
+    
+    if G.nodes[node].get('_res_serial') == target_idx:
+        return node
+    raise ValueError(f"No node with _res_serial {target_idx} found in graph.")
 
-def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, res_idx, G):
+def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, res_idx, mol_idx, G_list, nodes_list):
     '''
     Generate contacts list from the contact arrays calculated
 
@@ -624,8 +636,12 @@ def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, res
         nresidues x nresidues array of CSU destabilising contacts in the molecule
     res_idx: list
         list of serial residue ids for each of the residues
-    G: nx.Graph
-        residue based graph of the molecule
+    mol_idx: list
+        list of molecule index for each of the residues
+    G_list: list of nx.Graphs
+        residue based graph of the molecules in the system
+    nodes_list: list
+        list of node indexes, correspoding to the nx.graphs in G_list, for each of the residues
     '''
     contacts_list = []
     all_contacts = []
@@ -638,19 +654,34 @@ def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, res
         dest = destabilisers[i1, i2]
         rcsu = (stab - dest) > 0
 
+        # get corresponding mol_idx
+        mol_idx_a = mol_idx[i1]
+        mol_idx_b = mol_idx[i2]
+        # get corresponding graph
+        G_a = G_list[mol_idx_a]
+        G_b = G_list[mol_idx_b]
+        # get corresponding _res_serial
+        resid_idx_a = res_idx[i1]
+        resid_idx_b = res_idx[i2]
+        # get corresponding node
+        node_a = nodes_list[i1]
+        node_b = nodes_list[i2]
+
+        # See if res_serial == res_serial, if so continue with the nodes
+        a = find_node_by_res_idx(G_a, node_a, resid_idx_a)
+        b = find_node_by_res_idx(G_b, node_b, resid_idx_b)
+
         if (over > 0 or cont > 0):
-            a = np.where(res_idx == i1)[0][0]
-            b = np.where(res_idx == i2)[0][0]
-            all_contacts.append([i1+1, i2+1, a, b, over, cont, stab, rcsu])
+            all_contacts.append([i1+1, i2+1, a, b, over, cont, stab, rcsu, mol_idx_a, mol_idx_b])
             if over == 1 or (over == 0 and rcsu):
                 # this is a OV or rCSU contact we take it
-                contacts_list.append((int(G.nodes[a]['stash']['resid']), G.nodes[a]['chain'],
-                                      int(G.nodes[b]['stash']['resid']), G.nodes[b]['chain']))
-
+                contacts_list.append((int(G_a.nodes[a]['stash']['resid']), G_a.nodes[a]['chain'], mol_idx_a,
+                                      int(G_b.nodes[b]['stash']['resid']), G_b.nodes[b]['chain'], mol_idx_b))
+           
     return contacts_list, all_contacts
 
 
-def _write_contacts(fout, all_contacts, ca_pos, G):
+def _write_contacts(fout, all_contacts, ca_pos, G_list):
     '''
     write the contacts calculated to file
     fout: str
@@ -684,12 +715,16 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
     msgs = []
     count = 0
     for contact in all_contacts:
+        mol_idx_a = contact[8]
+        mol_idx_b = contact[9]
+        G_a = G_list[mol_idx_a]
+        G_b = G_list[mol_idx_b]
         count += 1
         msg = (f"R {int(count):6d} "
-               f"{int(contact[0]):5d}  {G.nodes[contact[2]]['resname']:3s} "
-               f"{G.nodes[contact[2]]['chain']:1s} {int(G.nodes[contact[2]]['stash']['resid']):4d}    "
-               f"{int(contact[1]):5d}  {G.nodes[contact[3]]['resname']:3s} "
-               f"{G.nodes[contact[3]]['chain']:1s} {int(G.nodes[contact[3]]['stash']['resid']):4d}    "
+               f"{int(contact[0]):5d}  {G_a.nodes[contact[2]]['resname']:3s} "
+               f"{G_a.nodes[contact[2]]['chain']:1s} {int(G_a.nodes[contact[2]]['stash']['resid']):4d}    "
+               f"{int(contact[1]):5d}  {G_b.nodes[contact[3]]['resname']:3s} "
+               f"{G_b.nodes[contact[3]]['chain']:1s} {int(G_b.nodes[contact[3]]['stash']['resid']):4d}    "
                f"{euclidean(ca_pos[contact[2]], ca_pos[contact[3]])*10:9.4f}     "
                f"{int(contact[4]):1d} {1 if contact[5] != 0 else 0} "
                f"{1 if contact[6] != 0 else 0} {1 if contact[7] else 0}"
@@ -723,21 +758,39 @@ def read_go_map(system, file_path):
     Returns
     -------
     list(tuple)
-        contact as chain id, res id, chain id, res id
+        contact as chain id, res id, mol id, chain id, res id, mol id
     """
+
+    mol_dict = {}
+    check_dup = []
+
+    # this new block is nessecairy for the mol_idx attribute that needs to be given in contacts
+    for molecule in system.molecules:
+        G = make_residue_graph(molecule)
+        for residue in G.nodes:
+            resid = (G.nodes[residue]['resid'])
+            chain = (G.nodes[residue]['chain'])
+            if (resid, chain) in check_dup:
+                raise IOError(f'Warning, there are multiple instances of {chain} (chain), {resid} (residue id)')
+            mol_idx = (G.nodes[residue]['mol_idx'])
+            mol_dict[(resid, chain)] = mol_idx
+            check_dup.append((resid, chain))
+
+
     with open(file_path, "r", encoding='UTF-8') as _file:
         contacts = []
         for line in _file:
             tokens = line.strip().split()
             if len(tokens) == 0:
                 continue
-
-            if tokens[0] == "R" and len(tokens) == 18:
+            if tokens[0] == "R" and (len(tokens) == 17 or len(tokens) == 18): # one or more than one models
                 # this is a bad place to filter but follows
                 # the old script
                 if tokens[11] == "1" or (tokens[11] == "0" and tokens[14] == "1"):
                     # this is a OV or rCSU contact we take it
-                    contacts.append((int(tokens[5]), tokens[4], int(tokens[9]), tokens[8]))
+                    resIDA, chainA, resIDB, chainB = (int(tokens[5]), tokens[4], int(tokens[9]), tokens[8])
+                    molIDA, molIDB = mol_dict[(resIDA, chainA)], mol_dict[(resIDB, chainB)]
+                    contacts.append((resIDA, chainA, molIDA, resIDB, chainB, molIDB))
 
         if len(contacts) == 0:
             raise IOError("You contact map is empty. Are you sure it has the right formatting?")
@@ -745,7 +798,7 @@ def read_go_map(system, file_path):
     system.go_params["go_map"].append(contacts)
 
 
-def do_contacts(molecule, write_file):
+def do_contacts(system, write_file):
     '''
     master function to calculate Go contacts
 
@@ -754,8 +807,8 @@ def do_contacts(molecule, write_file):
     write_file: bool
         write the file of the contacts out
     '''
-    vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, mol_graph = _contact_info(
-        molecule)
+    vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, mol_idx, ca_pos, nresidues, mol_graphs, nodes_list = _contact_info(
+        system)
 
     overlaps, contacts, stabilisers, destabilisers = _calculate_contacts(vdw_list,
                                                                         atypes,
@@ -764,14 +817,17 @@ def do_contacts(molecule, write_file):
                                                                         nresidues)
 
     contacts, all_contacts = _get_contacts(nresidues,
-                            overlaps, contacts,
+                            overlaps, 
+                            contacts,
                             stabilisers,
                             destabilisers,
                             res_idx,
-                            mol_graph)
+                            mol_idx,
+                            mol_graphs, 
+                            nodes_list)
 
     if isinstance(write_file, (str, Path)):
-        _write_contacts(write_file, all_contacts, ca_pos, mol_graph)
+        _write_contacts(write_file, all_contacts, ca_pos, mol_graphs)
 
     return contacts
 
@@ -783,18 +839,8 @@ class GenerateContactMap(Processor):
     def __init__(self, write_file):
         self.write_file = write_file
 
-    def run_molecule(self, molecule):
-        """
-        Process `system`.
-
-        Parameters
-        ----------
-        system: vermouth.system.System
-            The system to process. Is modified in-place.
-        """
-        return do_contacts(molecule, self.write_file)
-
     def run_system(self, system):
-        for molecule in system.molecules:
-            contacts = self.run_molecule(molecule)
-            system.go_params["go_map"].append(contacts)
+
+        contacts = do_contacts(system, self.write_file)
+        system.go_params["go_map"].append(contacts)
+
