@@ -147,7 +147,7 @@ class ComputeStructuralGoBias(Processor):
         for mol_id, molecule_graph in self.molecule_graphs.items():
             for resnode in molecule_graph.nodes:
                 chain_key = molecule_graph.nodes[resnode].get('chain', None)
-                resid_key = molecule_graph.nodes[resnode].get('_old_resid')
+                resid_key = molecule_graph.nodes[resnode]['stash'].get('resid')
                 mol_key = molecule_graph.nodes[resnode].get('mol_idx')
                 if mol_key != mol_id:
                     LOGGER.warning('mol index is not the same throughout the molecule')
@@ -259,7 +259,7 @@ class ComputeStructuralGoBias(Processor):
                     if high > dist > low:
                         if self.molecule_graphs[molIDA]:
                             vs_a, excl_a = get_go_type_from_attributes(self.molecule_graphs[molIDA].nodes[resA]['graph'],
-                                                                    _old_resid=resIDA,
+                                                                    stash=self.molecule_graphs[molIDA].nodes[resA]['stash'],
                                                                     chain=chainA,
                                                                     prefix=self.moltype)
                         else:
@@ -267,7 +267,7 @@ class ComputeStructuralGoBias(Processor):
 
                         if self.molecule_graphs[molIDB]:
                             vs_b, excl_b = get_go_type_from_attributes(self.molecule_graphs[molIDB].nodes[resB]['graph'],
-                                                                    _old_resid=resIDB,
+                                                                    stash=self.molecule_graphs[molIDB].nodes[resB]['stash'],
                                                                     chain=chainB,
                                                                     prefix=self.moltype)
                         else:
