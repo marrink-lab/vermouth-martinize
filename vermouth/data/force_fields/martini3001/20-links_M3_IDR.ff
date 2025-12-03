@@ -1,0 +1,458 @@
+
+[ macros ]
+protein_resnames         "CYSG|CYSF|CYSP|GLYM|GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames_non_pro "CYSG|CYSF|CYSP|GLYM|GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+protein_resnames_non_gly "CYSG|CYSF|CYSP|GLYM|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|ASPP|ASH|GLU|GLUP|GLH|THR|SER|LYS|LSN|LYN|ARG|HSE|HIS|HSD|HSP|HID|HIP|HIE|PHE|TYR|TRP"
+
+protein_resnames_BBS_110 "ALA|ILE|VAL|TRP|SER"
+protein_resnames_BBS_100 "CYS|ASP|GLU|PHE|HIS|LYS|LEU|THR|TYR"
+protein_resnames_BBS_90  "MET|ASN|GLN|ARG"
+
+protein_resnames_SBB_70 "SER"
+protein_resnames_SBB_75 "ALA|THR|CYS"
+protein_resnames_SBB_80 "VAL|TRP"
+protein_resnames_SBB_90 "ASP|GLU|PHE|HIS|ILE|LYS|LEU|MET|ASN|GLN|ARG|TYR"
+
+protein_resnames_improper_20 "ALA|HIS|ARG|TRP"
+protein_resnames_improper_25 "ASP|GLU|PHE|ILE|LYS|LEU|ASN|TYR|CYS|SER|THR|VAL"
+protein_resnames_improper_35 "MET"
+protein_resnames_improper_40 "GLN"
+
+[ citations ]
+Martini3
+Martini3IDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;; IDR SPECIFIC BONDS ;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Bond for IDR.
+[ link ]
+resname $protein_resnames_non_pro
+cgidr true
+[ features ]
+idr
+[ bonds ]
+BB +BB 1 0.360 8000 {"group": "Backbone bonds IDP", "comment": "BB-BB IDR"}
+
+;; Pro specific bondlength in IDR
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": $protein_resnames_non_pro}
++BB {"resname": "PRO"}
+[ bonds ]
+BB +BB 1 0.360 10000 {"group": "Backbone bonds IDP", "comment": "BB-BB(PRO)"}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": "PRO"}
++BB {"resname": $protein_resnames_non_pro}
+[ bonds ]
+BB +BB 1 0.305 10000 {"group": "Backbone bonds IDP", "comment": "BB(PRO)-BB"}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": "PRO"}
++BB {"resname": "PRO"}
+[ bonds ]
+BB +BB 1 0.321 10000 {"group": "Backbone bonds IDP", "comment": "BB(PRO)-BB(PRO)"}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; IDR ANGLES ;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; BBB Angle for IDR.
+[ link ]
+resname $protein_resnames
+cgidr true
+[ features ]
+idr
+[ angles ]
+-BB BB +BB 10 137 25 {"group": "BBB angles IDP"}
+
+
+;; IDP residue specific BBS angle
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": $protein_resnames}
+ BB {"resname": $protein_resnames_BBS_110}
+SC1 {"resname": $protein_resnames_BBS_110}
+[ angles ]
+-BB  BB  SC1  10 110 15 {"group": "BBS angles", "comment": "IDP residue specific", "version": 1}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": $protein_resnames}
+ BB {"resname": $protein_resnames_BBS_100}
+SC1 {"resname": $protein_resnames_BBS_100}
+[ angles ]
+-BB  BB  SC1  10 100 15 {"group": "BBS angles", "comment": "IDP residue specific", "version": 1}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": $protein_resnames}
+ BB {"resname": $protein_resnames_BBS_90}
+SC1 {"resname": $protein_resnames_BBS_90}
+[ angles ]
+-BB  BB  SC1  10 90 15 {"group": "BBS angles", "comment": "IDP residue specific", "version": 1}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": $protein_resnames}
+ BB {"resname": "PRO"}
+SC1 {"resname": "PRO"}
+[ angles ]
+-BB  BB  SC1  10 85 100 {"group": "BBS angles", "comment": "IDP residue specific", "version": 1}
+
+
+;; IDP residue specific SBB angle
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+SC1 {"resname": $protein_resnames_SBB_70}
+ BB {"resname": $protein_resnames_SBB_70}
++BB {"resname": $protein_resnames}
+[ angles ]
+SC1 BB +BB  10 70 15 {"group": "SBB angles", "comment": "IDP residue specific", "version": 1}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+SC1 {"resname": $protein_resnames_SBB_75}
+ BB {"resname": $protein_resnames_SBB_75}
++BB {"resname": $protein_resnames}
+[ angles ]
+SC1 BB +BB  10 75 15 {"group": "SBB angles", "comment": "IDP residue specific", "version": 1}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+SC1 {"resname": $protein_resnames_SBB_80}
+ BB {"resname": $protein_resnames_SBB_80}
++BB {"resname": $protein_resnames}
+[ angles ]
+SC1 BB +BB  10 80 15 {"group": "SBB angles", "comment": "IDP residue specific", "version": 1}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+SC1 {"resname": $protein_resnames_SBB_90}
+ BB {"resname": $protein_resnames_SBB_90}
++BB {"resname": $protein_resnames}
+[ angles ]
+SC1 BB +BB  10 90 15 {"group": "SBB angles", "comment": "IDP residue specific", "version": 1}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+SC1 {"resname": "PRO"}
+ BB {"resname": "PRO"}
++BB {"resname": $protein_resnames}
+[ angles ]
+SC1 BB +BB  10 120 30 {"group": "SBB angles", "comment": "IDP residue specific", "version": 1}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; IDR DIHEDRALS ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; IDP SC-BB-BB-SC dihedral based on the observation of Chris
+[ link ]
+resname $protein_resnames
+cgidr true
+[ features ]
+idr
+[ dihedrals ]
+SC1 BB +BB +SC1 9 -130 -1.4 1 {"group": "idp-fix-SC1-BB-BB-SC1", "version": 1, "comment": "SC1-BB-BB-SC1-v1"}
+SC1 BB +BB +SC1 9  100 -1.4 2 {"group": "idp-fix-SC1-BB-BB-SC1", "version": 2, "comment": "SC1-BB-BB-SC1-v2"}
+
+;; IDP generic BBBB dihedral function for most cases
+[ link ]
+resname $protein_resnames
+cgidr true
+[ features ]
+idr
+[ dihedrals ]
+-BB BB +BB ++BB 9  60   2.8  1   {"group": "idp-BBBB", "version": 1, "comment": "BBBB-v1"}
+-BB BB +BB ++BB 9  150  -0.60  1 {"group": "idp-BBBB", "version": 2, "comment": "BBBB-v2"}
+-BB BB +BB ++BB 9  130  -1.20  2 {"group": "idp-BBBB", "version": 3, "comment": "BBBB-v3"}
+
+;; IDP BBBB dihedral function for specific high Gly content pattern
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB  {"resname": "GLY"}
+ BB  {"resname": "GLY"}
++BB  {"resname": "GLY"}
+++BB {"resname": "GLY"}
+[ dihedrals ]
+-BB BB +BB ++BB 9  160  0.8  1 {"group": "idp-BBBB", "version": 1, "comment": "GGGG-v1"}
+-BB BB +BB ++BB 9  -160 0.8  1 {"group": "idp-BBBB", "version": 2, "comment": "GGGG-v2"}
+-BB BB +BB ++BB 9   0   1.2  2 {"group": "idp-BBBB", "version": 3, "comment": "GGGG-v3"}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": "GLY"}
+ BB {"resname": "GLY"}
++BB {"resname": "GLY"}
+++BB {"resname": $protein_resnames_non_gly}
+[ dihedrals ]
+-BB BB +BB ++BB 9  160  0.8  1 {"group": "idp-BBBB", "version": 1, "comment": "GGGX-v1"}
+-BB BB +BB ++BB 9  -160 0.8  1 {"group": "idp-BBBB", "version": 2, "comment": "GGGX-v2"}
+-BB BB +BB ++BB 9   0   1.2  2 {"group": "idp-BBBB", "version": 3, "comment": "GGGX-v3"}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": $protein_resnames_non_gly}
+ BB {"resname": "GLY"}
++BB {"resname": "GLY"}
+++BB {"resname": "GLY"}
+[ dihedrals ]
+-BB BB +BB ++BB 9  160  0.8  1 {"group": "idp-BBBB", "version": 1, "comment": "XGGG-v1"}
+-BB BB +BB ++BB 9 -160  0.8  1 {"group": "idp-BBBB", "version": 2, "comment": "XGGG-v2"}
+-BB BB +BB ++BB 9   0   1.2  2 {"group": "idp-BBBB", "version": 3, "comment": "XGGG-v3"}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": "GLY"}
+ BB {"resname": "GLY"}
++BB {"resname": $protein_resnames_non_gly}
+++BB {"resname": "GLY"}
+[ dihedrals ]
+-BB BB +BB ++BB 9 -160  0.8  1 {"group": "idp-BBBB", "version": 1, "comment": "GGXG-v1"}
+-BB BB +BB ++BB 9 -80   0.8  2 {"group": "idp-BBBB", "version": 2, "comment": "GGXG-v2"}
+-BB BB +BB ++BB 9   0   1.2  2 {"group": "idp-BBBB", "version": 3, "comment": "GGXG-v3"}
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": "GLY"}
+ BB {"resname": $protein_resnames_non_gly}
++BB {"resname": "GLY"}
+++BB {"resname": "GLY"}
+[ dihedrals ]
+-BB BB +BB ++BB 9  60  2.0  1 {"group": "idp-BBBB", "version": 1, "comment": "GXGG-v1"}
+-BB BB +BB ++BB 9 -100 0.8  1 {"group": "idp-BBBB", "version": 2, "comment": "GXGG-v2"}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;; IDR SIDECHAIN IMPROPER DIHEDRALS ;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; IDP exceptional BB-BB(GLY)-BB-SC1 dihedral distribution
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+-BB {"resname": $protein_resnames}
+ BB {"resname": "GLY"}
++BB {"resname": $protein_resnames}
++SC1 {"resname": $protein_resnames}
+[ dihedrals ]
+-BB BB +BB +SC1 9 -10   3.2 1 {"group": "idp-fix-BB-BB(GLY)-BB-SC1", "version": 1,"comment": "BB-BB(GLY)-BB-SC1-v1"}
+-BB BB +BB +SC1 9  15  -1.3 2 {"group": "idp-fix-BB-BB(GLY)-BB-SC1", "version": 2,"comment": "BB-BB(GLY)-BB-SC1-v2"}
+-BB BB +BB +SC1 9 -120  0.8 1 {"group": "idp-fix-BB-BB(GLY)-BB-SC1", "version": 3,"comment": "BB-BB(GLY)-BB-SC1-v3"}
+
+;; IDP residue specific BB-BB(-1)-BB(+1)-SC improper dihedral
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": $protein_resnames_improper_20}
+-BB {"resname": $protein_resnames}
++BB {"resname": $protein_resnames}
+SC1 {"resname": $protein_resnames_improper_20}
+[ dihedrals ]
+BB -BB +BB SC1 2 -20 30 {"group": "BB-BB(-1)-BB(+1)-SC improper", "comment": "IDR BBBS 20"}
+[ edges ]
+-BB BB
+BB +BB
+BB SC1
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": $protein_resnames_improper_25}
+-BB {"resname": $protein_resnames}
++BB {"resname": $protein_resnames}
+SC1 {"resname": $protein_resnames_improper_25}
+[ dihedrals ]
+BB -BB +BB SC1 2 -25 30 {"group": "BB-BB(-1)-BB(+1)-SC improper", "comment": "IDR BBBS 25"}
+[ edges ]
+-BB BB
+BB +BB
+BB SC1
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": $protein_resnames_improper_35}
+-BB {"resname": $protein_resnames}
++BB {"resname": $protein_resnames}
+SC1 {"resname": $protein_resnames_improper_35}
+[ dihedrals ]
+BB -BB +BB SC1 2 -35 30 {"group": "BB-BB(-1)-BB(+1)-SC improper", "comment": "IDR BBBS 35"}
+[ edges ]
+-BB BB
+BB +BB
+BB SC1
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": $protein_resnames_improper_40}
+-BB {"resname": $protein_resnames}
++BB {"resname": $protein_resnames}
+SC1 {"resname": $protein_resnames_improper_40}
+[ dihedrals ]
+BB -BB +BB SC1 2 -40 25 {"group": "BB-BB(-1)-BB(+1)-SC improper", "comment": "IDR BBBS 40"}
+[ edges ]
+-BB BB
+BB +BB
+BB SC1
+
+[ link ]
+cgidr true
+[ features ]
+idr
+[ atoms ]
+ BB {"resname": "PRO"}
+-BB {"resname": $protein_resnames}
++BB {"resname": $protein_resnames}
+SC1 {"resname": "PRO"}
+[ dihedrals ]
+BB -BB +BB SC1 2 -10 80 {"group": "BB-BB(-1)-BB(+1)-SC improper", "comment": "IDR BBBS PRO"}
+[ edges ]
+-BB BB
+BB +BB
+BB SC1
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;; LINK DISORDERED TO FOLDED REGIONS ;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;BB Bond
+[ link ]
+resname $protein_resnames
+[ features ]
+idr
+[ bonds ]
+BB +BB 1 0.360 8000 {"group": "Crosslinking Backbone bonds"} ;{"group": "Backbone bonds folded-disordered"}
+[ patterns ]
+BB {"cgidr": true} +BB {"cgidr": false}
+BB {"cgidr": false} +BB {"cgidr": true}
+
+;BBB angle
+;include DDX DXX XDD XXD and NO DDD cases (X means folded domain ss), avoid overlap with DDD in IDR domain above, although it's okay because parameters are same.
+[ link ]
+resname $protein_resnames
+[ features ]
+idr
+[ angles ]
+-BB BB +BB 10 137 25 {"group": "Crosslinking BBB angles"} ;{"group": "BBB angles folded-disordered"}
+[ patterns ]
+-BB {"cgidr": false} BB +BB {"cgidr": true}
+-BB {"cgidr": true} BB +BB {"cgidr": false}
+
+;BBS/SBB angle
+[ link ]
+resname $protein_resnames
+[ features ]
+idr
+[ angles ]
+-BB  BB  SC1  10 100 15 {"group": "Crosslinking BBS angles"} ;{"group": "BBS angles folded-disordered"}
+[ patterns ]
+-BB {"cgidr": true} BB {"cgidr": false} SC1
+-BB {"cgidr": false} BB {"cgidr": true} SC1
+
+[ link ]
+resname $protein_resnames
+[ features ]
+idr
+[ angles ]
+SC1 BB +BB 10 100 15 {"group": "Crosslinking SBB angles"} ;{"group": "SBB angles folded-disordered"}
+[ patterns ]
+SC1 BB {"cgidr": true} +BB {"cgidr": false}
+SC1 BB {"cgidr": false} +BB {"cgidr": true}
+
+;BBBB dihedral
+;include DDDX DDXX DXXX XDDD XXDD XXXD and NO DDDD cases (X means folded domain ss), avoid overlap with DDDD in IDR domain above
+[ link ]
+resname $protein_resnames
+[ features ]
+idr
+[ dihedrals ]
+-BB BB +BB ++BB 9  60   2.8  1   {"group": "idp-BBBB folded-disordered", "version": 1,"comment": "BBBB-v1"}
+-BB BB +BB ++BB 9  150  -0.60  1 {"group": "idp-BBBB folded-disordered", "version": 2,"comment": "BBBB-v2"}
+-BB BB +BB ++BB 9  130  -1.20  2 {"group": "idp-BBBB folded-disordered", "version": 3,"comment": "BBBB-v3"}
+[ patterns ]
+-BB {"cgidr": false} BB +BB ++BB {"cgidr": true}
+-BB {"cgidr": true} BB +BB ++BB {"cgidr": false}
+
+;; BB-BB(-1)-BB(+1)-SC improper dihedral not defined in crosslinking region
+;SBBS dihedral
+[ link ]
+resname $protein_resnames
+[ features ]
+idr
+[ dihedrals ]
+SC1 BB +BB +SC1 9 -130 -1.4 1 {"group": "idp-fix-SC1-BB-BB-SC1 folded-disordered", "version": 1, "comment": "SC1-BB-BB-SC1-v1"}
+SC1 BB +BB +SC1 9  100 -1.4 2 {"group": "idp-fix-SC1-BB-BB-SC1 folded-disordered", "version": 2, "comment": "SC1-BB-BB-SC1-v2"}
+[ patterns ]
+BB {"cgidr": true} +BB {"cgidr": false}
+BB {"cgidr": false} +BB {"cgidr": true}

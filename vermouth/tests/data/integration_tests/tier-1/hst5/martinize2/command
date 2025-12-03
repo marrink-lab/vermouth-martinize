@@ -4,7 +4,5 @@ martinize2
 -x cg.pdb
 -o topol.top
 -ss C
--water-bias
--water-bias-eps idr:0.5
 -id-regions 1:24
 -noscfix

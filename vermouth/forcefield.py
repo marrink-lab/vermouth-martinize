@@ -94,7 +94,7 @@ class ForceField:
         as the force field.
         """
         source_files = iter_force_field_files(directory)
-        for source in source_files:
+        for source in sorted(source_files):
             self._read_from_file(source)
 
     def _read_from_file(self, path):

@@ -2,9 +2,8 @@ martinize2
 -f ../aa.pdb
 -x cg.pdb
 -o topol.top
--ff martini30b32
+-ff martini3001
 -elastic
--cys auto
 -dssp
 -ignore HOH
 -ef 500
