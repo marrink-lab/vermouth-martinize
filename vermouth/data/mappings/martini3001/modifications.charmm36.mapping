@@ -129,6 +129,28 @@ HCC1 BB
 HCC2 BB
 HCC3 BB
 
+[modification]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+NCAP-ter-PRO
+[ to blocks ]
+NCAP-ter-PRO
+[ from nodes ]
+CA
+[ from edges ]
+N CA
+[ mapping ]
+CA  BB
+N   BB
+CY  BB
+OY  BB
+CAY BB
+HY1 BB
+HY2 BB
+HY3 BB
 
 [modification]
 [ from ]
@@ -508,4 +530,25 @@ CB   SC1
  HE1   SC3
    C    BB
    O    BB
-
+[modification]
+[ from ]
+charmm
+[ to ]
+martini3001
+[ from blocks ]
+CT2
+[ to blocks ]
+CT2
+[ from nodes ]
+CA
+N
+[ from edges ]
+CA N
+CA C
+[ mapping ]
+CA BB
+C  BB
+O  BB
+NT BB
+HT1 BB
+HT2 BB

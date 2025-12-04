@@ -27,9 +27,19 @@ NH2-ter
 BB {"replace": {"atype": "P6", "charge": 0}}
 
 [ modification ]
+CT2
+[ atoms ]
+BB {"replace": {"atype": "P5", "charge": 0}}
+
+[ modification ]
 CCAP-ter
 [ atoms ]
 BB {"replace": {"atype": "P1", "charge": 0}}
+
+[ modification ]
+NCAP-ter-PRO
+[ atoms ]
+BB {"replace": {"atype": "P2", "charge": 0}}
 
 [ modification ]
 NCAP-ter
