@@ -14,8 +14,8 @@
 
 """
 """
-
 import networkx as nx
+from collections import defaultdict
 from ..molecule import Interaction
 from ..processors.processor import Processor
 from ..gmx.topology import Atomtype
@@ -106,6 +106,22 @@ class VirtualSiteCreator(Processor):
         new_node_id = max(molecule.nodes)
         charge_groups = nx.get_node_attributes(molecule, 'charge_group').values()
         new_charge_group = max(charge_groups) if charge_groups else 0
+
+        # Pre-Listing all beads that are built as VS, storing their idx & inter params 
+        # i.e. bead is the first index in a virtual_sties* interaction.
+        # Not a big fan of this.
+        vs_first_interactions_by_node = defaultdict(list)
+        for name, inters in molecule.interactions.items():
+            if not name.startswith('virtual_sites'):
+                continue
+            for inter in inters:
+                if inter.atoms:
+                    vs_first_interactions_by_node[inter.atoms[0]].append((name, inter))
+
+        # Collect new  VS interactions per VS type name so we can append
+        # them to the correct lists afterwards.
+        new_vs_by_name = defaultdict(list)
+
         for node_id, atom in molecule.nodes(data=True):
             if atom.get('atomname') == backbone:
                 new_node_id += 1
@@ -124,15 +140,36 @@ class VirtualSiteCreator(Processor):
                     'cgsecstruct': atom.get('cgsecstruct', None),
                     'stash': atom.get('stash', None)
                 }))
-                virtual_sites.append(Interaction(
-                    atoms=[new_node_id, node_id],
-                    parameters=['1'],
-                    meta={'go_vs': True, 'group': 'Virtual go site'},
-                ))
+
+                # If this backbone node is itself a VS (i.e.
+                # it is the first atom in one or more virtual_sites* interactions),
+                # clone those virtual-site interactions but replace the first atom
+                # with the newly created Go virtual site node. 
+                existing_vs_inters = vs_first_interactions_by_node.get(node_id)
+                if existing_vs_inters:
+                    for name, inter in existing_vs_inters:
+                        cloned_atoms = [new_node_id] + list(inter.atoms[1:])
+                        cloned_params = list(inter.parameters) if inter.parameters is not None else []
+                        cloned_meta = dict(inter.meta) if inter.meta is not None else {}
+                        cloned_meta['group'] = 'Virtual go site'
+                        new_vs_by_name[name].append(Interaction(
+                            atoms=cloned_atoms,
+                            parameters=cloned_params,
+                            meta=cloned_meta,
+                        ))
+                else:
+                    # otherwise create a simple type 1 VS interaction as before
+                    new_vs_by_name['virtual_sitesn'].append(Interaction(
+                        atoms=[new_node_id, node_id],
+                        parameters=['1'],
+                        meta={'group': 'Virtual go site'},
+                    ))
+
                 vs_params = Atomtype(node=new_node_id, molecule=molecule, sigma=0.0, epsilon=0.0, meta={})
                 self.system.gmx_topology_params['atomtypes'].append(vs_params)
 
         molecule.add_nodes_from(virtual_site_nodes)
 
-
-        molecule.interactions['virtual_sitesn'] += virtual_sites
+        # append new interactions 
+        for name, inters in new_vs_by_name.items():
+            molecule.interactions[name] += inters
