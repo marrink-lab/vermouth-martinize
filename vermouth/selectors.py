@@ -46,6 +46,9 @@ def has_category(block, category):
     if block is None:
         return False
 
+    # `category` key may be absent, a single string, or a list of strings
+    # when absent, a None value is assigned, which in turn will make this
+    # function return False
     block_category = block.meta.get('category', None)
 
     if block_category is None:
