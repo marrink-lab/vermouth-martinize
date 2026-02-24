@@ -59,7 +59,7 @@ from vermouth.tests.helper_functions import test_molecule
         )))
 def test_go_map(test_molecule, tmp_path, lines, contacts):
     # write the go contact map file
-    with open(tmp_path / "go_file.txt", "w") as in_file:
+    with open(tmp_path / "go_file.txt", "w", encoding='utf-8') as in_file:
         in_file.write(lines)
 
     system = vermouth.System()
@@ -76,7 +76,7 @@ def test_go_error(test_molecule, tmp_path):
           No valid contacts in this file.
           """
     # write the go contact map file
-    with open(tmp_path / "go_file.txt", "w") as in_file:
+    with open(tmp_path / "go_file.txt", "w", encoding='utf-8') as in_file:
         in_file.write(lines)
 
     system = vermouth.System()

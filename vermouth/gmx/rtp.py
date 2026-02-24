@@ -31,7 +31,7 @@ __all__ = ['read_rtp']
 # Names starting with a '_' are for internal use.
 RTP_SUBSECTIONS = ('atoms', 'bonds', 'angles', 'dihedrals',
                    'impropers', 'cmap', 'exclusions',
-                   '_bondedtypes')
+                   'meta', '_bondedtypes')
 
 
 _BondedTypes = collections.namedtuple(
@@ -179,6 +179,23 @@ def _atoms(subsection, block):
             'charge_group': int(charge_group),
         }
         block.add_atom(atom)
+
+
+def _meta(subsection, block):
+    """
+    Parse the [ meta ] subsection of an RTP block and store the key-value
+    pairs in block.meta.
+    """
+    for line in subsection:
+        split_line = line.split()
+        key = split_line[0]
+        if len(split_line[1:]) == 0:
+            value = None
+        elif len(split_line[1:]) == 1:
+            value = split_line[1]
+        else:
+            value = split_line[1:]
+        block.meta[key] = value
 
 
 def _base_rtp_parser(interaction_name, natoms):
@@ -452,6 +469,7 @@ def read_rtp(lines, force_field):
         'angles': _base_rtp_parser('angles', natoms=3),
         'impropers': _base_rtp_parser('impropers', natoms=4),
         'cmap': _base_rtp_parser('cmap', natoms=5),
+        'meta': _meta,
     }
     # An RTP file contains both the blocks and the links.
     # We first read everything in "pre-blocks"; then we separate the

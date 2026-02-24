@@ -167,10 +167,10 @@ def test_equal_output(tmp_path):
     pdb_itp = [file for file in itp_files if 'pdb' in file][0]
 
     dummy_ff = ForceField(name='dummy')
-    with open(cif_itp) as fn1:
+    with open(cif_itp, encoding='utf-8') as fn1:
         read_itp(fn1, dummy_ff)
     dummy_ff2 = ForceField(name='dummy')
-    with open(pdb_itp) as fn2:
+    with open(pdb_itp, encoding='utf-8') as fn2:
         read_itp(fn2, dummy_ff2)
 
     assert_equal_blocks(dummy_ff.blocks['cif_0'],

@@ -36,8 +36,8 @@ def _read_quote_file(filehandle):
             yield line
 
 
-with open(DATA_PATH/'citations.bib') as citation_file:
+with open(DATA_PATH/'citations.bib', encoding='utf-8') as citation_file:
     COMMON_CITATIONS = read_bib(citation_file)
 
-with open(DATA_PATH/'quotes.txt') as quotes_file:
+with open(DATA_PATH/'quotes.txt', encoding='utf-8') as quotes_file:
     QUOTES = list(_read_quote_file(quotes_file))

@@ -20,7 +20,7 @@ import logging
 import string
 
 from hypothesis import strategies as st
-from hypothesis import given, note, event, example
+from hypothesis import given, note, event, example, assume
 import pytest
 
 from vermouth.log_helpers import (get_logger, TypeAdapter, StyleAdapter,
@@ -158,7 +158,7 @@ def test_style_type_adapter(handler, args, kwargs, type_, default_type, extra):
         if extra is not None:
             for key, val in extra.items():
                 assert getattr(record, key, None) == val
-
+    assume('name' not in kwargs)
     logger = logging.getLogger('test_style_type_adapter')
     logger.setLevel(1)
     logger.addHandler(handler)

@@ -45,7 +45,7 @@ def write_atomtypes(system, itp_path, C6C12=False):
     directly.
     """
     conditional_keys = {True: '#ifdef', False: '#ifndef'}
-    with deferred_open(itp_path, "w") as itp_file:
+    with deferred_open(itp_path, "w", encoding='utf-8') as itp_file:
         itp_file.write("[ atomtypes ]\n")
         grouped_types = _group_by_conditionals(system.gmx_topology_params['atomtypes'])
         for (conditional, group), interactions_in_group in grouped_types:
@@ -83,7 +83,7 @@ def write_nonbond_params(system, itp_path, C6C12=False):
     directly.
     """
     conditional_keys = {True: '#ifdef', False: '#ifndef'}
-    with deferred_open(itp_path, "w") as itp_file:
+    with deferred_open(itp_path, "w", encoding='utf-8') as itp_file:
         itp_file.write("[ nonbond_params ]\n")
         grouped_types = _group_by_conditionals(system.gmx_topology_params['nonbond_params'])
         for (conditional, group), interactions_in_group in grouped_types:
@@ -201,7 +201,7 @@ def write_gmx_topology(system,
             # A given moltype can appear more than once in the sequence of
             # molecules, without being uninterupted by other moltypes. Even in
             # that case, we want to write the ITP only once.
-            with deferred_open("{}.itp".format(moltype), "w") as outfile:
+            with deferred_open("{}.itp".format(moltype), "w", encoding='utf-8') as outfile:
                 # here we format and merge all citations
                 header[-1] = header[-1] + "\n"
                 header.append("Please cite the following papers:")
@@ -244,7 +244,7 @@ def write_gmx_topology(system,
         for mtype, num in moltype_count
     )
     define_string = "\n".join("#define {}".format(define) for define in defines)
-    with deferred_open(str(top_path), "w") as outfile:
+    with deferred_open(str(top_path), "w", encoding='utf-8') as outfile:
         outfile.write(
             textwrap.dedent(
                 template.format(
