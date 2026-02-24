@@ -40,6 +40,8 @@
    -C     N    CA     C     gd_43
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
+ [ meta ]
+  category protein
 
 [ ARG ]
  [ atoms ]
@@ -127,6 +129,8 @@
    CD    NE    CZ   NH1     gd_14   
    NE    CZ   NH1  HH11     gd_14   
    NE    CZ   NH2  HH21     gd_14   
+ [ meta ]
+  category protein
 
 [ ARGN ]
  [ atoms ]
@@ -209,6 +213,8 @@
    CD    NE    CZ   NH1     gd_14   
    NE    CZ   NH1   HH1     gd_14   
    NE    CZ   NH2  HH21     gd_14   
+ [ meta ]
+  category protein
 
 [ ASN ]
  [ atoms ]
@@ -270,6 +276,8 @@
     N    CA     C    +N     gd_42   
    CA    CB    CG   ND2     gd_40   
    CB    CG   ND2  HD21     gd_14   
+ [ meta ]
+  category protein
 
 [ ASN1 ]
  [ atoms ]
@@ -331,6 +339,8 @@
     N    CA     C    +N     gd_42   
    CA    CB    CG   ND2     gd_40   
    CB    CG   ND2  HD21     gd_14   
+ [ meta ]
+  category protein
 
 [ ASP ]
  [ atoms ]
@@ -383,6 +393,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   OD1     gd_40   
+ [ meta ]
+  category protein
 
 [ ASPH ]
  [ atoms ]
@@ -439,6 +451,8 @@
     N    CA     C    +N     gd_42   
    CA    CB    CG   OD2     gd_40   
    CB    CG   OD2   HD2     gd_12   
+ [ meta ]
+  category protein
 
 [ CYS ]
  [ atoms ]
@@ -482,6 +496,8 @@
     N    CA    CB    SG     gd_34   
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
+ [ meta ]
+  category protein
 
 [ CYSH ]
  [ atoms ]
@@ -529,6 +545,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    SG    HG     gd_26   
+ [ meta ]
+  category protein
 
 [ CYS1 ]
  [ atoms ]
@@ -572,6 +590,8 @@
     N    CA    CB    SG     gd_34   
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
+ [ meta ]
+  category protein
 
 [ CYS2 ]
  [ atoms ]
@@ -615,6 +635,8 @@
     N    CA    CB    SG     gd_34   
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
+ [ meta ]
+  category protein
 
 [ GLN ]
  [ atoms ]
@@ -680,6 +702,8 @@
    CA    CB    CG    CD     gd_34   
    CB    CG    CD   NE2     gd_40   
    CG    CD   NE2  HE21     gd_14   
+ [ meta ]
+  category protein
 
 [ GLU ]
  [ atoms ]
@@ -736,6 +760,8 @@
     N    CA     C    +N     gd_42   
    CA    CB    CG    CD     gd_34   
    CB    CG    CD   OE2     gd_40   
+ [ meta ]
+  category protein
 
 [ GLUH ]
  [ atoms ]
@@ -796,6 +822,8 @@
    CA    CB    CG    CD     gd_34   
    CB    CG    CD   OE2     gd_40   
    CG    CD   OE2   HE2     gd_12   
+ [ meta ]
+  category protein
 
 [ GLY ]
  [ atoms ]
@@ -830,6 +858,8 @@
    -C     N    CA     C     gd_43
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
+ [ meta ]
+  category protein
 
 [ HIS ]
  [ atoms ]
@@ -924,6 +954,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   ND1     gd_40   
+ [ meta ]
+  category protein
 
 [ HISB ]
  [ atoms ]
@@ -1018,6 +1050,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   ND1     gd_40   
+ [ meta ]
+  category protein
 
 [ HISH ]
  [ atoms ]
@@ -1121,6 +1155,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   ND1     gd_40   
+ [ meta ]
+  category protein
 
 [ HIS1 ]
  [ atoms ]
@@ -1219,6 +1255,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   ND1     gd_40   
+ [ meta ]
+  category protein
 
 [ HIS2 ]
  [ atoms ]
@@ -1317,6 +1355,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   ND1     gd_40   
+ [ meta ]
+  category protein
 
 [ HYP ]
  [ atoms ]
@@ -1375,6 +1415,8 @@
    CA    CB    CG   CD2     gd_34   
    CB    CG   OD1   HD1     gd_23   
    CB    CG   CD2     N     gd_34   
+ [ meta ]
+  category protein
 
 [ ILE ]
  [ atoms ]
@@ -1427,6 +1469,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB   CG1    CD     gd_34   
+ [ meta ]
+  category protein
 
 [ LEU ]
  [ atoms ]
@@ -1479,6 +1523,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   CD1     gd_34   
+ [ meta ]
+  category protein
 
 [ LYS ]
  [ atoms ]
@@ -1542,6 +1588,8 @@
    CB    CG    CD    CE     gd_34   
    CG    CD    CE    NZ     gd_34   
    CD    CE    NZ   HZ1     gd_29   
+ [ meta ]
+  category protein
 
 [ LYSH ]
  [ atoms ]
@@ -1610,6 +1658,8 @@
    CB    CG    CD    CE     gd_34   
    CG    CD    CE    NZ     gd_34   
    CD    CE    NZ   HZ1     gd_29   
+ [ meta ]
+  category protein
 
 [ MET ]
  [ atoms ]
@@ -1661,6 +1711,8 @@
     N    CA     C    +N     gd_42   
    CA    CB    CG    SD     gd_34   
    CB    CG    SD    CE     gd_26   
+ [ meta ]
+  category protein
 
 [ PHE ]
  [ atoms ]
@@ -1779,6 +1831,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   CD1     gd_40   
+ [ meta ]
+  category protein
 
 [ PRO ]
  [ atoms ]
@@ -1828,6 +1882,8 @@
     N    CA     C    +N     gd_42   
    CA    CB    CG    CD     gd_34   
    CB    CG    CD     N     gd_34   
+ [ meta ]
+  category protein
 
 [ SER ]
  [ atoms ]
@@ -1875,6 +1931,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    OG    HG     gd_23   
+ [ meta ]
+  category protein
 
 [ THR ]
  [ atoms ]
@@ -1927,6 +1985,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB   OG1   HG1     gd_23   
+ [ meta ]
+  category protein
 
 [ TRP ]
  [ atoms ]
@@ -2082,6 +2142,8 @@
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
    CA    CB    CG   CD2     gd_40   
+ [ meta ]
+  category protein
 
 [ TYR ]
  [ atoms ]
@@ -2204,6 +2266,8 @@
     N    CA     C    +N     gd_42   
    CA    CB    CG   CD1     gd_40   
   CE1    CZ    OH    HH     gd_11   
+ [ meta ]
+  category protein
 
 [ VAL ]
  [ atoms ]
@@ -2252,3 +2316,5 @@
     N    CA    CB   CG1     gd_34   
     N    CA     C    +N     gd_45   
     N    CA     C    +N     gd_42   
+ [ meta ]
+  category protein

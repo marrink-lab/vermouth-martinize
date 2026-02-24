@@ -142,7 +142,9 @@ def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs, write_sec
                 molecule.nodes[mol_node]['cgsecstruct'] = secstruc[resid]
             block.add_node(molecule.nodes[mol_node]['atomname'],
                            atype=molecule.nodes[mol_node]['atype'])
-
+        # annotate protein residues
+        if resname in vermouth.selectors.PROTEIN_RESIDUES:
+            block.meta['category'] = 'protein'
         ff.blocks[resname] = block
 
 

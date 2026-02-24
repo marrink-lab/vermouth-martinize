@@ -18,7 +18,7 @@ try:
     import pkg_resources
 except ImportError:
     import os
-    TEST_DATA = os.path.join(os.path.dirname(__file__), 'data')
+    TEST_DATA = Path(os.path.dirname(__file__), 'data')
     del os
 else:
     TEST_DATA = Path(pkg_resources.resource_filename('vermouth.tests', 'data'))
