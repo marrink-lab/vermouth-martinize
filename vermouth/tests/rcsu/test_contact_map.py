@@ -374,7 +374,7 @@ def test_write_contacts(test_molecule, tmp_path):
     _, all_contacts = contact_map._get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers,
                                                 res_idx, molecule_graph)
 
-    with open(TEST_MOLECULE_CONTACT_MAP) as expectedfile:
+    with open(TEST_MOLECULE_CONTACT_MAP, encoding='utf-8') as expectedfile:
         expected_lines = expectedfile.readlines()
 
     outpath = tmp_path / 'contacts.out'
@@ -385,7 +385,7 @@ def test_write_contacts(test_molecule, tmp_path):
                                 molecule_graph)
     DeferredFileWriter().write()
 
-    with open(str(outpath)) as infile:
+    with open(str(outpath), encoding='utf-8') as infile:
         written_lines = infile.readlines()
 
     # skip the first line here because it's the vermouth version
@@ -411,10 +411,10 @@ def test_do_contacts(test_molecule, tmp_path, write_out):
     if write_out:
         DeferredFileWriter().write()
 
-        with open(TEST_MOLECULE_CONTACT_MAP) as expectedfile:
+        with open(TEST_MOLECULE_CONTACT_MAP, encoding='utf-8') as expectedfile:
             expected_lines = expectedfile.readlines()
 
-        with open(str(outpath)) as infile:
+        with open(str(outpath), encoding='utf-8') as infile:
             written_lines = infile.readlines()
 
         # skip the first line here because it's the vermouth version

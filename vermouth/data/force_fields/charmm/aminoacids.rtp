@@ -64,6 +64,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ ARG ]
  [ atoms ]
@@ -122,6 +124,8 @@
 	CZ	NH1	NH2	NE
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ ASN ]
  [ atoms ]
@@ -163,6 +167,8 @@
 	ND2	CG	HD22	HD21
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ ASP ]
  [ atoms ]
@@ -197,6 +203,8 @@
 	CG	CB	OD2	OD1
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ ASPP ] ; protonated ASP
  [ atoms ]
@@ -233,6 +241,8 @@
         CG      CB      OD2     OD1
  [ cmap ]
         -C      N       CA      C       +N
+ [ meta ]
+  category protein
 
 [ CYS ]
  [ atoms ]
@@ -264,6 +274,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ CYS2 ]  ; disulfide cystine
  [ atoms ]
@@ -291,8 +303,10 @@
  [ impropers ]
         N       -C      CA      HN
         C       CA      +N      O
-[ cmap ]
+ [ cmap ]
         -C      N       CA      C       +N
+ [ meta ]
+  category protein
 
 [ GLN ]
  [ atoms ]
@@ -340,6 +354,8 @@
 	NE2	CD	HE22	HE21
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ GLU ]
  [ atoms ]
@@ -380,6 +396,8 @@
 	CD	CG	OE2	OE1
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ GLUP ] ; protonated GLU
  [ atoms ]
@@ -422,6 +440,8 @@
         CD      CG      OE2     OE1
  [ cmap ]
         -C      N       CA      C       +N
+ [ meta ]
+  category protein
 
 [ GLY ]
  [ atoms ]
@@ -445,6 +465,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ HSD ]
  [ atoms ]
@@ -495,6 +517,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ HSE ]
  [ atoms ]
@@ -545,6 +569,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ HSP ]
  [ atoms ]
@@ -595,6 +621,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ HIS ]
  [ atoms ]
@@ -645,6 +673,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ ILE ]
  [ atoms ]
@@ -692,6 +722,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ LEU ]
  [ atoms ]
@@ -739,6 +771,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ LYS ]
  [ atoms ]
@@ -786,6 +820,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ LSN ] ; neutral lysine residue
  [ atoms ]
@@ -835,8 +871,10 @@
  [ impropers ]
         N       -C      CA      HN
         C       CA      +N      O
-[ cmap ]
+ [ cmap ]
         -C      N       CA      C       +N
+ [ meta ]
+  category protein
 
 [ MET ]
  [ atoms ]
@@ -880,6 +918,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ PHE ]
  [ atoms ]
@@ -930,6 +970,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ PRO ]
  [ atoms ]
@@ -968,6 +1010,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ SER ]
  [ atoms ]
@@ -999,6 +1043,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ THR ]
  [ atoms ]
@@ -1036,6 +1082,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ TRP ]
  [ atoms ]
@@ -1095,6 +1143,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ TYR ]
  [ atoms ]
@@ -1147,6 +1197,8 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein
 
 [ VAL ]
  [ atoms ]
@@ -1188,3 +1240,5 @@
 	C	CA	+N	O
  [ cmap ]
 	-C	N	CA	C	+N
+ [ meta ]
+  category protein

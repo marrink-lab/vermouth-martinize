@@ -149,7 +149,7 @@ def write_gro(system, file_name, precision=7, title='Martinized!', box=(0, 0, 0)
         open = deferred_open
     else:
         from builtins import open
-    with open(str(file_name), 'w') as out:
+    with open(str(file_name), 'w', encoding='utf-8') as out:
         out.write(title + '\n')  # Title
         out.write(formatter.format('{}\n', system.num_particles))  # number of atoms
         atomid = 1

@@ -142,7 +142,9 @@ def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs, write_sec
                 molecule.nodes[mol_node]['cgsecstruct'] = secstruc[resid]
             block.add_node(molecule.nodes[mol_node]['atomname'],
                            atype=molecule.nodes[mol_node]['atype'])
-
+        # annotate protein residues
+        if resname in vermouth.selectors.PROTEIN_RESIDUES:
+            block.meta['category'] = 'protein'
         ff.blocks[resname] = block
 
 
@@ -158,7 +160,7 @@ def parse_gofiles(file, atomtypes=False):
     '''
     Parser of go_nbparams.itp & go_atomtypes.itp files into an easy to assert dictionary.
     '''
-    with open(file) as my_file:
+    with open(file, encoding='utf-8') as my_file:
         next(my_file)  # Skip header
         vals = {}
         for line in my_file:

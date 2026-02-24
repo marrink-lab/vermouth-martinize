@@ -19,8 +19,6 @@ protein backbones.
 import numpy as np
 from .molecule import attributes_match
 
-
-# TODO: Make that list part of the force fields
 PROTEIN_RESIDUES = set(('ALA', 'ARG', 'ASP', 'ASN', 'CYS',
                         'GLU', 'GLN', 'GLY', 'HIS', 'ILE',
                         'LEU', 'LYS', 'MET', 'PHE', 'PRO',
@@ -30,12 +28,41 @@ PROTEIN_RESIDUES = set(('ALA', 'ARG', 'ASP', 'ASN', 'CYS',
                         'GLH', 'LYN'))
 
 
+def has_category(block, category):
+    """
+    Returns True if the block belongs to the given category.
+
+    Parameters
+    ----------
+    block: Block
+        The block to test.
+    category: str
+        The category to check for.
+
+    Returns
+    -------
+    bool
+    """
+    if block is None:
+        return False
+
+    # `category` key may be absent, a single string, or a list of strings
+    # when absent, a None value is assigned, which in turn will make this
+    # function return False
+    block_category = block.meta.get('category', None)
+
+    if block_category is None:
+        return False
+    elif isinstance(block_category, str):
+        return block_category == category
+    else:
+        # it's a list of multiple categories
+        return category in block_category
+
+
 def is_protein(molecule):
     """
-    Return True if all the residues in the molecule are protein residues.
-
-    The function tests if the residue name of all the atoms in the input
-    molecule are in ``PROTEIN_RESIDUES``.
+    Returns True if all the residues in the molecule are protein residues.
 
     Parameters
     ----------
@@ -46,10 +73,21 @@ def is_protein(molecule):
     -------
     bool
     """
-    return all(
-        molecule.nodes[n_idx].get('resname') in PROTEIN_RESIDUES
-        for n_idx in molecule
-    )
+    if molecule.force_field is not None:
+        return all(
+            has_category(
+                molecule.force_field.blocks.get(
+                    molecule.nodes[n_idx].get('resname')
+                ),
+                'protein'
+            )
+            for n_idx in molecule
+        )
+    else:
+        return all(
+            molecule.nodes[n_idx].get('resname') in PROTEIN_RESIDUES
+            for n_idx in molecule
+        )
 
 
 def select_all(_, __="_"):

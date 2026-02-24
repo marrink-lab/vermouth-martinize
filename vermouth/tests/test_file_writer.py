@@ -43,21 +43,21 @@ def test_backup(tmp_path, monkeypatch, name, existing_files, expected):
     """
     monkeypatch.chdir(tmp_path)
     for idx, file in enumerate(existing_files):
-        with open(file, 'w') as handle:
+        with open(file, 'w', encoding='utf-8') as handle:
             handle.write(str(idx))
 
     writer = DeferredFileWriter()
-    with writer.open(name, 'w') as handle:
+    with writer.open(name, 'w', encoding='utf-8') as handle:
         handle.write("new {}".format(name))
     writer.write()
 
     assert Path(name).is_file()
-    with open(name) as file:
+    with open(name, encoding='utf-8') as file:
         assert file.read() == "new {}".format(name)
 
     for idx, name in enumerate(expected):
         assert Path(name).is_file()
-        with open(name) as file:
+        with open(name, encoding='utf-8') as file:
             assert file.read() == str(idx)
 
 
@@ -70,7 +70,7 @@ def test_deferred_writing(tmp_path, monkeypatch):
     file_name = Path('my_file.txt')
     writer = DeferredFileWriter()
     assert not file_name.exists()
-    with writer.open(file_name, 'w') as file:
+    with writer.open(file_name, 'w', encoding='utf-8') as file:
         file.write('hello')
     assert not file_name.exists()
     os.chdir('..')
@@ -111,7 +111,7 @@ def test_rw_plus(tmp_path, monkeypatch):
     path.write_text('123')
     writer = DeferredFileWriter()
 
-    with writer.open(path, 'r+') as file:
+    with writer.open(path, 'r+', encoding='utf-8') as file:
         assert file.read() == '123'
         file.write('456')
         file.seek(0)
@@ -131,7 +131,7 @@ def test_mode_errors(mode, exception):
     """
     writer = DeferredFileWriter()
     with pytest.raises(exception):
-        writer.open('somefile.txt', mode)
+        writer.open('somefile.txt', mode, encoding='utf-8')
 
 
 def test_append(tmp_path, monkeypatch):
@@ -141,7 +141,7 @@ def test_append(tmp_path, monkeypatch):
     path.write_text('123')
 
     writer = DeferredFileWriter()
-    with writer.open(path, 'a') as file:
+    with writer.open(path, 'a', encoding='utf-8') as file:
         file.write('abc')
 
     assert path.read_text() == '123'
@@ -163,14 +163,14 @@ def test_closing(tmp_path, monkeypatch):
 
     assert not [p.name for p in tmp_path.iterdir()]
 
-    with writer.open('file.txt', 'w') as file:
+    with writer.open('file.txt', 'w', encoding='utf-8') as file:
         file.write('abc')
 
     writer.write()
 
     assert [p.name for p in tmp_path.iterdir()] == ['file.txt']
 
-    with writer.open('file2.txt', 'w') as file:
+    with writer.open('file2.txt', 'w', encoding='utf-8') as file:
         file.write('abc')
 
     writer.close()
@@ -182,8 +182,8 @@ def test_reopen(tmp_path, monkeypatch):
     path = Path('file.txt')
     writer = DeferredFileWriter()
 
-    with writer.open(path, 'w') as file:
+    with writer.open(path, 'w', encoding='utf-8') as file:
         file.write('Hello!')
     # Close file
-    with writer.open(path, 'r') as file:
+    with writer.open(path, 'r', encoding='utf-8') as file:
         assert file.read() == 'Hello!'

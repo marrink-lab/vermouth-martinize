@@ -187,7 +187,7 @@ def run_mdtraj(system):
     SortMoleculeAtoms(target_attr='atomid').run_system(sys_copy)
     tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
                                                     dir='.', prefix='dssp_in_')
-    tmpfile_handle = os.fdopen(tmpfile_handle, mode='w')
+    tmpfile_handle = os.fdopen(tmpfile_handle, mode='w', encoding='utf-8')
     tmpfile_handle.write(pdb.write_pdb_string(sys_copy, conect=False))
     tmpfile_handle.close()
 
@@ -297,7 +297,7 @@ def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
 
     tmpfile_handle, tmpfile_name = tempfile.mkstemp(suffix='.pdb', text=True,
                                                     dir='.', prefix='dssp_in_')
-    tmpfile_handle = os.fdopen(tmpfile_handle, mode='w')
+    tmpfile_handle = os.fdopen(tmpfile_handle, mode='w', encoding='utf-8')
     tmpfile_handle.write(pdb.write_pdb_string(system, conect=False))
     tmpfile_handle.close()
 
@@ -324,7 +324,7 @@ def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
     if savefile is not None:
         if defer_writing:
             open = deferred_open
-        with open(str(savefile), 'w') as outfile:
+        with open(str(savefile), 'w', encoding='utf-8') as outfile:
             outfile.write(process.stdout)
 
     return read_dssp2(process.stdout.split('\n'))

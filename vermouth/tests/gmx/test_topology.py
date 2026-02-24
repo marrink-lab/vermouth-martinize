@@ -88,7 +88,7 @@ def test_atomtypes(tmp_path, dummy_molecule, atomtypes, expected, C6C12):
     write_atomtypes(dummy_sys, outpath, C6C12=C6C12)
     DeferredFileWriter().write()
 
-    with open(str(outpath)) as infile:
+    with open(str(outpath), encoding='utf-8') as infile:
         for line, ref_line in zip(infile, expected):
             assert line == ref_line
 
@@ -155,7 +155,7 @@ def test_nonbond_params(tmp_path, nbparams, expected, C6C12):
     write_nonbond_params(dummy_sys, outpath, C6C12=C6C12)
     DeferredFileWriter().write()
 
-    with open(str(outpath)) as infile:
+    with open(str(outpath), encoding='utf-8') as infile:
         for line, ref_line in zip(infile, expected):
             assert line == ref_line
 
@@ -204,7 +204,7 @@ Title of the system
 molecule_0    1
 """
     ref_lines = textwrap.dedent(reference).splitlines()
-    with open(str(outpath)) as infile:
+    with open(str(outpath), encoding='utf-8') as infile:
         for line, ref_line in zip(infile, ref_lines):
             assert line.strip() == ref_line
 
@@ -229,7 +229,7 @@ def test_gromacs_cmd_len(dummy_molecule, tmp_path, command, expected):
                        C6C12=False)
     DeferredFileWriter().write()
 
-    with open(str(tmp_path / 'molecule_0.itp')) as infile:
+    with open(str(tmp_path / 'molecule_0.itp'), encoding='utf-8') as infile:
         expected_line = infile.readlines()[0].strip()[2:]
 
     assert len(expected_line) == expected["length"]

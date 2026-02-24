@@ -696,7 +696,7 @@ def _write_contacts(fout, all_contacts, ca_pos, G):
                f"{int(contact[7]): 6d}  {int(contact[5]): 6d}\n")
         msgs.append(msg)
     message_out = ''.join(msgs)
-    with deferred_open(fout, "w") as f:
+    with deferred_open(fout, "w", encoding='utf-8') as f:
         f.write(''.join(header))
         f.write(message_out)
 
@@ -725,7 +725,7 @@ def read_go_map(system, file_path):
     list(tuple)
         contact as chain id, res id, chain id, res id
     """
-    with open(file_path, "r", encoding='UTF-8') as _file:
+    with open(file_path, "r", encoding='utf-8') as _file:
         contacts = []
         for line in _file:
             tokens = line.strip().split()

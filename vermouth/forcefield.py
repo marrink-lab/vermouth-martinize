@@ -99,7 +99,7 @@ class ForceField:
 
     def _read_from_file(self, path):
         extension = os.path.splitext(path)[-1]
-        with open(path) as infile:
+        with open(path, encoding='utf-8') as infile:
             FORCE_FIELD_PARSERS[extension](infile, self)
 
     @property

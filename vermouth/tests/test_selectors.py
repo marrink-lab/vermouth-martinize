@@ -29,6 +29,36 @@ from vermouth.tests.datafiles import (
 )
 
 
+@pytest.mark.parametrize('meta, category, expected', (
+    # No meta at all
+    ({}, 'protein', False),
+    # category key missing
+    ({'other_key': 'value'}, 'protein', False),
+    # single category as string, matches
+    ({'category': 'protein'}, 'protein', True),
+    # single category as string, does not match
+    ({'category': 'lipid'}, 'protein', False),
+    # multiple categories as list, matches
+    ({'category': ['protein', 'acid']}, 'protein', True),
+    # multiple categories as list, does not match
+    ({'category': ['lipid', 'acid']}, 'protein', False),
+    # category is None (flag-style, no value)
+    ({'category': None}, 'protein', False),
+))
+def test_has_category(meta, category, expected):
+    """
+    Test that :func:`vermouth.selectors.has_category` correctly identifies
+    whether a block belongs to a given category.
+    """
+    class FakeBlock:
+        pass
+
+    block = FakeBlock()
+    block.meta = meta
+
+    assert vermouth.selectors.has_category(block, category) == expected
+
+
 @pytest.mark.parametrize(
     'molecules, reference_answer',
     [(read_pdb(str(path)), answer) for path, answer in [

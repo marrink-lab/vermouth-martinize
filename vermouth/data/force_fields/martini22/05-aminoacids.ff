@@ -35,6 +35,11 @@ GLY                1
 ;id type resnr residu atom cgnr   charge
  1   P5   1     GLY    BB     1      0      
 
+[ meta ]
+;     key   value
+ category protein
+
+
 ;;; ALANINE
 
 [ moleculetype ]
@@ -44,6 +49,10 @@ ALA                1
 [ atoms ]
 ;id type resnr residu atom cgnr   charge
  1   P4    1     ALA    BB     1      0     ; ALA slightly less polar 
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; CYSTEINE
@@ -62,6 +71,10 @@ CYS                1
 ;  i     j   funct   length  force.c.
    1     2    1       0.31     7500        
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; VALINE
 
@@ -77,6 +90,10 @@ VAL                1
 [constraints]
 ;  i     j   funct   length  
    1     2    1       0.265       
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; LEUCINE
@@ -95,6 +112,10 @@ LEU                1
 ;  i     j   funct   length  force.c.
    1     2    1       0.33     7500    
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; ISOLEUCINE
 
@@ -110,6 +131,10 @@ ILE                1
 [constraints]
 ;  i     j   funct   length  
    1     2    1       0.31       
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; METHIONINE
@@ -128,6 +153,10 @@ MET                1
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     2500
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; PROLINE
 
@@ -144,6 +173,10 @@ PRO                1
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
   1     2    1       0.30     7500
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; ASPARAGINE
@@ -162,6 +195,10 @@ ASN                1
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     5000
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; GLUTAMINE
 
@@ -178,6 +215,10 @@ GLN                1
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     5000     
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; ASPARTATE
@@ -196,6 +237,10 @@ ASP                1
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     7500
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; ASPARTATE - NEUTRAL FORM
 
@@ -212,6 +257,10 @@ ASP0               1
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.32     7500
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; GLUTAMATE
@@ -230,6 +279,10 @@ GLU                1
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     5000     
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; GLUTAMATE - NEUTRAl FORM
 
@@ -247,6 +300,10 @@ GLU0               1
 ;  i     j   funct   length  force.c.
    1     2    1       0.40     5000    
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; THREONINE
 
@@ -262,6 +319,10 @@ THR                1
 [constraints]
 ;  i     j   funct   length 
    1     2    1       0.26   
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; SERINE
@@ -279,6 +340,10 @@ SER                1
 #meta {"group": "Side chain bonds"}
 ;  i     j   funct   length  force.c.
    1     2    1       0.25     7500
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; LYSINE 
@@ -304,6 +369,10 @@ LYS                1
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; LYSINE - NEUTRAL FORM
 
@@ -327,6 +396,10 @@ LSN               1
 #meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; ARGININE 
@@ -352,6 +425,10 @@ ARG                1
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;; ARGININE - NEUTRAL FORM
 
@@ -375,6 +452,10 @@ ARG0               1
 #meta {"group": "Side chain angles"}
 ;  i     j    k     funct   angle  force.c.
     1     2    3       2   180.000    25.0      
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; HISTIDINE 
@@ -411,6 +492,10 @@ HSE                1
 ;  i     j    k    l   funct   angle  force.c.
    1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
 
+[ meta ]
+;     key   value
+ category protein
+
 
 [ moleculetype ]
 ;molname       nrexcl
@@ -444,6 +529,9 @@ HSD                1
 ;  i     j    k    l   funct   angle  force.c.
    1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
 
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; HISTIDINE, charged.
@@ -480,6 +568,10 @@ HSP               1
 ;  i     j    k    l   funct   angle  force.c.
    1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; PHENYLALANINE
 
@@ -515,6 +607,10 @@ PHE                1
 ;  i     j    k    l   funct   angle  force.c.
    1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
 
+[ meta ]
+;     key   value
+ category protein
+
 
 ;;; TYROSINE
 
@@ -549,6 +645,10 @@ TYR                1
 [dihedrals]
 ;  i     j    k    l   funct   angle  force.c.
    1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; TRYPTOPHAN
@@ -588,6 +688,10 @@ TRP                1
 ;  i     j    k    l   funct   angle  force.c.
    1     3    4    2       2    0.0    50.0     ; to prevent backflipping of ring
    2     3    5    4       2    0.0    200.0    ; to keep plane fixed
+
+[ meta ]
+;     key   value
+ category protein
 
 
 ;;; Links
