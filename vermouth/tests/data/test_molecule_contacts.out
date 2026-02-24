@@ -12,12 +12,13 @@ CMs      - OV , CSU , oCSU , rCSU
            (CSU does not take into account chemical properties of atoms)
 rCSU     - net contact from rCSU
 Count    - number of contacts between residues
+MODEL    - model number
 
-      ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count 
-=======================================================================================
-R      1     1  res0 A    1        2  res1 A    2      55.9017     0 1 0 0     0      66
-R      2     2  res1 A    2        1  res0 A    1      55.9017     0 1 0 0     0     227
-R      3     2  res1 A    2        3  res2 A    3      55.9017     0 1 0 0     0     146
-R      4     3  res2 A    3        2  res1 A    2      55.9017     0 1 0 0     0     227
-R      5     3  res2 A    3        4  res0 A    4      70.7107     0 1 0 0     0     226
-R      6     4  res0 A    4        3  res2 A    3      70.7107     0 1 0 0     0     227
+      ID    I1  AA  C I(PDB)     I2  AA  C I(PDB)        DCA       CMs    rCSU   Count  Model
+=============================================================================================
+R      1     1  res0 A    1        2  res1 A    2      55.9017     0 1 0 0     0      66     0
+R      2     2  res1 A    2        1  res0 A    1      55.9017     0 1 0 0     0     227     0
+R      3     2  res1 A    2        3  res2 A    3      55.9017     0 1 0 0     0     146     0
+R      4     3  res2 A    3        2  res1 A    2      55.9017     0 1 0 0     0     227     0
+R      5     3  res2 A    3        4  res0 A    4      70.7107     0 1 0 0     0     226     0
+R      6     4  res0 A    4        3  res2 A    3      70.7107     0 1 0 0     0     227     0
