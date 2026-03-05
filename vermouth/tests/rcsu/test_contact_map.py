@@ -19,6 +19,7 @@ Unit tests for the Go contact map generator.
 
 import pytest
 import numpy as np
+from scipy.sparse import issparse
 from vermouth.rcsu import contact_map
 from collections import defaultdict
 from vermouth.graph_utils import make_residue_graph
@@ -29,6 +30,15 @@ from vermouth.tests.datafiles import TEST_MOLECULE_CONTACT_MAP
 from vermouth.file_writer import DeferredFileWriter
 from pathlib import Path
 
+# --- helper to compare sparse/dense arrays safely ---
+def allclose_maybe_sparse(a, b, rtol=1e-5, atol=1e-8):
+    if issparse(a):
+        a = a.toarray()
+    if issparse(b):
+        b = b.toarray()
+    return np.allclose(a, b, rtol=rtol, atol=atol)
+
+
 @pytest.mark.parametrize('resname, atomname, expected',
                          (
                                  ('TRP', 'N', 1.64),
@@ -37,7 +47,6 @@ from pathlib import Path
                                  ('NON', 'NON', 0.00)
                          ))
 def test_get_vdw_radius(resname, atomname, expected):
-    # test that we get the correct vdw radii and errors in resname/atomname are handled correctly
     result = contact_map._get_vdw_radius(resname, atomname)
     assert result == expected
 
@@ -54,17 +63,12 @@ def test_get_atype(resname, atomname, expected):
     assert result == expected
 
 def test_surface_generation():
-    # test that a surface is generated with the correct points
-
     position = np.array([1, 1, 1])
-
     surface = contact_map._make_surface(position, 13, 21, 1)
-
     assert len(surface) == 21
 
     first_point = [1.        , 1.        , 2.        ]
     last_point = [1.42591771, 1.        , 0.0952381 ]
-
     test_points = [first_point, last_point]
 
     for i, j in enumerate([surface[0], surface[-1]]):
@@ -77,21 +81,17 @@ def test_surface_generation():
                  [0, 8, 0, 0, 0],
                  [0, 0, 27, 0, 0],
                  [0, 0, 0, 36, 0],
-                 [0, 0, 0, 0, 80]]
-                )
+                 [0, 0, 0, 0, 80]])
       ),
      (True,
       np.array([[1, 0, 0, 0, 0],
                 [0, 1, 0, 0, 0],
                 [0, 0, 1, 0, 0],
                 [0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 1]]
-               )
+                [0, 0, 0, 0, 1]])
       )
     ))
 def test_atom2res(norm, expected):
-    # test that atomic resolution arrays get mapped correctly to their residues and are normalised if required
-
     arrin = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                       [0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                       [0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -110,54 +110,38 @@ def test_atom2res(norm, expected):
     nres = 5
     res_map = contact_map.make_atom_map([0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4])
     res_array = contact_map.atom2res(arrin, nres, res_map, norm)
-
-    assert np.allclose(res_array, expected)
+    assert allclose_maybe_sparse(res_array, expected)
 
 def test_make_atom_map():
-    # test that the atom_map defaultdict is generated correctly
-
     input = [0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4]
     result = contact_map.make_atom_map(input)
-
     expected = defaultdict(list, {0: np.array([0]),
                                   1: np.array([1, 2]),
                                   2: np.array([3, 4, 5]),
                                   3: np.array([6, 7, 8]),
                                   4: np.array([9, 10, 11, 12])})
-
     for key, value in result.items():
         assert key in expected.keys()
 
 
 def test_contact_info(test_molecule):
-    # test we get the expected input data from a molecule
-
     result = contact_map._contact_info(test_molecule)
-
     vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, G = result
 
     assert nresidues == 4
-
-    assert np.allclose(vdw_list, [0]*len(test_molecule))
-    assert np.allclose(atypes, [0]*len(test_molecule))
-
-    assert np.allclose(coords, np.stack([test_molecule.nodes[node]['position']*10 for node in sorted(test_molecule.nodes)]))
-
-    assert np.allclose(res_serial, np.array([0, 0, 0, 1, 1, 2, 3, 3, 3]))
-    assert np.allclose(resids, np.array([1, 2, 3, 4]))
-    assert np.allclose(res_idx, np.array([0, 1, 2, 3]))
-
+    assert allclose_maybe_sparse(vdw_list, [0]*len(test_molecule))
+    assert allclose_maybe_sparse(atypes, [0]*len(test_molecule))
+    assert allclose_maybe_sparse(coords, np.stack([test_molecule.nodes[node]['position']*10 for node in sorted(test_molecule.nodes)]))
+    assert allclose_maybe_sparse(res_serial, np.array([0, 0, 0, 1, 1, 2, 3, 3, 3]))
+    assert allclose_maybe_sparse(resids, np.array([1, 2, 3, 4]))
+    assert allclose_maybe_sparse(res_idx, np.array([0, 1, 2, 3]))
     assert len(ca_pos) == 0
-
     assert set(chains) & set(['A']*nresidues)
     assert set(resnames) & set(['res0', 'res1', 'res2', 'res3'])
-
     assert equal_graphs(make_residue_graph(test_molecule), G)
 
 
 def test_calculate_overlap(test_molecule):
-    # test the overlap is calculated correctly
-
     result = contact_map._contact_info(test_molecule)
     points = result[2]
     tree = KDTree(points)
@@ -165,9 +149,7 @@ def test_calculate_overlap(test_molecule):
     natoms = len(points)
     vdw_max = 20
     alpha = 1
-
     overlaps = contact_map._calculate_overlap(tree, vdw_list, natoms, vdw_max, alpha)
-
     expected = np.array([[0., 1., 1., 1., 1., 1., 0., 0., 0.],
                          [1., 0., 1., 1., 1., 1., 0., 0., 0.],
                          [1., 1., 0., 1., 1., 0., 0., 0., 0.],
@@ -177,8 +159,7 @@ def test_calculate_overlap(test_molecule):
                          [0., 0., 0., 1., 1., 1., 0., 1., 1.],
                          [0., 0., 0., 1., 1., 1., 1., 0., 1.],
                          [0., 0., 0., 0., 1., 1., 1., 1., 0.]])
-
-    assert np.allclose(overlaps, expected)
+    assert allclose_maybe_sparse(overlaps, expected)
 
 
 def test_calculate_csu(test_molecule):
@@ -273,8 +254,7 @@ def test_contact_types(test_molecule):
     contact_arrays = contact_map._contact_types(hits, natoms, atypes)
 
     for i, j in enumerate(contact_arrays):
-        assert np.allclose(j, expected[i])
-
+       assert allclose_maybe_sparse(j, expected[i])
 
 def test_calculate_contacts(test_molecule):
 
