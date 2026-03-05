@@ -47,6 +47,38 @@ N CA
 N HN2
 
 [ modification ]
+CT2
+[ atoms ]
+C {"element": "C"}
+O {"element": "O"}
+NT {"element": "N", "PTM_atom": true}
+HT1 {"element": "H", "PTM_atom": true}
+HT2 {"element": "H", "PTM_atom": true}
+[ edges ]
+C NT
+C O
+NT HT1
+NT HT2
+
+[ modification ]
+NCAP-ter-PRO
+[ atoms ]
+N {"element": "N"}
+CY {"element": "C", "PTM_atom": true}
+OY {"element": "O", "PTM_atom": true}
+CAY {"element": "C", "PTM_atom": true}
+HY1 {"element": "H", "PTM_atom": true}
+HY2 {"element": "H", "PTM_atom": true}
+HY3 {"element": "H", "PTM_atom": true}
+[ edges ]
+N CY
+CY OY
+CY CAY
+CAY HY3
+CAY HY2
+CAY HY1
+
+[ modification ]
 CCAP-ter
 [ atoms ]
 C {"element": "C"}
