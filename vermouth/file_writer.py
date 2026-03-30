@@ -25,6 +25,7 @@ import pathlib
 import shutil
 import threading
 import tempfile
+import stat
 
 from .log_helpers import StyleAdapter, get_logger
 
@@ -172,6 +173,12 @@ class DeferredFileWriter(metaclass=Singleton):
                 shutil.move(str(final_path), str(free_path))
             LOGGER.debug('Writing output to {}.', final_path, type='general')
             shutil.move(tmp_path, str(final_path))
+            permissions = (
+                    stat.S_IRUSR | stat.S_IWUSR |  # Owner: read, write
+                    stat.S_IRGRP |  # Group: read
+                    stat.S_IROTH  # Others: read
+            )
+            os.chmod(str(final_path), permissions)
 
     @staticmethod
     def _append_file(tmp_path, final_path, mode='a'):
