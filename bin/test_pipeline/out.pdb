@@ -1,0 +1,39 @@
+ATOM      1 N    ALA A   1       0.000   0.000   0.000  1.00  0.00          N   
+ATOM      2 CA   ALA A   1       1.458   0.000   0.000  1.00  0.00          C   
+ATOM      3 C    ALA A   1       1.958   1.420   0.000  1.00  0.00          C   
+ATOM      4 O    ALA A   1       1.158   2.280   0.000  1.00  0.00          O   
+ATOM      5 N    GLY A   2       3.218   1.560   0.000  1.00  0.00          N   
+ATOM      6 CA   GLY A   2       3.818   2.920   0.000  1.00  0.00          C   
+ATOM      7 C    GLY A   2       5.318   2.780   0.000  1.00  0.00          C   
+ATOM      8 C    GLY A   2       5.318   2.780   0.000  1.00  0.00          C   
+ATOM      9 C    GLY A   2       5.318   2.780   0.000  1.00  0.00          C   
+ATOM     10 C    GLY A   2       5.318   2.780   0.000  1.00  0.00          C   
+ATOM     11 C    GLY A   2       5.318   2.780   0.000  1.00  0.00          C   
+ATOM     12 O    GLY A   2       6.018   3.780   0.000  1.00  0.00          O   
+ATOM     13 O    GLY A   2       6.018   3.780   0.000  1.00  0.00          O   
+ATOM     14 O    GLY A   2       6.018   3.780   0.000  1.00  0.00          O   
+ATOM     15 O    GLY A   2       6.018   3.780   0.000  1.00  0.00          O   
+ATOM     16 O    GLY A   2       6.018   3.780   0.000  1.00  0.00          O   
+TER      17      GLY A   2 
+CONECT    1    2
+CONECT    2    3
+CONECT    3    4    5
+CONECT    5    6
+CONECT    6    7    8    9   10
+CONECT    6   11
+CONECT    7    8    9   10   11
+CONECT    7   12   13   14   15
+CONECT    7   16
+CONECT   12    8    9   10   11
+CONECT   12   13   14   15   16
+CONECT    8    9   10   11   13
+CONECT    8   14   15   16
+CONECT   13    9   10   11   14
+CONECT   13   15   16
+CONECT    9   10   11   14   15
+CONECT    9   16
+CONECT   14   10   11   15   16
+CONECT   10   11   15   16
+CONECT   15   11   16
+CONECT   11   16
+END   

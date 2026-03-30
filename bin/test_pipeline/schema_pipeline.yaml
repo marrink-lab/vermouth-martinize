@@ -1,0 +1,101 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+required:
+  - cli_prefix
+properties:
+  $schema:
+    type: string
+  cli_prefix:
+    type: string
+    default: "-"
+additionalProperties:
+  $ref: "#/$defs/step"
+
+$defs:
+  step:
+    type: object
+    properties:
+      cli_flags:
+        $ref: "#/$defs/cli_opt"
+      condition:
+        $ref: "#/$defs/condition"
+      steps:
+        type: array
+        minItems: 1
+        items:
+          type: array
+          minItems: 2
+          maxItems: 2
+          prefixItems:
+            - type: string
+            - $ref: "#/$defs/step"
+          items: false
+      args:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/arg_value"
+    additionalProperties: false
+    oneOf:
+      - required: [steps]
+      - required: [args]
+
+  arg_value:
+    type: object
+    oneOf:
+      - required: [value]
+        properties:
+          value: {}
+        additionalProperties: false
+      - required: [cli]
+        properties:
+          cli:
+            type: string
+        additionalProperties: false
+
+  cli_opt:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        default: {}
+        help:
+          type: string
+        required:
+          type: boolean
+      additionalProperties: true
+
+  condition:
+    type: object
+    oneOf:
+      - required: [equal]
+        properties:
+          equal:
+            type: object
+            required: [cli, value]
+            properties:
+              cli:
+                type: string
+              value: {}
+            additionalProperties: false
+        additionalProperties: false
+      - required: [not]
+        properties:
+          not:
+            $ref: "#/$defs/condition"
+        additionalProperties: false
+      - required: [all]
+        properties:
+          all:
+            type: array
+            minItems: 2
+            items:
+              $ref: "#/$defs/condition"
+        additionalProperties: false
+      - required: [any]
+        properties:
+          any:
+            type: array
+            minItems: 2
+            items:
+              $ref: "#/$defs/condition"
+        additionalProperties: false
