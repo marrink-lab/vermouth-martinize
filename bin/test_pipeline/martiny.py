@@ -215,6 +215,19 @@ args = parser.parse_args()
 # make the args into a dict 
 args = vars(args)
 
+# if you give noscfix, scfix is faslse otherwise true.
+args["scfix"] = not args["noscfix"]
+
+# keep count of how many secondary structure options are given, if its more then 1, give error.
+ss_count = [
+    args.get("dssp") is not None,
+    args.get("ss") is not None,
+    args.get("collagen") is True,
+]
+if sum(ss_count) > 1:
+    raise ValueError("Only one of the secondary structure options can be used at the same time.")   
+
+
 # check for conditions, fill in args, load processor objects
 set_values_from_cli(pipeline, args)
 
@@ -232,3 +245,4 @@ ff = vermouth.forcefield.get_native_force_field('charmm')
 system = vermouth.System(force_field=ff)
 # test the pipeline with None 
 pipeline.run_system(system)
+print(system.meta.get("header"))

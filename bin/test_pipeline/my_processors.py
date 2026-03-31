@@ -1,5 +1,5 @@
 from os import system
-
+import sys 
 import vermouth
 from vermouth.processors.processor import Processor
 import vermouth.pdb
@@ -8,7 +8,10 @@ from vermouth.log_helpers import TypeAdapter
 from pathlib import Path
 from vermouth import DATA_PATH
 from vermouth.map_input import read_mapping_directory
+import vermouth
+from vermouth import selectors
 
+VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 # import the martinize2 classes en functions 
 
@@ -176,5 +179,52 @@ class DoMappingWrapper(Processor):
         return system
 
 class Header(Processor):
-    def __init__(self, version):
-        self.version = version
+    def run_system(self, system):
+        # add a header to system with all command line arguments and the used version 
+        system.meta["header"].extend((
+            "This file was generated using the following command:",
+            " ".join(sys.argv),
+            VERSION,
+        ))
+        return system
+    
+# secundairy structure options. you can give only 1 out of 3. 
+class DSSPWrapper(Processor):
+    def __init__(self, executable = None, savedir = "."):
+        self.executable = executable
+        self.savedir = savedir
+    def run_system(self, system):
+        executable = self.executable
+        # if you dont give a string, so nothing, it automatically uses mdtraj, otherwise you can give a path or program file. 
+        if not isinstance(executable, str):
+            executable = None 
+        vermouth.dssp.dssp.AnnotateDSSP(executable = executable, savedir = self.savedir).run_system(system)
+        vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+        return system
+
+class SSWrapper(Processor):
+    def __init__(self, ss = None):
+        self.ss = ss
+    def run_system(self, system):
+        if self.ss is None:
+            return system 
+        # convert everything the user gives in -ss, otherwise it doesnt work apperently. 
+        sequence = self.ss.upper()
+
+        vermouth.dssp.dssp.AnnotateResidues(
+            attribute = "aasecstruct",
+            sequence = sequence,
+            molecule_selector = selectors.is_protein,
+        ).run_system(system)
+        vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+        return system 
+
+class CollagenWrapper(Processor):
+    def run_system(self, system):
+        vermouth.dssp.dssp.AnnotateResidues(
+            attribute="cgsecstruct",
+            sequence="F",
+            # wrapper was needed for this step, becasue you cant place that logic into yaml. 
+            molecule_selector=selectors.is_protein,
+        ).run_system(system)
+        return system

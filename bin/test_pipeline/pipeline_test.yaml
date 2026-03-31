@@ -159,11 +159,95 @@ martinize2:
           stash_name:
             value: "stash"
 
+    - my_processors.Header:
+        args: {}
+    
 
 
 
+    - choose_secstruct:
+        cli_flags:
+          dssp:
+            nargs: "?"
+            const: True
+            help: >
+                  DSSP executable for determining structure. If this flag is given
+                  but no executable is specified, the mdtraj library will be used
+                  to compute the secondary structure, if it can be imported.
+          ss:
+                  type: str
+                  default: null
+                  help: >
+                        (Manually set the secondary structure of the proteins. 
+                        Either give a dssp sequence for each residue in your input file 
+                        or a single letter to be repeated for the entire sequence, e.g. -ss C)
+          collagen:
+                  action: store_true
+                  default: false
+                  help: "Use collagen parameters"
+        steps: !!omap
+          - my_processors.DSSPWrapper:   
+              condition:
+                not:
+                  equal:
+                    cli: dssp
+                    value: null
+              args:
+                executable:
+                  cli: dssp
+                savedir:
+                  value: "."
+          - my_processors.SSWrapper: 
+              condition:
+                all:
+                  - not:
+                      equal:
+                        cli: ss
+                        value: null
+                  - equal:
+                      cli: dssp
+                      value: null
+              args:
+                ss:
+                  cli: ss
+          - my_processors.CollagenWrapper:
+              condition:
+                all:
+                    - equal:
+                        cli: ss
+                        value: null
+                    - equal:
+                        cli: dssp
+                        value: null
+                    - equal:
+                        cli: collagen
+                        value: true 
+              args: {}
+    - vermouth.SetMoleculeMeta:
+        cli_flags:
+          extdih:
+            action: store_true
+            default: false
+            help: > 
+                  Use dihedrals for extended regions, rather than elastic bonds
+        args:
+          extdih:
+            cli: extdih 
 
-
+    - vermouth.SetMoleculeMeta:
+        cli_flags:
+          noscfix:
+            action: store_true
+            default: false
+            help: "Don't apply side chain corrections. Please note the change in behaviour from martinize v0.11.0"
+          scfix:
+            action: store_true 
+            help: >
+                  Old -scfix argument. Side chain fixes are now assumed by default, and the flag does not need"
+                  "to be specified. Will be deprecated in future.
+        args:
+          scfix:
+            cli: scfix
 
     - martinize:
         steps: !!omap
