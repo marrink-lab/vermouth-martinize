@@ -10,6 +10,7 @@ from vermouth import DATA_PATH
 from vermouth.map_input import read_mapping_directory
 import vermouth
 from vermouth import selectors
+from vermouth.rcsu.contact_map import read_go_map, GenerateContactMap
 
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
@@ -208,7 +209,7 @@ class SSWrapper(Processor):
     def run_system(self, system):
         if self.ss is None:
             return system 
-        # convert everything the user gives in -ss, otherwise it doesnt work apperently. 
+        # convert everything the user gives in -ss to uppercase, otherwise it doesnt work apperently. 
         sequence = self.ss.upper()
 
         vermouth.dssp.dssp.AnnotateResidues(
@@ -224,7 +225,21 @@ class CollagenWrapper(Processor):
         vermouth.dssp.dssp.AnnotateResidues(
             attribute="cgsecstruct",
             sequence="F",
-            # wrapper was needed for this step, becasue you cant place that logic into yaml. 
+            # wrapper was needed for this step, because you cant place that logic into yaml. 
             molecule_selector=selectors.is_protein,
         ).run_system(system)
         return system
+    
+class GoWrapper(Processor):
+    def __init__(self, go, go_write_file = None):
+        self.go = go
+        self.go_write_file = go_write_file
+    def run_system(self, system):
+        if isinstance(self.go, Path):
+            LOGGER.info("Reading Go model contact map.", type="step")
+            read_go_map(system=system, file_path=self.go)
+        else:
+            LOGGER.info("Generating Go model contact map.", type="step")
+            GenerateContactMap(write_file=self.go_write_file).run_system(system)
+        return system
+        

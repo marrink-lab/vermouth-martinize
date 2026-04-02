@@ -9,6 +9,7 @@ import importlib
 import sys
 import logging
 
+
 logging.basicConfig(level=logging.INFO)
 #imports 
 
@@ -97,12 +98,26 @@ def validate_cli_options(
                 global_cli_options,
             )
 
+
+def _cys_argument(value):
+    try:
+        return float(value)
+    except ValueError:
+        lowered = value.lower()
+        if lowered in ("auto", "none"):
+            return lowered
+        raise argparse.ArgumentTypeError(
+            'Value must be "auto", "none", or a float.'
+        )
+
+
 # translation table 
 TYPE_MAP = {
     'str': str,
     'int': int,
     'float': float,
     'path': Path,
+    'cys_argument': _cys_argument,
 }
 # build the CLI based on the pipeline configuration.
 def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
@@ -207,10 +222,10 @@ validate_cli_options(pipeline, path=name)
 
 # build the cli with the cli_flags 
 parser = build_cli(pipeline, cli_prefix, prog=name)
+for action in parser._actions:
+    print(action.option_strings)
 
-
-
-# fake CLI test
+# take all the argumtents from the command line 
 args = parser.parse_args()
 # make the args into a dict 
 args = vars(args)
@@ -222,7 +237,7 @@ args["scfix"] = not args["noscfix"]
 ss_count = [
     args.get("dssp") is not None,
     args.get("ss") is not None,
-    args.get("collagen") is True,
+    args.get("collagen"),
 ]
 if sum(ss_count) > 1:
     raise ValueError("Only one of the secondary structure options can be used at the same time.")   

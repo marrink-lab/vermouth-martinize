@@ -162,9 +162,6 @@ martinize2:
     - my_processors.Header:
         args: {}
     
-
-
-
     - choose_secstruct:
         cli_flags:
           dssp:
@@ -248,6 +245,64 @@ martinize2:
         args:
           scfix:
             cli: scfix
+    - cystein_bridges:
+        cli_flags:
+          cystein_bridge:
+            type: cys_argument
+            default: auto
+        steps: !!omap
+          - vermouth.RemoveCysteinBridgeEdges:
+              condition:
+                equal:
+                  cli: cystein_bridge
+                  value: "none"
+              args: {}
+          - vermouth.AddCysteinBridgesThreshold:
+              condition:
+                all:
+                  - not: 
+                      equal:
+                        cli: cystein_bridge
+                        value:  "auto"
+                  - not:
+                      equal:
+                        cli: cystein_bridge
+                        value: "none"
+              args:
+                threshold:
+                  cli : cystein_bridge
+    - go_system:
+        cli_flags:
+                go:
+                  nargs: "?"
+                  const: true
+                  type: path
+                  help: "Use Martini Go model. Accepts either an input file from the server, or just provide the flag to calculate as part of Martinize." 
+                go_write_file:  
+                  nargs: "?"
+                  const: contact_map_martinize.out
+                  default: false
+                  type: path
+                  help: "Write out contact map to file if calculating as part of Martinize2."
+        steps: !!omap
+          - vermouth.MergeAllMolecules:                                         
+              condition:
+                not:
+                  equal:
+                    cli: go
+                    value: null 
+              args: {}
+          - my_processors.GoWrapper:
+              condition:
+                not:
+                  equal:
+                    cli: go
+                    value: null
+              args:
+                go:
+                  cli: go
+                go_write_file:
+                  cli: go_write_file
 
     - martinize:
         steps: !!omap
