@@ -136,6 +136,21 @@ def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
         # actually add the argument to the parser
         parser.add_argument(f'{prefix}{flag}', **opts)
     # recursion for steps in the pipeline
+
+    for group_cli in pipeline_conf.get('cli_groups', []):
+        group = parser.add_mutually_exclusive_group()
+        for flag, opts in group_cli.get('cli_flags', {}).items():
+            # make copy of dict 
+            opts = dict(opts)
+            # translate type from string to actual type if needed.
+            if 'type' in opts and isinstance(opts['type'], str):
+                type_name = opts['type']
+                if type_name not in TYPE_MAP:
+                    raise ValueError(f"Unknown CLI type: {type_name}")
+                opts['type'] = TYPE_MAP[type_name]
+            # actually add the argument to the parser
+            group.add_argument(f'{prefix}{flag}', **opts)
+    
     if pipeline_conf.get('steps'):
         for name, step in pipeline_conf['steps']:
             build_cli(step, prefix, parser=parser)
@@ -232,15 +247,6 @@ args = vars(args)
 
 # if you give noscfix, scfix is faslse otherwise true.
 args["scfix"] = not args["noscfix"]
-
-# keep count of how many secondary structure options are given, if its more then 1, give error.
-ss_count = [
-    args.get("dssp") is not None,
-    args.get("ss") is not None,
-    args.get("collagen"),
-]
-if sum(ss_count) > 1:
-    raise ValueError("Only one of the secondary structure options can be used at the same time.")   
 
 
 # check for conditions, fill in args, load processor objects

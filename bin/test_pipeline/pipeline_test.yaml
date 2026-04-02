@@ -2,6 +2,10 @@ $schema: "./schema-pipeline.yaml"
 cli_prefix: "-"
 
 martinize2:
+  cli_flags:
+    to_ff:
+      default: "martini3001"
+      help: Which forcefield to use
   steps: !!omap
     - my_processors.ReadSystem:
         cli_flags:
@@ -163,25 +167,27 @@ martinize2:
         args: {}
     
     - choose_secstruct:
-        cli_flags:
-          dssp:
-            nargs: "?"
-            const: True
-            help: >
-                  DSSP executable for determining structure. If this flag is given
-                  but no executable is specified, the mdtraj library will be used
-                  to compute the secondary structure, if it can be imported.
-          ss:
-                  type: str
-                  default: null
-                  help: >
-                        (Manually set the secondary structure of the proteins. 
-                        Either give a dssp sequence for each residue in your input file 
-                        or a single letter to be repeated for the entire sequence, e.g. -ss C)
-          collagen:
-                  action: store_true
-                  default: false
-                  help: "Use collagen parameters"
+        cli_groups:
+        - type: mutually_exclusive
+          flags:
+              dssp:
+                nargs: "?"
+                const: True
+                help: >
+                      DSSP executable for determining structure. If this flag is given
+                      but no executable is specified, the mdtraj library will be used
+                      to compute the secondary structure, if it can be imported.
+              ss:
+                      type: str
+                      default: null
+                      help: >
+                            (Manually set the secondary structure of the proteins. 
+                            Either give a dssp sequence for each residue in your input file 
+                            or a single letter to be repeated for the entire sequence, e.g. -ss C)
+              collagen:
+                      action: store_true
+                      default: false
+                      help: "Use collagen parameters"
         steps: !!omap
           - my_processors.DSSPWrapper:   
               condition:
@@ -307,10 +313,6 @@ martinize2:
     - martinize:
         steps: !!omap
           - my_processors.DoMappingWrapper:
-              cli_flags:
-                to_ff:
-                  default: "martini3001"
-                  help: Which forcefield to use"
               args:
                 to_ff:
                   cli: to_ff
@@ -341,3 +343,28 @@ martinize2:
           - vermouth.LocateChargeDummies:
               args: {}  
 
+    - my_processors.RTPPolisherWrapper:
+        args:
+          to_ff:
+            cli: to_ff
+    - my_processors.ApplyPosresWrapper:
+        condition:
+          not:
+            equal:
+              cli: posres
+              value: "none"
+        cli_flags:
+          posres:
+            type: str
+            default: "none"
+            choices: ["none", "all", "backbone"]
+            help: "Output position restraints (none/all/backbone)"
+          posres_fc:
+            type: float
+            default: 1000.0
+            help: "Position restraints force constant in kJ/mol/nm^2"
+        args:
+          posres:
+            cli: posres
+          posres_fc:
+            cli: posres_fc
