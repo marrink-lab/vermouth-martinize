@@ -41,54 +41,59 @@ def validate_cli_options(
     definition='cli_flags',
     local_cli_options=None,
     global_cli_options=None,
-):  # make local and globals if set to empty set if None is given.
+):
     local_cli_options = set() if local_cli_options is None else local_cli_options
     global_cli_options = set() if global_cli_options is None else global_cli_options
-    
-    # is there a definition of CLI options in this pipeline step?
-    if definition in pipeline_conf:
-        local_cli_options = local_cli_options | set(pipeline_conf[definition].keys())
-        # add new local cli options and dbubbel check 
-        if overlap := set(pipeline_conf[definition].keys()).intersection(global_cli_options):
-            _path = '.'.join([path, definition])
-            raise KeyError(
-                f'CLI options {overlap} have already been defined before '
-                f'but were found again in {_path}'
-            )
-        # adding cli options to global set 
-        global_cli_options |= set(pipeline_conf[definition])
-        
 
-    # is condition beging used in the current pipeline step? 
+    # gather flags defined in cli_flags
+    normal_cli_options = set(pipeline_conf.get('cli_flags', {}).keys())
+
+    # gather flags defined in cli_groups
+    group_cli_options = set()
+    for group_conf in pipeline_conf.get('cli_groups', []):
+        group_cli_options |= set(group_conf.get('flags', {}).keys())
+
+    # all options 
+    defined_here = normal_cli_options | group_cli_options
+
+    # check for duplicates 
+    if overlap := defined_here.intersection(global_cli_options):
+        _path = '.'.join([path, 'cli'])
+        raise KeyError(
+            f'CLI options {overlap} have already been defined before '
+            f'but were found again in {_path}'
+        )
+
+    # add to the sets of options defined in this scope and globally
+    local_cli_options |= defined_here
+    global_cli_options |= defined_here
+
+    # check for options used in conditions
     if 'condition' in pipeline_conf:
-        #find all cli options used in the condition
         cond_options = _cli_options_used_in_condition(pipeline_conf['condition'])
-        # are options missing, error path
         if missing := (cond_options - local_cli_options):
             _path = '.'.join([path, "condition"])
             raise KeyError(
                 f'CLI option(s) {missing} in {_path} have not been defined. '
                 f'Only {local_cli_options} are known in this scope.'
             )
-    # is it a pipeline step or a processor step?
+    # check for options used in arguments if this is not a pipeline step
     is_pipeline = bool(pipeline_conf.get('steps'))
     if not is_pipeline:
         references = {
-            # check if the cli options are used in args and gathers them 
             v[reference]
             for v in pipeline_conf.get('args', {}).values()
             if reference in v
-        }   # if missing, error path 
+        }
         if missing := (references - local_cli_options):
             _path = '.'.join([path, "args"])
             raise KeyError(
                 f'CLI option(s) {missing} in {_path} have not been defined. '
                 f'Only {local_cli_options} are known in this scope.'
             )
-    else:   # is it a pipline with recursive steps?
+    else:
         for idx, (name, step) in enumerate(pipeline_conf['steps']):
             _path = '.'.join([path, f'steps[{idx}]', name])
-            # the function is called recursively to check the steps in the pipeline.
             validate_cli_options(
                 step,
                 _path,
@@ -97,7 +102,6 @@ def validate_cli_options(
                 local_cli_options,
                 global_cli_options,
             )
-
 
 def _cys_argument(value):
     try:
@@ -109,7 +113,15 @@ def _cys_argument(value):
         raise argparse.ArgumentTypeError(
             'Value must be "auto", "none", or a float.'
         )
-
+def water_bias(value):
+    try:
+        letter, epsilon = value.split(":")
+        return letter, float(epsilon)
+    except Exception:
+        raise argparse.ArgumentTypeError(
+                'value must be a letter and a float separated by a colon'
+    )
+    
 
 # translation table 
 TYPE_MAP = {
@@ -118,6 +130,7 @@ TYPE_MAP = {
     'float': float,
     'path': Path,
     'cys_argument': _cys_argument,
+    'water_bias': water_bias,
 }
 # build the CLI based on the pipeline configuration.
 def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
@@ -139,7 +152,7 @@ def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
 
     for group_cli in pipeline_conf.get('cli_groups', []):
         group = parser.add_mutually_exclusive_group()
-        for flag, opts in group_cli.get('cli_flags', {}).items():
+        for flag, opts in group_cli.get('flags', {}).items():
             # make copy of dict 
             opts = dict(opts)
             # translate type from string to actual type if needed.
@@ -247,6 +260,7 @@ args = vars(args)
 
 # if you give noscfix, scfix is faslse otherwise true.
 args["scfix"] = not args["noscfix"]
+args["deduplicate"] = not args["keep_duplicate_itp"]
 
 
 # check for conditions, fill in args, load processor objects

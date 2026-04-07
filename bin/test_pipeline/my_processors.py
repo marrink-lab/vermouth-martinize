@@ -11,6 +11,7 @@ from vermouth.map_input import read_mapping_directory
 import vermouth
 from vermouth import selectors
 from vermouth.rcsu.contact_map import read_go_map, GenerateContactMap
+from vermouth.rcsu.go_pipeline import GoPipeline
 
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
@@ -267,3 +268,70 @@ class ApplyPosresWrapper(Processor):
         }
         node_selector = node_selectors[self.posres]
         vermouth.ApplyPosres(node_selector, self.posres_fc).run_system(system)
+
+class GoModelWrapper(Processor):
+    def __init__ (
+            self,
+            go_low,
+            go_up,
+            go_eps,
+            go_res_dist,
+            go_backbone,
+            go_atomname,
+            molname,
+            water_bias = False,
+            water_bias_eps = None,
+            water_bias_idr = None
+        ):
+        self.go_low = go_low
+        self.go_up = go_up
+        self.go_eps = go_eps
+        self.go_res_dist = go_res_dist
+        self.go_backbone = go_backbone
+        self.go_atomname = go_atomname
+        self.molname = molname
+        self.go_water_bias = water_bias
+        self.go_water_bias_eps = water_bias_eps or []
+        self.go_water_idrs = water_bias_idr or []
+
+    def run_system(self, system):
+        if system.go_params["go_map"]:
+            LOGGER.info("Generating the Go model.", type="step")
+            GoPipeline.run_system(system,
+                                moltype=self.molname,
+                                cutoff_short=self.go_low,
+                                cutoff_long=self.go_up,
+                                go_eps=self.go_eps,
+                                res_dist=self.go_res_dist,
+                                go_anchor_bead=self.go_backbone,
+                                go_atomname=self.go_atomname)
+            system.meta["defines"] = ("GO_VIRT",)
+            system.meta["itp_paths"] = {"atomtypes": "go_atomtypes.itp","nonbond_params": "go_nbparams.itp"}
+            if not self.go_water_bias:
+                # this ensures that disordered-folded go bonds get removed regardless of force field.
+                vermouth.processors.ComputeWaterBias(self.go_water_bias,
+                                                    dict(self.go_water_bias_eps),
+                                                    self.go_water_idrs,
+                                                    ).run_system(system)
+        return system
+    
+class MergeChainsWrapper(Processor):
+        def __init__(self, merge_chains = None):
+            self.merge_chains = merge_chains
+        def run_system(self, system):
+            if not self.merge_chains:
+                return system 
+            #if "all" is not in the list of chains to be merged
+            if "all" not in self.merge_chains:
+                input_chain_sets = [i.split(",") for i in self.merge_chains]
+                for chain_set in input_chain_sets:
+                    vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
+            #if "all" is in the list and is the only argument
+            elif "all" in self.merge_chains and len(self.merge_chains) == 1:
+                vermouth.MergeChains(chains=[], all_chains=True).run_system(system)
+            #otherwise there are multiple arguments and we need to raise an ArgumentError
+            else:
+                raise ValueError("Multiple conflicting merging arguments given. "
+                                "Either specify -merge all or -merge A,B,C (+).")
+            return system   
+        

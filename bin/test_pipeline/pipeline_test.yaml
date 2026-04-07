@@ -6,6 +6,22 @@ martinize2:
     to_ff:
       default: "martini3001"
       help: Which forcefield to use
+    go:
+      nargs: "?"
+      const: true
+      type: path
+      help: "Use Martini Go model. Accepts either an input file from the server, or just provide the flag to calculate as part of Martinize." 
+    go_write_file:  
+      nargs: "?"
+      const: contact_map_martinize.out
+      default: false
+      type: path
+      help: "Write out contact map to file if calculating as part of Martinize2."
+    molname:
+      type: str
+      default: "molecule"
+      help: "Name for the output molecule. If not specified, will default to 'molecule_{0..n}' for the number of molecules in your system."
+
   steps: !!omap
     - my_processors.ReadSystem:
         cli_flags:
@@ -277,19 +293,7 @@ martinize2:
               args:
                 threshold:
                   cli : cystein_bridge
-    - go_system:
-        cli_flags:
-                go:
-                  nargs: "?"
-                  const: true
-                  type: path
-                  help: "Use Martini Go model. Accepts either an input file from the server, or just provide the flag to calculate as part of Martinize." 
-                go_write_file:  
-                  nargs: "?"
-                  const: contact_map_martinize.out
-                  default: false
-                  type: path
-                  help: "Write out contact map to file if calculating as part of Martinize2."
+    - go_system:       
         steps: !!omap
           - vermouth.MergeAllMolecules:                                         
               condition:
@@ -368,3 +372,106 @@ martinize2:
             cli: posres
           posres_fc:
             cli: posres_fc
+
+    - my_processors.GoModelWrapper:
+        condition:
+          not:
+            equal:
+              cli: go
+              value: null
+        cli_flags:
+          go_low:
+            type: float
+            default: 0.3
+            help: "Minimum distance (nm) below which contacts are removed."
+          go_up:
+            type: float
+            default: 1.1
+            help: "Maximum distance (nm) above which contacts are removed."
+          go_res_dist:
+            type: int
+            default: 3
+            help: "Minimum graph distance (similar sequence distance) below which contacts are removed." 
+          go_backbone:
+            type: str
+            default: "BB"
+            help: "Name of protein backbone bead on which to place a virtual interaction go site"
+          go_atomname:
+            type: str
+            default: "CA"
+            help: "Name of the virtual interaction go site atom"
+          go_eps:
+            type: float
+            default: 9.414
+            help: "The strength of the Go model structural bias in kJ/mol."
+          water_bias:
+            action: store_true
+            default: false
+            help: "Automatically apply water bias to different secondary structure elements."
+          water_bias_eps:
+            nargs: "+"
+            type: water_bias
+            default: []
+            help: >
+                  Define the strength of the water bias by secondary structure type. 
+                  For example, use `H:3.6 C:2.1` to bias helixes and coils. 
+                  Using the idr option (e.g. idr:2.1) intrinsically disordered regions 
+                  are biased seperately.
+          water_bias_idr:
+            nargs: "+"
+            default: []
+            help: >
+                  Intrinsically disordered regions specified by resid.
+                  These parts are biased differently when applying a water bias.
+                  format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ...
+        args:
+          go_low:
+            cli: go_low
+          go_up:
+            cli: go_up
+          go_res_dist:
+            cli: go_res_dist 
+          go_backbone:    
+            cli: go_backbone
+          go_atomname:
+            cli: go_atomname
+          molname:
+            cli: molname
+          go_eps:
+            cli: go_eps
+          water_bias:
+            cli: water_bias
+          water_bias_eps:
+            cli: water_bias_eps
+          water_bias_idr:
+            cli: water_bias_idr
+    
+    - my_processors.MergeChainsWrapper:
+        condition:
+          not:
+            equal: 
+              cli: merge_chains
+              value: None 
+        cli_flags:
+          merge_chains:
+            type: str
+            action: append
+            default: []
+            help: > 
+                    Merge chains: either a comma separated list of chains to merge e.g. -merge A,B,C (+), or -merge all\n
+                    if instead all chains in the input file should be merged.\n
+                    Can be given multiple times for different groups of chains to merge.
+        args:
+          merge_chains:
+            cli: merge_chains
+    - vermouth.NameMolType:
+        cli_flags:
+          keep_duplicate_itp:
+            action: store_true
+            default: false
+            help: "Write separate topologies for identical chains"
+        args:
+          deduplicate:
+            cli: deduplicate
+          molname:
+            cli: molname
