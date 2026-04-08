@@ -31,7 +31,7 @@ martinize2:
             type: path
           ignore_res:
             help: residue names to ignore
-            nargs: "*"
+            nargs: "+"
             default: []
           ignore_h:
             help: ignore hydrogens
@@ -465,11 +465,19 @@ martinize2:
           merge_chains:
             cli: merge_chains
     - vermouth.NameMolType:
+        condition:
+          equal:
+            cli: go
+            value: null
         cli_flags:
           keep_duplicate_itp:
             action: store_true
             default: false
             help: "Write separate topologies for identical chains"
+          deduplicate:
+            action: store_true
+            default: false
+            help: "internal"
         args:
           deduplicate:
             cli: deduplicate

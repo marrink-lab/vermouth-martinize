@@ -321,15 +321,15 @@ class MergeChainsWrapper(Processor):
         def run_system(self, system):
             if not self.merge_chains:
                 return system 
-            #if "all" is not in the list of chains to be merged
+            #if all is not in the list of chains to be merged
             if "all" not in self.merge_chains:
                 input_chain_sets = [i.split(",") for i in self.merge_chains]
                 for chain_set in input_chain_sets:
                     vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
-            #if "all" is in the list and is the only argument
+            #if all is in the list and is the only argument
             elif "all" in self.merge_chains and len(self.merge_chains) == 1:
                 vermouth.MergeChains(chains=[], all_chains=True).run_system(system)
-            #otherwise there are multiple arguments and we need to raise an ArgumentError
+            #otherwise error because you cannot have all and specific chains at the same time.
             else:
                 raise ValueError("Multiple conflicting merging arguments given. "
                                 "Either specify -merge all or -merge A,B,C (+).")
