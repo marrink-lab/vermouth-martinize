@@ -282,7 +282,7 @@ class GoModelWrapper(Processor):
             molname,
             water_bias = False,
             water_bias_eps = None,
-            water_bias_idr = None
+            water_bias_idrs = None
         ):
         self.go_low = go_low
         self.go_up = go_up
@@ -291,9 +291,9 @@ class GoModelWrapper(Processor):
         self.go_backbone = go_backbone
         self.go_atomname = go_atomname
         self.molname = molname
-        self.go_water_bias = water_bias
-        self.go_water_bias_eps = water_bias_eps or []
-        self.go_water_idrs = water_bias_idr or []
+        self.water_bias = water_bias
+        self.water_bias_eps = water_bias_eps or []
+        self.water_bias_idrs = water_bias_idrs or []
 
     def run_system(self, system):
         if system.go_params["go_map"]:
@@ -308,11 +308,11 @@ class GoModelWrapper(Processor):
                                 go_atomname=self.go_atomname)
             system.meta["defines"] = ("GO_VIRT",)
             system.meta["itp_paths"] = {"atomtypes": "go_atomtypes.itp","nonbond_params": "go_nbparams.itp"}
-            if not self.go_water_bias:
+            if not self.water_bias:
                 # this ensures that disordered-folded go bonds get removed regardless of force field.
-                vermouth.processors.ComputeWaterBias(self.go_water_bias,
-                                                    dict(self.go_water_bias_eps),
-                                                    self.go_water_idrs,
+                vermouth.processors.ComputeWaterBias(self.water_bias,
+                                                    dict(self.water_bias_eps),
+                                                    self.water_bias_idrs,
                                                     ).run_system(system)
         return system
     
@@ -360,18 +360,23 @@ class ElasticWrapper(Processor):
        self.res_min_dist = res_min_dist
     def run_system(self, system):
         LOGGER.info("Setting the rubber bands.", type="step")
+        # if the rubber band unit is molecule, then the domain criterion is always true, no exclusion within the molecule.
         if self.rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
+            # if all, then merge all molecules into one and apply rubber band to the whole system. 
         elif self.rb_unit == "all":
             vermouth.MergeAllMolecules().run_system(system)
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
+            # only beads in the same chain can be connected by rubber bands.
         elif self.rb_unit == "chain":
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
+            # you can also choose your own region 
         else:
             regions = [
                 tuple(int(i) for i in apair.split(":"))
                 for apair in self.rb_unit.split(",")
-            ]
+            ] 
+            # check if all regions are pairs and not more or less. 
             if any(len(region) != 2 for region in regions):
                 message = (
                     'Faulty resid interval for elastic network unit: "{}".'.format(
@@ -380,19 +385,21 @@ class ElasticWrapper(Processor):
                 )
                 LOGGER.critical(message)
                 raise ValueError(message)
+            # if that is not the case proceed. only within residue area. not between regions. 
             else:
                 domain_criterion = (
                     vermouth.processors.apply_rubber_band.make_same_region_criterion(
                         regions
                     )
                 )
-
+        # check if the user has given a special selection for the rubber bands. 
         if self.rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
                 attribute="atomname",
                 values=self.rb_selection,
             )
+            # if not, use the backbone of the given force field.
         else:
             selector = functools.partial(selectors.select_backbone,
                                          bb_atomname=system.force_field.variables['bb_atomname'])
@@ -409,6 +416,29 @@ class ElasticWrapper(Processor):
         )
         rubber_band_processor.run_system(system)
         return system
-        
 
-       
+class WaterBiasWrapper(Processor):
+    def __init__(self, water_bias, water_bias_eps, water_bias_idrs, go):
+        self.water_bias = water_bias
+        self.water_bias_eps = water_bias_eps or []
+        self.water_bias_idrs = water_bias_idrs or []
+        self.go = go
+    def run_system(self, system):
+        if not self.go:
+            vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
+            # paths to the itp files for virtual sites. 
+            itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
+                            "nonbond_params": "virtual_sites_nonbond_params.itp"}
+        found_cgsecstruct = any(
+            "cgsecstruct" in data
+            for mol in system.molecules
+            for _, data in mol.nodes(data=True)
+        )
+
+        print("cgsecstruct present:", found_cgsecstruct)
+        # now we add a bias by defining specific virtual-site water interactions
+        vermouth.processors.ComputeWaterBias(self.water_bias,
+                                                    dict(self.water_bias_eps),
+                                                    self.water_bias_idrs,
+                                                    ).run_system(system)
+        return system

@@ -21,6 +21,26 @@ martinize2:
       type: str
       default: "molecule"
       help: "Name for the output molecule. If not specified, will default to 'molecule_{0..n}' for the number of molecules in your system."
+    water_bias:
+          action: store_true
+          default: false
+          help: "Automatically apply water bias to different secondary structure elements."
+    water_bias_eps:
+      nargs: "+"
+      type: water_bias
+      default: []
+      help: >
+            Define the strength of the water bias by secondary structure type. 
+            For example, use `H:3.6 C:2.1` to bias helixes and coils. 
+            Using the idr option (e.g. idr:2.1) intrinsically disordered regions 
+            are biased seperately.
+    water_bias_idrs:
+      nargs: "+"
+      default: []
+      help: >
+            Intrinsically disordered regions specified by resid.
+            These parts are biased differently when applying a water bias.
+            format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ...
 
   steps: !!omap
     - my_processors.ReadSystem:
@@ -404,26 +424,6 @@ martinize2:
             type: float
             default: 9.414
             help: "The strength of the Go model structural bias in kJ/mol."
-          water_bias:
-            action: store_true
-            default: false
-            help: "Automatically apply water bias to different secondary structure elements."
-          water_bias_eps:
-            nargs: "+"
-            type: water_bias
-            default: []
-            help: >
-                  Define the strength of the water bias by secondary structure type. 
-                  For example, use `H:3.6 C:2.1` to bias helixes and coils. 
-                  Using the idr option (e.g. idr:2.1) intrinsically disordered regions 
-                  are biased seperately.
-          water_bias_idr:
-            nargs: "+"
-            default: []
-            help: >
-                  Intrinsically disordered regions specified by resid.
-                  These parts are biased differently when applying a water bias.
-                  format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ...
         args:
           go_low:
             cli: go_low
@@ -443,8 +443,8 @@ martinize2:
             cli: water_bias
           water_bias_eps:
             cli: water_bias_eps
-          water_bias_idr:
-            cli: water_bias_idr
+          water_bias_idrs:
+            cli: water_bias_idrs
     
     - my_processors.MergeChainsWrapper:
         condition:
@@ -485,9 +485,13 @@ martinize2:
             cli: molname
     - my_processors.ElasticWrapper:
         condition:
-          equal:
-            cli: elastic
-            value: true
+          all: 
+            - equal:
+                cli: elastic
+                value: true
+            - equal:
+                cli: go
+                value: null
         cli_flags:
           elastic:
             action: store_true
@@ -551,3 +555,17 @@ martinize2:
           res_min_dist:
             cli: res_min_dist
             
+    - my_processors.WaterBiasWrapper:
+        condition:
+            equal:
+              cli: water_bias
+              value: true
+        args:
+          water_bias_eps:
+            cli: water_bias_eps
+          water_bias_idrs:
+            cli: water_bias_idrs
+          water_bias:
+            cli: water_bias
+          go:
+            cli: go
