@@ -483,3 +483,71 @@ martinize2:
             cli: deduplicate
           molname:
             cli: molname
+    - my_processors.ElasticWrapper:
+        condition:
+          equal:
+            cli: elastic
+            value: true
+        cli_flags:
+          elastic:
+            action: store_true
+            default: false
+            help: "Write elastic bonds"
+          rb_force_constant:
+            type: float 
+            default: 700.0
+            help: "Elastic bond force constant Fc in kJ/mol/nm^2"
+          rb_lower_bound:
+            type: float
+            default: 0.0
+            help: "Elastic bond lower cutoff: F = Fc if rij < lo"
+          rb_upper_bound:
+            type: float
+            default: 0.9
+            help: "Elastic bond upper cutoff: F = 0 if rij > up"
+          res_min_dist:
+            type: int
+            default: null
+            help: "The minimum separation between two residues to have an RB"
+          rb_decay_factor:
+            type: float
+            default: 0
+            help: "Elastic bond decay factor a"
+          rb_decay_power:
+            type: float
+            default: 1
+            help: "Elastic bond decay power p"
+          rb_minimum_force:
+            type: float
+            default: 0
+            help: "Remove elastic bonds with force constant lower than this"
+          rb_selection:
+            default: null
+            type: str
+            help: "Comma separated list of bead names for elastic bonds"
+          rb_unit:
+            type: str
+            default: "molecule"
+            help: >
+              Establish what is the structural unit for the elastic network.
+              Options are molecule, chain, all, or regions like 10:50,80:120
+        args:
+          rb_force_constant:
+            cli: rb_force_constant
+          rb_lower_bound:
+            cli: rb_lower_bound
+          rb_upper_bound:
+            cli: rb_upper_bound
+          rb_decay_factor:
+            cli: rb_decay_factor
+          rb_decay_power:
+            cli: rb_decay_power
+          rb_minimum_force:
+            cli: rb_minimum_force
+          rb_selection:
+            cli: rb_selection
+          rb_unit:
+            cli: rb_unit
+          res_min_dist:
+            cli: res_min_dist
+            
