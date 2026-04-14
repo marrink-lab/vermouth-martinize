@@ -13,7 +13,7 @@ import functools
 from vermouth import selectors
 from vermouth.rcsu.contact_map import read_go_map, GenerateContactMap
 from vermouth.rcsu.go_pipeline import GoPipeline
-
+import networkx as nx
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 # import the martinize2 classes en functions 
@@ -429,16 +429,22 @@ class WaterBiasWrapper(Processor):
             # paths to the itp files for virtual sites. 
             itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
                             "nonbond_params": "virtual_sites_nonbond_params.itp"}
-        found_cgsecstruct = any(
-            "cgsecstruct" in data
-            for mol in system.molecules
-            for _, data in mol.nodes(data=True)
-        )
-
-        print("cgsecstruct present:", found_cgsecstruct)
         # now we add a bias by defining specific virtual-site water interactions
         vermouth.processors.ComputeWaterBias(self.water_bias,
                                                     dict(self.water_bias_eps),
                                                     self.water_bias_idrs,
                                                     ).run_system(system)
         return system
+    
+class ResidHandlingWrapper(Processor):
+    def __init__(self, resid_handling):
+        self.resid_handling = resid_handling
+    def run_system(self, system):
+        if self.resid_handling != "input":
+            return system
+        for molecule in system.molecules:
+            old_resids = {node: molecule.nodes[node]["stash"].get("resid") for node in molecule.nodes}
+            nx.set_node_attributes(molecule, old_resids, "resid")
+
+        return system
+        

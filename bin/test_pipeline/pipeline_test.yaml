@@ -569,3 +569,16 @@ martinize2:
             cli: water_bias
           go:
             cli: go
+    
+    - my_processors.ResidHandlingWrapper:
+        cli_flags:
+          resid_handling:
+            type: str
+            default: "mol"
+            help: > 
+                  How to handle resid. Choice of mol or input.\n
+                  mol: resids are numbered from 1 to n for each molecule\n
+                  input: resids are the same as in the input pdb
+        args:
+          resid_handling:
+            cli: resid_handling 
