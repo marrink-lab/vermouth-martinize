@@ -131,7 +131,8 @@ def water_bias(value):
         raise argparse.ArgumentTypeError(
                 'value must be a letter and a float separated by a colon'
     )
-    
+def ignore_resname(value):
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 # translation table 
 TYPE_MAP = {
@@ -141,6 +142,7 @@ TYPE_MAP = {
     'path': Path,
     'cys_argument': _cys_argument,
     'water_bias': water_bias,
+    'ignore_resname': ignore_resname
 }
 # build the CLI based on the pipeline configuration.
 def build_cli(pipeline_conf, prefix, parser=None, **kwargs):

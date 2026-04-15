@@ -57,8 +57,21 @@ martinize2:
             Intrinsically disordered regions specified by resid.
             These parts are biased differently when applying a water bias.
             format: [<chain>-]<start_resid_1>:<end_resid_1> [<chain>-]<start_resid_2>:<end_resid_2> ...
+    list_blocks:
+      action: store_true
+      help: "List all known blocks and modifications for the selected force fields."
 
   steps: !!omap
+    - my_processors.ListBlocksWrapper:
+        condition:
+          equal:
+            cli: list_blocks
+            value: true
+        args:
+          from_ff:
+            cli: from_ff
+          to_ff:
+            cli: to_ff
     - my_processors.ReadSystem:
         cli_flags:
           inpath:
@@ -69,6 +82,9 @@ martinize2:
             help: residue names to ignore
             nargs: "+"
             default: []
+            action: append
+            type: ignore_resname
+            help: "Ignore residues with that name: e.g. -ignore HOH,LIG (+)"
           ignore_h:
             help: ignore hydrogens
             action: store_true
@@ -76,7 +92,7 @@ martinize2:
           modelidx:
             help: model number
             type: int
-            default: 1
+            default: null
         args:
           path:
             cli: inpath
@@ -89,18 +105,26 @@ martinize2:
 
     - pdb_to_universal:
         steps: !!omap
-          - vermouth.MakeBonds:
+          - my_processors.MakeBondsWrapper:
               cli_flags:
+                bonds_from:
+                  type: str
+                  choices: ["name", "distance", "none", "both"]
+                  default: "both"
+                  help: >
+                    How to determine connectivity in the input.
+                    If 'none', only bonds from the input file (CONECT) will be used.
                 fudge:
                   type: float
                   default: 1.2
+                  help: >
+                    Factor with which Van der Waals radii should be scaled when determining
+                    bonds based on distances.
               args:
-                allow_name:
-                  value: true
-                allow_dist:
-                  value: true
+                bonds_from:
+                  cli: bonds_from
                 fudge:
-                  cli: fudge 
+                  cli: fudge
 
           - vermouth.MergeNucleicStrands:
               args: {}

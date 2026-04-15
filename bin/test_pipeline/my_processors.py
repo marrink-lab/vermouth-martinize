@@ -64,7 +64,19 @@ class ReadSystem(Processor):
     def run_system(self, system):
         print("Running ReadSystem processor")
         print("Input file:", self.path)
-        # fill the system with the parameters and return it
+        file_extension = self.path.suffix.upper()[1:]  # We do not keep the dot
+        if file_extension in ["GRO"] and self.modelidx is not None:
+            raise ValueError("GRO files don't know the concept of models.")
+        if self.modelidx is None:
+        # Set a sane default value. Can't do this using argparse machinery,
+        # since we need to be able to check whether the flag was given.
+            self.modelidx = 1
+        # merge the lists of the ignored resnames into a set. 
+        ignore_res = set()
+        for grp in self.ignore_resnames:
+            ignore_res.update(*grp)
+        print(ignore_res)
+
         system = read_system(
             system=system,
             path=self.path,
@@ -75,6 +87,23 @@ class ReadSystem(Processor):
         # print and return the system
         print("Returned system:", system)
         print(f'{system.force_field=}')
+        return system
+    
+class MakeBondsWrapper(Processor):
+    def __init__(self, bonds_from="both", fudge=1.2):
+        self.bonds_from = bonds_from
+        self.fudge = fudge
+
+    def run_system(self, system):
+        allow_name = self.bonds_from in ("name", "both")
+        allow_dist = self.bonds_from in ("distance", "both")
+
+        vermouth.MakeBonds(
+            allow_name=allow_name,
+            allow_dist=allow_dist,
+            fudge=self.fudge,
+        ).run_system(system)
+
         return system
 
 # write the current system to a pdb file. This is for testing and bug fixing, not a pipeline step. 
@@ -476,7 +505,9 @@ class OutputWriterWrapper(Processor):
                            C6C12=False,
                            defines=system.meta.get("defines", ()),
                            ) 
-        vermouth.pdb.write_pdb(system, str(self.outpath), omit_charges=True)
+        if self.outpath is not None:
+            vermouth.pdb.write_pdb(system, str(self.outpath), omit_charges=True)
+
 
         return system
     
@@ -500,3 +531,38 @@ class OutputWriterWrapper(Processor):
 #             vermouth.Quoter().run_system(system)
 #         return system
     
+class ListBlocksWrapper(Processor):
+    def __init__(self, from_ff, to_ff):
+        self.from_ff = from_ff
+        self.to_ff = to_ff
+
+    def run_system(self, system):
+        known_force_fields = vermouth.forcefield.find_force_fields(
+            Path(DATA_PATH) / "force_fields"
+        )
+
+        if self.from_ff not in known_force_fields:
+            raise ValueError(f'Unknown force field "{self.from_ff}".')
+        if self.to_ff not in known_force_fields:
+            raise ValueError(f'Unknown force field "{self.to_ff}".')
+
+        print("The following Blocks are known to force field {}:".format(self.from_ff))
+        print(", ".join(sorted(known_force_fields[self.from_ff].blocks)))
+        print(
+            "The following Modifications are known to force field {}:".format(
+                self.from_ff
+            )
+        )
+        print(", ".join(sorted(known_force_fields[self.from_ff].modifications)))
+        print()
+
+        print("The following Blocks are known to force field {}:".format(self.to_ff))
+        print(", ".join(sorted(known_force_fields[self.to_ff].blocks)))
+        print(
+            "The following Modifications are known to force field {}:".format(
+                self.to_ff
+            )
+        )
+        print(", ".join(sorted(known_force_fields[self.to_ff].modifications)))
+
+        raise SystemExit(0)
