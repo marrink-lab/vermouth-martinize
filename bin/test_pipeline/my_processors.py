@@ -14,6 +14,11 @@ from vermouth import selectors
 from vermouth.rcsu.contact_map import read_go_map, GenerateContactMap
 from vermouth.rcsu.go_pipeline import GoPipeline
 import networkx as nx
+from vermouth.gmx.topology import write_gmx_topology
+from vermouth.file_writer import DeferredFileWriter
+from vermouth.log_helpers import ignore_warnings_and_count
+
+
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 # import the martinize2 classes en functions 
@@ -448,3 +453,50 @@ class ResidHandlingWrapper(Processor):
 
         return system
         
+class OutputLoggerWrapper(Processor):
+    def run_system(self, system):
+        for molecule in system.molecules:
+            LOGGER.debug("Writing molecule {}.", molecule, type="step")
+            for loglevel, entries in molecule.log_entries.items():
+                for entry, fmt_args in entries.items():
+                    for fmt_arg in fmt_args:
+                        fmt_arg = {str(k): molecule.nodes[v] for k, v in fmt_arg.items()}
+                        LOGGER.log(loglevel, entry, **fmt_arg, type="model")
+        return system
+
+class OutputWriterWrapper(Processor):
+    def __init__(self, top_path, outpath):
+        self.top_path = top_path
+        self.outpath = outpath
+    def run_system(self, system):
+        if self.top_path is not None:
+            write_gmx_topology(system,
+                           self.top_path,
+                           itp_paths=system.meta.get("itp_paths", {}),
+                           C6C12=False,
+                           defines=system.meta.get("defines", ()),
+                           ) 
+        vermouth.pdb.write_pdb(system, str(self.outpath), omit_charges=True)
+
+        return system
+    
+# class FinalizeOutputWriterWrapper(Processor):
+#     def __init__(self, maxwwarn, counter):
+#         self.maxwwarns = maxwwarn
+#         self.counter = counter
+#     def run_system(self, system):
+#         leftover_warnings = ignore_warnings_and_count(COUNTER, self.maxwarn)
+#         if leftover_warnings:
+#             LOGGER.error(
+#                 "{} warnings were encountered after accounting for the "
+#                 "-maxwarn flag. No output files will be "
+#                 "written. Consider fixing the warnings, or if you are sure"
+#                 " they are harmless, use the -maxwarn flag.",
+#                 leftover_warnings,
+#             )
+#             sys.exit(2)
+#         else:
+#             DeferredFileWriter().write()
+#             vermouth.Quoter().run_system(system)
+#         return system
+    

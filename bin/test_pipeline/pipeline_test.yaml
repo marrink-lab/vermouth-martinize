@@ -6,6 +6,22 @@ martinize2:
     to_ff:
       default: "martini3001"
       help: Which forcefield to use
+    from_ff:
+      default: "charmm"
+      help: "Which forcefield to use"
+    extra_ff_dir:
+      action: append
+      default: []
+      type: path
+      help: "Additional repository for custom force fields."
+    extra_map_dir:
+      action: append
+      default: []
+      type: path
+      help: "Additional repository for mapping files."
+    list_ff:
+      action: store_true
+      help: "List all known force fields, and exit."
     go:
       nargs: "?"
       const: true
@@ -582,3 +598,29 @@ martinize2:
         args:
           resid_handling:
             cli: resid_handling 
+
+    - vermouth.SortMoleculeAtoms:
+        condition:
+          equal:
+            cli: go
+            value: null
+        args: {}
+    
+    - my_processors.OutputLoggerWrapper:
+        args: {}
+
+    - my_processors.OutputWriterWrapper:
+        cli_flags:
+          outpath:
+            required: false
+            type: path
+            help: "Output coarse grained structure (PDB)"
+          top_path:
+            type: path
+            help: "Output topology (TOP)"
+        args:
+          outpath:
+            cli: outpath
+          top_path:
+            cli: top_path
+ 

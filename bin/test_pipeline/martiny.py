@@ -8,11 +8,21 @@ import argparse
 import importlib
 import sys
 import logging
+from vermouth.log_helpers import CountingHandler
+from vermouth.file_writer import DeferredFileWriter
+from vermouth import DATA_PATH
+from vermouth.map_input import (
+    read_mapping_directory,
+    generate_all_self_mappings,
+    combine_mappings,
+)
 
 
 logging.basicConfig(level=logging.INFO)
-#imports 
-
+LOGGER = logging.getLogger("vermouth")
+COUNTER = CountingHandler()
+COUNTER.setLevel(logging.WARNING)
+LOGGER.addHandler(COUNTER)
 
 sys.path.insert(0, r"C:\Users\roord\Documents\Stage_git\vermouth-martinize\bin")
 
@@ -255,12 +265,56 @@ for action in parser._actions:
 
 # take all the argumtents from the command line 
 args = parser.parse_args()
+
+def force_fields(args, parser):
+    known_force_fields = vermouth.forcefield.find_force_fields(
+        Path(DATA_PATH) / "force_fields"
+    )
+    known_mappings = read_mapping_directory(
+        Path(DATA_PATH) / "mappings", known_force_fields
+    )
+
+    for directory in args["extra_ff_dir"]:
+        try:
+            vermouth.forcefield.find_force_fields(directory, known_force_fields)
+        except FileNotFoundError as error:
+            msg = '"{}" given to the -ff-dir option should be a directory.'
+            raise ValueError(msg.format(directory)) from error
+
+    for directory in args["extra_map_dir"]:
+        try:
+            partial_mapping = read_mapping_directory(directory, known_force_fields)
+        except NotADirectoryError as error:
+            msg = '"{}" given to the -map-dir option should be a directory.'
+            raise ValueError(msg.format(directory)) from error
+        combine_mappings(known_mappings, partial_mapping)
+
+    if args["list_ff"]:
+        print("The following force fields are known:")
+        for idx, ff_name in enumerate(reversed(list(known_force_fields)), 1):
+            print("{:3d}. {}".format(idx, ff_name))
+        parser.exit()
+
+    partial_mapping = generate_all_self_mappings(known_force_fields.values())
+    combine_mappings(known_mappings, partial_mapping)
+
+    if args["to_ff"] not in known_force_fields:
+        raise ValueError('Unknown force field "{}".'.format(args["to_ff"]))
+    if args["from_ff"] not in known_force_fields:
+        raise ValueError('Unknown force field "{}".'.format(args["from_ff"]))
+    return known_force_fields[args["to_ff"]], known_mappings[args["from_ff"]][args["to_ff"]]
+
+
 # make the args into a dict 
 args = vars(args)
+target_ff, mappings = force_fields(args, parser)
+args["target_ff"] = target_ff
+args["mappings"] = mappings
 
 # if you give noscfix, scfix is faslse otherwise true.
 args["scfix"] = not args["noscfix"]
 args["deduplicate"] = not args["keep_duplicate_itp"]
+
 
 
 # check for conditions, fill in args, load processor objects
@@ -276,9 +330,11 @@ print()
 
 
 # load in the forcefield because pdb to universal expects a system with a forcefield.
-ff = vermouth.forcefield.get_native_force_field('charmm')
+ff = vermouth.forcefield.get_native_force_field(args["from_ff"])
 system = vermouth.System(force_field=ff)
 # test the pipeline with None 
 pipeline.run_system(system)
+DeferredFileWriter().write()
+vermouth.Quoter().run_system(system)
 print(system.meta.get("header"))
-#test
+
