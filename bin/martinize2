@@ -1147,7 +1147,7 @@ def entry():
     # remove any secondary structure interactions that cross disordered/folded domains.
     vermouth.processors.IDRInteractionOptimising(go=args.go,
                                                  elastic=args.elastic,
-                                                 id_regions=args.id_regions
+                                                 id_regions=args.id_regions,
                                                  elastic_res_distance=args.res_min_dist
                                                 ).run_system(system)
 
