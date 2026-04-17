@@ -26,7 +26,7 @@ class ComputeWaterBias(Processor):
 
     The water bias strength is defined per secondary
     structure element in `water_bias` and assigned if
-    `auto_bias` is set to True. Using the `idr_regions`
+    `auto_bias` is set to True. Using the `id_regions`
     argument the water_bias can be changed for
     intrinsically disordered regions (IDRs). The IDR
     bias superseeds the auto bias.
@@ -44,10 +44,8 @@ class ComputeWaterBias(Processor):
     def __init__(self,
                  auto_bias,
                  water_bias,
-                 idr_regions):
+                 id_regions):
         """
-
-
         Parameters
         ----------
         auto_bias: bool
@@ -56,7 +54,7 @@ class ComputeWaterBias(Processor):
         water_bias: dict[str, float]
             a dict of secondary structure codes and
             epsilon value for the water bias in kJ/mol
-        idr_regions: list
+        id_regions: list
             list of tuples of residue regions defining the IDRs
         prefix: str
             prefix of the Go virtual-site atomtypes
@@ -66,9 +64,9 @@ class ComputeWaterBias(Processor):
         """
         self.water_bias = water_bias
         self.auto_bias = auto_bias
-        self.idr_regions = []
-        for region in idr_regions:
-            self.idr_regions.append(parse_residues(region))
+        self.id_regions = []
+        for region in id_regions:
+            self.id_regions.append(parse_residues(region))
         self.system = None
 
     def assign_residue_water_bias(self, molecule, res_graph):
@@ -95,7 +93,7 @@ class ComputeWaterBias(Processor):
             if self.auto_bias:
                 sec_struc = res_graph.nodes[res_node]['cgsecstruct']
                 eps = self.water_bias.get(sec_struc, 0.0)
-            for region in self.idr_regions:
+            for region in self.id_regions:
                 if _in_chain_and_resid_region(region, _old_resid, chain):
                     eps = self.water_bias.get('idr', 0.0)
                     sec_struc = res_graph.nodes[res_node]['cgsecstruct']
@@ -121,42 +119,6 @@ class ComputeWaterBias(Processor):
                                       meta={"comment": ["water bias", sec_struc]})
             self.system.gmx_topology_params["nonbond_params"].append(water_bias)
 
-    def remove_cross_nb_interactions(self, molecule, res_graph):
-        """
-        Remove Go bonds between folded and disordered regions of a molecule
-
-        Parameters
-        ----------
-        molecule: :class:`vermouth.molecule.Molecule`
-            the molecule
-        res_graph: :class:`vermouth.molecule.Molecule`
-            the residue graph of the molecule
-        """
-        #list of all the Go pairs in the molecule
-        all_go_pairs = np.array([list(i.atoms) for i in self.system.gmx_topology_params["nonbond_params"] if 'W' not in list(i.atoms)])
-        # list to record which items we don't want. cross = go potential between folded and disordered domain.
-        all_cross_pairs = []
-
-        for region in self.idr_regions:
-            for res_node in res_graph.nodes:
-                resid = res_graph.nodes[res_node]['resid']
-                _old_resid = res_graph.nodes[res_node]['stash']['resid']
-                chain = res_graph.nodes[res_node]['chain']
-                if _in_chain_and_resid_region(region, _old_resid, chain):
-                    vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
-                                                                  resid=resid,
-                                                                  chain=chain,
-                                                                  prefix=molecule.meta.get('moltype')))
-                    all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
-
-
-        # make sure we only have one entry in case a site has more than one interaction
-        all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])
-        # delete the folded-disordered Go interactions from the list going backwards.
-        # otherwise list order gets messed up.
-        for i in reversed(all_cross_pairs):
-            del self.system.gmx_topology_params["nonbond_params"][i]
-
     def run_molecule(self, molecule):
         """
         Assign water bias for a single molecule
@@ -173,7 +135,6 @@ class ComputeWaterBias(Processor):
             res_graph = make_residue_graph(molecule)
 
         self.assign_residue_water_bias(molecule, res_graph)
-        self.remove_cross_nb_interactions(molecule, res_graph)
 
         return molecule
 
@@ -187,7 +148,7 @@ class ComputeWaterBias(Processor):
         ----------
         system: :class:`vermouth.system.System`
         """
-        if not (self.idr_regions or self.auto_bias):
+        if not (self.id_regions or self.auto_bias):
             return system
         self.system = system
         super().run_system(system)
