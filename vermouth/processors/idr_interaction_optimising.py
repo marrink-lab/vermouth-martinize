@@ -23,7 +23,8 @@ class IDRInteractionOptimising(Processor):
     def __init__(self, 
                  go, 
                  elastic,
-                 id_regions):
+                 id_regions,
+                 elastic_res_distance=None):
         """
         Parameters
         ----------
@@ -43,6 +44,7 @@ class IDRInteractionOptimising(Processor):
         for region in id_regions:
             self.id_regions.append(parse_residues(region))
         self.system = None
+        self.elastic_res_distance = elastic_res_distance
 
 
     def remove_cross_nb_interactions(self, molecule, res_graph):
@@ -86,7 +88,7 @@ class IDRInteractionOptimising(Processor):
         for i in reversed(all_cross_pairs):
             del self.system.gmx_topology_params["nonbond_params"][i]
 
-    def remove_cross_elastic(self, molecule, elastic_bond_residue_distance=3):
+    def remove_cross_elastic(self, molecule, elastic_bond_residue_distance):
         """
         Remove elastic network bonds between folded and disordered regions of a molecule
 
@@ -102,10 +104,10 @@ class IDRInteractionOptimising(Processor):
         all_bonds = np.array([i.atoms for i in molecule.get_interaction('bonds')])
 
         # make a map between bond indicies and their residues. index starts from 1 so -1 for idx
-        nodes_map = {int(i+1): {"resid": molecule.nodes[j].get('stash').get('resid'),
+        nodes_map = {i: {"resid": molecule.nodes[j].get('stash').get('resid'),
                                 "chain": molecule.nodes[j].get('chain')
                                 }
-                    for i,j in enumerate(molecule.nodes)}
+                    for i,j in enumerate(molecule.nodes, 1)}
         
         # list of bonds, but which residues they link not nodes
         residue_bonds = np.array([[nodes_map[i].get('resid') for i in j] for j in all_bonds])
@@ -125,7 +127,7 @@ class IDRInteractionOptimising(Processor):
             # get info about the region
             lower, upper = sorted(region['resids'][0])
             chain = region['chain']
-            
+
             removal_idx = np.where((residue_bonds >= lower) &       # residues >= lower residue bound of region 
                                    (residue_bonds <= upper) &       # residues <= upper residue bound of region
                                    (is_elastic == True) &           # the bond is categorised as elastic by residue distance
@@ -156,7 +158,7 @@ class IDRInteractionOptimising(Processor):
         if self.go:
             self.remove_cross_nb_interactions(molecule=molecule, res_graph=res_graph)
         elif self.elastic:
-            self.remove_cross_elastic(molecule=molecule, elastic_bond_residue_distance=3)
+            self.remove_cross_elastic(molecule=molecule, elastic_bond_residue_distance=self.elastic_res_distance)
 
         return molecule
 
