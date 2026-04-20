@@ -19,7 +19,6 @@ from ..rcsu.go_utils import get_go_type_from_attributes, _in_chain_and_resid_reg
 import numpy as np
 
 class IDRInteractionOptimising(Processor):
-
     def __init__(self, 
                  go, 
                  elastic,
