@@ -44,8 +44,6 @@ class IDRInteractionOptimising(Processor):
             self.id_regions.append(parse_residues(region))
         self.system = None
         self.elastic_res_distance = elastic_res_distance
-
-
     def remove_cross_nb_interactions(self, molecule, res_graph):
         """
         Remove Go interactions between folded and disordered regions of a molecule
@@ -59,7 +57,6 @@ class IDRInteractionOptimising(Processor):
         """
         #list of all the Go pairs in the molecule
         all_go_pairs = np.array([list(i.atoms) for i in self.system.gmx_topology_params["nonbond_params"] if 'W' not in list(i.atoms)])
-        # print(all_go_pairs)
         # list to record which items we don't want. cross = go potential between folded and disordered domain.
         all_cross_pairs = []
         # for each IDR that we have
