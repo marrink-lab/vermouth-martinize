@@ -18,6 +18,9 @@ from .annotate_idrs import parse_residues
 from ..graph_utils import make_residue_graph
 from ..rcsu.go_utils import get_go_type_from_attributes, _in_chain_and_resid_region
 import numpy as np
+from ..log_helpers import StyleAdapter, get_logger
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 class IDRCrossDomainInteractionRemoval(Processor):
     def __init__(self, 
@@ -42,9 +45,8 @@ class IDRCrossDomainInteractionRemoval(Processor):
         self.id_regions = []
         for region in id_regions:
             self.id_regions.append(parse_residues(region))
-        self.system = None
 
-    def remove_cross_nb_interactions(self, molecule, res_graph):
+    def remove_cross_nb_interactions(self, molecule, res_graph, nbparams):
         """
         Remove Go interactions between folded and disordered regions of a molecule
 
@@ -56,7 +58,7 @@ class IDRCrossDomainInteractionRemoval(Processor):
             the residue graph of the molecule
         """
         #list of all the Go pairs in the molecule
-        all_go_pairs = np.array([list(i.atoms) for i in self.system.gmx_topology_params["nonbond_params"] if 'W' not in list(i.atoms)])
+        all_go_pairs = np.array([list(i.atoms) for i in nbparams if 'W' not in list(i.atoms)])
         # list to record which items we don't want. cross = go potential between folded and disordered domain.
         all_cross_pairs = []
         # for each IDR that we have
@@ -79,10 +81,7 @@ class IDRCrossDomainInteractionRemoval(Processor):
         # make sure we only have one entry in case a site has more than one interaction
         all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])
 
-        # delete the folded-disordered Go interactions from the list.
-        # go backwards otherwise list order gets messed up.
-        for i in reversed(all_cross_pairs):
-            del self.system.gmx_topology_params["nonbond_params"][i]
+        return all_cross_pairs
 
     def remove_cross_elastic(self, molecule):
         """
@@ -97,7 +96,7 @@ class IDRCrossDomainInteractionRemoval(Processor):
         """
         # find elastic bonds by meta
         elastic_bonds = [list(i.atoms) for i in molecule.interactions['bonds'] if i.meta.get('group') == "Rubber band"]
-
+        print(elastic_bonds)
         # list to record which items we don't want. cross = elastic bond between folded and disordered domain.
         all_cross_pairs = []
         # make a map between bond indicies and their residues. index starts from 1 so -1 for idx        
@@ -131,26 +130,33 @@ class IDRCrossDomainInteractionRemoval(Processor):
             molecule.remove_interaction('bonds', tuple(i))
 
 
-    def run_molecule(self, molecule):
-        if not self.system:
-            raise IOError('This processor requires a system.')
+    def _remove_nb_interactions(self, system, interactions_list):
+        """
+        remove non bonded interactions at the system level
+        """
+        # delete the folded-disordered Go interactions from the list.
+        # go backwards otherwise list order gets messed up.
+        for i in reversed(interactions_list):
+            del system.gmx_topology_params["nonbond_params"][i]
 
-        if hasattr(molecule, 'res_graph'):
-            res_graph = molecule.res_graph
-        else:
-            res_graph = make_residue_graph(molecule)
-
-        if self.go:
-            self.remove_cross_nb_interactions(molecule=molecule, res_graph=res_graph)
-        elif self.elastic:
-            self.remove_cross_elastic(molecule=molecule)
-
-        return molecule
 
     def run_system(self, system):
         # no disordered regions, no bother
         if not self.id_regions:
             return system
-        self.system = system
-        super().run_system(system)
 
+        for molecule in system.molecules:
+
+            if self.go:
+                if hasattr(molecule, 'res_graph'):
+                    res_graph = molecule.res_graph
+                else:
+                    res_graph = make_residue_graph(molecule)
+
+                interactions_for_removal = self.remove_cross_nb_interactions(molecule=molecule, 
+                                                                             res_graph=res_graph,
+                                                                             nbparams=system.gmx_topology_params["nonbond_params"])
+                self._remove_nb_interactions(system, interactions_for_removal)
+
+            elif self.elastic:
+                self.remove_cross_elastic(molecule=molecule)

@@ -82,8 +82,8 @@ def test_cross_go_bond_removal(test_molecule,
 
     # remove folded-disordered domain Go interactions
     processor = IDRCrossDomainInteractionRemoval(go=True,
-                                         elastic=False,
-                                         id_regions=id_regions)
+                                                 elastic=False,
+                                                 id_regions=id_regions)
     processor.run_system(system)
 
     #find the go bonds which remain after removal, and don't involve water
@@ -155,10 +155,10 @@ def test_cross_el_bond_removal(test_molecule,
 
     # remove folded-disordered domain bonds
     processor = IDRCrossDomainInteractionRemoval(go=False,
-                                         elastic=True,
-                                         id_regions=id_regions)
+                                                 elastic=True,
+                                                 id_regions=id_regions)
     processor.run_system(system)
-    print(system.molecules[0].interactions['bonds'])
+
     # assert False
     remaining = [i.atoms for i in system.molecules[0].interactions['bonds']]
 
