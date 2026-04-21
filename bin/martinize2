@@ -1145,11 +1145,10 @@ def entry():
                                             ).run_system(system)
 
     # remove any secondary structure interactions that cross disordered/folded domains.
-    vermouth.processors.IDRInteractionOptimising(go=args.go,
-                                                 elastic=args.elastic,
-                                                 id_regions=args.id_regions,
-                                                 elastic_res_distance=args.res_min_dist
-                                                ).run_system(system)
+    vermouth.processors.IDRCrossDomainInteractionRemoval(go=args.go,
+                                                         elastic=args.elastic,
+                                                         id_regions=args.id_regions,
+                                                         ).run_system(system)
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":

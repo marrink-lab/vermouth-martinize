@@ -15,7 +15,7 @@ import pytest
 import vermouth
 from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
 from vermouth.processors.water_bias import ComputeWaterBias
-from vermouth.processors.idr_interaction_optimising import IDRInteractionOptimising
+from vermouth.processors.idr_cross_domain_interaction_removal import IDRCrossDomainInteractionRemoval
 from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
 from vermouth.gmx.topology import NonbondParam
 from vermouth.molecule import Interaction
@@ -81,7 +81,7 @@ def test_cross_go_bond_removal(test_molecule,
         system.gmx_topology_params["nonbond_params"].append(contact_bias)
 
     # remove folded-disordered domain Go interactions
-    processor = IDRInteractionOptimising(go=True,
+    processor = IDRCrossDomainInteractionRemoval(go=True,
                                          elastic=False,
                                          id_regions=id_regions)
     processor.run_system(system)
@@ -149,14 +149,14 @@ def test_cross_el_bond_removal(test_molecule,
     for el_bond in el_bonds:
         system.molecules[0].add_interaction(type_ = 'bonds',
                                             atoms = tuple(el_bond),
-                                            parameters = ['1', '10', '5000']
+                                            parameters = ['1', '10', '5000'],
+                                            meta = {"group": "Rubber band"}
                                             )
 
     # remove folded-disordered domain bonds
-    processor = IDRInteractionOptimising(go=False,
+    processor = IDRCrossDomainInteractionRemoval(go=False,
                                          elastic=True,
-                                         id_regions=id_regions,
-                                         elastic_res_distance=1)
+                                         id_regions=id_regions)
     processor.run_system(system)
     print(system.molecules[0].interactions['bonds'])
     # assert False

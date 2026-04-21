@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from itertools import compress
 from .processor import Processor
 from .annotate_idrs import parse_residues
 from ..graph_utils import make_residue_graph
 from ..rcsu.go_utils import get_go_type_from_attributes, _in_chain_and_resid_region
 import numpy as np
 
-class IDRInteractionOptimising(Processor):
+class IDRCrossDomainInteractionRemoval(Processor):
     def __init__(self, 
                  go, 
                  elastic,
-                 id_regions,
-                 elastic_res_distance=None):
+                 id_regions):
         """
         Parameters
         ----------
@@ -43,7 +43,7 @@ class IDRInteractionOptimising(Processor):
         for region in id_regions:
             self.id_regions.append(parse_residues(region))
         self.system = None
-        self.elastic_res_distance = elastic_res_distance
+
     def remove_cross_nb_interactions(self, molecule, res_graph):
         """
         Remove Go interactions between folded and disordered regions of a molecule
@@ -84,7 +84,7 @@ class IDRInteractionOptimising(Processor):
         for i in reversed(all_cross_pairs):
             del self.system.gmx_topology_params["nonbond_params"][i]
 
-    def remove_cross_elastic(self, molecule, elastic_bond_residue_distance):
+    def remove_cross_elastic(self, molecule):
         """
         Remove elastic network bonds between folded and disordered regions of a molecule
 
@@ -95,45 +95,34 @@ class IDRInteractionOptimising(Processor):
         res_graph: :class:`networkx.Graph`
             the residue graph of the molecule
         """
+        # find elastic bonds by meta
+        elastic_bonds = [list(i.atoms) for i in molecule.interactions['bonds'] if i.meta.get('group') == "Rubber band"]
 
-        # list of all atom pairs with bonds between them in the molecule
-        all_bonds = np.array([i.atoms for i in molecule.get_interaction('bonds')])
-
-        # make a map between bond indicies and their residues. index starts from 1 so -1 for idx
-        nodes_map = {i: {"resid": molecule.nodes[j].get('stash').get('resid'),
-                                "chain": molecule.nodes[j].get('chain')
-                                }
-                    for i,j in enumerate(molecule.nodes, 1)}
-        
-        # list of bonds, but which residues they link not nodes
-        residue_bonds = np.array([[nodes_map[i].get('resid') for i in j] for j in all_bonds])
-        # same but for chains
-        chains = np.array([[nodes_map[i].get('chain') for i in j] for j in all_bonds])
-        
-        # mask of whether a bond is elastic or not.
-        elastic = np.diff(residue_bonds, axis=1).ravel()>=elastic_bond_residue_distance
-        # need (n,2) shape array to use np.where
-        is_elastic = np.stack((elastic, elastic)).T
-        idx = np.arange(len(all_bonds))
-
-        # list to record which items we don't want. cross = go potential between folded and disordered domain.
+        # list to record which items we don't want. cross = elastic bond between folded and disordered domain.
         all_cross_pairs = []
-
+        # make a map between bond indicies and their residues. index starts from 1 so -1 for idx        
+        nodes_map = {i: {"resid": molecule.nodes[j].get('stash').get('resid'),                                
+                         "chain": molecule.nodes[j].get('chain')                                
+                         }                    
+                         for i,j in enumerate(molecule.nodes, 1)}
+                
+        # list of bonds, but which residues they link not nodes
+        residue_bonds = [[nodes_map[i].get('resid') for i in j] for j in elastic_bonds]
+        # same but for chains
+        chains = [[nodes_map[i].get('chain') for i in j] for j in elastic_bonds]
+        
         for region in self.id_regions:
             # get info about the region
             lower, upper = sorted(region['resids'][0])
             chain = region['chain']
+            # get bonds and chain in molecule which match this region
+            bond_in_region = [any([(i>= lower) & (i<= upper) for i in j]) for j in residue_bonds]
+            chain_in_region = [any([i == chain for i in j]) for j in chains]
+            # list of which residue bonds meet both criteria
+            bonds_rm_idx = [all([i,j]) for i,j in zip(bond_in_region, chain_in_region)]
 
-            removal_idx = np.where((residue_bonds >= lower) &       # residues >= lower residue bound of region 
-                                   (residue_bonds <= upper) &       # residues <= upper residue bound of region
-                                   (is_elastic == True) &           # the bond is categorised as elastic by residue distance
-                                   (chains == chain)  # chain is correct
-                                   )[0]                             # only need the first index of the search
-            
-            # make a mask within the bonds list for bonds that need to be removed
-            bonds_idx = np.array([True if i in removal_idx else False for i in idx])
             # get the bonds that need to be removed
-            for_removal = all_bonds[bonds_idx] 
+            for_removal = compress(elastic_bonds, bonds_rm_idx) 
             all_cross_pairs.extend(for_removal)
 
         # delete the folded-disordered elastic network bonds from the list
@@ -154,7 +143,7 @@ class IDRInteractionOptimising(Processor):
         if self.go:
             self.remove_cross_nb_interactions(molecule=molecule, res_graph=res_graph)
         elif self.elastic:
-            self.remove_cross_elastic(molecule=molecule, elastic_bond_residue_distance=self.elastic_res_distance)
+            self.remove_cross_elastic(molecule=molecule)
 
         return molecule
 
