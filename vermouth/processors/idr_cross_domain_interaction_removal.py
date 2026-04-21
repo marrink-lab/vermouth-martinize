@@ -36,9 +36,6 @@ class IDRCrossDomainInteractionRemoval(Processor):
             this system contains an elastic network
         id_regions: list
             list of tuples of residue regions defining the IDRs
-        system: vermouth.system.System
-            the system of the molecules is used for
-            storing the nonbonded parameters
         """
         self.go = go
         self.elastic = elastic
