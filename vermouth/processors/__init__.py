@@ -48,3 +48,4 @@ from .annotate_idrs import AnnotateIDRs
 from .cif_reader import CIFInput
 from .rtp_polisher import RTPPolisher
 from .stash_attributes import StashAttributes
+from .idr_cross_domain_interaction_removal import IDRCrossDomainInteractionRemoval

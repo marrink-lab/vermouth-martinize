@@ -628,7 +628,7 @@ def entry():
     )
     water_group.add_argument(
         "-id-regions",
-        dest="water_idrs",
+        dest="id_regions",
         default=[],
         nargs='+',
         help=("Intrinsically disordered regions specified by resid."
@@ -992,7 +992,7 @@ def entry():
         LOGGER.info("The -idr-tune argument has been deprecated since version v0.15.0. IDR parameters "
                     "will automatically be applied when an idr has been specified in the "
                     "-id-regions flag")
-    idr_tune = any(args.water_idrs)
+    idr_tune = any(args.id_regions)
     vermouth.SetMoleculeMeta(idr=idr_tune).run_system(system)
     if idr_tune:
         if not target_ff.has_feature("idr"):
@@ -1023,7 +1023,7 @@ def entry():
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
-        disordered_regions=args.water_idrs
+        disordered_regions=args.id_regions
     )
     if 'bondedtypes' in known_force_fields[args.to_ff].variables:
         LOGGER.info("Generating implicit interactions for RTP force field", type='step')
@@ -1055,12 +1055,7 @@ def entry():
         defines = ("GO_VIRT",)
         itp_paths = {"atomtypes": "go_atomtypes.itp",
                      "nonbond_params": "go_nbparams.itp"}
-        if not args.water_bias:
-            # this ensures that disordered-folded go bonds get removed regardless of force field.
-            vermouth.processors.ComputeWaterBias(args.water_bias,
-                                                 {s: float(eps) for s, eps in args.water_bias_eps},
-                                                 args.water_idrs,
-                                                ).run_system(system)
+
     else:
         # don't write non-bonded interactions
         itp_paths = []
@@ -1145,9 +1140,15 @@ def entry():
 
         # now we add a bias by defining specific virtual-site water interactions
         vermouth.processors.ComputeWaterBias(args.water_bias,
-                                             { s:float(eps) for s, eps in args.water_bias_eps},
-                                             args.water_idrs,
+                                             {s:float(eps) for s, eps in args.water_bias_eps},
+                                             args.id_regions,
                                             ).run_system(system)
+
+    # remove any secondary structure interactions that cross disordered/folded domains.
+    vermouth.processors.IDRCrossDomainInteractionRemoval(go=args.go,
+                                                         elastic=args.elastic,
+                                                         id_regions=args.id_regions,
+                                                         ).run_system(system)
 
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
