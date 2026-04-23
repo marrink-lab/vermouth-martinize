@@ -68,7 +68,7 @@ class IDRCrossDomainInteractionRemoval(Processor):
                 chain = res_graph.nodes[res_node]['chain']
                 # if the region is in the original resid and chain
                 if _in_chain_and_resid_region(region, _old_resid, chain):
-                    # get the 
+                    # get the matching virtual site from the residue attrs
                     vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
                                                                   resid=resid,
                                                                   chain=chain,
@@ -93,7 +93,6 @@ class IDRCrossDomainInteractionRemoval(Processor):
         """
         # find elastic bonds by meta
         elastic_bonds = [list(i.atoms) for i in molecule.interactions['bonds'] if i.meta.get('group') == "Rubber band"]
-        print(elastic_bonds)
         # list to record which items we don't want. cross = elastic bond between folded and disordered domain.
         all_cross_pairs = []
         # make a map between bond indicies and their residues. index starts from 1 so -1 for idx        
