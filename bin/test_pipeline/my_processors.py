@@ -23,6 +23,10 @@ VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 # import the martinize2 classes en functions 
 
+class WrapperMixin:
+    def __init__(self, *args, **kwargs):
+        args, kwargs = self.wrap(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 def read_system(system, path, ignore_resnames=(), ignh=None, modelidx=None):
@@ -89,22 +93,17 @@ class ReadSystem(Processor):
         print(f'{system.force_field=}')
         return system
     
-class MakeBondsWrapper(Processor):
-    def __init__(self, bonds_from="both", fudge=1.2):
-        self.bonds_from = bonds_from
-        self.fudge = fudge
 
-    def run_system(self, system):
-        allow_name = self.bonds_from in ("name", "both")
-        allow_dist = self.bonds_from in ("distance", "both")
-
-        vermouth.MakeBonds(
-            allow_name=allow_name,
-            allow_dist=allow_dist,
-            fudge=self.fudge,
-        ).run_system(system)
-
-        return system
+class MakeBondsWrapper(WrapperMixin, vermouth.MakeBonds):
+    @staticmethod
+    def wrap(bonds_from="both", fudge=1.2):
+        allow_name = bonds_from in ("name", "both")
+        allow_dist = bonds_from in ("distance", "both")
+        return (), {
+            "allow_name": allow_name,
+            "allow_dist": allow_dist,
+            "fudge": fudge,
+        }
 
 # write the current system to a pdb file. This is for testing and bug fixing, not a pipeline step. 
 class WritePDB(Processor):
@@ -138,63 +137,55 @@ class WritePDB(Processor):
         # return a system, otherwise the pipeline will break.
         return system 
 
-# this wrapper is made to combine multiple CLI into modifications and mutations 
-class AnnotateMutModWrapper(Processor):
-    # make the constructor with the parameters
-    def __init__(self, modify=None, cter=None, nter=None, mutate=None):
-        self.modify = modify or [] # use an empty list if modify is None
-        self.cter = cter or []
-        self.nter = nter or []
-        self.mutate = mutate or []
+class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
+    @staticmethod
+    def wrap(modify = None, cter = None, nter = None, mutate = None):
+        modify = modify or [] # use an empty list if modify is None
+        cter = cter or []
+        nter = nter or []
+        mutate = mutate or []
 
-    # call the system with the parameters
-    def run_system(self, system):
         # make the list which will contain all the differnet modifications 
         modifications = []
         # loop through the modify arguments and split them into two on the :, add them to the modifications list. 
-        for item in self.modify:
+        for item in modify:
             modifications.append(item.split(':'))
 
-        for item in self.cter:
+        for item in cter:
             modifications.append(['cter', item])
 
-        for item in self.nter:
+        for item in nter:
             modifications.append(['nter', item])
 
         # mutations list 
         mutations = []
-        for items in self.mutate: 
+        for items in mutate: 
             mutations.append(items.split(':'))
 
         # check if modifications is empty
         if modifications:
             # split all modifications into two lists. 
-            # resspecs is where needs to be and mods is which ones. 
             resspecs, mods = zip(*modifications)
         else:
             # if there are no modifications, make empty lists for resspecs and mods.
             resspecs, mods = [], []
 
-        # If there are no modifications add the cter and nter so that the lists are not empty
-        if not any("cter" in str(resspec) for resspec in resspecs):
+        # if no cter modification was given, add the default cter modification
+        if not any("cter" in resspec for resspec in resspecs):
             modifications.append(["cter", "+C-ter"])
 
-        if not any("nter" in str(resspec) for resspec in resspecs):
+        if not any("nter" in resspec for resspec in resspecs):
             modifications.append(["nter", "+N-ter"])
 
-        # call the processor with the modifications and mutations.
-        vermouth.AnnotateMutMod(modifications, mutations).run_system(system)
-        return system
+        return(modifications, mutations), {}
 
-class DoMappingWrapper(Processor):
-    # constructor with parameters
-    def __init__(self, to_ff, delete_unknown=False, attribute_keep=(), attribute_must=()):
-        self.to_ff = to_ff
-        self.delete_unknown = delete_unknown
-        self.attribute_keep = attribute_keep
-        self.attribute_must = attribute_must
-
-    def run_system(self, system):
+class DoMappingWrapper(WrapperMixin, vermouth.DoMapping):
+    @staticmethod
+    def wrap(to_ff, delete_unknown=False, attribute_keep=(), attribute_must=()):
+        to_ff = to_ff
+        delete_unknown = delete_unknown
+        attribute_keep = attribute_keep
+        attribute_must = attribute_must
         # find the known forcefield and use that forcefield for mapping. 
         known_force_fields = vermouth.forcefield.find_force_fields(
             Path(DATA_PATH) / "force_fields"
@@ -205,15 +196,14 @@ class DoMappingWrapper(Processor):
             known_force_fields
         )
         # say which forcefield to use 
-        target_ff = known_force_fields[self.to_ff]
-        vermouth.DoMapping(
-            mappings = known_mappings,
-            to_ff = target_ff,
-            delete_unknown=self.delete_unknown,
-            attribute_keep=self.attribute_keep,
-            attribute_must=self.attribute_must
-        ).run_system(system)
-        return system
+        target_ff = known_force_fields[to_ff]
+        return(),{
+            "mappings": known_mappings,
+            "to_ff": target_ff,
+            "delete_unknown": delete_unknown,
+            "attribute_keep": attribute_keep,
+            "attribute_must": attribute_must}
+
 
 class Header(Processor):
     def run_system(self, system):
@@ -226,18 +216,15 @@ class Header(Processor):
         return system
     
 # secundairy structure options. you can give only 1 out of 3. 
-class DSSPWrapper(Processor):
-    def __init__(self, executable = None, savedir = "."):
-        self.executable = executable
-        self.savedir = savedir
-    def run_system(self, system):
-        executable = self.executable
-        # if you dont give a string, so nothing, it automatically uses mdtraj, otherwise you can give a path or program file. 
+class DSSPWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateDSSP):
+    @staticmethod
+    def wrap(executable=None, savedir="."):
         if not isinstance(executable, str):
-            executable = None 
-        vermouth.dssp.dssp.AnnotateDSSP(executable = executable, savedir = self.savedir).run_system(system)
-        vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures().run_system(system)
-        return system
+            executable = None
+        return (), {
+            "executable": executable,
+            "savedir": savedir,
+        }
 
 class SSWrapper(Processor):
     def __init__(self, ss = None):
@@ -253,19 +240,16 @@ class SSWrapper(Processor):
             sequence = sequence,
             molecule_selector = selectors.is_protein,
         ).run_system(system)
-        vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures().run_system(system)
         return system 
 
-class CollagenWrapper(Processor):
-    def run_system(self, system):
-        vermouth.dssp.dssp.AnnotateResidues(
-            attribute="cgsecstruct",
-            sequence="F",
-            # wrapper was needed for this step, because you cant place that logic into yaml. 
-            molecule_selector=selectors.is_protein,
-        ).run_system(system)
-        return system
-    
+class CollagenWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateResidues):
+    @staticmethod
+    def wrap():
+        return (), {
+            "attribute": "cgsecstruct",
+            "sequence": "F",
+            "molecule_selector": selectors.is_protein,
+        }
 class GoWrapper(Processor):
     def __init__(self, go, go_write_file = None):
         self.go = go

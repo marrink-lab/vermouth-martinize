@@ -1,6 +1,9 @@
 $schema: "./schema-pipeline.yaml"
 cli_prefix: "-"
-
+# variables:
+#   - to_ff
+#   - from_ff
+#   - mappings
 martinize2:
   cli_flags:
     to_ff:
@@ -71,6 +74,7 @@ martinize2:
           from_ff:
             cli: from_ff
           to_ff:
+            # variable: to_ff
             cli: to_ff
     - my_processors.ReadSystem:
         cli_flags:
@@ -276,6 +280,13 @@ martinize2:
                   cli: dssp
                 savedir:
                   value: "."
+          - vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures:
+              condition:
+                not:
+                  equal:
+                    cli: dssp
+                    value: null
+              args: {}
           - my_processors.SSWrapper: 
               condition:
                 all:
@@ -289,6 +300,13 @@ martinize2:
               args:
                 ss:
                   cli: ss
+          - vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures:
+              condition:
+                not:
+                  equal:
+                    cli: ss
+                    value: null
+              args: {}
           - my_processors.CollagenWrapper:
               condition:
                 all:
