@@ -226,21 +226,17 @@ class DSSPWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateDSSP):
             "savedir": savedir,
         }
 
-class SSWrapper(Processor):
-    def __init__(self, ss = None):
-        self.ss = ss
-    def run_system(self, system):
-        if self.ss is None:
-            return system 
-        # convert everything the user gives in -ss to uppercase, otherwise it doesnt work apperently. 
-        sequence = self.ss.upper()
+class SSWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateResidues):
+    @staticmethod
+    def wrap(ss=None):
+        if ss is None:
+            ss = ""
+        return (), {
+            "attribute": "aasecstruct",
+            "sequence": ss.upper(),
+            "molecule_selector": selectors.is_protein,
+        }
 
-        vermouth.dssp.dssp.AnnotateResidues(
-            attribute = "aasecstruct",
-            sequence = sequence,
-            molecule_selector = selectors.is_protein,
-        ).run_system(system)
-        return system 
 
 class CollagenWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateResidues):
     @staticmethod
@@ -354,9 +350,9 @@ class MergeChainsWrapper(Processor):
                                 "Either specify -merge all or -merge A,B,C (+).")
             return system   
         
-class ElasticWrapper(Processor):
-    def __init__(
-        self, 
+class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
+    @staticmethod
+    def wrap(
         rb_force_constant,
         rb_lower_bound,
         rb_upper_bound,
@@ -366,93 +362,65 @@ class ElasticWrapper(Processor):
         rb_selection,
         rb_unit,
         res_min_dist,
+        bb_atomname,
     ):
-       self.rb_force_constant = rb_force_constant
-       self.rb_lower_bound = rb_lower_bound
-       self.rb_upper_bound = rb_upper_bound
-       self.rb_decay_factor = rb_decay_factor
-       self.rb_decay_power = rb_decay_power
-       self.rb_minimum_force = rb_minimum_force
-       self.rb_selection = rb_selection
-       self.rb_unit = rb_unit
-       self.res_min_dist = res_min_dist
-    def run_system(self, system):
-        LOGGER.info("Setting the rubber bands.", type="step")
-        # if the rubber band unit is molecule, then the domain criterion is always true, no exclusion within the molecule.
-        if self.rb_unit == "molecule":
+        if rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
-            # if all, then merge all molecules into one and apply rubber band to the whole system. 
-        elif self.rb_unit == "all":
-            vermouth.MergeAllMolecules().run_system(system)
+
+        elif rb_unit == "all":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
-            # only beads in the same chain can be connected by rubber bands.
-        elif self.rb_unit == "chain":
+
+        elif rb_unit == "chain":
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
-            # you can also choose your own region 
+
         else:
             regions = [
                 tuple(int(i) for i in apair.split(":"))
-                for apair in self.rb_unit.split(",")
-            ] 
-            # check if all regions are pairs and not more or less. 
+                for apair in rb_unit.split(",")
+            ]
+
             if any(len(region) != 2 for region in regions):
-                message = (
-                    'Faulty resid interval for elastic network unit: "{}".'.format(
-                        self.rb_unit
-                    )
+                raise ValueError(
+                    f'Faulty resid interval for elastic network unit: "{rb_unit}".'
                 )
-                LOGGER.critical(message)
-                raise ValueError(message)
-            # if that is not the case proceed. only within residue area. not between regions. 
-            else:
-                domain_criterion = (
-                    vermouth.processors.apply_rubber_band.make_same_region_criterion(
-                        regions
-                    )
-                )
-        # check if the user has given a special selection for the rubber bands. 
-        if self.rb_selection is not None:
+
+            domain_criterion = (
+                vermouth.processors.apply_rubber_band
+                .make_same_region_criterion(regions)
+            )
+
+        if rb_selection is not None:
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
                 attribute="atomname",
-                values=self.rb_selection,
+                values=rb_selection,
             )
-            # if not, use the backbone of the given force field.
         else:
-            selector = functools.partial(selectors.select_backbone,
-                                         bb_atomname=system.force_field.variables['bb_atomname'])
-        rubber_band_processor = vermouth.ApplyRubberBand(
-            lower_bound=self.rb_lower_bound,
-            upper_bound=self.rb_upper_bound,
-            decay_factor=self.rb_decay_factor,
-            decay_power=self.rb_decay_power,
-            base_constant=self.rb_force_constant,
-            minimum_force=self.rb_minimum_force,
-            selector=selector,
-            domain_criterion=domain_criterion,
-            res_min_dist=self.res_min_dist,
-        )
-        rubber_band_processor.run_system(system)
-        return system
+            selector = functools.partial(
+                selectors.select_backbone,
+                bb_atomname=bb_atomname,
+            )
 
-class WaterBiasWrapper(Processor):
-    def __init__(self, water_bias, water_bias_eps, water_bias_idrs, go):
-        self.water_bias = water_bias
-        self.water_bias_eps = water_bias_eps or []
-        self.water_bias_idrs = water_bias_idrs or []
-        self.go = go
-    def run_system(self, system):
-        if not self.go:
-            vermouth.rcsu.go_vs_includes.VirtualSiteCreator().run_system(system)
-            # paths to the itp files for virtual sites. 
-            itp_paths = {"atomtypes": "virtual_sites_atomtypes.itp",
-                            "nonbond_params": "virtual_sites_nonbond_params.itp"}
-        # now we add a bias by defining specific virtual-site water interactions
-        vermouth.processors.ComputeWaterBias(self.water_bias,
-                                                    dict(self.water_bias_eps),
-                                                    self.water_bias_idrs,
-                                                    ).run_system(system)
-        return system
+        return (), {
+            "lower_bound": rb_lower_bound,
+            "upper_bound": rb_upper_bound,
+            "decay_factor": rb_decay_factor,
+            "decay_power": rb_decay_power,
+            "base_constant": rb_force_constant,
+            "minimum_force": rb_minimum_force,
+            "selector": selector,
+            "domain_criterion": domain_criterion,
+            "res_min_dist": res_min_dist,
+        }
+
+class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias):
+    @staticmethod
+    def wrap(water_bias, water_bias_eps=None, water_bias_idrs=None):
+        return (
+            water_bias,
+            dict(water_bias_eps or []),
+            water_bias_idrs or [],
+        ), {}
     
 class ResidHandlingWrapper(Processor):
     def __init__(self, resid_handling):

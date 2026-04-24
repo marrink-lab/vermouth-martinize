@@ -593,6 +593,8 @@ martinize2:
             help: >
               Establish what is the structural unit for the elastic network.
               Options are molecule, chain, all, or regions like 10:50,80:120
+          bb_atomname:
+            type: str
         args:
           rb_force_constant:
             cli: rb_force_constant
@@ -612,21 +614,43 @@ martinize2:
             cli: rb_unit
           res_min_dist:
             cli: res_min_dist
-            
-    - my_processors.WaterBiasWrapper:
+          bb_atomname:
+            cli: bb_atomname
+    - vermouth.MergeAllMolecules:
         condition:
-            equal:
-              cli: water_bias
-              value: true
+          all:
+            - equal:
+                cli: elastic
+                value: true
+            - equal:
+                cli: go
+                value: null
+            - equal:
+                cli: rb_unit
+                value: "all"
+        args: {}
+    - vermouth.rcsu.go_vs_includes.VirtualSiteCreator:
+        condition:
+          all:
+            - equal:
+                cli: water_bias
+                value: true
+            - equal:
+                cli: go
+                value: null
+        args: {}
+    - my_processors.ComputeWaterBiasWrapper:
+        condition:
+          equal:
+            cli: water_bias
+            value: true
         args:
+          water_bias:
+            cli: water_bias
           water_bias_eps:
             cli: water_bias_eps
           water_bias_idrs:
             cli: water_bias_idrs
-          water_bias:
-            cli: water_bias
-          go:
-            cli: go
     
     - my_processors.ResidHandlingWrapper:
         cli_flags:
