@@ -78,3 +78,20 @@ class ElasticWrapper(Processor):
         )
         rubber_band_processor.run_system(system)
         return system
+    
+
+
+
+
+class ApplyPosresWrapper(Processor):
+    def __init__(self, posres, posres_fc):
+        self.posres = posres
+        self.posres_fc = posres_fc
+    def run_system(self, system):
+        LOGGER.info("Applying position restraints.", type="step")
+        node_selectors = {
+            "all": (selectors.select_all, None),
+            "backbone": (selectors.select_backbone, system.force_field.variables['bb_atomname'])
+        }
+        node_selector = node_selectors[self.posres]
+        vermouth.ApplyPosres(node_selector, self.posres_fc).run_system(system)

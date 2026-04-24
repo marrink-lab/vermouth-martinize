@@ -246,6 +246,15 @@ class CollagenWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateResidues):
             "sequence": "F",
             "molecule_selector": selectors.is_protein,
         }
+    
+class GoMapReader(Processor):
+    def __init__(self, file_path):
+        self.file_path = file_path
+    
+    def run_system(self, system):
+        read_go_map(system=system, file_path=self.file_path)
+        return system
+
 class GoWrapper(Processor):
     def __init__(self, go, go_write_file = None):
         self.go = go
@@ -271,18 +280,19 @@ class RTPPolisherWrapper(Processor):
             vermouth.RTPPolisher().run_system(system)
         return system
     
-class ApplyPosresWrapper(Processor):
-    def __init__(self, posres, posres_fc):
-        self.posres = posres
-        self.posres_fc = posres_fc
-    def run_system(self, system):
+class ApplyPosresWrapper(WrapperMixin, vermouth.ApplyPosres):
+    @staticmethod
+    def wrap(posres, posres_fc, force_field):
         LOGGER.info("Applying position restraints.", type="step")
         node_selectors = {
             "all": (selectors.select_all, None),
-            "backbone": (selectors.select_backbone, system.force_field.variables['bb_atomname'])
+            "backbone": (
+                selectors.select_backbone,
+                force_field.variables["bb_atomname"]
+            )
         }
-        node_selector = node_selectors[self.posres]
-        vermouth.ApplyPosres(node_selector, self.posres_fc).run_system(system)
+        node_selector = node_selectors[posres]
+        return(node_selector, posres_fc), {}
 
 class GoModelWrapper(Processor):
     def __init__ (
@@ -362,7 +372,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         rb_selection,
         rb_unit,
         res_min_dist,
-        bb_atomname,
+        force_field,
     ):
         if rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
@@ -398,7 +408,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         else:
             selector = functools.partial(
                 selectors.select_backbone,
-                bb_atomname=bb_atomname,
+                bb_atomname=force_field.variables['bb_atomname'],
             )
 
         return (), {

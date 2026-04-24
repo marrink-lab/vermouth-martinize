@@ -1,10 +1,12 @@
 $schema: "./schema-pipeline.yaml"
 cli_prefix: "-"
-# variables:
-#   - to_ff
-#   - from_ff
-#   - mappings
+
 martinize2:
+  variables:
+  - target_ff
+  - mappings
+  - bondedtypes
+  - bb_atomname
   cli_flags:
     to_ff:
       default: "martini3001"
@@ -63,6 +65,16 @@ martinize2:
     list_blocks:
       action: store_true
       help: "List all known blocks and modifications for the selected force fields."
+    elastic:
+      action: store_true
+      default: false
+      help: "Write elastic bonds"
+    rb_unit:
+      type: str
+      default: "molecule"
+      help: >
+        Establish what is the structural unit for the elastic network.
+        Options are molecule, chain, all, or regions like 10:50,80:120
 
   steps: !!omap
     - my_processors.ListBlocksWrapper:
@@ -541,6 +553,20 @@ martinize2:
             cli: deduplicate
           molname:
             cli: molname
+    - vermouth.MergeAllMolecules:
+        condition:
+          all:
+            - equal:
+                cli: elastic
+                value: true
+            - equal:
+                cli: go
+                value: null
+            - equal:
+                cli: rb_unit
+                value: "all"
+        args: {}
+
     - my_processors.ElasticWrapper:
         condition:
           all: 
@@ -551,10 +577,6 @@ martinize2:
                 cli: go
                 value: null
         cli_flags:
-          elastic:
-            action: store_true
-            default: false
-            help: "Write elastic bonds"
           rb_force_constant:
             type: float 
             default: 700.0
@@ -587,14 +609,6 @@ martinize2:
             default: null
             type: str
             help: "Comma separated list of bead names for elastic bonds"
-          rb_unit:
-            type: str
-            default: "molecule"
-            help: >
-              Establish what is the structural unit for the elastic network.
-              Options are molecule, chain, all, or regions like 10:50,80:120
-          bb_atomname:
-            type: str
         args:
           rb_force_constant:
             cli: rb_force_constant
@@ -614,21 +628,8 @@ martinize2:
             cli: rb_unit
           res_min_dist:
             cli: res_min_dist
-          bb_atomname:
-            cli: bb_atomname
-    - vermouth.MergeAllMolecules:
-        condition:
-          all:
-            - equal:
-                cli: elastic
-                value: true
-            - equal:
-                cli: go
-                value: null
-            - equal:
-                cli: rb_unit
-                value: "all"
-        args: {}
+          force_field:
+            variable: target_ff
     - vermouth.rcsu.go_vs_includes.VirtualSiteCreator:
         condition:
           all:

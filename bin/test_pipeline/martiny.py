@@ -62,9 +62,12 @@ def validate_cli_options(
     group_cli_options = set()
     for group_conf in pipeline_conf.get('cli_groups', []):
         group_cli_options |= set(group_conf.get('flags', {}).keys())
+    
+    # force_field variable options
+    variable_options = set(pipeline_conf.get("variables", []))
 
     # all options 
-    defined_here = normal_cli_options | group_cli_options
+    defined_here = normal_cli_options | group_cli_options | variable_options
 
     # check for duplicates 
     if overlap := defined_here.intersection(global_cli_options):
@@ -90,11 +93,14 @@ def validate_cli_options(
     # check for options used in arguments if this is not a pipeline step
     is_pipeline = bool(pipeline_conf.get('steps'))
     if not is_pipeline:
-        references = {
-            v[reference]
-            for v in pipeline_conf.get('args', {}).values()
-            if reference in v
-        }
+        references = set()
+
+        for v in pipeline_conf.get('args', {}).values():
+            if 'cli' in v:
+                references.add(v['cli'])
+
+            if 'variable' in v:
+                references.add(v['variable'])
         if missing := (references - local_cli_options):
             _path = '.'.join([path, "args"])
             raise KeyError(
@@ -112,6 +118,23 @@ def validate_cli_options(
                 local_cli_options,
                 global_cli_options,
             )
+
+def variable_options(pipeline_conf, args, **variables):
+    for variable in pipeline_conf.get("variables", []):
+        args[variable] = variables[variable]
+        # if variable == "target_ff":
+        #     args["target_ff"] = target_ff
+        # elif variable == "mappings":
+        #     args["mappings"] = mappings
+        # elif variable == "bb_atomname":
+        #     args["bb_atomname"] = target_ff.variables.get("bb_atomname")
+        # elif variable == "bondedtypes":
+        #     args["bondedtypes"] = "bondedtypes" in target_ff.variables
+        # else: 
+        #     raise KeyError(f"Unknown variable {variable}")
+    # print("bb_atomname:", args.get("bb_atomname"))
+    # print("bondedtypes:", args.get("bondedtypes"))
+
 
 def _cys_argument(value):
     try:
@@ -215,13 +238,17 @@ def set_values_from_cli(pipeline_conf, cli_values):
         args = {}
         # loop through the arguments defined in the pipeline config
         for arg_name, value in pipeline_conf['args'].items():
-            if 'value' in value:
+            if "value" in value:
                 # check if its a fixed value
                 args[arg_name] = value['value']
-            else:
+            elif "cli" in value:
                 # if not, use the CLI value 
                 args[arg_name] = cli_values[value['cli']]
                 # set the arg value good 
+            elif 'variable' in value:
+                args[arg_name] = cli_values[value['variable']]
+            else: 
+                raise KeyError(f"{arg_name} must have a value, cli or variable")
         pipeline_conf['args'] = args
     # if its recursive pipeline, do the same for the steps in the pipeline
     for name, step in pipeline_conf.get('steps', []):
@@ -310,8 +337,7 @@ def force_fields(args, parser):
 # make the args into a dict 
 args = vars(args)
 target_ff, mappings = force_fields(args, parser)
-args["target_ff"] = target_ff
-args["mappings"] = mappings
+variable_options(pipeline, args, target_ff=target_ff, mappings=mappings, bondedtypes="bondedtypes" in target_ff.variables, bb_atomname=target_ff.variables.get("bb_atomname"))
 
 # if you give noscfix, scfix is faslse otherwise true.
 args["scfix"] = not args["noscfix"]
@@ -334,6 +360,11 @@ print()
 # load in the forcefield because pdb to universal expects a system with a forcefield.
 ff = vermouth.forcefield.get_native_force_field(args["from_ff"])
 system = vermouth.System(force_field=ff)
+
+print(target_ff.name)
+print(target_ff.variables)
+
+
 # test the pipeline with None 
 pipeline.run_system(system)
 DeferredFileWriter().write()
