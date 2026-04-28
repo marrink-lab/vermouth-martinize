@@ -477,21 +477,21 @@ def entry():
         "-ef",
         dest="rb_force_constant",
         type=float,
-        default=700,
+        default=None,
         help="Elastic bond force constant Fc in kJ/mol/nm^2",
     )
     rb_group.add_argument(
         "-el",
         dest="rb_lower_bound",
         type=float,
-        default=0,
+        default=None,
         help="Elastic bond lower cutoff: F = Fc if rij < lo",
     )
     rb_group.add_argument(
         "-eu",
         dest="rb_upper_bound",
         type=float,
-        default=0.9,
+        default=None,
         help="Elastic bond upper cutoff: F = 0  if rij > up",
     )
     rb_group.add_argument(
@@ -508,21 +508,21 @@ def entry():
         "-ea",
         dest="rb_decay_factor",
         type=float,
-        default=0,
+        default=None,
         help="Elastic bond decay factor a",
     )
     rb_group.add_argument(
         "-ep",
         dest="rb_decay_power",
         type=float,
-        default=1,
+        default=None,
         help="Elastic bond decay power p",
     )
     rb_group.add_argument(
         "-em",
         dest="rb_minimum_force",
         type=float,
-        default=0,
+        default=None,
         help="Remove elastic bonds with force constant lower than this",
     )
     rb_group.add_argument(
@@ -1117,6 +1117,7 @@ def entry():
             selector = functools.partial(selectors.select_backbone,
                                          bb_atomname=system.force_field.variables['bb_atomname'])
         rubber_band_processor = vermouth.ApplyRubberBand(
+            force_field=system.force_field,
             lower_bound=args.rb_lower_bound,
             upper_bound=args.rb_upper_bound,
             decay_factor=args.rb_decay_factor,
