@@ -392,24 +392,37 @@ martinize2:
                     cli: go
                     value: null 
               args: {}
-          - my_processors.GoWrapper:
+          - my_processors.GoReader:
               condition:
-                not:
+                all: 
+                  - not:
+                        equal:
+                          cli: go
+                          value: null
+                  - not:
+                        equal:
+                          cli: go
+                          value: true
+              args:
+                  file_path:
+                    cli: go
+          - vermouth.rcsu.contact_map.GenerateContactMap:
+              condition:
                   equal:
                     cli: go
-                    value: null
+                    value: true
               args:
-                go:
-                  cli: go
-                go_write_file:
+                write_file:
                   cli: go_write_file
 
     - martinize:
         steps: !!omap
-          - my_processors.DoMappingWrapper:
+          - vermouth.DoMapping:
               args:
                 to_ff:
-                  cli: to_ff
+                  variable: target_ff
+                mappings:
+                  variable: mappings
                 delete_unknown:
                   value: true
                 attribute_keep:
@@ -437,10 +450,12 @@ martinize2:
           - vermouth.LocateChargeDummies:
               args: {}  
 
-    - my_processors.RTPPolisherWrapper:
-        args:
-          to_ff:
-            cli: to_ff
+    - vermouth.RTPPolisher:
+        condition:
+          has_variable:
+            variable: target_ff
+            key: "bondedtypes"
+        args: {}
     - my_processors.ApplyPosresWrapper:
         condition:
           not:
@@ -462,6 +477,8 @@ martinize2:
             cli: posres
           posres_fc:
             cli: posres_fc
+          force_field:
+            variable: target_ff
 
     - my_processors.GoModelWrapper:
         condition:

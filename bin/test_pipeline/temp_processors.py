@@ -95,3 +95,55 @@ class ApplyPosresWrapper(Processor):
         }
         node_selector = node_selectors[self.posres]
         vermouth.ApplyPosres(node_selector, self.posres_fc).run_system(system)
+
+
+class DoMappingWrapper(WrapperMixin, vermouth.DoMapping):
+    @staticmethod
+    def wrap(to_ff, delete_unknown=False, attribute_keep=(), attribute_must=()):
+        to_ff = to_ff
+        delete_unknown = delete_unknown
+        attribute_keep = attribute_keep
+        attribute_must = attribute_must
+        # find the known forcefield and use that forcefield for mapping. 
+        known_force_fields = vermouth.forcefield.find_force_fields(
+            Path(DATA_PATH) / "force_fields"
+        )
+        # find the known mapping to use with the right forcefield. 
+        known_mappings = read_mapping_directory(
+            Path(DATA_PATH) / "mappings",
+            known_force_fields
+        )
+        # say which forcefield to use 
+        target_ff = known_force_fields[to_ff]
+        return(),{
+            "mappings": known_mappings,
+            "to_ff": target_ff,
+            "delete_unknown": delete_unknown,
+            "attribute_keep": attribute_keep,
+            "attribute_must": attribute_must}
+    
+
+class RTPPolisherWrapper(Processor):
+    def __init__(self, to_ff):
+        self.to_ff = to_ff
+    def run_system(self, system):
+        known_force_fields = vermouth.forcefield.find_force_fields(
+            Path(DATA_PATH) / "force_fields"
+        )
+        if 'bondedtypes' in known_force_fields[self.to_ff].variables:
+            LOGGER.info("Generating implicit interactions for RTP force field", type='step')
+            vermouth.RTPPolisher().run_system(system)
+        return system
+
+class GoWrapper(Processor):
+    def __init__(self, go, go_write_file = None):
+        self.go = go
+        self.go_write_file = go_write_file
+    def run_system(self, system):
+        if isinstance(self.go, Path):
+            LOGGER.info("Reading Go model contact map.", type="step")
+            read_go_map(system=system, file_path=self.go)
+        else:
+            LOGGER.info("Generating Go model contact map.", type="step")
+            GenerateContactMap(write_file=self.go_write_file).run_system(system)
+        return system

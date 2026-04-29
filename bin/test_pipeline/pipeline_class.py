@@ -17,10 +17,13 @@ class Pipeline(nx.DiGraph, Processor):
                 obj = cls(name=name)
                 for name, step in conf['steps']:
                     _recurse(obj, name, step)
-            else:
-                processor = conf['processor']
-                kwargs = conf['args']
-                obj = processor(**kwargs)
+            else: #check before making the processor object if the condition is met. otherwise return none 
+                if not conf["condition"]:
+                    obj = None
+                else:
+                    processor = conf['processor']
+                    kwargs = conf['args']
+                    obj = processor(**kwargs)
             if parent is not None:
                 parent.add(obj, condition=conf['condition'])
             else:

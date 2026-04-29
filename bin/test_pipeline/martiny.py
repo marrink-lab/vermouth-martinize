@@ -37,9 +37,14 @@ def _cli_options_used_in_condition(condition):
                 result = result | _cli_options_used_in_condition(item)
         case 'not':
             result = result | _cli_options_used_in_condition(cond)
-        case _:
-            result = result | {cond['cli']}
+        case 'equal':
+            result |= {cond['cli']}
 
+        case 'has_variable':
+            result |= {cond['variable']}
+
+        case _:
+            raise ValueError(f"Unknown condition type: {type_}")
     return result
 
 # validate if options are defines more than once
@@ -220,6 +225,9 @@ def eval_condition(condition, cli_values):
             verdict = not eval_condition(args, cli_values)
         case 'equal':
             verdict = cli_values[args['cli']] == args['value']
+        case "has_variable":
+            obj = cli_values[args['variable']]
+            verdict = args["key"] in obj.variables 
         case _:
             raise ValueError(f"Unknown condition type: {type_}")
 
@@ -295,6 +303,7 @@ for action in parser._actions:
 # take all the argumtents from the command line 
 args = parser.parse_args()
 
+
 def force_fields(args, parser):
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / "force_fields"
@@ -331,11 +340,12 @@ def force_fields(args, parser):
         raise ValueError('Unknown force field "{}".'.format(args["to_ff"]))
     if args["from_ff"] not in known_force_fields:
         raise ValueError('Unknown force field "{}".'.format(args["from_ff"]))
-    return known_force_fields[args["to_ff"]], known_mappings[args["from_ff"]][args["to_ff"]]
+    return known_force_fields[args["to_ff"]], known_mappings
 
 
 # make the args into a dict 
 args = vars(args)
+print(args["go"], type(args["go"]))
 target_ff, mappings = force_fields(args, parser)
 variable_options(pipeline, args, target_ff=target_ff, mappings=mappings, bondedtypes="bondedtypes" in target_ff.variables, bb_atomname=target_ff.variables.get("bb_atomname"))
 
