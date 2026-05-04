@@ -414,25 +414,6 @@ class OutputWriterWrapper(Processor):
 
         return system
     
-# class FinalizeOutputWriterWrapper(Processor):
-#     def __init__(self, maxwwarn, counter):
-#         self.maxwwarns = maxwwarn
-#         self.counter = counter
-#     def run_system(self, system):
-#         leftover_warnings = ignore_warnings_and_count(COUNTER, self.maxwarn)
-#         if leftover_warnings:
-#             LOGGER.error(
-#                 "{} warnings were encountered after accounting for the "
-#                 "-maxwarn flag. No output files will be "
-#                 "written. Consider fixing the warnings, or if you are sure"
-#                 " they are harmless, use the -maxwarn flag.",
-#                 leftover_warnings,
-#             )
-#             sys.exit(2)
-#         else:
-#             DeferredFileWriter().write()
-#             vermouth.Quoter().run_system(system)
-#         return system
     
 class ListBlocksWrapper(Processor):
     def __init__(self, from_ff, to_ff):

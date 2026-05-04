@@ -172,6 +172,18 @@ TYPE_MAP = {
     'water_bias': water_bias,
     'ignore_resname': ignore_resname
 }
+
+#building a mini parser to get the to_ff and from_ff values so that the yaml knows what they are. because the yaml depends on the cli. 
+def build_mini_parser():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-from_ff", default="charmm")
+    parser.add_argument("-to_ff", default="martini3001")
+    parser.add_argument("-extra_ff_dir", action="append", default=[], type=Path)
+    parser.add_argument("-extra_map_dir", action="append", default=[], type=Path)
+    parser.add_argument("-list_ff", action="store_true")
+    return parser
+
+
 # build the CLI based on the pipeline configuration.
 def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
     # make parser if not given, otherwise use the given one.
@@ -276,74 +288,73 @@ def import_processor(processor_name):
     proc = getattr(module, name)
     return proc
 
-def collect_all_yaml_halves(script_dir, root_conf):
-    steps = []
 
-    from_dir = script_dir / "pipelines" / "from"
-    to_dir = script_dir / "pipelines" / "to"
-
-    for path in from_dir.glob("*.yaml"):
-        conf = load_yaml_file(path)
-        steps += conf["steps"]
-
-    for path in to_dir.glob("*.yaml"):
-        conf = load_yaml_file(path)
-        steps += conf["steps"]
-
-    return {
-        "variables": root_conf.get("variables", []),
-        "cli_flags": root_conf.get("cli_flags", {}),
-        "steps": steps,
-    }
-
+# load in the yaml files
 def load_yaml_file(path):
     with open(path, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
-
+# load in the pipeline halves from the yaml files.
 def load_pipeline_halves(script_dir, from_ff, to_ff):
+    # source yaml file. 
     from_path = script_dir / "pipelines" / "from" / f"{from_ff}.yaml"
+    # target yaml file.
     to_path = script_dir / "pipelines" / "to" / f"{to_ff}.yaml"
 
-    from_conf = load_yaml_file(from_path)
-    to_conf = load_yaml_file(to_path)
+    # load in the yaml as dicts
+    from_file = load_yaml_file(from_path)
+    to_file = load_yaml_file(to_path)
+
+    # only take the part of the yaml that is relevant for martinize2. 
+    from_conf = from_file.get("martinize2", from_file)
+    to_conf = to_file.get("martinize2", to_file)
 
     return from_conf, to_conf
 
-
-def combine_pipeline_halves(root_conf, from_conf, to_conf):
-    steps = from_conf["steps"] + to_conf["steps"]
-
+# combine the actuall pipeline halves into one pipeline config.
+def combine_pipeline_halves(from_conf, to_conf):
+    # gather all cli flags 
+    cli_flags = {}
+    # check for duplicates and combine the cli flags from both halves.
+    for conf in (from_conf, to_conf):
+        for flag, opts in conf.get("cli_flags", {}).items():
+            if flag in cli_flags:
+                raise KeyError(f"CLI flag '{flag}' is defined twice.")
+            cli_flags[flag] = opts    
     return {
-        "variables": root_conf.get("variables", []),
-        "cli_flags": root_conf.get("cli_flags", {}),
-        "steps": steps,
+        # return all variables, cli flags and steps combined into one pipeline config.
+        "variables": to_conf.get("variables", []),
+        "cli_flags": cli_flags,
+        "steps": from_conf.get("steps", []) + to_conf.get("steps", []),
     }
 
-# path to yaml file 
+# path to yamls.
 script_dir = Path(__file__).resolve().parent
-yaml_path = script_dir / "pipeline_test.yaml"
+# which prefix to use
+CLI_PREFIX = "-"
+#name of program
+name = "martinize2"
 
-# load in the yaml file and read it 
-with open(yaml_path, "r", encoding="utf-8") as file:
-    parsed_file = yaml.safe_load(file)
+# makes the mini parser with only the flags defined above.
+mini_parser = build_mini_parser()
+# parse the known args. and _ the unknown args. 
+mini_args, _ = mini_parser.parse_known_args()
 
-# remove unecessary things from the yaml file and keept the prefix 
-parsed_file.pop("$schema", None)
-cli_prefix = parsed_file.pop("cli_prefix")
-# get the name of the pipeline 
-name, root_conf = parsed_file.popitem()
-
-cli_conf = collect_all_yaml_halves(script_dir, root_conf)
+# choose the pipeline halves based on the from_ff and to_ff values given in the CLI.
+from_conf, to_conf = load_pipeline_halves(
+    script_dir,
+    mini_args.from_ff,
+    mini_args.to_ff,
+)
+# make one pipelineconfig containing variables, cli_flags and steps. 
+pipeline_conf = combine_pipeline_halves(from_conf, to_conf)
 # validate the cli options 
-validate_cli_options(cli_conf, path=name)
+validate_cli_options(pipeline_conf, path=name)
 
-# build the cli with the cli_flags 
-parser = build_cli(cli_conf, cli_prefix, prog=name)
-for action in parser._actions:
-    print(action.option_strings)
+# build real parser. by calling the build_cli function. 
+parser = build_cli(pipeline_conf, CLI_PREFIX, prog=name)
 
-# take all the argumtents from the command line 
+# parser the args with the real parser. this will give us all the values from the CLI.
 args = parser.parse_args()
 
 
@@ -388,26 +399,15 @@ def force_fields(args, parser):
 
 # make the args into a dict 
 args = vars(args)
+# get the forcefields and mappings based on the CLI args. this is needed for the variable options in the yaml.
 target_ff, mappings = force_fields(args, parser)
 
 # if you give noscfix, scfix is faslse otherwise true.
 args["scfix"] = not args["noscfix"]
 args["deduplicate"] = not args["keep_duplicate_itp"]
 
-from_conf, to_conf = load_pipeline_halves(
-    script_dir,
-    args["from_ff"],
-    args["to_ff"],
-)
-
-# halves samenvoegen
-pipeline = combine_pipeline_halves(
-    root_conf,
-    from_conf,
-    to_conf,
-)
-
-variable_options(pipeline, args, 
+# put extra values into the args based on variables, not cli_flags. These can be used in the yaml file. 
+variable_options(pipeline_conf, args, 
                  target_ff=target_ff, 
                  mappings=mappings, 
                  bondedtypes="bondedtypes" in target_ff.variables, 
@@ -417,11 +417,11 @@ variable_options(pipeline, args,
 
 
 
-# check for conditions, fill in args, load processor objects
-set_values_from_cli(pipeline, args)
+# check for conditions, yaml and cli and variables will be python values, load processor objects
+set_values_from_cli(pipeline_conf, args)
 
 # make the pipeline object from the pipeline config
-pipeline = Pipeline.from_json_conf(pipeline, name)
+pipeline = Pipeline.from_json_conf(pipeline_conf, name)
 
 #print the pipeline 
 print("Pipeline object:")
@@ -431,11 +431,13 @@ print()
 
 # load in the forcefield because pdb to universal expects a system with a forcefield.
 ff = vermouth.forcefield.get_native_force_field(args["from_ff"])
+# make an empty vermouth system. 
 system = vermouth.System(force_field=ff)
 
-print(target_ff.name)
-print(target_ff.variables)
 
+print("FROM YAML:", mini_args.from_ff)
+print("TO YAML:", mini_args.to_ff)
+print("CLI FLAGS:", pipeline_conf["cli_flags"].keys())
 
 # test the pipeline with None 
 pipeline.run_system(system)

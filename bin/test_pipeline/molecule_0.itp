@@ -1,0 +1,51 @@
+; This file was generated using the following command:
+; martiny.py -inpath test.pdb -outpath posres.pdb -top_path posres.top -ss C -posres backbone
+; martinize with vermouth 0.15.1.dev31
+; The following sequence of secondary structure 
+; was used for the full system:
+; CC
+
+; Please cite the following papers:
+; Souza, P C T; Alessandri, R; Barnoud, J; Thallmair, S; Faustino, I; Grünewald, F; Patmanidis, I; Abdizadeh, H; Bruininks, B M H; Wassenaar, T A; Kroon, P C; Melcr, J; Nieto, V; Corradi, V; Khan, H M; Domański, J; Javanainen, M; Martinez-Seara, H; Reuter, N; Best, R B; Vattulainen, I; Monticelli, L; Periole, X; Tieleman, D P; de Vries, A H; Marrink, S J;  Nature Methods 2021; 10.1038/s41592-021-01098-3
+; Kroon, P C; Grünewald, F; Barnoud, J; van Tilburg, M; Brasnett, C; Souza, P C; Wassenaar, T A; Marrink, S J;  eLife 2025; 10.7554/eLife.90627
+
+#ifndef POSRES_FC
+#define POSRES_FC 1000
+#endif
+
+[ moleculetype ]
+molecule_0 1
+
+[ atoms ]
+1 SP2 1 ALA BB  1 0.0 
+2 TC3 1 ALA SC1 2 0.0 
+3 SP1 2 GLY BB  3 0.0 
+
+[ position_restraints ]
+#ifdef POSRES
+1 1 POSRES_FC POSRES_FC POSRES_FC
+3 1 POSRES_FC POSRES_FC POSRES_FC
+#endif
+
+[ bonds ]
+; Backbone bonds
+1 3 1 0.350 4000
+
+#ifdef FLEXIBLE
+; Side chain bonds
+1 2 1 0.270 1000000
+#endif
+
+[ constraints ]
+#ifndef FLEXIBLE
+; Side chain bonds
+1 2 1 0.270
+#endif
+
+[ angles ]
+; SBB angles
+2 1 3 2 100 25 ; First Regular Martini
+
+; SC-BB-BB and BB-BB-SC scFix
+2 1 3 10 100 15 ; SC-BB-BB
+

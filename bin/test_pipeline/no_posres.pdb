@@ -1,0 +1,6 @@
+ATOM      1 BB   ALA A   1       1.102   0.991   0.000  1.00  0.00              
+ATOM      2 SC1  ALA A   1         nan     nan     nan  1.00  0.00              
+ATOM      3 BB   GLY A   2       4.648   2.791   0.000  1.00  0.00              
+TER       4      GLY A   2 
+CONECT    1    2    3
+END   
