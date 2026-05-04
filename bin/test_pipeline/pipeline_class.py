@@ -15,22 +15,27 @@ class Pipeline(nx.DiGraph, Processor):
         def _recurse(parent, name, conf):
             if 'steps' in conf:
                 obj = cls(name=name)
-                for name, step in conf['steps']:
-                    _recurse(obj, name, step)
-            else: #check before making the processor object if the condition is met. otherwise return none 
-                if not conf["condition"]:
-                    obj = None
+                for step_name, step in conf['steps']:
+                    _recurse(obj, step_name, step)
+
+            else:
+                processor = conf.get('processor')
+
+                if processor is None:
+                    raise KeyError(f"Step {name} has no processor. Conf: {conf}")
+
+                if not conf.get("condition", True):
+                    obj = processor
                 else:
-                    processor = conf['processor']
-                    kwargs = conf['args']
+                    kwargs = conf.get('args', {})
                     obj = processor(**kwargs)
+
             if parent is not None:
-                parent.add(obj, condition=conf['condition'])
+                parent.add(obj, condition=conf.get("condition", True))
             else:
                 return obj
 
-        self = _recurse(None, name, conf)
-        return self
+        return _recurse(None, name, conf)
 
 
     @property
@@ -51,7 +56,10 @@ class Pipeline(nx.DiGraph, Processor):
     def run_system(self, system):
         for node_idx in self.ordered_nodes:
             processor = self.nodes[node_idx]['processor']
-            name = getattr(processor, 'name', None) or processor.__class__.__name__
+            if isinstance(processor, type):
+                name = processor.__name__
+            else:
+                name = getattr(processor, 'name', None) or processor.__class__.__name__
             if self.nodes[node_idx]['condition']:
                 print(f'Running {name}')
                 result = processor.run_system(system)

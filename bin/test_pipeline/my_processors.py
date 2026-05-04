@@ -384,18 +384,7 @@ class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias
             water_bias_idrs or [],
         ), {}
     
-class ResidHandlingWrapper(Processor):
-    def __init__(self, resid_handling):
-        self.resid_handling = resid_handling
-    def run_system(self, system):
-        if self.resid_handling != "input":
-            return system
-        for molecule in system.molecules:
-            old_resids = {node: molecule.nodes[node]["stash"].get("resid") for node in molecule.nodes}
-            nx.set_node_attributes(molecule, old_resids, "resid")
 
-        return system
-        
 class OutputLoggerWrapper(Processor):
     def run_system(self, system):
         for molecule in system.molecules:

@@ -1,0 +1,284 @@
+steps: !!omap
+    - martinize:
+          steps: !!omap
+              - vermouth.DoMapping:
+                    args:
+                        to_ff:
+                            variable: target_ff
+                        mappings:
+                            variable: mappings
+                        delete_unknown:
+                            value: true
+                        attribute_keep:
+                            value: [ "cgsecstruct", "chain", "aasecstruct", "resname", "stash" ]
+                        attribute_must:
+                            value: [ "resname", "atype" ]
+              - vermouth.DoAverageBead:
+                    args:
+                        ignore_missing_graphs:
+                            value: true
+              - vermouth.AnnotateIDRs:
+                    cli_flags:
+                        id_regions:
+                            nargs: "*"
+                            default: []
+                    args:
+                        id_regions:
+                            cli: id_regions
+              - vermouth.DoLinks:
+                    args: {}
+              - vermouth.LocateChargeDummies:
+                    args: {}
+    - vermouth.RTPPolisher:
+          condition:
+              has_variable:
+                  variable: target_ff
+                  key: "bondedtypes"
+          args: {}
+    - my_processors.ApplyPosresWrapper:
+          condition:
+              not:
+                  equal:
+                      cli: posres
+                      value: "none"
+          cli_flags:
+              posres:
+                  type: str
+                  default: "none"
+                  choices: [ "none", "all", "backbone" ]
+                  help: "Output position restraints (none/all/backbone)"
+              posres_fc:
+                  type: float
+                  default: 1000.0
+                  help: "Position restraints force constant in kJ/mol/nm^2"
+          args:
+              posres:
+                  cli: posres
+              posres_fc:
+                  cli: posres_fc
+              force_field:
+                  variable: target_ff
+    - my_processors.GoModelWrapper:
+          condition:
+              not:
+                  equal:
+                      cli: go
+                      value: null
+          cli_flags:
+              go_low:
+                  type: float
+                  default: 0.3
+                  help: "Minimum distance (nm) below which contacts are removed."
+              go_up:
+                  type: float
+                  default: 1.1
+                  help: "Maximum distance (nm) above which contacts are removed."
+              go_res_dist:
+                  type: int
+                  default: 3
+                  help: "Minimum graph distance (similar sequence distance) below which contacts are removed."
+              go_backbone:
+                  type: str
+                  default: "BB"
+                  help: "Name of protein backbone bead on which to place a virtual interaction go site"
+              go_atomname:
+                  type: str
+                  default: "CA"
+                  help: "Name of the virtual interaction go site atom"
+              go_eps:
+                  type: float
+                  default: 9.414
+                  help: "The strength of the Go model structural bias in kJ/mol."
+          args:
+              go_low:
+                  cli: go_low
+              go_up:
+                  cli: go_up
+              go_res_dist:
+                  cli: go_res_dist
+              go_backbone:
+                  cli: go_backbone
+              go_atomname:
+                  cli: go_atomname
+              molname:
+                  cli: molname
+              go_eps:
+                  cli: go_eps
+              water_bias:
+                  cli: water_bias
+              water_bias_eps:
+                  cli: water_bias_eps
+              water_bias_idrs:
+                  cli: water_bias_idrs
+    - my_processors.MergeChainsWrapper:
+          condition:
+              not:
+                  equal:
+                      cli: merge_chains
+                      value: []
+          cli_flags:
+              merge_chains:
+                  type: str
+                  action: append
+                  default: []
+                  help: >
+                      Merge chains: either a comma separated list of chains to merge e.g. -merge A,B,C (+), or -merge all if instead all chains in the input file should be merged. Can be given multiple times for different groups of chains to merge.
+          args:
+              merge_chains:
+                  cli: merge_chains
+    - vermouth.NameMolType:
+          condition:
+              equal:
+                  cli: go
+                  value: null
+          cli_flags:
+              keep_duplicate_itp:
+                  action: store_true
+                  default: false
+                  help: "Write separate topologies for identical chains"
+              deduplicate:
+                  action: store_true
+                  default: false
+                  help: "internal"
+          args:
+              deduplicate:
+                  cli: deduplicate
+              molname:
+                  cli: molname
+    - vermouth.MergeAllMolecules:
+          condition:
+              all:
+                - equal:
+                      cli: elastic
+                      value: true
+                - equal:
+                      cli: go
+                      value: null
+                - equal:
+                      cli: rb_unit
+                      value: "all"
+          args: {}
+    - my_processors.ElasticWrapper:
+          condition:
+              all:
+                - equal:
+                      cli: elastic
+                      value: true
+                - equal:
+                      cli: go
+                      value: null
+          cli_flags:
+              rb_force_constant:
+                  type: float
+                  default: 700.0
+                  help: "Elastic bond force constant Fc in kJ/mol/nm^2"
+              rb_lower_bound:
+                  type: float
+                  default: 0.0
+                  help: "Elastic bond lower cutoff: F = Fc if rij < lo"
+              rb_upper_bound:
+                  type: float
+                  default: 0.9
+                  help: "Elastic bond upper cutoff: F = 0 if rij > up"
+              res_min_dist:
+                  type: int
+                  default: null
+                  help: "The minimum separation between two residues to have an RB"
+              rb_decay_factor:
+                  type: float
+                  default: 0
+                  help: "Elastic bond decay factor a"
+              rb_decay_power:
+                  type: float
+                  default: 1
+                  help: "Elastic bond decay power p"
+              rb_minimum_force:
+                  type: float
+                  default: 0
+                  help: "Remove elastic bonds with force constant lower than this"
+              rb_selection:
+                  default: null
+                  type: str
+                  help: "Comma separated list of bead names for elastic bonds"
+          args:
+              rb_force_constant:
+                  cli: rb_force_constant
+              rb_lower_bound:
+                  cli: rb_lower_bound
+              rb_upper_bound:
+                  cli: rb_upper_bound
+              rb_decay_factor:
+                  cli: rb_decay_factor
+              rb_decay_power:
+                  cli: rb_decay_power
+              rb_minimum_force:
+                  cli: rb_minimum_force
+              rb_selection:
+                  cli: rb_selection
+              rb_unit:
+                  cli: rb_unit
+              res_min_dist:
+                  cli: res_min_dist
+              force_field:
+                  variable: target_ff
+    - vermouth.rcsu.go_vs_includes.VirtualSiteCreator:
+          condition:
+              all:
+                - equal:
+                      cli: water_bias
+                      value: true
+                - equal:
+                      cli: go
+                      value: null
+          args: {}
+    - my_processors.ComputeWaterBiasWrapper:
+          condition:
+              equal:
+                  cli: water_bias
+                  value: true
+          args:
+              water_bias:
+                  cli: water_bias
+              water_bias_eps:
+                  cli: water_bias_eps
+              water_bias_idrs:
+                  cli: water_bias_idrs
+    - vermouth.UnstashAttributes:
+          condition:
+              equal:
+                  cli: resid_handling
+                  value: "input"
+          cli_flags:
+              resid_handling:
+                  type: str
+                  default: "mol"
+                  choices: [ "mol", "input" ]
+                  help: >
+                      How to handle resid. Choice of mol or input. mol: resids are numbered from 1 to n for each molecule input: resids are the same as in the input pdb
+          args:
+              attributes:
+                  value: [ "resid" ]
+              stash_name:
+                  value: "stash"
+    - vermouth.SortMoleculeAtoms:
+          condition:
+              equal:
+                  cli: go
+                  value: null
+          args: {}
+    - my_processors.OutputLoggerWrapper:
+          args: {}
+    - my_processors.OutputWriterWrapper:
+          cli_flags:
+              outpath:
+                  required: false
+                  type: path
+                  help: "Output coarse grained structure (PDB)"
+              top_path:
+                  type: path
+                  help: "Output topology (TOP)"
+          args:
+              outpath:
+                  cli: outpath
+              top_path:
+                  cli: top_path

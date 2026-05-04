@@ -147,3 +147,4 @@ class GoWrapper(Processor):
             LOGGER.info("Generating Go model contact map.", type="step")
             GenerateContactMap(write_file=self.go_write_file).run_system(system)
         return system
+    

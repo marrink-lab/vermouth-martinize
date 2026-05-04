@@ -276,7 +276,49 @@ def import_processor(processor_name):
     proc = getattr(module, name)
     return proc
 
+def collect_all_yaml_halves(script_dir, root_conf):
+    steps = []
 
+    from_dir = script_dir / "pipelines" / "from"
+    to_dir = script_dir / "pipelines" / "to"
+
+    for path in from_dir.glob("*.yaml"):
+        conf = load_yaml_file(path)
+        steps += conf["steps"]
+
+    for path in to_dir.glob("*.yaml"):
+        conf = load_yaml_file(path)
+        steps += conf["steps"]
+
+    return {
+        "variables": root_conf.get("variables", []),
+        "cli_flags": root_conf.get("cli_flags", {}),
+        "steps": steps,
+    }
+
+def load_yaml_file(path):
+    with open(path, "r", encoding="utf-8") as file:
+        return yaml.safe_load(file)
+
+
+def load_pipeline_halves(script_dir, from_ff, to_ff):
+    from_path = script_dir / "pipelines" / "from" / f"{from_ff}.yaml"
+    to_path = script_dir / "pipelines" / "to" / f"{to_ff}.yaml"
+
+    from_conf = load_yaml_file(from_path)
+    to_conf = load_yaml_file(to_path)
+
+    return from_conf, to_conf
+
+
+def combine_pipeline_halves(root_conf, from_conf, to_conf):
+    steps = from_conf["steps"] + to_conf["steps"]
+
+    return {
+        "variables": root_conf.get("variables", []),
+        "cli_flags": root_conf.get("cli_flags", {}),
+        "steps": steps,
+    }
 
 # path to yaml file 
 script_dir = Path(__file__).resolve().parent
@@ -290,13 +332,14 @@ with open(yaml_path, "r", encoding="utf-8") as file:
 parsed_file.pop("$schema", None)
 cli_prefix = parsed_file.pop("cli_prefix")
 # get the name of the pipeline 
-name, pipeline = parsed_file.popitem()
+name, root_conf = parsed_file.popitem()
 
+cli_conf = collect_all_yaml_halves(script_dir, root_conf)
 # validate the cli options 
-validate_cli_options(pipeline, path=name)
+validate_cli_options(cli_conf, path=name)
 
 # build the cli with the cli_flags 
-parser = build_cli(pipeline, cli_prefix, prog=name)
+parser = build_cli(cli_conf, cli_prefix, prog=name)
 for action in parser._actions:
     print(action.option_strings)
 
@@ -345,13 +388,32 @@ def force_fields(args, parser):
 
 # make the args into a dict 
 args = vars(args)
-print(args["go"], type(args["go"]))
 target_ff, mappings = force_fields(args, parser)
-variable_options(pipeline, args, target_ff=target_ff, mappings=mappings, bondedtypes="bondedtypes" in target_ff.variables, bb_atomname=target_ff.variables.get("bb_atomname"))
 
 # if you give noscfix, scfix is faslse otherwise true.
 args["scfix"] = not args["noscfix"]
 args["deduplicate"] = not args["keep_duplicate_itp"]
+
+from_conf, to_conf = load_pipeline_halves(
+    script_dir,
+    args["from_ff"],
+    args["to_ff"],
+)
+
+# halves samenvoegen
+pipeline = combine_pipeline_halves(
+    root_conf,
+    from_conf,
+    to_conf,
+)
+
+variable_options(pipeline, args, 
+                 target_ff=target_ff, 
+                 mappings=mappings, 
+                 bondedtypes="bondedtypes" in target_ff.variables, 
+                 bb_atomname=target_ff.variables.get("bb_atomname"),
+                 )
+
 
 
 
