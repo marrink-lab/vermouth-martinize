@@ -49,16 +49,16 @@ def test_get_vdw_radius(resname, atomname, expected):
                                  ('NON', 'N', 0),
                                  ('NON', 'NON', 0)
                          ))
-def test_get_atype(resname, atomname, expected):
-    result = contact_map._get_atype(resname, atomname)
+def test_lookup_atom_type(resname, atomname, expected):
+    result = contact_map._lookup_atom_type(resname, atomname)
     assert result == expected
 
-def test_surface_generation():
+def test_make_fibonacci_sphere():
     # test that a surface is generated with the correct points
 
     position = np.array([1, 1, 1])
 
-    surface = contact_map._make_surface(position, 13, 21, 1)
+    surface = contact_map._make_fibonacci_sphere(position, 13, 21, 1)
 
     assert len(surface) == 21
 
@@ -89,7 +89,7 @@ def test_surface_generation():
                )
       )
     ))
-def test_atom2res(norm, expected):
+def test_aggregate_atoms_to_residues(norm, expected):
     # test that atomic resolution arrays get mapped correctly to their residues and are normalised if required
 
     arrin = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -108,16 +108,16 @@ def test_atom2res(norm, expected):
                       ])
 
     nres = 5
-    res_map = contact_map.make_atom_map([0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4])
-    res_array = contact_map.atom2res(arrin, nres, res_map, norm)
+    res_map = contact_map._build_residue_atom_index([0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    res_array = contact_map._aggregate_atoms_to_residues(arrin, nres, res_map, norm)
 
     assert np.allclose(res_array, expected)
 
-def test_make_atom_map():
+def test_build_residue_atom_index():
     # test that the atom_map defaultdict is generated correctly
 
     input = [0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4]
-    result = contact_map.make_atom_map(input)
+    result = contact_map._build_residue_atom_index(input)
 
     expected = defaultdict(list, {0: np.array([0]),
                                   1: np.array([1, 2]),
@@ -129,10 +129,10 @@ def test_make_atom_map():
         assert key in expected.keys()
 
 
-def test_contact_info(test_molecule):
+def test_extract_contact_inputs(test_molecule):
     # test we get the expected input data from a molecule
 
-    result = contact_map._contact_info(test_molecule)
+    result = contact_map._extract_contact_inputs(test_molecule)
 
     vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, G = result
 
@@ -155,10 +155,10 @@ def test_contact_info(test_molecule):
     assert equal_graphs(make_residue_graph(test_molecule), G)
 
 
-def test_calculate_overlap(test_molecule):
+def test_calculate_ov_contacts(test_molecule):
     # test the overlap is calculated correctly
 
-    result = contact_map._contact_info(test_molecule)
+    result = contact_map._extract_contact_inputs(test_molecule)
     points = result[2]
     tree = KDTree(points)
     vdw_list = [7] * len(points)
@@ -166,7 +166,7 @@ def test_calculate_overlap(test_molecule):
     vdw_max = 20
     alpha = 1
 
-    overlaps = contact_map._calculate_overlap(tree, vdw_list, natoms, vdw_max, alpha)
+    overlaps = contact_map._calculate_ov_contacts(tree, vdw_list, natoms, vdw_max, alpha)
 
     expected = np.array([[0., 1., 1., 1., 1., 1., 0., 0., 0.],
                          [1., 0., 1., 1., 1., 1., 0., 0., 0.],
@@ -178,13 +178,13 @@ def test_calculate_overlap(test_molecule):
                          [0., 0., 0., 1., 1., 1., 1., 0., 1.],
                          [0., 0., 0., 0., 1., 1., 1., 1., 0.]])
 
-    assert np.allclose(overlaps, expected)
+    assert np.allclose(overlaps.toarray(), expected)
 
 
-def test_calculate_csu(test_molecule):
+def test_calculate_csu_contacts(test_molecule):
     # test that the csu contacts are found correctly
 
-    result = contact_map._contact_info(test_molecule)
+    result = contact_map._extract_contact_inputs(test_molecule)
     points = result[2]
 
     vdw_list = [7] * len(points)
@@ -194,7 +194,7 @@ def test_calculate_csu(test_molecule):
     vdw_max = 20
     water_radius = 1
 
-    csu_contacts = contact_map._calculate_csu(points,
+    csu_contacts = contact_map._calculate_csu_contacts(points,
                                               vdw_list,
                                               fiba,
                                               fibb,
@@ -216,9 +216,9 @@ def test_calculate_csu(test_molecule):
 
     assert np.allclose(csu_contacts, expected)
 
-def test_contact_types(test_molecule):
+def test_classify_contact_types(test_molecule):
 
-    result = contact_map._contact_info(test_molecule)
+    result = contact_map._extract_contact_inputs(test_molecule)
     points = result[2]
 
     vdw_list = [7] * len(points)
@@ -228,7 +228,7 @@ def test_contact_types(test_molecule):
     vdw_max = 20
     water_radius = 1
 
-    hits = contact_map._calculate_csu(points,
+    hits = contact_map._calculate_csu_contacts(points,
                                       vdw_list,
                                       fiba,
                                       fibb,
@@ -270,15 +270,15 @@ def test_contact_types(test_molecule):
                           [0., 0., 0., 0., 0., 0., 0., 0., 0.],
                           [0., 0., 0., 0., 0., 0., 0., 0., 0.]])]
 
-    contact_arrays = contact_map._contact_types(hits, natoms, atypes)
+    contact_arrays = contact_map._classify_contact_types(hits, natoms, atypes)
 
     for i, j in enumerate(contact_arrays):
-        assert np.allclose(j, expected[i])
+        assert np.allclose(j.toarray(), expected[i])
 
 
-def test_calculate_contacts(test_molecule):
+def test_compute_residue_contacts(test_molecule):
 
-    result = contact_map._contact_info(test_molecule)
+    result = contact_map._extract_contact_inputs(test_molecule)
     points = result[2]
     res_serial = result[3]
     nresidues = result[9]
@@ -304,14 +304,14 @@ def test_calculate_contacts(test_molecule):
                           [  0.,   0.,   0.,   0.]])]
 
 
-    contact_arrays = contact_map._calculate_contacts(vdw_list, atypes, points, res_serial, nresidues)
+    contact_arrays = contact_map._compute_residue_contacts(vdw_list, atypes, points, res_serial, nresidues)
 
     for i, j in enumerate(contact_arrays):
         assert np.allclose(j, expected[i])
 
-def test_get_contacts(test_molecule):
+def test_filter_rcsu_contacts(test_molecule):
 
-    result = contact_map._contact_info(test_molecule)
+    result = contact_map._extract_contact_inputs(test_molecule)
     points = result[2]
     res_serial = result[3]
     res_idx = result[7]
@@ -321,7 +321,7 @@ def test_get_contacts(test_molecule):
     vdw_list = [7] * len(points)
     atypes = np.arange(len(points))
 
-    overlaps, contacts, stabilisers, destabilisers = contact_map._calculate_contacts(vdw_list, atypes, points,
+    overlaps, contacts, stabilisers, destabilisers = contact_map._compute_residue_contacts(vdw_list, atypes, points,
                                                                                      res_serial, nresidues)
 
     # add something interesting to overlaps otherwise we get nothing
@@ -330,7 +330,7 @@ def test_get_contacts(test_molecule):
                          [0., 1., 1., 0.],
                          [0., 0., 1., 0.]])
 
-    contacts_list, all_contacts = contact_map._get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers,
+    contacts_list, all_contacts = contact_map._filter_rcsu_contacts(overlaps, contacts, stabilisers, destabilisers,
                                                             res_idx, molecule_graph)
 
     expected_all_contacts = [[1, 2, 0, 1, 1.0, 66.0, 0.0, False],
@@ -350,7 +350,7 @@ def test_get_contacts(test_molecule):
 
 def test_write_contacts(test_molecule, tmp_path):
 
-    result = contact_map._contact_info(test_molecule)
+    result = contact_map._extract_contact_inputs(test_molecule)
     points = result[2]
     res_serial = result[3]
     res_idx = result[7]
@@ -368,10 +368,10 @@ def test_write_contacts(test_molecule, tmp_path):
             pos.append(subgraph.nodes[atom]['position']*10)
         ca_pos.append(np.mean(np.stack(pos), axis=0))
 
-    overlaps, contacts, stabilisers, destabilisers = contact_map._calculate_contacts(vdw_list, atypes, points,
+    overlaps, contacts, stabilisers, destabilisers = contact_map._compute_residue_contacts(vdw_list, atypes, points,
                                                                                      res_serial, nresidues)
 
-    _, all_contacts = contact_map._get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers,
+    _, all_contacts = contact_map._filter_rcsu_contacts(overlaps, contacts, stabilisers, destabilisers,
                                                 res_idx, molecule_graph)
 
     with open(TEST_MOLECULE_CONTACT_MAP, encoding='utf-8') as expectedfile:
@@ -396,14 +396,14 @@ def test_write_contacts(test_molecule, tmp_path):
 @pytest.mark.parametrize('write_out',
                          (False, True)
                          )
-def test_do_contacts(test_molecule, tmp_path, write_out):
+def test_calculate_go_contacts(test_molecule, tmp_path, write_out):
 
     if write_out:
         outpath = Path(tmp_path / 'contacts.out')
     else:
         outpath = False
 
-    contacts = contact_map.do_contacts(test_molecule, outpath)
+    contacts = contact_map.calculate_go_contacts(test_molecule, outpath)
 
     # because of the vdw radii we actually expect no contacts
     assert len(contacts) == len([]) == 0
