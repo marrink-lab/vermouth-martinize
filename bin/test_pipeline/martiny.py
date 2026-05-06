@@ -124,21 +124,11 @@ def validate_cli_options(
                 global_cli_options,
             )
 
-def variable_options(pipeline_conf, args, **variables):
+def variable_options(pipeline_conf, args, namespace, **variables):
     for variable in pipeline_conf.get("variables", []):
-        args[variable] = variables[variable]
-        # if variable == "target_ff":
-        #     args["target_ff"] = target_ff
-        # elif variable == "mappings":
-        #     args["mappings"] = mappings
-        # elif variable == "bb_atomname":
-        #     args["bb_atomname"] = target_ff.variables.get("bb_atomname")
-        # elif variable == "bondedtypes":
-        #     args["bondedtypes"] = "bondedtypes" in target_ff.variables
-        # else: 
-        #     raise KeyError(f"Unknown variable {variable}")
-    # print("bb_atomname:", args.get("bb_atomname"))
-    # print("bondedtypes:", args.get("bondedtypes"))
+        namespaced_variables = f"{namespace}.{variable}" 
+        args[namespaced_variables] = variables[variable]
+
 
 
 def _cys_argument(value):
@@ -288,11 +278,26 @@ def import_processor(processor_name):
     proc = getattr(module, name)
     return proc
 
+def namespace_variables(obj, namespace):
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key == "variable" and isinstance(value, str):
+                obj[key] = f"{namespace}.{value}"
+            else:
+                namespace_variables(value, namespace)
+    elif isinstance(obj, list): 
+        for item in obj: 
+            namespace_variables(item, namespace)
+    elif isinstance(obj, tuple):
+        for item in obj:
+            namespace_variables(item, namespace)
+    return obj
 
 # load in the yaml files
 def load_yaml_file(path):
     with open(path, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
+
 
 # load in the pipeline halves from the yaml files.
 def load_pipeline_halves(script_dir, from_ff, to_ff):
@@ -309,10 +314,13 @@ def load_pipeline_halves(script_dir, from_ff, to_ff):
     from_conf = from_file.get("martinize2", from_file)
     to_conf = to_file.get("martinize2", to_file)
 
+    from_conf = namespace_variables(from_conf, from_ff)
+    to_conf = namespace_variables(to_conf, to_ff)
+
     return from_conf, to_conf
 
 # combine the actuall pipeline halves into one pipeline config.
-def combine_pipeline_halves(from_conf, to_conf):
+def combine_pipeline_halves(from_conf, to_conf, from_ff, to_ff):
     # gather all cli flags 
     cli_flags = {}
     # check for duplicates and combine the cli flags from both halves.
@@ -321,10 +329,16 @@ def combine_pipeline_halves(from_conf, to_conf):
             if flag in cli_flags:
                 raise KeyError(f"CLI flag '{flag}' is defined twice.")
             cli_flags[flag] = opts    
-    return {
-        # return all variables, cli flags and steps combined into one pipeline config.
-        "variables": to_conf.get("variables", []),
+    
+    return { # give back one big pipeline config with all the info.
+        "variables": (
+            # namespace the variables with the forcefield they come from. 
+            # so for example ff will become charmm.ff. because from_ff = charmm and var is the variable name, like ff. 
+            [f"{from_ff}.{var}" for var in from_conf.get("variables", [])] +
+            [f"{to_ff}.{var}" for var in to_conf.get("variables", [])]
+        ),
         "cli_flags": cli_flags,
+        # return the steps from both halves. 
         "steps": from_conf.get("steps", []) + to_conf.get("steps", []),
     }
 
@@ -347,7 +361,7 @@ from_conf, to_conf = load_pipeline_halves(
     mini_args.to_ff,
 )
 # make one pipelineconfig containing variables, cli_flags and steps. 
-pipeline_conf = combine_pipeline_halves(from_conf, to_conf)
+pipeline_conf = combine_pipeline_halves(from_conf, to_conf, mini_args.from_ff, mini_args.to_ff)
 # validate the cli options 
 validate_cli_options(pipeline_conf, path=name)
 
@@ -394,27 +408,24 @@ def force_fields(args, parser):
         raise ValueError('Unknown force field "{}".'.format(args["to_ff"]))
     if args["from_ff"] not in known_force_fields:
         raise ValueError('Unknown force field "{}".'.format(args["from_ff"]))
-    return known_force_fields[args["to_ff"]], known_mappings
+    return (
+    known_force_fields[args["from_ff"]],
+    known_force_fields[args["to_ff"]],
+    known_mappings,
+)
 
 
 # make the args into a dict 
 args = vars(args)
-# get the forcefields and mappings based on the CLI args. this is needed for the variable options in the yaml.
-target_ff, mappings = force_fields(args, parser)
 
 # if you give noscfix, scfix is faslse otherwise true.
 args["scfix"] = not args["noscfix"]
 args["deduplicate"] = not args["keep_duplicate_itp"]
 
-# put extra values into the args based on variables, not cli_flags. These can be used in the yaml file. 
-variable_options(pipeline_conf, args, 
-                 target_ff=target_ff, 
-                 mappings=mappings, 
-                 bondedtypes="bondedtypes" in target_ff.variables, 
-                 bb_atomname=target_ff.variables.get("bb_atomname"),
-                 )
+source_ff, target_ff, mappings = force_fields(args, parser)
 
-
+variable_options(from_conf, args, args["from_ff"], ff=source_ff)
+variable_options(to_conf, args, args["to_ff"], ff=target_ff, mappings=mappings)
 
 
 # check for conditions, yaml and cli and variables will be python values, load processor objects
@@ -427,12 +438,10 @@ pipeline = Pipeline.from_json_conf(pipeline_conf, name)
 print("Pipeline object:")
 print(pipeline)
 print()
+print(args.keys())
 
-
-# load in the forcefield because pdb to universal expects a system with a forcefield.
-ff = vermouth.forcefield.get_native_force_field(args["from_ff"])
 # make an empty vermouth system. 
-system = vermouth.System(force_field=ff)
+system = vermouth.System(force_field=source_ff)
 
 
 print("FROM YAML:", mini_args.from_ff)

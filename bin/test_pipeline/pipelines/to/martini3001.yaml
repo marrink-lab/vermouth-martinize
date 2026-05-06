@@ -1,7 +1,7 @@
 $schema: ./schema-pipeline.yaml
 martinize2:
   variables:
-    - target_ff
+    - ff
     - mappings
   cli_flags:
     to_ff:
@@ -41,7 +41,7 @@ martinize2:
           - vermouth.DoMapping:
               args:
                 to_ff:
-                  variable: target_ff
+                  variable: ff
                 mappings:
                   variable: mappings
                 delete_unknown:
@@ -61,6 +61,10 @@ martinize2:
               args:
                 ignore_missing_graphs:
                   value: true
+          - my_processors.PrintFF:
+              args:
+                force_field:
+                  variable: ff
           - vermouth.AnnotateIDRs:
               cli_flags:
                 id_regions:
@@ -76,7 +80,7 @@ martinize2:
     - vermouth.RTPPolisher:
         condition:
           has_variable:
-            variable: target_ff
+            variable: ff
             key: bondedtypes
         args: {}
     - my_processors.ApplyPosresWrapper:
@@ -104,7 +108,7 @@ martinize2:
           posres_fc:
             cli: posres_fc
           force_field:
-            variable: target_ff
+            variable: ff
     - my_processors.GoModelWrapper:
         condition:
           not:
@@ -274,7 +278,7 @@ martinize2:
           res_min_dist:
             cli: res_min_dist
           force_field:
-            variable: target_ff
+            variable: ff
     - vermouth.rcsu.go_vs_includes.VirtualSiteCreator:
         condition:
           all:

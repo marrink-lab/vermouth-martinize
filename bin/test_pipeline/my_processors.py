@@ -136,7 +136,13 @@ class WritePDB(Processor):
             )
         # return a system, otherwise the pipeline will break.
         return system 
+class PrintFF(Processor):
+    def __init__(self, force_field):
+        self.force_field = force_field
 
+    def run_system(self, system):
+        print("FORCE FIELD:", self.force_field.name)
+        return system
 class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
     @staticmethod
     def wrap(modify = None, cter = None, nter = None, mutate = None):

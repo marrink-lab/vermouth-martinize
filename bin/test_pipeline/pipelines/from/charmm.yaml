@@ -1,5 +1,7 @@
 $schema: "./schema-pipeline.yaml"
 martinize2:
+  variables:
+    - ff
   cli_flags:
     from_ff:
       default: "charmm"
@@ -86,7 +88,10 @@ martinize2:
 
           - vermouth.MergeNucleicStrands:
               args: {}
-
+          - my_processors.PrintFF:
+              args:
+                force_field:
+                  variable: ff
           - my_processors.WritePDB:
               cli_flags:
                 write_graph:
