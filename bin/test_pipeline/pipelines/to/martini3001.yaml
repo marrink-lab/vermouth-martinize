@@ -144,6 +144,11 @@ martinize2:
             type: float
             default: 9.414
             help: The strength of the Go model structural bias in kJ/mol.
+          go:
+            nargs: '?'
+            const: true
+            type: path
+            help: Use Martini Go model.
         args:
           go_low:
             cli: go_low

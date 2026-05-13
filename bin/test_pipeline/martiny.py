@@ -74,14 +74,6 @@ def validate_cli_options(
     # all options 
     defined_here = normal_cli_options | group_cli_options | variable_options
 
-    # check for duplicates 
-    if overlap := defined_here.intersection(global_cli_options):
-        _path = '.'.join([path, 'cli'])
-        raise KeyError(
-            f'CLI options {overlap} have already been defined before '
-            f'but were found again in {_path}'
-        )
-
     # add to the sets of options defined in this scope and globally
     local_cli_options |= defined_here
     global_cli_options |= defined_here
@@ -123,10 +115,13 @@ def validate_cli_options(
                 local_cli_options,
                 global_cli_options,
             )
-
+# function for the variable options, this will set the variables in the yaml to the values from the CLI.
 def variable_options(pipeline_conf, args, namespace, **variables):
+    # loop through all the variables defined in the pipeline. 
     for variable in pipeline_conf.get("variables", []):
+        # make a namespaced variable name, so like charmm + the variable ff --> charmm.ff. 
         namespaced_variables = f"{namespace}.{variable}" 
+        # connect the variable name to the value from the CLI. so charmm.ff will get the value of ff from the CLI.
         args[namespaced_variables] = variables[variable]
 
 
@@ -175,11 +170,15 @@ def build_mini_parser():
 
 
 # build the CLI based on the pipeline configuration.
-def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
+def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     # make parser if not given, otherwise use the given one.
     parser = parser or argparse.ArgumentParser(**kwargs)
-    # add arguments for the current pipeline step
+    # make an empty set of the added_flags. or use the given one. 
+    added_flags = set() if added_flags is None else added_flags
+    # loop through the cli flags defined in the pipeline config. and don't add the same flag twice. 
     for flag, opts in pipeline_conf.get('cli_flags', {}).items():
+        if flag in added_flags:
+            continue 
         # make copy of dict 
         opts = dict(opts)
         # translate type from string to actual type if needed.
@@ -190,11 +189,13 @@ def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
             opts['type'] = TYPE_MAP[type_name]
         # actually add the argument to the parser
         parser.add_argument(f'{prefix}{flag}', **opts)
+        added_flags.add(flag)
     # recursion for steps in the pipeline
-
     for group_cli in pipeline_conf.get('cli_groups', []):
         group = parser.add_mutually_exclusive_group()
         for flag, opts in group_cli.get('flags', {}).items():
+            if flag in added_flags:
+                continue
             # make copy of dict 
             opts = dict(opts)
             # translate type from string to actual type if needed.
@@ -205,10 +206,11 @@ def build_cli(pipeline_conf, prefix, parser=None, **kwargs):
                 opts['type'] = TYPE_MAP[type_name]
             # actually add the argument to the parser
             group.add_argument(f'{prefix}{flag}', **opts)
-    
+            added_flags.add(flag)
+    # recursion for steps in the pipeline
     if pipeline_conf.get('steps'):
         for name, step in pipeline_conf['steps']:
-            build_cli(step, prefix, parser=parser)
+            build_cli(step, prefix, parser=parser, added_flags=added_flags)
 
     return parser
 # evaluete the condition with the cli values 
@@ -319,17 +321,39 @@ def load_pipeline_halves(script_dir, from_ff, to_ff):
 
     return from_conf, to_conf
 
+def iter_cli_flags(pipeline_conf):
+    # gather cli_flags defined in cli_flags
+    for flag, opts in pipeline_conf.get("cli_flags", {}).items():
+        # using yield so that it saves time and memory by not creating a big list of all the flags, but instead giving them one by one.
+        yield flag, opts
+
+    # gather cli_flags defined in cli_groups
+    for group_conf in pipeline_conf.get("cli_groups", []):
+        for flag, opts in group_conf.get("flags", {}).items():
+            yield flag, opts
+
+    # recursion for steps in the pipeline
+    if pipeline_conf.get("steps"):
+        for name, step in pipeline_conf["steps"]:
+            yield from iter_cli_flags(step)
+
 # combine the actuall pipeline halves into one pipeline config.
 def combine_pipeline_halves(from_conf, to_conf, from_ff, to_ff):
     # gather all cli flags 
-    cli_flags = {}
+    seen_cli_flags = {}
     # check for duplicates and combine the cli flags from both halves.
     for conf in (from_conf, to_conf):
-        for flag, opts in conf.get("cli_flags", {}).items():
-            if flag in cli_flags:
-                raise KeyError(f"CLI flag '{flag}' is defined twice.")
-            cli_flags[flag] = opts    
-    
+        for flag, opts in iter_cli_flags(conf):
+            if flag in seen_cli_flags:
+                if seen_cli_flags[flag] != opts:
+                    raise KeyError(
+                        f"CLI flag '{flag}' is defined multiple times "
+                        f"with different definitions."
+                    )
+                continue
+
+            seen_cli_flags[flag] = opts
+
     return { # give back one big pipeline config with all the info.
         "variables": (
             # namespace the variables with the forcefield they come from. 
@@ -337,7 +361,7 @@ def combine_pipeline_halves(from_conf, to_conf, from_ff, to_ff):
             [f"{from_ff}.{var}" for var in from_conf.get("variables", [])] +
             [f"{to_ff}.{var}" for var in to_conf.get("variables", [])]
         ),
-        "cli_flags": cli_flags,
+        "cli_flags": seen_cli_flags,
         # return the steps from both halves. 
         "steps": from_conf.get("steps", []) + to_conf.get("steps", []),
     }
