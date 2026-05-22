@@ -453,15 +453,18 @@ def _calculate_ov_contacts(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24):
     alpha: float
         Enlargement factor for attraction effects
     """
+    vdw_list = np.asarray(vdw_list)
     over_sdm = coords_tree.sparse_distance_matrix(coords_tree, 2 * vdw_max * alpha)
-    over_sdm_arr = over_sdm.to_array()
-    vdw_arr = alpha * (vdw_list + vdw_list[:,np.newaxis])
-    mask = np.triu(np.ones(over_sdm_arr.shape, dtype=bool), k=1) # upper triangle only, excluding diagonal
-    # positions where over_sdm_arr is < vdw overlap
-    rows, cols = np.where((over_sdm_arr < vdw_arr) & mask)
+    over_coo = over_sdm.tocoo()
+    vdw_sum = alpha * (vdw_list[over_coo.row] + vdw_list[over_coo.col])
+    keep = (over_coo.row < over_coo.col) & (over_coo.data < vdw_sum)
+    rows = over_coo.row[keep]
+    cols = over_coo.col[keep]
     LOGGER.debug("Found {} OV overlapping atom pairs", len(rows))
+    all_rows = np.concatenate([rows, cols])
+    all_cols = np.concatenate([cols, rows])
     return sp.csr_matrix(
-        (np.ones(len(rows), dtype=np.float32), (rows, cols)),
+        (np.ones(len(all_rows), dtype=np.float32), (all_rows, all_cols)),
         shape=(natoms, natoms)
     )
 
@@ -549,7 +552,7 @@ def _classify_contact_types(hit_results, natoms, atypes):
         if at1 == 0:
             continue
         for k in row:
-            if k < 0 or at2 := atypes[k] < 0:  # Not sure if I like the use of the walrus here tbh
+            if (k < 0) or ((at2 := int(atypes[k])) <= 0):
                 continue
             key = (i, int(k))
             contact_data[key] = contact_data.get(key, 0) + 1
