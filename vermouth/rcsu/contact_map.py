@@ -454,11 +454,11 @@ def _calculate_ov_contacts(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24):
         Enlargement factor for attraction effects
     """
     over_sdm = coords_tree.sparse_distance_matrix(coords_tree, 2 * vdw_max * alpha)
-    rows, cols = [], []
-    for (idx, jdx), distance_between in over_sdm.items():
-        if idx != jdx and distance_between < (vdw_list[idx] + vdw_list[jdx]) * alpha:
-            rows.append(idx)
-            cols.append(jdx)
+    over_sdm_arr = over_sdm.to_array()
+    vdw_arr = alpha * (vdw_list + vdw_list[:,np.newaxis])
+    mask = np.triu(np.ones(over_sdm_arr.shape, dtype=bool), k=1) # upper triangle only, excluding diagonal
+    # positions where over_sdm_arr is < vdw overlap
+    rows, cols = np.where((over_sdm_arr < vdw_arr) & mask)
     LOGGER.debug("Found {} OV overlapping atom pairs", len(rows))
     return sp.csr_matrix(
         (np.ones(len(rows), dtype=np.float32), (rows, cols)),
@@ -549,17 +549,15 @@ def _classify_contact_types(hit_results, natoms, atypes):
         if at1 == 0:
             continue
         for k in row:
-            if k < 0:
+            if k < 0 or at2 := atypes[k] < 0:  # Not sure if I like the use of the walrus here tbh
                 continue
-            at2 = atypes[k]
-            if at2 > 0:
-                key = (i, int(k))
-                contact_data[key] = contact_data.get(key, 0) + 1
-                btype = BOND_TYPE[at1, at2]
-                if btype <= 4:
-                    stab_data[key] = stab_data.get(key, 0) + 1
-                elif btype == 5:
-                    destab_data[key] = destab_data.get(key, 0) + 1
+            key = (i, int(k))
+            contact_data[key] = contact_data.get(key, 0) + 1
+            btype = BOND_TYPE[at1, at2]
+            if btype <= 4:
+                stab_data[key] = stab_data.get(key, 0) + 1
+            elif btype == 5:
+                destab_data[key] = destab_data.get(key, 0) + 1
 
     LOGGER.debug("Classified {} atom contact pairs ({} stabilising, {} destabilising)",
                  len(contact_data), len(stab_data), len(destab_data))
