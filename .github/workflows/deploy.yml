@@ -86,7 +86,7 @@ jobs:
     - name: Run pylint 
       run: |
          pylint --disable=fixme --fail-under=8.0 vermouth
-         pylint --disable=fixme --fail-under=9.0 bin/martinize2 
+         pylint --disable=fixme --fail-under=9.0 vermouth/bin/martinize2 
          
    
   docs:
@@ -143,7 +143,7 @@ jobs:
         pip install --upgrade .
     - name: Install pypa/build
       run: |
-        python3 -m pip install build pbr --user
+        python3 -m pip install build --user
     - name: Build a binary wheel and a source tarball
       run: python3 -m build --sdist --wheel --outdir dist/
     - name: Publish distribution 📦 to PyPI
