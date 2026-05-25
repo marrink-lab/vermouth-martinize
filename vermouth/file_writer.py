@@ -150,10 +150,17 @@ class DeferredFileWriter(metaclass=Singleton):
         Existing file destinations will be backed up according to the Gromacs
         scheme.
         """
+        # get a temp path
+        handle, perm_source = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(perm_source)
+        # create an empty file with default permissions based on env
+        open(perm_source, "x").close()
+
         while self.open_files:
             tmp_path, final_path, mode = self.open_files.popleft()
             if 'w' in mode or '+' in mode:  # write
-                self._write_file(tmp_path, final_path)
+                self._write_file(tmp_path, final_path, perm_source)
             elif 'r' in mode:  # read = error
                 raise AssertionError("Files opened with mode 'r' should not be "
                                      "treated special")
@@ -162,7 +169,9 @@ class DeferredFileWriter(metaclass=Singleton):
             else:
                 raise KeyError('Unknown file mode')
 
-    def _write_file(self, tmp_path, final_path):
+        os.remove(perm_source)
+
+    def _write_file(self, tmp_path, final_path, perm_source):
         # There is no way to move a file and make it error if the destination
         # already exists, so use a lock instead.
         with lock:
@@ -172,6 +181,7 @@ class DeferredFileWriter(metaclass=Singleton):
                 shutil.move(str(final_path), str(free_path))
             LOGGER.debug('Writing output to {}.', final_path, type='general')
             shutil.move(tmp_path, str(final_path))
+            shutil.copymode(perm_source, str(final_path))
 
     @staticmethod
     def _append_file(tmp_path, final_path, mode='a'):
