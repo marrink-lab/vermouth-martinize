@@ -119,6 +119,9 @@ jobs:
   deploy:
     needs: [build, lint, docs]
     runs-on: ubuntu-latest
+    env:
+      # Strip local version from version -> 0.15.1.dev51 instead of 0.15.1.dev51+gc45000f63.d20260526
+      SETUPTOOLS_SCM_OVERRIDES_FOR_VERMOUTH: '{local_scheme = "no-local-version"}'
     environment:
       name: testpypi
       url: https://test.pypi.org/p/vermouth
