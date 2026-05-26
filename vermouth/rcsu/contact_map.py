@@ -376,9 +376,10 @@ def _aggregate_atoms_to_residues(arrin, nresidues, atom_map, norm=False):
             rows.append(res_i)
             cols.append(int(atom_idx))
     P = sp.csr_matrix((np.ones(len(rows)), (rows, cols)), shape=(nresidues, natoms))
-    out = (P @ arrin @ P.T).toarray()
+    out = (P @ arrin @ P.T).tocsr()
     if norm:
-        out = (out > 0).astype(np.float64)
+        out.eliminate_zeros()
+        out.data[:] = 1.0
     return out
 
 
@@ -493,39 +494,51 @@ def _calculate_csu_contacts(coords, vdw_list, fiba, fibb, natoms, coords_tree, v
         fibonacci sphere
 
     """
-
+    vdw_arr = np.asarray(vdw_list)
     LOGGER.debug("Computing CSU contacts for {} atoms using {} Fibonacci sphere points per atom",
                  natoms, fibb)
     hit_results = np.full((natoms, fibb), -1)
-    dists_counter = np.full((natoms, fibb), np.inf)
 
-    # sparse matrix with a cutoff at the maximum possible distance for a contact
     surface_sdm = coords_tree.sparse_distance_matrix(coords_tree, (2 * vdw_max) + water_radius)
-    # n.b. this loop works because sparse_distance_matrix is sorted by (idx, jdx) pairs
-    for (idx, jdx), distance_between in surface_sdm.items():
-        # don't take atoms which are identical
-        if idx == jdx:
-            continue
+    coo = surface_sdm.tocoo()
 
-        # check that the distance between them is shorter than the vdw sum and the water radius
-        if distance_between >= (vdw_list[idx] + vdw_list[jdx] + water_radius):
-            continue
+    # Vectorised pre-filter: remove self-pairs and pairs beyond the per-atom cutoff
+    vdw_sum = vdw_arr[coo.row] + vdw_arr[coo.col] + water_radius
+    valid = (coo.row != coo.col) & (coo.data < vdw_sum)
+    valid_rows = coo.row[valid]
+    valid_cols = coo.col[valid]
+    valid_dists = coo.data[valid]
 
-        # Generate the fibonacci sphere for this point and make a KDTree from it
-        base_tree = KDTree(_make_fibonacci_sphere(coords[idx], fiba, fibb, vdw_list[idx]+water_radius))
+    if len(valid_rows) == 0:
+        return hit_results
 
-        # find points on the base point sphere which are within the vdw cutoff of the target point's coordinate
-        res = np.array(base_tree.query_ball_point(coords[jdx], vdw_list[jdx] + water_radius))
+    # Sort by (idx, jdx) to group neighbours per base atom, preserving original iteration order
+    sort_order = np.lexsort((valid_cols, valid_rows))
+    sorted_rows = valid_rows[sort_order]
+    sorted_cols = valid_cols[sort_order]
+    sorted_dists = valid_dists[sort_order]
 
-        # if we have any results
-        if len(res) > 0:
-            # find where the distance between the two points is smaller than the current recorded distance
-            # at the points which are within the cutoff
-            to_fill = np.where(distance_between < dists_counter[idx][res])[0]
+    unique_idx, first_occ = np.unique(sorted_rows, return_index=True)
+    ends = np.append(first_occ[1:], len(sorted_rows))
 
-            # record the new distances and indices of the points
-            dists_counter[idx][res[to_fill]] = distance_between
-            hit_results[idx][res[to_fill]] = jdx
+    for idx, start, end in zip(unique_idx, first_occ, ends):
+        neighbors = sorted_cols[start:end]
+        dists = sorted_dists[start:end]
+
+        # Build the Fibonacci sphere KDTree once per base atom
+        sphere_tree = KDTree(_make_fibonacci_sphere(coords[idx], fiba, fibb, vdw_arr[idx] + water_radius))
+        dists_counter = np.full(fibb, np.inf)
+
+        # Query all neighbours in one batched call with per-neighbour radii
+        all_res = sphere_tree.query_ball_point(coords[neighbors], vdw_arr[neighbors] + water_radius)
+
+        for jdx, dist, res in zip(neighbors, dists, all_res):
+            res = np.asarray(res, dtype=np.intp)
+            if len(res) > 0:
+                to_fill = res[dist < dists_counter[res]]
+                if len(to_fill) > 0:
+                    dists_counter[to_fill] = dist
+                    hit_results[idx, to_fill] = jdx
 
     return hit_results
 
@@ -640,27 +653,47 @@ def _filter_rcsu_contacts(overlaps, contacts, stabilisers, destabilisers, res_id
 
     nresidues: int
         number of residues in the molecule
-    overlaps: ndarray
+    overlaps: sparse or dense array
         nresidues x nresidues array of OV contacts in the molecule
-    contacts: ndarray
+    contacts: sparse or dense array
         nresidues x nresidues array of CSU contacts in the molecule
-    stabilisers: ndarray
+    stabilisers: sparse or dense array
         nresidues x nresidues array of CSU stabilising contacts in the molecule
-    destabilisers: ndarray
+    destabilisers: sparse or dense array
         nresidues x nresidues array of CSU destabilising contacts in the molecule
     res_idx: list
         list of serial residue ids for each of the residues
     G: nx.Graph
         residue based graph of the molecule
     '''
+    if not sp.issparse(overlaps):
+        overlaps = sp.csr_matrix(overlaps)
+    if not sp.issparse(contacts):
+        contacts = sp.csr_matrix(contacts)
+    if not sp.issparse(stabilisers):
+        stabilisers = sp.csr_matrix(stabilisers)
+    if not sp.issparse(destabilisers):
+        destabilisers = sp.csr_matrix(destabilisers)
+
     res_idx_inv = {int(v): i for i, v in enumerate(res_idx)}
+
+    # Find active (i, j) pairs: union of nonzero positions in overlaps and contacts
+    ov_coo = overlaps.tocoo()
+    ct_coo = contacts.tocoo()
+    all_i = np.concatenate([ov_coo.row, ct_coo.row])
+    all_j = np.concatenate([ov_coo.col, ct_coo.col])
 
     contacts_list = []
     all_contacts = []
-    active_i, active_j = np.where((overlaps > 0) | (contacts > 0))
-    for i1, i2 in zip(active_i, active_j):
-        if i1 == i2:
-            continue
+
+    if len(all_i) == 0:
+        return contacts_list, all_contacts
+
+    # Unique pairs in row-major order, excluding diagonal
+    pairs = np.unique(np.column_stack([all_i, all_j]), axis=0)
+    pairs = pairs[pairs[:, 0] != pairs[:, 1]]
+
+    for i1, i2 in pairs:
         over = overlaps[i1, i2]
         cont = contacts[i1, i2]
         stab = stabilisers[i1, i2]

@@ -111,7 +111,7 @@ def test_aggregate_atoms_to_residues(norm, expected):
     res_map = contact_map._build_residue_atom_index([0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4])
     res_array = contact_map._aggregate_atoms_to_residues(arrin, nres, res_map, norm)
 
-    assert np.allclose(res_array, expected)
+    assert np.allclose(res_array.toarray(), expected)
 
 def test_build_residue_atom_index():
     # test that the atom_map defaultdict is generated correctly
@@ -307,7 +307,7 @@ def test_compute_residue_contacts(test_molecule):
     contact_arrays = contact_map._compute_residue_contacts(vdw_list, atypes, points, res_serial, nresidues)
 
     for i, j in enumerate(contact_arrays):
-        assert np.allclose(j, expected[i])
+        assert np.allclose(j.toarray(), expected[i])
 
 def test_filter_rcsu_contacts(test_molecule):
 
