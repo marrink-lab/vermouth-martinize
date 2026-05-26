@@ -171,8 +171,17 @@ class DeferredFileWriter(metaclass=Singleton):
                 LOGGER.info('Backing up {} to {}.', final_path, free_path, type='general')
                 shutil.move(str(final_path), str(free_path))
             LOGGER.debug('Writing output to {}.', final_path, type='general')
-            shutil.copyfile(tmp_path, str(final_path))
-            os.remove(tmp_path)
+            try:
+                success = True
+                shutil.copyfile(tmp_path, str(final_path))
+            except Exception as error:
+                success = False
+                LOGGER.exception("An error occurred when moving your output from {tmp_path} to {final_path}: {error}", tmp_path=tmp_path, final_path=final_path, error=error)
+            if success:
+                try:
+                    os.remove(tmp_path)
+                except OSError as error:
+                    LOGGER.warning("An error occurred removing temporary file {tmp_path}: {error}", tmp_path=tmp_path, error=error)
 
     @staticmethod
     def _append_file(tmp_path, final_path, mode='a'):
