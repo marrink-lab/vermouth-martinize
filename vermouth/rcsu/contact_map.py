@@ -14,14 +14,17 @@
 
 from ..processors.processor import Processor
 import numpy as np
+import scipy.sparse as sp
 from scipy.spatial.distance import euclidean
 from scipy.spatial import cKDTree as KDTree
 from ..graph_utils import make_residue_graph
-from itertools import product
 from vermouth.file_writer import deferred_open
+from ..log_helpers import StyleAdapter, get_logger
 from collections import defaultdict
 from vermouth import __version__ as VERSION
 from pathlib import Path
+
+LOGGER = StyleAdapter(get_logger(__name__))
 
 # BOND TYPE
 # Types of contacts:
@@ -315,7 +318,7 @@ def _get_vdw_radius(resname, atomname):
     return atom_vdw['vrad']
 
 
-def _get_atype(resname, atomname):
+def _lookup_atom_type(resname, atomname):
     """
     get the vdw radius of an atom indexed internally within a serially numbered residue
     """
@@ -332,7 +335,7 @@ def _get_atype(resname, atomname):
     return atom_vdw['atype']
 
 
-def _make_surface(position, fiba, fibb, vrad):
+def _make_fibonacci_sphere(position, fiba, fibb, vrad):
     """
     Generate points on a sphere using Fibonacci points
 
@@ -360,25 +363,27 @@ def _make_surface(position, fiba, fibb, vrad):
     return surface
 
 
-def atom2res(arrin, nresidues, atom_map, norm=False):
+def _aggregate_atoms_to_residues(arrin, nresidues, atom_map, norm=False):
     '''
     take an array with atom level data and sum the entries over within the residue
     '''
-
-    out = np.zeros((nresidues, nresidues))
-    for res_idx, res_jdx in product(atom_map.keys(), atom_map.keys()):
-        atom_idxs = atom_map[res_idx]
-        atom_jdxs = atom_map[res_jdx][:, np.newaxis]
-        value = arrin[atom_idxs, atom_jdxs].sum()
-        out[res_idx, res_jdx] = value
-
+    if not sp.issparse(arrin):
+        arrin = sp.csr_matrix(arrin)
+    natoms = arrin.shape[0]
+    rows, cols = [], []
+    for res_i, atom_idxs in atom_map.items():
+        for atom_idx in atom_idxs:
+            rows.append(res_i)
+            cols.append(int(atom_idx))
+    P = sp.csr_matrix((np.ones(len(rows)), (rows, cols)), shape=(nresidues, natoms))
+    out = (P @ arrin @ P.T).tocsr()
     if norm:
-        out[out > 0] = 1
-
+        out.eliminate_zeros()
+        out.data[:] = 1.0
     return out
 
 
-def _contact_info(molecule):
+def _extract_contact_inputs(molecule):
     """
     get the atom attributes that we need to calculate the contacts
     """
@@ -411,7 +416,7 @@ def _contact_info(molecule):
 
                 vdw_list.append(_get_vdw_radius(subgraph.nodes[atom]['resname'],
                                                 subgraph.nodes[atom]['atomname']))
-                atypes.append(_get_atype(subgraph.nodes[atom]['resname'],
+                atypes.append(_lookup_atom_type(subgraph.nodes[atom]['resname'],
                                          subgraph.nodes[atom]['atomname']))
 
                 if subgraph.nodes[atom]['atomname'] == 'CA':
@@ -431,9 +436,10 @@ def _contact_info(molecule):
     # 2) find the number of residues that we have
     nresidues = len(G)
 
+    LOGGER.debug("Extracted {} atoms from {} residues", len(positions_all), nresidues)
     return vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, G
 
-def _calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24):
+def _calculate_ov_contacts(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24):
     """
     Find enlarged (OV) overlap contacts
 
@@ -448,15 +454,22 @@ def _calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24):
     alpha: float
         Enlargement factor for attraction effects
     """
-    over = np.zeros((natoms, natoms))
+    vdw_list = np.asarray(vdw_list)
     over_sdm = coords_tree.sparse_distance_matrix(coords_tree, 2 * vdw_max * alpha)
-    for (idx, jdx), distance_between in over_sdm.items():
-        if idx != jdx:
-            if distance_between < (vdw_list[idx] + vdw_list[jdx]) * alpha:
-                over[idx, jdx] = 1
-    return over
+    over_coo = over_sdm.tocoo()
+    vdw_sum = alpha * (vdw_list[over_coo.row] + vdw_list[over_coo.col])
+    keep = (over_coo.row < over_coo.col) & (over_coo.data < vdw_sum)
+    rows = over_coo.row[keep]
+    cols = over_coo.col[keep]
+    LOGGER.debug("Found {} OV overlapping atom pairs", len(rows))
+    all_rows = np.concatenate([rows, cols])
+    all_cols = np.concatenate([cols, rows])
+    return sp.csr_matrix(
+        (np.ones(len(all_rows), dtype=np.float32), (all_rows, all_cols)),
+        shape=(natoms, natoms)
+    )
 
-def _calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius=2.80):
+def _calculate_csu_contacts(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius=2.80):
     """
     Calculate contacts of structural units (CSU)
 
@@ -481,43 +494,56 @@ def _calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, w
         fibonacci sphere
 
     """
-
-    #setup arrays to keep track
+    vdw_arr = np.asarray(vdw_list)
+    LOGGER.debug("Computing CSU contacts for {} atoms using {} Fibonacci sphere points per atom",
+                 natoms, fibb)
     hit_results = np.full((natoms, fibb), -1)
-    dists_counter = np.full((natoms, fibb), np.inf)
 
-    # sparse matrix with a cutoff at the maximum possible distance for a contact
     surface_sdm = coords_tree.sparse_distance_matrix(coords_tree, (2 * vdw_max) + water_radius)
-    # n.b. this loop works because sparse_distance_matrix is sorted by (idx, jdx) pairs
-    for (idx, jdx), distance_between in surface_sdm.items():
-        # don't take atoms which are identical
-        if idx == jdx:
-            continue
+    coo = surface_sdm.tocoo()
 
-        # check that the distance between them is shorter than the vdw sum and the water radius
-        if distance_between >= (vdw_list[idx] + vdw_list[jdx] + water_radius):
-            continue
+    # Vectorised pre-filter: remove self-pairs and pairs beyond the per-atom cutoff
+    vdw_sum = vdw_arr[coo.row] + vdw_arr[coo.col] + water_radius
+    valid = (coo.row != coo.col) & (coo.data < vdw_sum)
+    valid_rows = coo.row[valid]
+    valid_cols = coo.col[valid]
+    valid_dists = coo.data[valid]
 
-        # Generate the fibonacci sphere for this point and make a KDTree from it
-        base_tree = KDTree(_make_surface(coords[idx], fiba, fibb, vdw_list[idx]+water_radius))
+    if len(valid_rows) == 0:
+        return hit_results
 
-        # find points on the base point sphere which are within the vdw cutoff of the target point's coordinate
-        res = np.array(base_tree.query_ball_point(coords[jdx], vdw_list[jdx] + water_radius))
+    # Sort by (idx, jdx) to group neighbours per base atom, preserving original iteration order
+    sort_order = np.lexsort((valid_cols, valid_rows))
+    sorted_rows = valid_rows[sort_order]
+    sorted_cols = valid_cols[sort_order]
+    sorted_dists = valid_dists[sort_order]
 
-        # if we have any results
-        if len(res) > 0:
-            # find where the distance between the two points is smaller than the current recorded distance
-            # at the points which are within the cutoff
-            to_fill = np.where(distance_between < dists_counter[idx][res])[0]
+    unique_idx, first_occ = np.unique(sorted_rows, return_index=True)
+    ends = np.append(first_occ[1:], len(sorted_rows))
 
-            # record the new distances and indices of the points
-            dists_counter[idx][res[to_fill]] = distance_between
-            hit_results[idx][res[to_fill]] = jdx
+    for idx, start, end in zip(unique_idx, first_occ, ends):
+        neighbors = sorted_cols[start:end]
+        dists = sorted_dists[start:end]
+
+        # Build the Fibonacci sphere KDTree once per base atom
+        sphere_tree = KDTree(_make_fibonacci_sphere(coords[idx], fiba, fibb, vdw_arr[idx] + water_radius))
+        dists_counter = np.full(fibb, np.inf)
+
+        # Query all neighbours in one batched call with per-neighbour radii
+        all_res = sphere_tree.query_ball_point(coords[neighbors], vdw_arr[neighbors] + water_radius)
+
+        for jdx, dist, res in zip(neighbors, dists, all_res):
+            res = np.asarray(res, dtype=np.intp)
+            if len(res) > 0:
+                to_fill = res[dist < dists_counter[res]]
+                if len(to_fill) > 0:
+                    dists_counter[to_fill] = dist
+                    hit_results[idx, to_fill] = jdx
 
     return hit_results
 
 
-def _contact_types(hit_results, natoms, atypes):
+def _classify_contact_types(hit_results, natoms, atypes):
     """
     From CSU contacts, establish contact types from atomtypes
 
@@ -530,26 +556,40 @@ def _contact_types(hit_results, natoms, atypes):
         list of the atomtypes of each atom in the molecule
     """
 
-    contactcounter_1 = np.zeros((natoms, natoms))
-    stabilisercounter_1 = np.zeros((natoms, natoms))
-    destabilisercounter_1 = np.zeros((natoms, natoms))
+    contact_data = {}
+    stab_data = {}
+    destab_data = {}
 
-    for i, j in enumerate(hit_results):
-        for k in j:
-            if k >= 0:
-                at1 = atypes[i]
-                at2 = atypes[k]
-                if (at1 > 0) and (at2 > 0):
-                    contactcounter_1[i, k] += 1
-                    btype = BOND_TYPE[at1, at2]
-                    if btype <= 4:
-                        stabilisercounter_1[i, k] += 1
-                    if btype == 5:
-                        destabilisercounter_1[i, k] += 1
+    for i, row in enumerate(hit_results):
+        at1 = atypes[i]
+        if at1 == 0:
+            continue
+        for k in row:
+            if (k < 0) or ((at2 := int(atypes[k])) <= 0):
+                continue
+            key = (i, int(k))
+            contact_data[key] = contact_data.get(key, 0) + 1
+            btype = BOND_TYPE[at1, at2]
+            if btype <= 4:
+                stab_data[key] = stab_data.get(key, 0) + 1
+            elif btype == 5:
+                destab_data[key] = destab_data.get(key, 0) + 1
 
-    return contactcounter_1, stabilisercounter_1, destabilisercounter_1
+    LOGGER.debug("Classified {} atom contact pairs ({} stabilising, {} destabilising)",
+                 len(contact_data), len(stab_data), len(destab_data))
 
-def make_atom_map(res_serial):
+    def _to_csr(data):
+        if not data:
+            return sp.csr_matrix((natoms, natoms), dtype=np.int32)
+        rows, cols = zip(*data.keys())
+        return sp.csr_matrix(
+            (list(data.values()), (rows, cols)),
+            shape=(natoms, natoms), dtype=np.int32
+        )
+
+    return _to_csr(contact_data), _to_csr(stab_data), _to_csr(destab_data)
+
+def _build_residue_atom_index(res_serial):
 
     atom_map = defaultdict(list)
     for atom_idx, res_idx in enumerate(res_serial):
@@ -559,7 +599,7 @@ def make_atom_map(res_serial):
 
     return atom_map
 
-def _calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
+def _compute_residue_contacts(vdw_list, atypes, coords, res_serial, nresidues):
     """
     run the contact calculation functions
 
@@ -585,68 +625,91 @@ def _calculate_contacts(vdw_list, atypes, coords, res_serial, nresidues):
 
     vdw_max = max(item['vrad'] for atoms in PROTEIN_MAP.values() for item in atoms.values())
 
-    # make the KDTree of the input coordinates
     coords_tree = KDTree(coords)
 
-    # calculate the OV contacts of the molecule
-    over = _calculate_overlap(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24)
+    LOGGER.debug("Computing OV overlap contacts for {} atoms", natoms)
+    over = _calculate_ov_contacts(coords_tree, vdw_list, natoms, vdw_max, alpha=1.24)
 
-    # Calculate the CSU contacts of the molecule
-    hit_results = _calculate_csu(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius=2.80)
+    LOGGER.debug("Computing CSU surface contacts")
+    hit_results = _calculate_csu_contacts(coords, vdw_list, fiba, fibb, natoms, coords_tree, vdw_max, water_radius=2.80)
 
-    # find the types of contacts we have
-    contactcounter_1, stabilisercounter_1, destabilisercounter_1 = _contact_types(hit_results, natoms, atypes)
+    LOGGER.debug("Classifying contact types by bond chemistry")
+    contactcounter_1, stabilisercounter_1, destabilisercounter_1 = _classify_contact_types(hit_results, natoms, atypes)
 
-    atom_map = make_atom_map(res_serial)
+    atom_map = _build_residue_atom_index(res_serial)
 
-    # transform the resolution between atoms and residues
-    overlapcounter_2 = atom2res(over, nresidues, atom_map, norm=True)
-    contactcounter_2 = atom2res(contactcounter_1, nresidues, atom_map)
-    stabilisercounter_2 = atom2res(stabilisercounter_1, nresidues, atom_map)
-    destabilisercounter_2 = atom2res(destabilisercounter_1, nresidues, atom_map)
+    LOGGER.debug("Projecting atom contacts to residue level ({} atoms -> {} residues)", natoms, nresidues)
+    overlapcounter_2 = _aggregate_atoms_to_residues(over, nresidues, atom_map, norm=True)
+    contactcounter_2 = _aggregate_atoms_to_residues(contactcounter_1, nresidues, atom_map)
+    stabilisercounter_2 = _aggregate_atoms_to_residues(stabilisercounter_1, nresidues, atom_map)
+    destabilisercounter_2 = _aggregate_atoms_to_residues(destabilisercounter_1, nresidues, atom_map)
 
     return overlapcounter_2, contactcounter_2, stabilisercounter_2, destabilisercounter_2
 
 
-def _get_contacts(nresidues, overlaps, contacts, stabilisers, destabilisers, res_idx, G):
+def _filter_rcsu_contacts(overlaps, contacts, stabilisers, destabilisers, res_idx, G):
     '''
     Generate contacts list from the contact arrays calculated
 
     nresidues: int
         number of residues in the molecule
-    overlaps: ndarray
+    overlaps: sparse or dense array
         nresidues x nresidues array of OV contacts in the molecule
-    contacts: ndarray
+    contacts: sparse or dense array
         nresidues x nresidues array of CSU contacts in the molecule
-    stabilisers: ndarray
+    stabilisers: sparse or dense array
         nresidues x nresidues array of CSU stabilising contacts in the molecule
-    destabilisers: ndarray
+    destabilisers: sparse or dense array
         nresidues x nresidues array of CSU destabilising contacts in the molecule
     res_idx: list
         list of serial residue ids for each of the residues
     G: nx.Graph
         residue based graph of the molecule
     '''
+    if not sp.issparse(overlaps):
+        overlaps = sp.csr_matrix(overlaps)
+    if not sp.issparse(contacts):
+        contacts = sp.csr_matrix(contacts)
+    if not sp.issparse(stabilisers):
+        stabilisers = sp.csr_matrix(stabilisers)
+    if not sp.issparse(destabilisers):
+        destabilisers = sp.csr_matrix(destabilisers)
+
+    res_idx_inv = {int(v): i for i, v in enumerate(res_idx)}
+
+    # Find active (i, j) pairs: union of nonzero positions in overlaps and contacts
+    ov_coo = overlaps.tocoo()
+    ct_coo = contacts.tocoo()
+    all_i = np.concatenate([ov_coo.row, ct_coo.row])
+    all_j = np.concatenate([ov_coo.col, ct_coo.col])
+
     contacts_list = []
     all_contacts = []
-    for i1, i2 in product(np.arange(nresidues), np.arange(nresidues)):
-        if i1 == i2:
-            continue
+
+    if len(all_i) == 0:
+        return contacts_list, all_contacts
+
+    # Unique pairs in row-major order, excluding diagonal
+    pairs = np.unique(np.column_stack([all_i, all_j]), axis=0)
+    pairs = pairs[pairs[:, 0] != pairs[:, 1]]
+
+    for i1, i2 in pairs:
         over = overlaps[i1, i2]
         cont = contacts[i1, i2]
         stab = stabilisers[i1, i2]
         dest = destabilisers[i1, i2]
         rcsu = (stab - dest) > 0
 
-        if (over > 0 or cont > 0):
-            a = np.where(res_idx == i1)[0][0]
-            b = np.where(res_idx == i2)[0][0]
-            all_contacts.append([i1+1, i2+1, a, b, over, cont, stab, rcsu])
-            if over == 1 or (over == 0 and rcsu):
-                # this is a OV or rCSU contact we take it
-                contacts_list.append((int(G.nodes[a]['stash']['resid']), G.nodes[a]['chain'],
-                                      int(G.nodes[b]['stash']['resid']), G.nodes[b]['chain']))
+        a = res_idx_inv[i1]
+        b = res_idx_inv[i2]
+        all_contacts.append([i1+1, i2+1, a, b, over, cont, stab, rcsu])
+        if over == 1 or (over == 0 and rcsu):
+            # this is a OV or rCSU contact we take it
+            contacts_list.append((int(G.nodes[a]['stash']['resid']), G.nodes[a]['chain'],
+                                  int(G.nodes[b]['stash']['resid']), G.nodes[b]['chain']))
 
+    LOGGER.debug("Found {} Go contacts ({} total residue-residue interactions examined)",
+                 len(contacts_list), len(all_contacts))
     return contacts_list, all_contacts
 
 
@@ -747,7 +810,7 @@ def read_go_map(system, file_path):
     system.go_params["go_map"].append(contacts)
 
 
-def do_contacts(molecule, write_file):
+def calculate_go_contacts(molecule, write_file):
     '''
     master function to calculate Go contacts
 
@@ -756,21 +819,22 @@ def do_contacts(molecule, write_file):
     write_file: bool
         write the file of the contacts out
     '''
-    vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, mol_graph = _contact_info(
+    vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, mol_graph = _extract_contact_inputs(
         molecule)
 
-    overlaps, contacts, stabilisers, destabilisers = _calculate_contacts(vdw_list,
+    LOGGER.info("Calculating Go contacts for {} residues ({} atoms)", nresidues, len(coords))
+
+    overlaps, contacts, stabilisers, destabilisers = _compute_residue_contacts(vdw_list,
                                                                         atypes,
                                                                         coords,
                                                                         res_serial,
                                                                         nresidues)
 
-    contacts, all_contacts = _get_contacts(nresidues,
-                            overlaps, contacts,
-                            stabilisers,
-                            destabilisers,
-                            res_idx,
-                            mol_graph)
+    contacts, all_contacts = _filter_rcsu_contacts(overlaps, contacts,
+                                            stabilisers, destabilisers,
+                                            res_idx, mol_graph)
+
+    LOGGER.info("Contact map complete: {} Go contacts identified", len(contacts))
 
     if isinstance(write_file, (str, Path)):
         _write_contacts(write_file, all_contacts, ca_pos, mol_graph)
@@ -794,7 +858,7 @@ class GenerateContactMap(Processor):
         system: vermouth.system.System
             The system to process. Is modified in-place.
         """
-        return do_contacts(molecule, self.write_file)
+        return calculate_go_contacts(molecule, self.write_file)
 
     def run_system(self, system):
         for molecule in system.molecules:
