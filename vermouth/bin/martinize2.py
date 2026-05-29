@@ -1047,7 +1047,7 @@ def entry():
 
     if any(args.id_regions):
         annotated = any(
-            mol.nodes[n].get("idr")
+            mol.nodes[n].get("cgidr")
             for mol in system.molecules
             for n in mol.nodes
         )
