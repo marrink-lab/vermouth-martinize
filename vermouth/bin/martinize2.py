@@ -1027,21 +1027,37 @@ def entry():
     )
 
     # Check if any residues were annotated as IDR, if IDR regions were specified.
+    # if any(args.id_regions):
+    #     for region in args.id_regions:
+    #         # check if any molecule node was actually annotated
+    #         annotated = any(
+    #             mol.nodes[n].get("idr")
+    #             for mol in system.molecules
+    #             for n in mol.nodes
+    #         )
+    #         if not annotated:
+    #             LOGGER.warning(
+    #                 "No residues were annotated as IDR. "
+    #                 "Check that the resids in -id-regions match your input structure.",
+    #                 type="missing-feature",
+    #             )
+    #             break
+    
+
+
     if any(args.id_regions):
-        for region in args.id_regions:
-            # check if any molecule node was actually annotated
-            annotated = any(
-                mol.nodes[n].get("idr")
-                for mol in system.molecules
-                for n in mol.nodes
+        annotated = any(
+            mol.nodes[n].get("idr")
+            for mol in system.molecules
+            for n in mol.nodes
+        )
+        if not annotated:
+            LOGGER.warning(
+                "No residues were annotated as IDR. "
+                "Check that the resids in -id-regions match your input structure.",
+                type="missing-flag",
             )
-            if not annotated:
-                LOGGER.warning(
-                    "No residues were annotated as IDR. "
-                    "Check that the resids in -id-regions match your input structure.",
-                    type="missing-feature",
-                )
-                break
+        
 
     if 'bondedtypes' in known_force_fields[args.to_ff].variables:
         LOGGER.info("Generating implicit interactions for RTP force field", type='step')
