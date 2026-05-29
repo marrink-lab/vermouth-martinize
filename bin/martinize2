@@ -1026,20 +1026,50 @@ def entry():
         disordered_regions=args.id_regions
     )
 
-    print("DEBUG id_regions:", args.id_regions)
+    # Check that all requested residues to be treated as IDR are actually present in the structure, and warn if not.
     if any(args.id_regions):
-        annotated = any(
-            mol.nodes[n].get("cgidr")
+
+        # Rebuild requested_resids from args.id_regions
+        requested_resids = set()
+        for region in args.id_regions:
+            if ":" in region:
+                a, b = region.split(":")
+                start, end = int(a), int(b)
+            else:
+                start = end = int(region)
+            lo, hi = sorted((start, end))
+            requested_resids.update(range(lo, hi + 1))
+
+        # Collect annotated residues using TRUE PDB numbering
+        annotated_resids = {
+            mol.nodes[n]['stash']['resid']
             for mol in system.molecules
             for n in mol.nodes
-        )
-        if not annotated:
+            if mol.nodes[n].get("cgidr")
+        }
+
+        # Collect ALL PDB residues present in the structure
+        present_resids = {
+            mol.nodes[n]['stash']['resid']
+            for mol in system.molecules
+            for n in mol.nodes
+        }
+        min_pdb = min(present_resids)
+        max_pdb = max(present_resids)
+
+        # Find missing requested residues
+        missing = sorted(requested_resids - annotated_resids)
+
+        if missing:
+            # show only first 10 missing residues
+            missing_preview = missing[:10]
+
             LOGGER.warning(
-                "No residues were annotated as IDR. "
-                "Check that the resids in -id-regions match your input structure.",
+                f"Requested residues in -id-regions do not exist in the input structure. "
+                f"Some missing residues: {missing_preview} ... "
+                f"Please select residues within the PDB range {min_pdb}–{max_pdb}.",
                 type="missing-flag",
             )
-        
 
     if 'bondedtypes' in known_force_fields[args.to_ff].variables:
         LOGGER.info("Generating implicit interactions for RTP force field", type='step')
