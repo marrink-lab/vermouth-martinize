@@ -306,7 +306,7 @@ martinize2:
             cli: water_bias_eps
           water_bias_idrs:
             cli: water_bias_idrs
-    - vermouth.UnstashAttributes:
+    - vermouth.processors.stash_attributes.UnstashAttributes:
         condition:
           equal:
             cli: resid_handling
