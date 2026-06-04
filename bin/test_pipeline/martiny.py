@@ -39,7 +39,6 @@ def _cli_options_used_in_condition(condition):
             result = result | _cli_options_used_in_condition(cond)
         case 'equal':
             result |= {cond['cli']}
-
         case 'has_variable':
             result |= {cond['variable']}
 
@@ -192,19 +191,27 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
         added_flags.add(flag)
     # recursion for steps in the pipeline
     for group_cli in pipeline_conf.get('cli_groups', []):
+        flags_to_add = [
+            (flag, opts)
+            for flag, opts in group_cli.get('flags', {}).items()
+            if flag not in added_flags
+        ]
+
+        # If all flags were already added earlier, don't create an empty group.
+        if not flags_to_add:
+            continue
+
         group = parser.add_mutually_exclusive_group()
-        for flag, opts in group_cli.get('flags', {}).items():
-            if flag in added_flags:
-                continue
-            # make copy of dict 
+
+        for flag, opts in flags_to_add:
             opts = dict(opts)
-            # translate type from string to actual type if needed.
+
             if 'type' in opts and isinstance(opts['type'], str):
                 type_name = opts['type']
                 if type_name not in TYPE_MAP:
                     raise ValueError(f"Unknown CLI type: {type_name}")
                 opts['type'] = TYPE_MAP[type_name]
-            # actually add the argument to the parser
+
             group.add_argument(f'{prefix}{flag}', **opts)
             added_flags.add(flag)
     # recursion for steps in the pipeline
@@ -456,7 +463,7 @@ variable_options(to_conf, args, args["to_ff"], ff=target_ff, mappings=mappings)
 set_values_from_cli(pipeline_conf, args)
 
 # make the pipeline object from the pipeline config
-pipeline = Pipeline.from_json_conf(pipeline_conf, name)
+pipeline = Pipeline.from_dict(pipeline_conf, name)
 
 #print the pipeline 
 print("Pipeline object:")

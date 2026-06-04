@@ -61,10 +61,6 @@ martinize2:
               args:
                 ignore_missing_graphs:
                   value: true
-          - my_processors.PrintFF:
-              args:
-                force_field:
-                  variable: ff
           - vermouth.AnnotateIDRs:
               cli_flags:
                 id_regions:
@@ -306,7 +302,7 @@ martinize2:
             cli: water_bias_eps
           water_bias_idrs:
             cli: water_bias_idrs
-    - vermouth.processors.stash_attributes.UnstashAttributes:
+    - vermouth.UnstashAttributes:
         condition:
           equal:
             cli: resid_handling
@@ -334,19 +330,30 @@ martinize2:
             cli: go
             value: null
         args: {}
-    - my_processors.OutputLoggerWrapper:
+    - vermouth.OutputLogger:
         args: {}
-    - my_processors.OutputWriterWrapper:
+    - vermouth.gmx.topology.TopologyWriter:
         cli_flags:
-          outpath:
-            required: false
-            type: path
-            help: Output coarse grained structure (PDB)
           top_path:
             type: path
+            required: false
             help: Output topology (TOP)
         args:
-          outpath:
-            cli: outpath
           top_path:
             cli: top_path
+
+    - vermouth.pdb.WritePDB:
+        cli_flags:
+          outpath:
+            type: path
+            required: false
+            help: Output coarse grained structure (PDB)
+        args:
+          path:
+            cli: outpath
+          omit_charges:
+            value: true
+          defer_writing:
+            value: true
+          nan_missing_pos:
+            value: false

@@ -39,20 +39,14 @@ def read_system(system, path, ignore_resnames=(), ignh=None, modelidx=None):
     """
     file_extension = path.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ["PDB", "ENT"]:
-        vermouth.PDBInput(
-            str(path), exclude=ignore_resnames, ignh=ignh, modelidx=modelidx
-        ).run_system(system)
+        vermouth.PDBInput(str(path), exclude=ignore_resnames, ignh=ignh, modelidx=modelidx).run_system(system)
     elif file_extension in ["GRO"]:
-        vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(
-            system
-        )
+        vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(system)
     elif file_extension in ["CIF"]:
-        vermouth.CIFInput(str(path), exclude=ignore_resnames, ignh=ignh,
-                          modelidx=modelidx).run_system(system)
+        vermouth.CIFInput(str(path), exclude=ignore_resnames, ignh=ignh,modelidx=modelidx).run_system(system)
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
-
 
 
 # define the processor class. readsystem itself does not have a forcefield. 
@@ -66,8 +60,8 @@ class ReadSystem(Processor):
         self.modelidx = modelidx
     # define run system 
     def run_system(self, system):
-        print("Running ReadSystem processor")
-        print("Input file:", self.path)
+        LOGGER.info("Running ReadSystem processor", type="step")
+        LOGGER.info("Input file: %s", self.path)
         file_extension = self.path.suffix.upper()[1:]  # We do not keep the dot
         if file_extension in ["GRO"] and self.modelidx is not None:
             raise ValueError("GRO files don't know the concept of models.")
@@ -75,11 +69,7 @@ class ReadSystem(Processor):
         # Set a sane default value. Can't do this using argparse machinery,
         # since we need to be able to check whether the flag was given.
             self.modelidx = 1
-        # merge the lists of the ignored resnames into a set. 
-        ignore_res = set()
-        for grp in self.ignore_resnames:
-            ignore_res.update(*grp)
-        print(ignore_res)
+        
 
         system = read_system(
             system=system,
@@ -88,9 +78,7 @@ class ReadSystem(Processor):
             ignh=self.ignh,
             modelidx=self.modelidx,
         )
-        # print and return the system
-        print("Returned system:", system)
-        print(f'{system.force_field=}')
+        
         return system
     
 
@@ -105,47 +93,9 @@ class MakeBondsWrapper(WrapperMixin, vermouth.MakeBonds):
             "fudge": fudge,
         }
 
-# write the current system to a pdb file. This is for testing and bug fixing, not a pipeline step. 
-class WritePDB(Processor):
-    # constructor with parameters
-    def __init__(self, path=None, omit_charges = True, defer_writing = False, nan_missing_pos = True):
-        # path to the output file 
-        self.path = path
-        # do you count charges 
-        self.omit_charges = omit_charges
-        # do you want to write it now or wait
-        self.defer_writing = defer_writing
-        # give nan to missing atom positions 
-        self.nan_missing_pos = nan_missing_pos
-    # run the system 
-    def run_system(self, system):
-        # if there is no path, do nothing. 
-        if self.path is not None:
-            # use the pdb writer of the vermouth library 
-            vermouth.pdb.write_pdb(
-                # the system to write
-                system,
-                # the path to write to
-                str(self.path),
-                # do you count charges, true means you dont 
-                omit_charges=self.omit_charges,
-                # do you want to write it now or wait
-                defer_writing=self.defer_writing,
-                # give nan to missing atom positions
-                nan_missing_pos=self.nan_missing_pos,
-            )
-        # return a system, otherwise the pipeline will break.
-        return system 
-class PrintFF(Processor):
-    def __init__(self, force_field):
-        self.force_field = force_field
-
-    def run_system(self, system):
-        print("FORCE FIELD:", self.force_field.name)
-        return system
 class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
     @staticmethod
-    def wrap(modify = None, cter = None, nter = None, mutate = None):
+    def wrap(modify =None, cter =None, nter =None, mutate =None):
         modify = modify or [] # use an empty list if modify is None
         cter = cter or []
         nter = nter or []
@@ -184,19 +134,7 @@ class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
             modifications.append(["nter", "+N-ter"])
 
         return(modifications, mutations), {}
-
-
-
-class Header(Processor):
-    def run_system(self, system):
-        # add a header to system with all command line arguments and the used version 
-        system.meta["header"].extend((
-            "This file was generated using the following command:",
-            " ".join(sys.argv),
-            VERSION,
-        ))
-        return system
-    
+ 
 # secundairy structure options. you can give only 1 out of 3. 
 class DSSPWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateDSSP):
     @staticmethod
@@ -210,22 +148,10 @@ class DSSPWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateDSSP):
 
 class SSWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateResidues):
     @staticmethod
-    def wrap(ss=None):
-        if ss is None:
-            ss = ""
+    def wrap(attr, seq=""):
         return (), {
-            "attribute": "aasecstruct",
-            "sequence": ss.upper(),
-            "molecule_selector": selectors.is_protein,
-        }
-
-
-class CollagenWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateResidues):
-    @staticmethod
-    def wrap():
-        return (), {
-            "attribute": "cgsecstruct",
-            "sequence": "F",
+            "attribute": attr,
+            "sequence": seq.upper(),
             "molecule_selector": selectors.is_protein,
         }
     
@@ -233,9 +159,9 @@ class GoReader(Processor):
     def __init__(self, file_path):
         self.file_path = file_path
     def run_system(self, system):
-            LOGGER.info("Reading Go model contact map.", type="step")
-            read_go_map(system=system, file_path=self.file_path)
-            return system
+        LOGGER.info("Reading Go model contact map.", type="step")
+        read_go_map(system=system, file_path=self.file_path)
+        return system
     
 class ApplyPosresWrapper(WrapperMixin, vermouth.ApplyPosres):
     @staticmethod
@@ -334,13 +260,10 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
     ):
         if rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
-
         elif rb_unit == "all":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
-
         elif rb_unit == "chain":
             domain_criterion = vermouth.processors.apply_rubber_band.same_chain
-
         else:
             regions = [
                 tuple(int(i) for i in apair.split(":"))
@@ -386,21 +309,9 @@ class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias
     def wrap(water_bias, water_bias_eps=None, water_bias_idrs=None):
         return (
             water_bias,
-            dict(water_bias_eps or []),
+            dict(water_bias_eps) or [],
             water_bias_idrs or [],
         ), {}
-    
-
-class OutputLoggerWrapper(Processor):
-    def run_system(self, system):
-        for molecule in system.molecules:
-            LOGGER.debug("Writing molecule {}.", molecule, type="step")
-            for loglevel, entries in molecule.log_entries.items():
-                for entry, fmt_args in entries.items():
-                    for fmt_arg in fmt_args:
-                        fmt_arg = {str(k): molecule.nodes[v] for k, v in fmt_arg.items()}
-                        LOGGER.log(loglevel, entry, **fmt_arg, type="model")
-        return system
 
 class OutputWriterWrapper(Processor):
     def __init__(self, top_path, outpath):
@@ -421,39 +332,23 @@ class OutputWriterWrapper(Processor):
         return system
     
     
-class ListBlocksWrapper(Processor):
+class ListBlocks(Processor):
     def __init__(self, from_ff, to_ff):
         self.from_ff = from_ff
         self.to_ff = to_ff
-
     def run_system(self, system):
-        known_force_fields = vermouth.forcefield.find_force_fields(
-            Path(DATA_PATH) / "force_fields"
-        )
+        print(f"The following Blocks are known to force field {self.from_ff.name}:")
+        print(", ".join(sorted(self.from_ff.blocks)))
 
-        if self.from_ff not in known_force_fields:
-            raise ValueError(f'Unknown force field "{self.from_ff}".')
-        if self.to_ff not in known_force_fields:
-            raise ValueError(f'Unknown force field "{self.to_ff}".')
-
-        print("The following Blocks are known to force field {}:".format(self.from_ff))
-        print(", ".join(sorted(known_force_fields[self.from_ff].blocks)))
-        print(
-            "The following Modifications are known to force field {}:".format(
-                self.from_ff
-            )
-        )
-        print(", ".join(sorted(known_force_fields[self.from_ff].modifications)))
+        print(f"The following Modifications are known to force field {self.from_ff.name}:")
+        print(", ".join(sorted(self.from_ff.modifications)))
         print()
 
-        print("The following Blocks are known to force field {}:".format(self.to_ff))
-        print(", ".join(sorted(known_force_fields[self.to_ff].blocks)))
-        print(
-            "The following Modifications are known to force field {}:".format(
-                self.to_ff
-            )
-        )
-        print(", ".join(sorted(known_force_fields[self.to_ff].modifications)))
+        print(f"The following Blocks are known to force field {self.to_ff.name}:")
+        print(", ".join(sorted(self.to_ff.blocks)))
+
+        print(f"The following Modifications are known to force field {self.to_ff.name}:")
+        print(", ".join(sorted(self.to_ff.modifications)))
 
         raise SystemExit(0)
     

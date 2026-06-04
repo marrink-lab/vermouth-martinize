@@ -11,7 +11,7 @@ class Pipeline(nx.DiGraph, Processor):
         self.name = name
 
     @classmethod
-    def from_json_conf(cls, conf, name):
+    def from_dict(cls, conf, name):
         def _recurse(parent, name, conf):
             if 'steps' in conf:
                 obj = cls(name=name)

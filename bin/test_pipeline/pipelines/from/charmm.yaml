@@ -31,8 +31,18 @@ martinize2:
         const: true
         type: path
         help: Use Martini Go model.
-
+  
   steps: !!omap
+    - my_processors.ListBlocks:
+        condition:
+          equal:
+            cli: list_blocks
+            value: true
+        args:
+          from_ff:
+            variable: ff
+          to_ff:
+            variable: ff
     - my_processors.ReadSystem:
         cli_flags:
           inpath:
@@ -88,11 +98,7 @@ martinize2:
 
           - vermouth.MergeNucleicStrands:
               args: {}
-          - my_processors.PrintFF:
-              args:
-                force_field:
-                  variable: ff
-          - my_processors.WritePDB:
+          - vermouth.pdb.WritePDB:
               cli_flags:
                 write_graph:
                   type: path
@@ -143,7 +149,7 @@ martinize2:
                 include_graph:
                   value: false
 
-          - my_processors.WritePDB:
+          - vermouth.pdb.WritePDB:
               cli_flags:
                 write_repair:
                   type: path
@@ -166,7 +172,7 @@ martinize2:
           - vermouth.CanonicalizeModifications:
               args: {}
 
-          - my_processors.WritePDB:
+          - vermouth.pdb.WritePDB:
               cli_flags:
                 write_canon:
                   type: path
@@ -202,7 +208,7 @@ martinize2:
           stash_name:
             value: "stash"
 
-    - my_processors.Header:
+    - vermouth.gmx.topology.Header:
         args: {}
 
     - choose_secstruct:
@@ -259,7 +265,9 @@ martinize2:
                       cli: dssp
                       value: null
               args:
-                ss:
+                attr:
+                  value: aasecstruct
+                seq:
                   cli: ss
 
           - vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures:
@@ -270,7 +278,7 @@ martinize2:
                     value: null
               args: {}
 
-          - my_processors.CollagenWrapper:
+          - my_processors.SSWrapper:
               condition:
                 all:
                   - equal:
@@ -282,8 +290,12 @@ martinize2:
                   - equal:
                       cli: collagen
                       value: true
-              args: {}
-
+              args:
+                attr:
+                  value: cgsecstruct
+                seq:
+                  value: "F"
+                
     - vermouth.SetMoleculeMeta:
         cli_flags:
           extdih:
