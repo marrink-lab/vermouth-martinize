@@ -15,6 +15,7 @@
 Provides a processor that adds a rubber band elastic network.
 """
 import itertools
+import inspect 
 
 import numpy as np
 import networkx as nx
@@ -27,11 +28,14 @@ from ..log_helpers import StyleAdapter, get_logger
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
-# the bond type of the RB
-DEFAULT_BOND_TYPE = 6
-# the minimum distance between the resids
-# of two beads to have an RB
-DEFAULT_RMD = 2
+DEFAULTS = {"ApplyRubberBand:bond_type": 6,
+            "ApplyRubberBand:res_min_dist": 2,
+            "ApplyRubberBand:minimum_force": 0,
+            "ApplyRubberBand:lower_bound": 0,
+            "ApplyRubberBand:upper_bound": 0.9,
+            "ApplyRubberBand:decay_factor": 0,
+            "ApplyRubberBand:base_constant": 700,
+            "ApplyRubberBand:decay_power": 1,}
 
 def self_distance_matrix(coordinates):
     """
@@ -492,46 +496,32 @@ class ApplyRubberBand(Processor):
     --------
     :func:`apply_rubber_band`
     """
-    def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
-                 base_constant, minimum_force,
+    def __init__(self,
+                 force_field,
+                 lower_bound=None,
+                 upper_bound=None,
+                 decay_factor=None,
+                 decay_power=None,
+                 base_constant=None,
+                 minimum_force=None,
                  res_min_dist=None,
                  bond_type=None,
                  selector=selectors.select_backbone,
-                 bond_type_variable='elastic_network_bond_type',
-                 res_min_dist_variable='elastic_network_res_min_dist',
                  domain_criterion=always_true):
         super().__init__()
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
-        self.decay_factor = decay_factor
-        self.decay_power = decay_power
-        self.base_constant = base_constant
-        self.minimum_force = minimum_force
-        self.bond_type = bond_type
-        self.selector = selector
-        self.bond_type_variable = bond_type_variable
-        self.domain_criterion = domain_criterion
-        self.res_min_dist = res_min_dist
-        self.res_min_dist_variable = res_min_dist_variable
+        # populates the class variables by first checking if they are 
+        # defined as input arguments; if not we check if they are defined
+        # in the force field variables. If neither they are taken from 
+        # the processors defaults
+        for argname in inspect.signature(self.__init__).parameters.keys():
+            value = locals()[argname]
+            if value is None:
+                argkey  = f"ApplyRubberBand:{argname}"
+                value = force_field.variables.get(argkey,
+                                                  DEFAULTS[argkey])
+            setattr(self, argname, value)
 
     def run_molecule(self, molecule):
-        # Choose the bond type. From high to low, the priority order is:
-        # * what is set as an argument to the processor
-        # * what is written in the force field variables
-        #   under the key `self.bond_type_variable`
-        # * the default value set in DEFAULT_BOND_TYPE
-        bond_type = self.bond_type
-        if self.bond_type is None:
-            bond_type = molecule.force_field.variables.get(self.bond_type_variable,
-                                                           DEFAULT_BOND_TYPE)
-
-        # Same procedure for res_min_dist the minimum distance between
-        # the resids of two beads for them to have a RB
-        res_min_dist = self.res_min_dist
-        if self.res_min_dist is None:
-            res_min_dist = molecule.force_field.variables.get(self.res_min_dist_variable,
-                                                              DEFAULT_RMD)
-
         apply_rubber_band(molecule, self.selector,
                           lower_bound=self.lower_bound,
                           upper_bound=self.upper_bound,
@@ -539,7 +529,7 @@ class ApplyRubberBand(Processor):
                           decay_power=self.decay_power,
                           base_constant=self.base_constant,
                           minimum_force=self.minimum_force,
-                          bond_type=bond_type,
+                          bond_type=self.bond_type,
                           domain_criterion=self.domain_criterion,
-                          res_min_dist=res_min_dist)
+                          res_min_dist=self.res_min_dist)
         return molecule
