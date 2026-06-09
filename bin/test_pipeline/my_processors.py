@@ -351,5 +351,4 @@ class ListBlocks(Processor):
         print(", ".join(sorted(self.to_ff.modifications)))
 
         raise SystemExit(0)
-    
 

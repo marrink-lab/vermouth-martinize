@@ -3,12 +3,12 @@ from pathlib import Path
 import vermouth
 import vermouth.forcefield
 import yaml
-from pipeline_class import Pipeline
+from vermouth.processors.processor import Pipeline
 import argparse
 import importlib
 import sys
 import logging
-from vermouth.log_helpers import CountingHandler
+from vermouth.log_helpers import CountingHandler, ignore_warnings_and_count
 from vermouth.file_writer import DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.map_input import (
@@ -27,37 +27,42 @@ LOGGER.addHandler(COUNTER)
 sys.path.insert(0, r"C:\Users\roord\Documents\Stage_git\vermouth-martinize\bin")
 
 # validate conditions  
-def _cli_options_used_in_condition(condition):
+def _options_used_in_condition(condition):
     type_, cond = next(iter(condition.items()))
-    result = set()
+    cli_refs = set()
+    variable_refs = set()
 
     match type_:
         case 'all' | 'any':
             for item in cond:
-                result = result | _cli_options_used_in_condition(item)
+                sub_cli_refs, sub_variable_refs = _options_used_in_condition(item)
+                cli_refs |= sub_cli_refs
+                variable_refs |= sub_variable_refs
+
         case 'not':
-            result = result | _cli_options_used_in_condition(cond)
+            cli_refs, variable_refs = _options_used_in_condition(cond)
+
         case 'equal':
-            result |= {cond['cli']}
+            cli_refs.add(cond['cli'])
+
         case 'has_variable':
-            result |= {cond['variable']}
+            variable_refs.add(cond['variable'])
 
         case _:
             raise ValueError(f"Unknown condition type: {type_}")
-    return result
+
+    return cli_refs, variable_refs
 
 # validate if options are defines more than once
 # are the parameters correct. 
 def validate_cli_options(
     pipeline_conf,
     path='',
-    reference='cli',
-    definition='cli_flags',
     local_cli_options=None,
-    global_cli_options=None,
+    local_variables=None,
 ):
-    local_cli_options = set() if local_cli_options is None else local_cli_options
-    global_cli_options = set() if global_cli_options is None else global_cli_options
+    local_cli_options = set() if local_cli_options is None else set(local_cli_options)
+    local_variables = set() if local_variables is None else set(local_variables)
 
     # gather flags defined in cli_flags
     normal_cli_options = set(pipeline_conf.get('cli_flags', {}).keys())
@@ -70,38 +75,54 @@ def validate_cli_options(
     # force_field variable options
     variable_options = set(pipeline_conf.get("variables", []))
 
-    # all options 
-    defined_here = normal_cli_options | group_cli_options | variable_options
-
     # add to the sets of options defined in this scope and globally
-    local_cli_options |= defined_here
-    global_cli_options |= defined_here
+    local_cli_options |= normal_cli_options | group_cli_options
+    local_variables |= variable_options
 
     # check for options used in conditions
     if 'condition' in pipeline_conf:
-        cond_options = _cli_options_used_in_condition(pipeline_conf['condition'])
-        if missing := (cond_options - local_cli_options):
+        cond_cli_refs, cond_variable_refs = _options_used_in_condition(
+            pipeline_conf['condition']
+        )
+
+        if missing := (cond_cli_refs - local_cli_options):
             _path = '.'.join([path, "condition"])
             raise KeyError(
-                f'CLI option(s) {missing} in {_path} have not been defined. '
-                f'Only {local_cli_options} are known in this scope.'
+                f"CLI option(s) {missing} in {_path} have not been defined. "
+                f"Known CLI options are {local_cli_options}."
+            )
+        if missing := (cond_variable_refs - local_variables):
+            _path = '.'.join([path, "condition"])
+            raise KeyError(
+                f"Variable(s) {missing} in {_path} have not been defined. "
+                f"Known variables are {local_variables}."
             )
     # check for options used in arguments if this is not a pipeline step
     is_pipeline = bool(pipeline_conf.get('steps'))
+
     if not is_pipeline:
-        references = set()
+        cli_references = set()
+        variable_references = set()
 
-        for v in pipeline_conf.get('args', {}).values():
-            if 'cli' in v:
-                references.add(v['cli'])
+        for value in pipeline_conf.get('args', {}).values():
+            if 'cli' in value:
+                cli_references.add(value['cli'])
 
-            if 'variable' in v:
-                references.add(v['variable'])
-        if missing := (references - local_cli_options):
+            if 'variable' in value:
+                variable_references.add(value['variable'])
+
+        if missing := (cli_references - local_cli_options):
             _path = '.'.join([path, "args"])
             raise KeyError(
-                f'CLI option(s) {missing} in {_path} have not been defined. '
-                f'Only {local_cli_options} are known in this scope.'
+                f"CLI option(s) {missing} in {_path} have not been defined. "
+                f"Known CLI options are {local_cli_options}."
+            )
+
+        if missing := (variable_references - local_variables):
+            _path = '.'.join([path, "args"])
+            raise KeyError(
+                f"Variable(s) {missing} in {_path} have not been defined. "
+                f"Known variables are {local_variables}."
             )
     else:
         for idx, (name, step) in enumerate(pipeline_conf['steps']):
@@ -109,10 +130,8 @@ def validate_cli_options(
             validate_cli_options(
                 step,
                 _path,
-                reference,
-                definition,
                 local_cli_options,
-                global_cli_options,
+                local_variables,   
             )
 # function for the variable options, this will set the variables in the yaml to the values from the CLI.
 def variable_options(pipeline_conf, args, namespace, **variables):
@@ -129,12 +148,13 @@ def _cys_argument(value):
     try:
         return float(value)
     except ValueError:
-        lowered = value.lower()
-        if lowered in ("auto", "none"):
-            return lowered
-        raise argparse.ArgumentTypeError(
-            'Value must be "auto", "none", or a float.'
-        )
+        match value.lower():
+            case "auto" | "none" as v:
+                return v
+            case _:
+                raise argparse.ArgumentTypeError(
+                    'Value must be "auto", "none", or a float.'
+                )
 def water_bias(value):
     try:
         letter, epsilon = value.split(":")
@@ -146,6 +166,72 @@ def water_bias(value):
 def ignore_resname(value):
     return [item.strip() for item in value.split(",") if item.strip()]
 
+def translate_cli_opts(opts):
+    opts = dict(opts)
+
+    if 'type' in opts and isinstance(opts['type'], str):
+        type_name = opts['type']
+        if type_name not in TYPE_MAP:
+            raise ValueError(f"Unknown CLI type: {type_name}")
+        opts['type'] = TYPE_MAP[type_name]
+
+    return opts
+
+def maxwarn(value):
+    """
+    Given a maxwarn specification, split it in a warning type, and the number
+    to ignore.
+
+    >>> maxwarn('3')
+    (None, 3)
+    >>> maxwarn('general:15')
+    ('general', 15)
+    >>> maxwarn('inconsistent-data')
+    ('inconsistent-data, None)
+
+    Parameters
+    ----------
+    value: str
+        A warning type and a count, separated by a colon.
+
+    Returns
+    -------
+    tuple[str, int]
+        A warning type and the associated count to ignore. Either element can be
+        None if not specified.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+    """
+    msg = (
+        "Values for the -maxwarn option must be the name of a "
+        "warning type, a number, or following the format "
+        "'<warning-type>:<count>' where <warning-type> is the name "
+        "of the warning type to ignore, and <count> is the number of "
+        "warning of that type to ignore. "
+        "'{value}' is not a valid value.".format(value=value)
+    )
+    splitted = value.split(":")
+    if len(splitted) == 1:
+        try:
+            count = int(value)
+        except ValueError:
+            # The value is not an int, so a warning type to ignore an
+            # an unspecified number of
+            return (value, None)
+        else:
+            return (None, count)
+    elif len(splitted) == 2:
+        try:
+            count = int(splitted[1])
+        except ValueError:
+            pass  # The exception will be raised at the end of the function
+        else:
+            return (splitted[0], count)
+    raise argparse.ArgumentTypeError(msg)
+
+
 # translation table 
 TYPE_MAP = {
     'str': str,
@@ -154,7 +240,8 @@ TYPE_MAP = {
     'path': Path,
     'cys_argument': _cys_argument,
     'water_bias': water_bias,
-    'ignore_resname': ignore_resname
+    'ignore_resname': ignore_resname,
+    'maxwarn': maxwarn,
 }
 
 #building a mini parser to get the to_ff and from_ff values so that the yaml knows what they are. because the yaml depends on the cli. 
@@ -178,18 +265,11 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     for flag, opts in pipeline_conf.get('cli_flags', {}).items():
         if flag in added_flags:
             continue 
-        # make copy of dict 
-        opts = dict(opts)
-        # translate type from string to actual type if needed.
-        if 'type' in opts and isinstance(opts['type'], str):
-            type_name = opts['type']
-            if type_name not in TYPE_MAP:
-                raise ValueError(f"Unknown CLI type: {type_name}")
-            opts['type'] = TYPE_MAP[type_name]
-        # actually add the argument to the parser
+        # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
+        opts = translate_cli_opts(opts)
         parser.add_argument(f'{prefix}{flag}', **opts)
         added_flags.add(flag)
-    # recursion for steps in the pipeline
+    # add CLI Flags from the CLI groups. 
     for group_cli in pipeline_conf.get('cli_groups', []):
         flags_to_add = [
             (flag, opts)
@@ -204,13 +284,8 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
         group = parser.add_mutually_exclusive_group()
 
         for flag, opts in flags_to_add:
-            opts = dict(opts)
-
-            if 'type' in opts and isinstance(opts['type'], str):
-                type_name = opts['type']
-                if type_name not in TYPE_MAP:
-                    raise ValueError(f"Unknown CLI type: {type_name}")
-                opts['type'] = TYPE_MAP[type_name]
+            # make the options dict from the options defined in the yaml. and translate the type from a string to a real python type.
+            opts = translate_cli_opts(opts)
 
             group.add_argument(f'{prefix}{flag}', **opts)
             added_flags.add(flag)
@@ -220,10 +295,16 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
             build_cli(step, prefix, parser=parser, added_flags=added_flags)
 
     return parser
+
+
 # evaluete the condition with the cli values 
 def eval_condition(condition, cli_values):
     # every condition can only have 1 key 
-    assert len(condition) == 1, condition
+    if len(condition) != 1:
+        raise ValueError(
+            f"Condition must contain exactly one condition type, got {condition}."
+        )
+    
     # get the type and arguments of the condition
     type_, args = next(iter(condition.items()))
     # what type of condition is it and what to do with it 
@@ -235,7 +316,12 @@ def eval_condition(condition, cli_values):
         case 'not':
             verdict = not eval_condition(args, cli_values)
         case 'equal':
-            verdict = cli_values[args['cli']] == args['value']
+            if 'cli' in args:
+                verdict = cli_values[args['cli']] == args['value']
+            elif 'variable' in args:
+                verdict = cli_values[args['variable']] == args['value']
+            else:
+                raise ValueError("equal condition needs 'cli' or 'variable'")
         case "has_variable":
             obj = cli_values[args['variable']]
             verdict = args["key"] in obj.variables 
@@ -267,7 +353,7 @@ def set_values_from_cli(pipeline_conf, cli_values):
             elif 'variable' in value:
                 args[arg_name] = cli_values[value['variable']]
             else: 
-                raise KeyError(f"{arg_name} must have a value, cli or variable")
+                raise KeyError(f"{arg_name} must have a value, cli, or variable")
         pipeline_conf['args'] = args
     # if its recursive pipeline, do the same for the steps in the pipeline
     for name, step in pipeline_conf.get('steps', []):
@@ -458,7 +544,6 @@ source_ff, target_ff, mappings = force_fields(args, parser)
 variable_options(from_conf, args, args["from_ff"], ff=source_ff)
 variable_options(to_conf, args, args["to_ff"], ff=target_ff, mappings=mappings)
 
-
 # check for conditions, yaml and cli and variables will be python values, load processor objects
 set_values_from_cli(pipeline_conf, args)
 
@@ -481,7 +566,19 @@ print("CLI FLAGS:", pipeline_conf["cli_flags"].keys())
 
 # test the pipeline with None 
 pipeline.run_system(system)
-DeferredFileWriter().write()
-vermouth.Quoter().run_system(system)
+leftover_warnings = ignore_warnings_and_count(COUNTER, args["maxwarn"])
+
+if leftover_warnings:
+    LOGGER.error(
+        "{} warnings were encountered after accounting for the "
+        "-maxwarn flag. No output files will be "
+        "written. Consider fixing the warnings, or if you are sure "
+        "they are harmless, use the -maxwarn flag.",
+        leftover_warnings,
+    )
+    sys.exit(2)
+else:
+    DeferredFileWriter().write()
+    vermouth.Quoter().run_system(system)
 print(system.meta.get("header"))
 

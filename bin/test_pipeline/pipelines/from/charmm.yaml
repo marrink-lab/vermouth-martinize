@@ -31,7 +31,15 @@ martinize2:
         const: true
         type: path
         help: Use Martini Go model.
-  
+    maxwarn:
+        type: maxwarn
+        action: append
+        nargs: "+"
+        default: []
+        help: >
+          The maximum number of allowed warnings. If more warnings are encountered
+          no output files are written.
+        
   steps: !!omap
     - my_processors.ListBlocks:
         condition:
