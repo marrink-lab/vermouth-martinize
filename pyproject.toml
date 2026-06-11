@@ -26,7 +26,7 @@ maintainers = [
     {name = "Fabian Grünewald"},
     {name = "Chris Brasnett"},
 ]
-keywords = ["martini MD martinize"]
+keywords = ["martini", "MD", "martinize"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
