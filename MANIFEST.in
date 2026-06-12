@@ -1,0 +1,5 @@
+# Exclude all git-tracked files that should not be packaged. setuptools-scm includes.
+prune vermouth/tests
+prune maintainers
+prune .github
+global-exclude *.pyc __pycache__ .*
