@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vermouth"
-dynamic = ["version", "dependencies"]
+dynamic = ["version"]
 description = "Martinize2 and vermouth: The ultimate MD resolution transformation tools"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -39,6 +39,12 @@ classifiers = [
 ]
 readme = {file = "README.md", content-type = "text/markdown; charset=UTF-8"}
 requires-python= ">= 3.10"
+dependencies = [
+    "networkx>=3.0",
+    "numpy",
+    "scipy",
+]
+
 
 [project.urls]
 Repository = "https://github.com/marrink-lab/vermouth-martinize"
@@ -50,11 +56,31 @@ Article = "https://doi.org/10.7554/eLife.90627"
 mdtraj = ["mdtraj"]
 PyCifRW = ["PyCifRW"]
 
+[dependency-groups]
+docs = [
+    "sphinx >= 8.2.1, < 9",
+    "setuptools >= 30.3.0",
+    "sphinxext-opengraph",
+    "sphinx-copybutton",
+    "furo",
+    "numpy",
+    "networkx",
+    "scipy",
+]
+test = [
+    "pytest",
+    "coverage",
+    "pytest-cov",
+    "pylint",
+    "hypothesis",
+    "hypothesis-networkx",
+    "codecov",
+    "mdtraj",
+    "PyCifRW",
+]
+
 [project.scripts]
 martinize2 = "vermouth.bin.martinize2:entry"
-
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools]
 include-package-data = true

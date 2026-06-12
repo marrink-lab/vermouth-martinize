@@ -49,7 +49,7 @@ jobs:
     - name: Install package and requirements
       run: |
         pip install --upgrade .
-        pip install -r requirements-tests.txt
+        pip install --group test
         
     - name: Run pytest with codecoverage
       run: |
@@ -84,7 +84,7 @@ jobs:
       run: |
         pip install --upgrade setuptools pip
         pip install --upgrade .
-        pip install -r requirements-tests.txt
+        pip install --group test
     - name: Run pylint 
       run: |
          pylint --disable=fixme --fail-under=8.0 vermouth
@@ -109,7 +109,7 @@ jobs:
         run: |
           pip install --upgrade setuptools pip
           pip install --upgrade .
-          pip install -r requirements-docs.txt
+          pip install --group docs
           
       - name: Run docs
         run: | 
@@ -147,7 +147,7 @@ jobs:
         pip install --upgrade .
     - name: Install pypa/build
       run: |
-        python3 -m pip install build --user
+        python3 -m pip install build
     - name: Build a binary wheel and a source tarball
       run: python3 -m build --sdist --wheel --outdir dist/
     - name: Publish distribution 📦 to PyPI
