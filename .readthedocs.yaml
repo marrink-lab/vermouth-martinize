@@ -11,6 +11,10 @@ build:
   tools:
     python: "3"
   jobs:
+    install:
+      - pip install -U pip
+      - pip install .
+      - pip install --group docs
     post_checkout:
       # Avoid setuptools-scm dirty Git index issues
       - git reset --hard HEAD
@@ -24,11 +28,3 @@ sphinx:
   builder: html
   fail_on_warning: true
   configuration: doc/source/conf.py
-
-# We recommend specifying your dependencies to enable reproducible builds:
-# https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
-python:
- install:
-   - method: pip
-     path: .
-   - requirements: requirements-docs.txt
