@@ -106,6 +106,9 @@ class Choice(LinkPredicate):
         """
         return node.get(key) in self.value
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}(value={self.value})'
+
 
 class Regex(LinkPredicate):
     """
