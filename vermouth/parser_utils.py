@@ -223,7 +223,9 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         Parameters
         ----------
         line: str
+            The line content, before macro substitution.
         lineno: int
+            The line number, used to display accurate error messages.
 
         Returns
         -------
@@ -238,9 +240,12 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
             method, kwargs = self.METH_DICT[tuple(self.section)]
             return method(self, line, lineno, **kwargs)
         except Exception as error:
-            raise IOError("Problems parsing line {}. I think it should be a "
-                          "'{}' line, but I can't parse it as such."
-                          "".format(lineno, self.section)) from error
+            raise IOError(
+                f"Problems parsing line {lineno} "
+                f"in section {self.section}:\n"
+                f"{line}\n"
+                f"{repr(error)}"
+            ) from error
 
     def parse_header(self, line, lineno=0):
         """
@@ -251,7 +256,7 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         Parameters
         ----------
         line: str
-        lineno: str
+        lineno: int
 
         Returns
         -------
@@ -310,6 +315,7 @@ class SectionLineParser(LineParser, metaclass=SectionParser):
         Parameters
         ----------
         line: str
+        lineno: int
         """
         line = deque(_tokenize(line))
         _parse_macro(line, self.macros)
