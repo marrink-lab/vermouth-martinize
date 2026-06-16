@@ -17,7 +17,7 @@ import networkx as nx
 from vermouth.gmx.topology import write_gmx_topology
 from vermouth.file_writer import DeferredFileWriter
 from vermouth.log_helpers import ignore_warnings_and_count
-
+from vermouth.processors.processor import Processor
 
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))

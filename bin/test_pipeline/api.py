@@ -1,30 +1,11 @@
-from pprint import pprint
 from pathlib import Path
-import vermouth
-import vermouth.forcefield
-import yaml
-from vermouth.processors.processor import Pipeline
 import argparse
 import importlib
-import sys
-import logging
-from vermouth.log_helpers import CountingHandler, ignore_warnings_and_count
-from vermouth.file_writer import DeferredFileWriter
-from vermouth import DATA_PATH
-from vermouth.map_input import (
-    read_mapping_directory,
-    generate_all_self_mappings,
-    combine_mappings,
-)
-from api import PipelineConfigBuilder
+import yaml
 
-logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger("vermouth")
-COUNTER = CountingHandler()
-COUNTER.setLevel(logging.WARNING)
-LOGGER.addHandler(COUNTER)
+from vermouth.processors.processor import Pipeline
 
-sys.path.insert(0, r"C:\Users\roord\Documents\Stage_git\vermouth-martinize\bin")
+
 
 # validate conditions  
 def _options_used_in_condition(condition):
@@ -328,7 +309,7 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
 
 
 # evaluete the condition with the cli values 
-def eval_condition(condition, cli_values):
+def eval_condition(condition, cli_args, variables):
     # every condition can only have 1 key 
     if len(condition) != 1:
         raise ValueError(
@@ -340,20 +321,20 @@ def eval_condition(condition, cli_values):
     # what type of condition is it and what to do with it 
     match type_:
         case 'any':
-            verdict = any(eval_condition(c, cli_values) for c in args)
+            verdict = any(eval_condition(c, cli_args, variables) for c in args)
         case 'all':
-            verdict = all(eval_condition(c, cli_values) for c in args)
+            verdict = all(eval_condition(c, cli_args, variables) for c in args)
         case 'not':
-            verdict = not eval_condition(args, cli_values)
+            verdict = not eval_condition(args, cli_args, variables)
         case 'equal':
             if 'cli' in args:
-                verdict = cli_values[args['cli']] == args['value']
+                verdict = cli_args[args['cli']] == args['value']
             elif 'variable' in args:
-                verdict = cli_values[args['variable']] == args['value']
+                verdict = variables[args['variable']] == args['value']
             else:
                 raise ValueError("equal condition needs 'cli' or 'variable'")
         case "has_variable":
-            obj = cli_values[args['variable']]
+            obj = variables[args['variable']]
             verdict = args["key"] in obj.variables 
         case _:
             raise ValueError(f"Unknown condition type: {type_}")
@@ -361,10 +342,10 @@ def eval_condition(condition, cli_values):
     return verdict
 
 # set the values from the CLI into the pipeline config 
-def set_values_from_cli(pipeline_conf, cli_values):
+def set_values(pipeline_conf, cli_args, variables):
     # check if there is a condition 
     if 'condition' in pipeline_conf:
-        pipeline_conf['condition'] = eval_condition(pipeline_conf['condition'], cli_values)
+        pipeline_conf['condition'] = eval_condition(pipeline_conf['condition'], cli_args, variables)
     else:
         pipeline_conf['condition'] = True
     # check if the current processor has argumnents 
@@ -378,10 +359,10 @@ def set_values_from_cli(pipeline_conf, cli_values):
                 args[arg_name] = value['value']
             elif "cli" in value:
                 # if not, use the CLI value 
-                args[arg_name] = cli_values[value['cli']]
+                args[arg_name] = cli_args[value['cli']]
                 # set the arg value good 
             elif 'variable' in value:
-                args[arg_name] = cli_values[value['variable']]
+                args[arg_name] = variables[value['variable']]
             else: 
                 raise KeyError(f"{arg_name} must have a value, cli, or variable")
         pipeline_conf['args'] = args
@@ -391,7 +372,7 @@ def set_values_from_cli(pipeline_conf, cli_values):
             # go from text to actual processor object
             step['processor'] = import_processor(name)
         # call itself 
-        set_values_from_cli(step, cli_values)
+        set_values(step, cli_args, variables)
 
 # import the processor 
 def import_processor(processor_name):
@@ -516,114 +497,44 @@ def combine_pipeline_configs(configs):
         combined["steps"].extend(root.get("steps", []))
 
     return combined
-# path to yamls.
-script_dir = Path(__file__).resolve().parent
-# which prefix to use
-CLI_PREFIX = "-"
-#name of program
-name = "martinize2"
-
-mini_parser = build_mini_parser()
-mini_args, remaining_args = mini_parser.parse_known_args()
-
-configs = load_pipeline_configs(mini_args.pipeline, mini_args.pipeline_dir)
-pipeline_conf = combine_pipeline_configs(configs)
-
-validate_cli_options(pipeline_conf, path=name)
-
-print(pipeline_conf["cli_flags"].keys())
-
-parser = build_cli(pipeline_conf, CLI_PREFIX, prog=name)
-
-args = parser.parse_args(remaining_args)
-
-def force_fields(args, parser):
-    known_force_fields = vermouth.forcefield.find_force_fields(
-        Path(DATA_PATH) / "force_fields"
-    )
-
-    known_mappings = read_mapping_directory(
-        Path(DATA_PATH) / "mappings", known_force_fields
-    )
-
-    for directory in args["extra_ff_dir"]:
-        vermouth.forcefield.find_force_fields(directory, known_force_fields)
-
-    for directory in args["extra_map_dir"]:
-        partial_mapping = read_mapping_directory(directory, known_force_fields)
-        combine_mappings(known_mappings, partial_mapping)
-
-    if args["list_ff"]:
-        print("The following force fields are known:")
-        for idx, ff_name in enumerate(reversed(list(known_force_fields)), 1):
-            print("{:3d}. {}".format(idx, ff_name))
-        parser.exit()
-
-    partial_mapping = generate_all_self_mappings(known_force_fields.values())
-    combine_mappings(known_mappings, partial_mapping)
-
-    return known_force_fields, known_mappings
 
 
-# make the args into a dict 
-args = vars(args)
+class PipelineConfigBuilder:
+    def __init__(self, pipeline_names, pipeline_dirs=None):
+        self.pipeline_names = pipeline_names
+        self.pipeline_dirs = pipeline_dirs or []
 
-# if you give noscfix, scfix is false otherwise true.
-args["scfix"] = not args["noscfix"]
-args["deduplicate"] = not args["keep_duplicate_itp"]
-
-known_force_fields, mappings = force_fields(args, parser)
-
-for namespace, conf in configs:
-    root = conf["martinize2"]
-
-    variables = {}
-
-    if namespace in known_force_fields:
-        variables["ff"] = known_force_fields[namespace]
-
-    if "mappings" in root.get("variables", []):
-        variables["mappings"] = mappings
-
-    variable_options(root, args, namespace, **variables)
+    def build_config(self):
+        configs = load_pipeline_configs(self.pipeline_names, self.pipeline_dirs)
+        pipeline_conf = combine_pipeline_configs(configs)
+        validate_cli_options(pipeline_conf, path="martinize2")
+        return configs, pipeline_conf
 
 
-# check for conditions, yaml and cli and variables will be python values, load processor objects
-set_values_from_cli(pipeline_conf, args)
+class CLIBuilder:
+    def __init__(self, pipeline_conf, prefix="-"):
+        self.pipeline_conf = pipeline_conf
+        self.prefix = prefix
+        self.argparser = None
 
-# make the pipeline object from the pipeline config
-pipeline = Pipeline.from_dict(pipeline_conf, name)
+    def build_argparser(self):
+        self.argparser = build_cli(self.pipeline_conf, self.prefix)
+        return self.argparser
 
-#print the pipeline 
-print("Pipeline object:")
-print(pipeline)
-print()
-print(args.keys())
-
-
-first_ff_name = mini_args.pipeline[0]
-source_ff = known_force_fields[first_ff_name]
-system = vermouth.System(force_field=source_ff)
-
-# test the pipeline with None 
-pipeline.run_system(system)
-leftover_warnings = ignore_warnings_and_count(COUNTER, args["maxwarn"])
-
-if leftover_warnings:
-    LOGGER.error(
-        "{} warnings were encountered after accounting for the "
-        "-maxwarn flag. No output files will be "
-        "written. Consider fixing the warnings, or if you are sure "
-        "they are harmless, use the -maxwarn flag.",
-        leftover_warnings,
-    )
-    sys.exit(2)
-else:
-    DeferredFileWriter().write()
-    vermouth.Quoter().run_system(system)
-print(system.meta.get("header"))
+    def parse_cli_args(self, args=None):
+        if self.argparser is None:
+            self.build_argparser()
+        return vars(self.argparser.parse_args(args))
 
 
+class PipelineBuilder:
+    def __init__(self, pipeline_conf):
+        self.pipeline_conf = pipeline_conf
 
+    def build_pipeline(self, cli_args, variables):
+        set_values(self.pipeline_conf, cli_args, variables)
 
-
+        return Pipeline.from_dict(
+            self.pipeline_conf,
+            "martinize2",
+        )
