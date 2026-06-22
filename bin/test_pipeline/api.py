@@ -114,16 +114,6 @@ def validate_cli_options(
                 local_cli_options,
                 local_variables,   
             )
-# function for the variable options, this will set the variables in the yaml to the values from the CLI.
-def variable_options(pipeline_conf, args, namespace, **variables):
-    # loop through all the variables defined in the pipeline. 
-    for variable in pipeline_conf.get("variables", []):
-        # make a namespaced variable name, so like charmm + the variable ff --> charmm.ff. 
-        namespaced_variables = f"{namespace}.{variable}" 
-        # connect the variable name to the value from the CLI. so charmm.ff will get the value of ff from the CLI.
-        args[namespaced_variables] = variables[variable]
-
-
 
 def _cys_argument(value):
     try:
@@ -515,17 +505,19 @@ class CLIBuilder:
     def __init__(self, pipeline_conf, prefix="-"):
         self.pipeline_conf = pipeline_conf
         self.prefix = prefix
-        self.argparser = None
+        self._argparser = None
 
-    def build_argparser(self):
-        self.argparser = build_cli(self.pipeline_conf, self.prefix)
-        return self.argparser
+    @property
+    def argparser(self):
+        if self._argparser is None:
+            self.build_argparser()
+        return self._argparser
+
+    def build_argparser(self, **kwargs):
+        self._argparser = build_cli(self.pipeline_conf, self.prefix, **kwargs)
 
     def parse_cli_args(self, args=None):
-        if self.argparser is None:
-            self.build_argparser()
         return vars(self.argparser.parse_args(args))
-
 
 class PipelineBuilder:
     def __init__(self, pipeline_conf):
@@ -538,3 +530,4 @@ class PipelineBuilder:
             self.pipeline_conf,
             "martinize2",
         )
+    

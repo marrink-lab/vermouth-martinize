@@ -1,13 +1,9 @@
-from pprint import pprint
 from pathlib import Path
 import vermouth
 import vermouth.forcefield
-import yaml
-from vermouth.processors.processor import Pipeline
-import argparse
-import importlib
 import sys
 import logging
+
 from vermouth.log_helpers import CountingHandler, ignore_warnings_and_count
 from vermouth.file_writer import DeferredFileWriter
 from vermouth import DATA_PATH
@@ -16,526 +12,19 @@ from vermouth.map_input import (
     generate_all_self_mappings,
     combine_mappings,
 )
-from api import PipelineConfigBuilder
 
+from api import (
+    build_mini_parser,
+    PipelineConfigBuilder,
+    CLIBuilder,
+    PipelineBuilder,
+)
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("vermouth")
 COUNTER = CountingHandler()
 COUNTER.setLevel(logging.WARNING)
 LOGGER.addHandler(COUNTER)
 
-sys.path.insert(0, r"C:\Users\roord\Documents\Stage_git\vermouth-martinize\bin")
-
-# validate conditions  
-def _options_used_in_condition(condition):
-    type_, cond = next(iter(condition.items()))
-    cli_refs = set()
-    variable_refs = set()
-
-    match type_:
-        case 'all' | 'any':
-            for item in cond:
-                sub_cli_refs, sub_variable_refs = _options_used_in_condition(item)
-                cli_refs |= sub_cli_refs
-                variable_refs |= sub_variable_refs
-
-        case 'not':
-            cli_refs, variable_refs = _options_used_in_condition(cond)
-
-        case 'equal':
-            cli_refs.add(cond['cli'])
-
-        case 'has_variable':
-            variable_refs.add(cond['variable'])
-
-        case _:
-            raise ValueError(f"Unknown condition type: {type_}")
-
-    return cli_refs, variable_refs
-
-# validate if options are defines more than once
-# are the parameters correct. 
-def validate_cli_options(
-    pipeline_conf,
-    path='',
-    local_cli_options=None,
-    local_variables=None,
-):
-    local_cli_options = set() if local_cli_options is None else set(local_cli_options)
-    local_variables = set() if local_variables is None else set(local_variables)
-
-    # gather flags defined in cli_flags
-    normal_cli_options = set(pipeline_conf.get('cli_flags', {}).keys())
-
-    # gather flags defined in cli_groups
-    group_cli_options = set()
-    for group_conf in pipeline_conf.get('cli_groups', []):
-        group_cli_options |= set(group_conf.get('flags', {}).keys())
-    
-    # force_field variable options
-    variable_options = set(pipeline_conf.get("variables", []))
-
-    # add to the sets of options defined in this scope and globally
-    local_cli_options |= normal_cli_options | group_cli_options
-    local_variables |= variable_options
-
-    # check for options used in conditions
-    if 'condition' in pipeline_conf:
-        cond_cli_refs, cond_variable_refs = _options_used_in_condition(
-            pipeline_conf['condition']
-        )
-
-        if missing := (cond_cli_refs - local_cli_options):
-            _path = '.'.join([path, "condition"])
-            raise KeyError(
-                f"CLI option(s) {missing} in {_path} have not been defined. "
-                f"Known CLI options are {local_cli_options}."
-            )
-        if missing := (cond_variable_refs - local_variables):
-            _path = '.'.join([path, "condition"])
-            raise KeyError(
-                f"Variable(s) {missing} in {_path} have not been defined. "
-                f"Known variables are {local_variables}."
-            )
-    # check for options used in arguments if this is not a pipeline step
-    is_pipeline = bool(pipeline_conf.get('steps'))
-
-    if not is_pipeline:
-        cli_references = set()
-        variable_references = set()
-
-        for value in pipeline_conf.get('args', {}).values():
-            if 'cli' in value:
-                cli_references.add(value['cli'])
-
-            if 'variable' in value:
-                variable_references.add(value['variable'])
-
-        if missing := (cli_references - local_cli_options):
-            _path = '.'.join([path, "args"])
-            raise KeyError(
-                f"CLI option(s) {missing} in {_path} have not been defined. "
-                f"Known CLI options are {local_cli_options}."
-            )
-
-        if missing := (variable_references - local_variables):
-            _path = '.'.join([path, "args"])
-            raise KeyError(
-                f"Variable(s) {missing} in {_path} have not been defined. "
-                f"Known variables are {local_variables}."
-            )
-    else:
-        for idx, (name, step) in enumerate(pipeline_conf['steps']):
-            _path = '.'.join([path, f'steps[{idx}]', name])
-            validate_cli_options(
-                step,
-                _path,
-                local_cli_options,
-                local_variables,   
-            )
-# function for the variable options, this will set the variables in the yaml to the values from the CLI.
-def variable_options(pipeline_conf, args, namespace, **variables):
-    # loop through all the variables defined in the pipeline. 
-    for variable in pipeline_conf.get("variables", []):
-        # make a namespaced variable name, so like charmm + the variable ff --> charmm.ff. 
-        namespaced_variables = f"{namespace}.{variable}" 
-        # connect the variable name to the value from the CLI. so charmm.ff will get the value of ff from the CLI.
-        args[namespaced_variables] = variables[variable]
-
-
-
-def _cys_argument(value):
-    try:
-        return float(value)
-    except ValueError:
-        match value.lower():
-            case "auto" | "none" as v:
-                return v
-            case _:
-                raise argparse.ArgumentTypeError(
-                    'Value must be "auto", "none", or a float.'
-                )
-def water_bias(value):
-    try:
-        letter, epsilon = value.split(":")
-        return letter, float(epsilon)
-    except Exception:
-        raise argparse.ArgumentTypeError(
-                'value must be a letter and a float separated by a colon'
-    )
-def ignore_resname(value):
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-def translate_cli_opts(opts):
-    opts = dict(opts)
-
-    if 'type' in opts and isinstance(opts['type'], str):
-        type_name = opts['type']
-        if type_name not in TYPE_MAP:
-            raise ValueError(f"Unknown CLI type: {type_name}")
-        opts['type'] = TYPE_MAP[type_name]
-
-    return opts
-
-def maxwarn(value):
-    """
-    Given a maxwarn specification, split it in a warning type, and the number
-    to ignore.
-
-    >>> maxwarn('3')
-    (None, 3)
-    >>> maxwarn('general:15')
-    ('general', 15)
-    >>> maxwarn('inconsistent-data')
-    ('inconsistent-data, None)
-
-    Parameters
-    ----------
-    value: str
-        A warning type and a count, separated by a colon.
-
-    Returns
-    -------
-    tuple[str, int]
-        A warning type and the associated count to ignore. Either element can be
-        None if not specified.
-
-    Raises
-    ------
-    argparse.ArgumentTypeError
-    """
-    msg = (
-        "Values for the -maxwarn option must be the name of a "
-        "warning type, a number, or following the format "
-        "'<warning-type>:<count>' where <warning-type> is the name "
-        "of the warning type to ignore, and <count> is the number of "
-        "warning of that type to ignore. "
-        "'{value}' is not a valid value.".format(value=value)
-    )
-    splitted = value.split(":")
-    if len(splitted) == 1:
-        try:
-            count = int(value)
-        except ValueError:
-            # The value is not an int, so a warning type to ignore an
-            # an unspecified number of
-            return (value, None)
-        else:
-            return (None, count)
-    elif len(splitted) == 2:
-        try:
-            count = int(splitted[1])
-        except ValueError:
-            pass  # The exception will be raised at the end of the function
-        else:
-            return (splitted[0], count)
-    raise argparse.ArgumentTypeError(msg)
-
-
-# translation table 
-TYPE_MAP = {
-    'str': str,
-    'int': int,
-    'float': float,
-    'path': Path,
-    'cys_argument': _cys_argument,
-    'water_bias': water_bias,
-    'ignore_resname': ignore_resname,
-    'maxwarn': maxwarn,
-}
-
-#building a mini parser with the pipelines that we want because we need to know what forcefield to use. 
-def build_mini_parser():
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument(
-        "-pipeline",
-        nargs="+",
-        default=["charmm", "martini3001"],
-        help="Pipeline YAML fragments to combine in order.",
-    )
-    parser.add_argument(
-        "-pipeline-dir",
-        action="append",
-        default=[],
-        type=Path,
-        help="Directory to search pipeline YAML files in.",
-    )
-    parser.add_argument("-extra_ff_dir", action="append", default=[], type=Path)
-    parser.add_argument("-extra_map_dir", action="append", default=[], type=Path)
-    parser.add_argument("-list_ff", action="store_true")
-    return parser
-
-def find_pipeline_yaml(name, pipeline_dirs):
-    path = Path(name)
-
-    # User gaf een volledig pad op
-    if path.exists():
-        return path
-
-    # Zoek in opgegeven directories
-    for directory in pipeline_dirs:
-        candidate = Path(directory) / f"{name}.yaml"
-        if candidate.exists():
-            return candidate
-
-    # Standaard locatie
-    candidate = Path("pipelines") / f"{name}.yaml"
-    if candidate.exists():
-        return candidate
-
-    raise FileNotFoundError(f"Could not find pipeline YAML '{name}'.")
-
-# build the CLI based on the pipeline configuration.
-def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
-    # make parser if not given, otherwise use the given one.
-    parser = parser or argparse.ArgumentParser(**kwargs)
-    # make an empty set of the added_flags. or use the given one. 
-    added_flags = set() if added_flags is None else added_flags
-    # loop through the cli flags defined in the pipeline config. and don't add the same flag twice. 
-    for flag, opts in pipeline_conf.get('cli_flags', {}).items():
-        if flag in added_flags:
-            continue 
-        # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
-        opts = translate_cli_opts(opts)
-        parser.add_argument(f'{prefix}{flag}', **opts)
-        added_flags.add(flag)
-    # add CLI Flags from the CLI groups. 
-    for group_cli in pipeline_conf.get('cli_groups', []):
-        flags_to_add = [
-            (flag, opts)
-            for flag, opts in group_cli.get('flags', {}).items()
-            if flag not in added_flags
-        ]
-
-        # If all flags were already added earlier, don't create an empty group.
-        if not flags_to_add:
-            continue
-
-        group = parser.add_mutually_exclusive_group()
-
-        for flag, opts in flags_to_add:
-            # make the options dict from the options defined in the yaml. and translate the type from a string to a real python type.
-            opts = translate_cli_opts(opts)
-
-            group.add_argument(f'{prefix}{flag}', **opts)
-            added_flags.add(flag)
-    # recursion for steps in the pipeline
-    if pipeline_conf.get('steps'):
-        for name, step in pipeline_conf['steps']:
-            build_cli(step, prefix, parser=parser, added_flags=added_flags)
-
-    return parser
-
-
-# evaluete the condition with the cli values 
-def eval_condition(condition, cli_values):
-    # every condition can only have 1 key 
-    if len(condition) != 1:
-        raise ValueError(
-            f"Condition must contain exactly one condition type, got {condition}."
-        )
-    
-    # get the type and arguments of the condition
-    type_, args = next(iter(condition.items()))
-    # what type of condition is it and what to do with it 
-    match type_:
-        case 'any':
-            verdict = any(eval_condition(c, cli_values) for c in args)
-        case 'all':
-            verdict = all(eval_condition(c, cli_values) for c in args)
-        case 'not':
-            verdict = not eval_condition(args, cli_values)
-        case 'equal':
-            if 'cli' in args:
-                verdict = cli_values[args['cli']] == args['value']
-            elif 'variable' in args:
-                verdict = cli_values[args['variable']] == args['value']
-            else:
-                raise ValueError("equal condition needs 'cli' or 'variable'")
-        case "has_variable":
-            obj = cli_values[args['variable']]
-            verdict = args["key"] in obj.variables 
-        case _:
-            raise ValueError(f"Unknown condition type: {type_}")
-
-    return verdict
-
-# set the values from the CLI into the pipeline config 
-def set_values_from_cli(pipeline_conf, cli_values):
-    # check if there is a condition 
-    if 'condition' in pipeline_conf:
-        pipeline_conf['condition'] = eval_condition(pipeline_conf['condition'], cli_values)
-    else:
-        pipeline_conf['condition'] = True
-    # check if the current processor has argumnents 
-    if 'args' in pipeline_conf:
-        # make the args dict with the real values from the CLI
-        args = {}
-        # loop through the arguments defined in the pipeline config
-        for arg_name, value in pipeline_conf['args'].items():
-            if "value" in value:
-                # check if its a fixed value
-                args[arg_name] = value['value']
-            elif "cli" in value:
-                # if not, use the CLI value 
-                args[arg_name] = cli_values[value['cli']]
-                # set the arg value good 
-            elif 'variable' in value:
-                args[arg_name] = cli_values[value['variable']]
-            else: 
-                raise KeyError(f"{arg_name} must have a value, cli, or variable")
-        pipeline_conf['args'] = args
-    # if its recursive pipeline, do the same for the steps in the pipeline
-    for name, step in pipeline_conf.get('steps', []):
-        if not step.get('steps'):
-            # go from text to actual processor object
-            step['processor'] = import_processor(name)
-        # call itself 
-        set_values_from_cli(step, cli_values)
-
-# import the processor 
-def import_processor(processor_name):
-    # split the processor name into module and name. 
-    module, name = processor_name.rsplit('.', 1)
-    # import to python module 
-    module = importlib.import_module(module)
-    # get the processor class from the module 
-    proc = getattr(module, name)
-    return proc
-
-def namespace_variables(obj, namespace):
-    if isinstance(obj, dict):
-        for key, value in obj.items():
-            if key == "variable" and isinstance(value, str):
-                obj[key] = f"{namespace}.{value}"
-            else:
-                namespace_variables(value, namespace)
-    elif isinstance(obj, list): 
-        for item in obj: 
-            namespace_variables(item, namespace)
-    elif isinstance(obj, tuple):
-        for item in obj:
-            namespace_variables(item, namespace)
-    return obj
-
-# load in the yaml files
-def load_yaml_file(path):
-    with open(path, "r", encoding="utf-8") as file:
-        return yaml.safe_load(file)
-
-
-def load_pipeline_configs(pipeline_names, pipeline_dirs):
-    """
-    Load multiple pipeline YAML configs.
-
-    Parameters
-    ----------
-    pipeline_names : list[str]
-        Names or paths of YAML pipeline fragments.
-    pipeline_dirs : list[Path]
-        Extra directories to search in.
-
-    Returns
-    -------
-    list[tuple[str, dict]]
-        List of (namespace, config) pairs.
-    """
-    configs = []
-
-    for name in pipeline_names:
-        path = find_pipeline_yaml(name, pipeline_dirs)
-        conf = load_yaml_file(path)
-
-        namespace = Path(name).stem
-        configs.append((namespace, conf))
-
-    return configs
-
-def iter_cli_flags(pipeline_conf):
-    # gather cli_flags defined in cli_flags
-    for flag, opts in pipeline_conf.get("cli_flags", {}).items():
-        # using yield so that it saves time and memory by not creating a big list of all the flags, but instead giving them one by one.
-        yield flag, opts
-
-    # gather cli_flags defined in cli_groups
-    for group_conf in pipeline_conf.get("cli_groups", []):
-        for flag, opts in group_conf.get("flags", {}).items():
-            yield flag, opts
-
-    # recursion for steps in the pipeline
-    if pipeline_conf.get("steps"):
-        for name, step in pipeline_conf["steps"]:
-            yield from iter_cli_flags(step)
-
-def combine_pipeline_configs(configs):
-    """
-    Combine multiple pipeline YAML configs into one pipeline config.
-
-    Duplicate CLI flags are allowed only if their definitions are exactly equal.
-    Variables are namespaced per YAML fragment.
-    Steps are appended in the order given by the user.
-    """
-    combined = {
-        "cli_flags": {},
-        "cli_groups": [],
-        "variables": [],
-        "steps": [],
-    }
-
-    seen_cli_flags = {}
-
-    for namespace, conf in configs:
-        root = conf["martinize2"]
-
-        # namespace all variable references inside this YAML
-        namespace_variables(root, namespace)
-
-        # collect namespaced variables
-        for variable in root.get("variables", []):
-            namespaced_variable = f"{namespace}.{variable}"
-
-            if namespaced_variable not in combined["variables"]:
-                combined["variables"].append(namespaced_variable)
-
-        # merge normal CLI flags
-        for flag, opts in root.get("cli_flags", {}).items():
-            if flag in seen_cli_flags:
-                if seen_cli_flags[flag] != opts:
-                    raise ValueError(
-                        f"CLI flag {flag!r} is defined multiple times "
-                        "with different options."
-                    )
-            else:
-                seen_cli_flags[flag] = opts
-                combined["cli_flags"][flag] = opts
-
-        # merge CLI groups
-        combined["cli_groups"].extend(root.get("cli_groups", []))
-
-        # append pipeline steps in order
-        combined["steps"].extend(root.get("steps", []))
-
-    return combined
-# path to yamls.
-script_dir = Path(__file__).resolve().parent
-# which prefix to use
-CLI_PREFIX = "-"
-#name of program
-name = "martinize2"
-
-mini_parser = build_mini_parser()
-mini_args, remaining_args = mini_parser.parse_known_args()
-
-configs = load_pipeline_configs(mini_args.pipeline, mini_args.pipeline_dir)
-pipeline_conf = combine_pipeline_configs(configs)
-
-validate_cli_options(pipeline_conf, path=name)
-
-print(pipeline_conf["cli_flags"].keys())
-
-parser = build_cli(pipeline_conf, CLI_PREFIX, prog=name)
-
-args = parser.parse_args(remaining_args)
 
 def force_fields(args, parser):
     known_force_fields = vermouth.forcefield.find_force_fields(
@@ -565,65 +54,70 @@ def force_fields(args, parser):
     return known_force_fields, known_mappings
 
 
-# make the args into a dict 
-args = vars(args)
+def main():
+    mini_parser = build_mini_parser()
+    mini_args, remaining_args = mini_parser.parse_known_args()
 
-# if you give noscfix, scfix is false otherwise true.
-args["scfix"] = not args["noscfix"]
-args["deduplicate"] = not args["keep_duplicate_itp"]
+    config_builder = PipelineConfigBuilder(
+        mini_args.pipeline,
+        mini_args.pipeline_dir,
+    )
+    configs, pipeline_conf = config_builder.build_config()
 
-known_force_fields, mappings = force_fields(args, parser)
+    cli_builder = CLIBuilder(pipeline_conf)
+    parser = cli_builder.build_argparser()
+    cli_args = cli_builder.parse_cli_args(remaining_args)
 
-for namespace, conf in configs:
-    root = conf["martinize2"]
+    cli_args["extra_ff_dir"] = mini_args.extra_ff_dir
+    cli_args["extra_map_dir"] = mini_args.extra_map_dir
+    cli_args["list_ff"] = mini_args.list_ff
+
+    cli_args["scfix"] = not cli_args["noscfix"]
+    cli_args["deduplicate"] = not cli_args["keep_duplicate_itp"]
+
+    known_force_fields, mappings = force_fields(cli_args, parser)
 
     variables = {}
+    for namespace, conf in configs:
+        root = conf["martinize2"]
 
-    if namespace in known_force_fields:
-        variables["ff"] = known_force_fields[namespace]
+        if namespace in known_force_fields:
+            variables[f"{namespace}.ff"] = known_force_fields[namespace]
 
-    if "mappings" in root.get("variables", []):
-        variables["mappings"] = mappings
+        if "mappings" in root.get("variables", []):
+            variables[f"{namespace}.mappings"] = mappings
 
-    variable_options(root, args, namespace, **variables)
+    pipeline_builder = PipelineBuilder(pipeline_conf)
+    pipeline = pipeline_builder.build_pipeline(cli_args, variables)
 
+    print("Pipeline object:")
+    print(pipeline)
+    print()
+    print(cli_args.keys())
+    print("PIPELINE YAMLS:", mini_args.pipeline)
 
-# check for conditions, yaml and cli and variables will be python values, load processor objects
-set_values_from_cli(pipeline_conf, args)
+    first_ff_name = mini_args.pipeline[0]
+    source_ff = known_force_fields[first_ff_name]
+    system = vermouth.System(force_field=source_ff)
 
-# make the pipeline object from the pipeline config
-pipeline = Pipeline.from_dict(pipeline_conf, name)
+    pipeline.run_system(system)
 
-#print the pipeline 
-print("Pipeline object:")
-print(pipeline)
-print()
-print(args.keys())
+    leftover_warnings = ignore_warnings_and_count(COUNTER, cli_args["maxwarn"])
 
+    if leftover_warnings:
+        LOGGER.error(
+            "%s warnings were encountered after accounting for the "
+            "-maxwarn flag. No output files will be "
+            "written. Consider fixing the warnings, or if you are sure "
+            "they are harmless, use the -maxwarn flag.",
+            leftover_warnings,
+        )
+        sys.exit(2)
 
-first_ff_name = mini_args.pipeline[0]
-source_ff = known_force_fields[first_ff_name]
-system = vermouth.System(force_field=source_ff)
-
-# test the pipeline with None 
-pipeline.run_system(system)
-leftover_warnings = ignore_warnings_and_count(COUNTER, args["maxwarn"])
-
-if leftover_warnings:
-    LOGGER.error(
-        "{} warnings were encountered after accounting for the "
-        "-maxwarn flag. No output files will be "
-        "written. Consider fixing the warnings, or if you are sure "
-        "they are harmless, use the -maxwarn flag.",
-        leftover_warnings,
-    )
-    sys.exit(2)
-else:
     DeferredFileWriter().write()
     vermouth.Quoter().run_system(system)
-print(system.meta.get("header"))
+    print(system.meta.get("header"))
 
 
-
-
-
+if __name__ == "__main__":
+    main()
