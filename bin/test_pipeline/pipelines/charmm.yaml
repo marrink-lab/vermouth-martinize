@@ -123,6 +123,7 @@ martinize2:
                   value: false
 
           - my_processors.AnnotateMutModWrapper:
+              id: annotate_mut_mod
               cli_flags:
                 modify:
                   action: append

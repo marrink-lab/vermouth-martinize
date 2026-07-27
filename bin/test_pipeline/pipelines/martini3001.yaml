@@ -218,6 +218,7 @@ martinize2:
                 value: all
         args: {}
     - my_processors.ElasticWrapper:
+        id: elastic
         condition:
           all:
             - equal:

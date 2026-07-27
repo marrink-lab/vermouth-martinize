@@ -1,4 +1,6 @@
 from pathlib import Path
+
+import yaml
 import vermouth
 import vermouth.forcefield
 import sys
@@ -18,6 +20,9 @@ from api import (
     PipelineConfigBuilder,
     CLIBuilder,
     PipelineBuilder,
+    find_step_by_id,
+    insert_step_by_id,
+    merge_override,
 )
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("vermouth")
@@ -58,12 +63,40 @@ def main():
     mini_parser = build_mini_parser()
     mini_args, remaining_args = mini_parser.parse_known_args()
 
+    override_conf = None
+
+    if mini_args.override is not None:
+        override_path = mini_args.override
+
+        if not override_path.exists():
+            override_path = Path("pipelines") / override_path
+
+        with open(override_path, "r", encoding="utf-8") as file:
+            override_conf = yaml.safe_load(file)
+
+        
+
     config_builder = PipelineConfigBuilder(
         mini_args.pipeline,
         mini_args.pipeline_dir,
     )
     configs, pipeline_conf = config_builder.build_config()
 
+    
+    if override_conf is not None:
+        overrides = override_conf.get("override", {})
+
+        for step_id, changes in overrides.items():
+            step = find_step_by_id(pipeline_conf, step_id, raise_if_missing=False)
+
+            if step is not None:
+                merge_override(step, changes)
+            else:
+                insert_step_by_id(
+                    pipeline_conf,
+                    step_id,
+                    changes,
+                )
     cli_builder = CLIBuilder(pipeline_conf)
     parser = cli_builder.build_argparser()
     cli_args = cli_builder.parse_cli_args(remaining_args)

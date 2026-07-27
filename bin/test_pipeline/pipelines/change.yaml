@@ -1,0 +1,27 @@
+override:
+  test_processor:
+    $insert_after: annotate_mut_mod
+    processor: vermouth.SortMoleculeAtoms
+    args: {}
+
+ 
+  elastic:
+    cli_flags:
+      rb_force_constant:
+        help: "$remove"
+    
+  elastic:
+    cli_flags:
+      rb_force_constant:
+        default: 500
+
+  elastic:
+    args:
+      force_constant:
+        value: 42
+
+  elastic:
+    cli_flags:
+      rb_force_constant:
+        $strategy: replace
+        default: 42

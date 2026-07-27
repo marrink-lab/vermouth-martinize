@@ -1,4 +1,5 @@
 from pathlib import Path
+from copy import deepcopy
 import argparse
 import importlib
 import yaml
@@ -218,12 +219,21 @@ TYPE_MAP = {
 #building a mini parser with the pipelines that we want because we need to know what forcefield to use. 
 def build_mini_parser():
     parser = argparse.ArgumentParser(add_help=False)
+
     parser.add_argument(
         "-pipeline",
         nargs="+",
         default=["charmm", "martini3001"],
         help="Pipeline YAML fragments to combine in order.",
     )
+
+    parser.add_argument(
+        "-override",
+        type=Path,
+        default=None,
+        help="Pipeline override YAML file.",
+    )
+
     parser.add_argument(
         "-pipeline-dir",
         action="append",
@@ -231,9 +241,11 @@ def build_mini_parser():
         type=Path,
         help="Directory to search pipeline YAML files in.",
     )
+
     parser.add_argument("-extra_ff_dir", action="append", default=[], type=Path)
     parser.add_argument("-extra_map_dir", action="append", default=[], type=Path)
     parser.add_argument("-list_ff", action="store_true")
+
     return parser
 
 def find_pipeline_yaml(name, pipeline_dirs):
@@ -438,6 +450,170 @@ def iter_cli_flags(pipeline_conf):
         for name, step in pipeline_conf["steps"]:
             yield from iter_cli_flags(step)
 
+def find_step_by_id(config, target_id, raise_if_missing=True):
+    matches = []
+
+    def search(value):
+        if isinstance(value, dict):
+            if value.get("id") == target_id:
+                matches.append(value)
+
+            for child in value.values():
+                search(child)
+
+        elif isinstance(value, list):
+            for child in value:
+                if isinstance(child, tuple):
+                    search(child[1])
+                else:
+                    search(child)
+
+    search(config)
+
+    if not matches:
+        if raise_if_missing:
+            raise KeyError(
+                f"No pipeline step found with id {target_id!r}."
+            )
+        return None
+
+    if len(matches) > 1:
+        raise ValueError(
+            f"Pipeline id {target_id!r} is not unique."
+        )
+
+    return matches[0]
+
+SOURCE_KEYS = {"cli", "value", "variable"}
+REMOVE_VALUE = "$remove"
+STRATEGY_KEY = "$strategy"
+VALID_STRATEGIES = {"merge", "replace"}
+
+
+def merge_override(target, override):
+    """
+    Apply an override dictionary to a target dictionary.
+
+    By default, dictionaries are merged recursively.
+    With '$strategy: replace', the target dictionary is replaced completely.
+    Lists and ordinary values are replaced.
+    The keys 'cli', 'value', and 'variable' are mutually exclusive.
+    '$remove' removes a key.
+    """
+    if not isinstance(target, dict):
+        raise TypeError(
+            f"Override target must be a dictionary, "
+            f"not {type(target).__name__}."
+        )
+
+    if not isinstance(override, dict):
+        raise TypeError(
+            f"Override must be a dictionary, "
+            f"not {type(override).__name__}."
+        )
+
+    strategy = override.get(STRATEGY_KEY, "merge")
+
+    if strategy not in VALID_STRATEGIES:
+        raise ValueError(
+            f"Unknown override strategy {strategy!r}. "
+            f"Expected 'merge' or 'replace'."
+        )
+
+    override_values = {
+        key: value
+        for key, value in override.items()
+        if key != STRATEGY_KEY
+    }
+
+    if strategy == "replace":
+        target.clear()
+
+    if SOURCE_KEYS.intersection(override_values):
+        for source_key in SOURCE_KEYS:
+            target.pop(source_key, None)
+
+    for key, override_value in override_values.items():
+        if override_value == REMOVE_VALUE:
+            target.pop(key, None)
+            continue
+
+        target_value = target.get(key)
+
+        if (
+            isinstance(target_value, dict)
+            and isinstance(override_value, dict)
+        ):
+            merge_override(target_value, override_value)
+        else:
+            target[key] = override_value
+
+    return target
+
+def insert_step_by_id(config, step_id, changes):
+    new_step = deepcopy(changes)
+    new_step["id"] = step_id
+
+    insert_before = new_step.pop("$insert_before", None)
+    insert_after = new_step.pop("$insert_after", None)
+
+    if insert_before is not None and insert_after is not None:
+        raise ValueError(
+            f"New step {step_id!r} cannot use both "
+            "'$insert_before' and '$insert_after'."
+        )
+
+    anchor_id = insert_before or insert_after
+
+    if anchor_id is None:
+        raise ValueError(
+            f"New step {step_id!r} must use "
+            "'$insert_before' or '$insert_after'."
+        )
+
+    def search_and_insert(value):
+        if isinstance(value, dict):
+            for child in value.values():
+                if search_and_insert(child):
+                    return True
+
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                step_value = child[1] if isinstance(child, tuple) else child
+
+                if (
+                    isinstance(step_value, dict)
+                    and step_value.get("id") == anchor_id
+                ):
+                    insert_index = (
+                        index
+                        if insert_before is not None
+                        else index + 1
+                    )
+
+                    value.insert(
+                        insert_index,
+                        (
+                            new_step["processor"],
+                            {
+                                key: val
+                                for key, val in new_step.items()
+                                if key != "processor"
+                            },
+                        ),
+                    )
+                    return True
+
+                if search_and_insert(step_value):
+                    return True
+
+        return False
+
+    if not search_and_insert(config):
+        raise KeyError(
+            f"No pipeline step found with id {anchor_id!r}."
+        )
+    
 def combine_pipeline_configs(configs):
     """
     Combine multiple pipeline YAML configs into one pipeline config.
