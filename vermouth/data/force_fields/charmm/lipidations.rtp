@@ -145,6 +145,8 @@
         C       CA      +N      O
  [ cmap ]
         -C      N       CA      C       +N
+ [ meta ]
+  category protein
 
 [ CYSG ]
 ; Cysteine-Geranyl
@@ -276,6 +278,8 @@
       C20  H20A
       C20  H20B
       C20  H20C
+ [ meta ]
+  category protein
 
 [ CYSP ]
 ; Cysteine-Palmitate
@@ -401,6 +405,8 @@
        C1    O1    SG    C2
 ;        N    -C    CA    HN  ; Moved to links.ff, since this rtp file doesn't know an edge -C N
         C    CA    +N     O
+ [ meta ]
+  category protein
 
 [ GLYM ]
 ; Glycine-myristate
@@ -508,3 +514,5 @@
        C1    O1     N    C2
         N    C1    CA    HN
         C    CA    +N     O
+ [ meta ]
+  category protein
