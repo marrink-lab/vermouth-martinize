@@ -269,7 +269,7 @@ def find_pipeline_yaml(name, pipeline_dirs):
             return candidate
 
     # Standaard locatie
-    candidate = Path("pipelines") / f"{name}.yaml"
+    candidate = Path(__file__).parent / "data" / "pipelines" / f"{name}.yaml"
     if candidate.exists():
         return candidate
 
