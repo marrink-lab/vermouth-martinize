@@ -79,7 +79,7 @@ martinize2:
             variable: ff
             key: bondedtypes
         args: {}
-    - my_processors.ApplyPosresWrapper:
+    - vermouth.pipeline_processors.ApplyPosresWrapper:
         condition:
           not:
             equal:
@@ -105,7 +105,7 @@ martinize2:
             cli: posres_fc
           force_field:
             variable: ff
-    - my_processors.GoModelWrapper:
+    - vermouth.pipeline_processors.GoModelWrapper:
         condition:
           not:
             equal:
@@ -166,7 +166,7 @@ martinize2:
             cli: water_bias_eps
           water_bias_idrs:
             cli: water_bias_idrs
-    - my_processors.MergeChainsWrapper:
+    - vermouth.pipeline_processors.MergeChainsWrapper:
         condition:
           not:
             equal:
@@ -217,7 +217,7 @@ martinize2:
                 cli: rb_unit
                 value: all
         args: {}
-    - my_processors.ElasticWrapper:
+    - vermouth.pipeline_processors.ElasticWrapper:
         id: elastic
         condition:
           all:
@@ -291,7 +291,7 @@ martinize2:
                 cli: go
                 value: null
         args: {}
-    - my_processors.ComputeWaterBiasWrapper:
+    - vermouth.pipeline_processors.ComputeWaterBiasWrapper:
         condition:
           equal:
             cli: water_bias

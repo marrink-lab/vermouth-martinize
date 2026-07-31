@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import pytest
-from api import set_values, eval_condition, PipelineBuilder
+from vermouth.pipeline import set_values, eval_condition, PipelineBuilder
 from vermouth.processors.processor import Pipeline
 
 

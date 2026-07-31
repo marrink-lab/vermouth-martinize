@@ -1,6 +1,6 @@
 override:
   test_processor:
-    $insert_after: my_processors.AnnotateMutModWrapper
+    $insert_after: vermouth.pipeline_processors.AnnotateMutModWrapper
     processor: vermouth.SortMoleculeAtoms
     args: {}
 

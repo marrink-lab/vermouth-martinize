@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import pytest
-from api import _cys_argument, water_bias, ignore_resname, maxwarn
+from vermouth.pipeline import _cys_argument, water_bias, ignore_resname, maxwarn
 
 def test_cys_argument_float():
     """

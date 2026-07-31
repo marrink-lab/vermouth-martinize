@@ -41,7 +41,7 @@ martinize2:
           no output files are written.
         
   steps: !!omap
-    - my_processors.ListBlocks:
+    - vermouth.pipeline_processors.ListBlocks:
         condition:
           equal:
             cli: list_blocks
@@ -51,7 +51,7 @@ martinize2:
             variable: ff
           to_ff:
             variable: ff
-    - my_processors.ReadSystem:
+    - vermouth.pipeline_processors.ReadSystem:
         cli_flags:
           inpath:
             help: path to input file
@@ -83,7 +83,7 @@ martinize2:
 
     - pdb_to_universal:
         steps: !!omap
-          - my_processors.MakeBondsWrapper:
+          - vermouth.pipeline_processors.MakeBondsWrapper:
               cli_flags:
                 bonds_from:
                   type: str
@@ -122,7 +122,7 @@ martinize2:
                 nan_missing_pos:
                   value: false
 
-          - my_processors.AnnotateMutModWrapper:
+          - vermouth.pipeline_processors.AnnotateMutModWrapper:
               cli_flags:
                 modify:
                   action: append
@@ -242,7 +242,7 @@ martinize2:
                 default: false
                 help: "Use collagen parameters"
         steps: !!omap
-          - my_processors.DSSPWrapper:
+          - vermouth.pipeline_processors.DSSPWrapper:
               condition:
                 not:
                   equal:
@@ -262,7 +262,7 @@ martinize2:
                     value: null
               args: {}
 
-          - my_processors.SSWrapper:
+          - vermouth.pipeline_processors.SSWrapper:
               condition:
                 all:
                   - not:
@@ -286,7 +286,7 @@ martinize2:
                     value: null
               args: {}
 
-          - my_processors.SSWrapper:
+          - vermouth.pipeline_processors.SSWrapper:
               condition:
                 all:
                   - equal:
@@ -368,7 +368,7 @@ martinize2:
                     value: null
               args: {}
 
-          - my_processors.GoReader:
+          - vermouth.pipeline_processors.GoReader:
               condition:
                 all:
                   - not:
