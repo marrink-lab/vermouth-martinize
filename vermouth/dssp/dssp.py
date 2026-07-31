@@ -282,7 +282,7 @@ def run_dssp(system, executable='dssp', savedir=None, defer_writing=True):
     except FileNotFoundError:
         raise DSSPError("DSSP executable not found. Perhaps MDTraj was not installed in the environment?")
 
-    match = re.search('\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
+    match = re.search(r'\d+\.\d+\.\d+', process.stdout.decode('UTF8'))
     version = match[0] if match else None
     if not version:
         raise DSSPError('Failed to get DSSP version information.')

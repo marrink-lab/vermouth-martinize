@@ -140,7 +140,7 @@ class BibTexDirector():
         str, str
             the field type, the field content
         """
-        for field, value in re.findall("(.*?)=(.*?)\}", entry_string):
+        for field, value in re.findall(r"(.*?)=(.*?)\}", entry_string):
             yield field.strip(",").strip(" "), value.strip("{").strip("}")
 
     def parse_entry(self, entry_string):

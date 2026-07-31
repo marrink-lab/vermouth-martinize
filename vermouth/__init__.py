@@ -20,11 +20,14 @@ the CLI tool martinize2.
 """
 import logging
 
-import pbr.version
+from importlib.metadata import PackageNotFoundError, version
 
 from .log_helpers import StyleAdapter, get_logger
 
-__version__ = pbr.version.VersionInfo('vermouth').release_string()
+try:
+    __version__ = version('vermouth')
+except PackageNotFoundError:
+    __version__ = '0+unknown'
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -46,8 +49,6 @@ else:
     atexit.register(file_manager.close)
     DATA_PATH = file_manager.enter_context(as_file(ref))
     del files, as_file, atexit, ExitStack
-
-del pbr
 
 from scipy.spatial import cKDTree as KDTree
 

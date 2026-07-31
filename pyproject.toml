@@ -1,10 +1,97 @@
 [build-system]
 requires = [
-        "wheel",
-        "setuptools >= 30.3.0",
-        "pbr",
+        "setuptools >= 80.0.0",
+        "setuptools-scm[simple] >= 9.2"
     ]
-build-backend = "pbr.build"
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vermouth"
+dynamic = ["version"]
+description = "Martinize2 and vermouth: The ultimate MD resolution transformation tools"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    {name = "P C Kroon"},
+    {name = "Fabian Grünewald"},
+    {name = "Jonathan Barnoud"},
+    {name = "Marco van Tilburg"},
+    {name = "Chris Brasnett"},
+    {name = "Paulo CT Souza"},
+    {name = "Tsjerk A Wassenaar"},
+    {name = "Siewert J Marrink"},
+]
+maintainers = [
+    {name = "P C Kroon"},
+    {name = "Fabian Grünewald"},
+    {name = "Chris Brasnett"},
+]
+keywords = ["martini", "MD", "martinize"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry"
+]
+readme = {file = "README.md", content-type = "text/markdown; charset=UTF-8"}
+requires-python= ">= 3.10"
+dependencies = [
+    "networkx>=3.0",
+    "numpy",
+    "scipy",
+]
+
+
+[project.urls]
+Repository = "https://github.com/marrink-lab/vermouth-martinize"
+Issues = "https://github.com/marrink-lab/vermouth-martinize/issues"
+Documentation = "https://vermouth-martinize.readthedocs.io/en/latest/"
+Article = "https://doi.org/10.7554/eLife.90627"
+
+[project.optional-dependencies]
+mdtraj = ["mdtraj"]
+PyCifRW = ["PyCifRW"]
+
+[dependency-groups]
+docs = [
+    "sphinx >= 8.2.1, < 9",
+    "setuptools >= 30.3.0",
+    "sphinxext-opengraph",
+    "sphinx-copybutton",
+    "furo",
+    "numpy",
+    "networkx",
+    "scipy",
+]
+test = [
+    "pytest",
+    "coverage",
+    "pytest-cov",
+    "pylint",
+    "hypothesis",
+    "hypothesis-networkx",
+    "codecov",
+    "mdtraj",
+    "PyCifRW",
+]
+
+[project.scripts]
+martinize2 = "vermouth.bin.martinize2:entry"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ['.']
+include = ["vermouth*"]
+exclude = ["vermouth.tests*"]
+namespaces = false
+
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
