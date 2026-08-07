@@ -352,3 +352,17 @@ class ListBlocks(Processor):
 
         raise SystemExit(0)
 
+class SetMoleculeMetaScFixWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
+    @staticmethod
+    def wrap(noscfix=False):
+        return (), {
+            "scfix": not noscfix,
+        }
+    
+class NameMolTypeWrapper(WrapperMixin, vermouth.NameMolType):
+    @staticmethod
+    def wrap(keep_duplicate_itp=False, molname=None):
+        return (), {
+            "deduplicate": not keep_duplicate_itp,
+            "molname": molname,
+        }

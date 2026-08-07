@@ -315,21 +315,18 @@ martinize2:
           extdih:
             cli: extdih
 
-    - vermouth.SetMoleculeMeta:
+    - vermouth.pipeline_processors.SetMoleculeMetaScFixWrapper:
         cli_flags:
           noscfix:
             action: store_true
             default: false
-            help: "Don't apply side chain corrections. Please note the change in behaviour from martinize v0.11.0"
-          scfix:
-            action: store_true
             help: >
-              Old -scfix argument. Side chain fixes are now assumed by default, and the flag does not need"
-              "to be specified. Will be deprecated in future.
+              Don't apply side chain corrections. Please note the change
+              in behaviour from martinize v0.11.0
         args:
-          scfix:
-            cli: scfix
-
+          noscfix:
+            cli: noscfix
+            
     - cystein_bridges:
         cli_flags:
           cystein_bridge:

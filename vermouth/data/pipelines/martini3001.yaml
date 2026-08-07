@@ -185,7 +185,7 @@ martinize2:
         args:
           merge_chains:
             cli: merge_chains
-    - vermouth.NameMolType:
+    - vermouth.pipeline_processors.NameMolTypeWrapper:
         condition:
           equal:
             cli: go
@@ -195,13 +195,9 @@ martinize2:
             action: store_true
             default: false
             help: Write separate topologies for identical chains
-          deduplicate:
-            action: store_true
-            default: false
-            help: internal
         args:
-          deduplicate:
-            cli: deduplicate
+          keep_duplicate_itp:
+            cli: keep_duplicate_itp
           molname:
             cli: molname
     - vermouth.MergeAllMolecules:

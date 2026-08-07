@@ -98,12 +98,7 @@ def main():
     parser = cli_builder.build_argparser()
     cli_args = cli_builder.parse_cli_args(remaining_args)
 
-    cli_args["extra_ff_dir"] = mini_args.extra_ff_dir
-    cli_args["extra_map_dir"] = mini_args.extra_map_dir
-    cli_args["list_ff"] = mini_args.list_ff
-
-    cli_args["scfix"] = not cli_args["noscfix"]
-    cli_args["deduplicate"] = not cli_args["keep_duplicate_itp"]
+    cli_args.update(vars(mini_args))
 
     known_force_fields, mappings = force_fields(cli_args, parser)
 
@@ -132,7 +127,7 @@ def main():
 
     if leftover_warnings:
         LOGGER.error(
-            "%s warnings were encountered after accounting for the "
+            "{} warnings were encountered after accounting for the "
             "-maxwarn flag. No output files will be "
             "written. Consider fixing the warnings, or if you are sure "
             "they are harmless, use the -maxwarn flag.",
@@ -145,5 +140,9 @@ def main():
     print(system.meta.get("header"))
 
 
-if __name__ == "__main__":
+def entry():
     main()
+
+
+if __name__ == "__main__":
+    entry()
