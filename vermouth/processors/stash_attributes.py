@@ -87,9 +87,8 @@ def unstash_attributes(molecule, attributes, stash_name="stash", strict=False):
     stash_name : str
         Name of the node attribute where values were previously stashed.
     strict : bool
-    If True, raise an exception when a stash or attribute is missing.
-    If False, missing values are ignored.
-        
+        If True, raise an exception when a stash or attribute is missing.
+        If False, missing values are ignored.
     """
     for attribute in attributes:
         values = {node: data[stash_name][attribute]

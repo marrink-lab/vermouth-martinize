@@ -4,6 +4,7 @@ martinize2:
     - ff
   cli_flags:
     from_ff:
+      cli: from 
       default: "charmm"
       help: "Force field of the original structure."
 
@@ -54,10 +55,12 @@ martinize2:
     - vermouth.pipeline_processors.ReadSystem:
         cli_flags:
           inpath:
+            cli: f
             help: path to input file
             required: true
             type: path
           ignore_res:
+            cli: ignore
             nargs: "+"
             default: []
             action: append
@@ -140,6 +143,11 @@ martinize2:
                   action: append
                   default: []
                   help: mutate a specific amino acid into another one.
+                neutral_termini:
+                  cli: nt
+                  action: store_true
+                  default: false
+                  help: Use neutral N- and C-termini.
               args:
                 modify:
                   cli: modify
@@ -149,6 +157,8 @@ martinize2:
                   cli: nter
                 mutate:
                   cli: mutate
+                neutral_termini:
+                  cli: neutral_termini
 
           - vermouth.RepairGraph:
               args:
@@ -326,10 +336,10 @@ martinize2:
         args:
           noscfix:
             cli: noscfix
-            
     - cystein_bridges:
         cli_flags:
           cystein_bridge:
+            cli: cys 
             type: cys_argument
             default: auto
         steps: !!omap

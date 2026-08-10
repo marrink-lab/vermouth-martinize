@@ -1,23 +1,14 @@
-from os import system
-import sys 
 import vermouth
 from vermouth.processors.processor import Processor
 import vermouth.pdb
 import logging
 from vermouth.log_helpers import TypeAdapter
-from pathlib import Path
-from vermouth import DATA_PATH
-from vermouth.map_input import read_mapping_directory
-import vermouth
 import functools
 from vermouth import selectors
-from vermouth.rcsu.contact_map import read_go_map, GenerateContactMap
 from vermouth.rcsu.go_pipeline import GoPipeline
-import networkx as nx
 from vermouth.gmx.topology import write_gmx_topology
-from vermouth.file_writer import DeferredFileWriter
-from vermouth.log_helpers import ignore_warnings_and_count
-from vermouth.processors.processor import Processor
+from vermouth.rcsu.contact_map import read_go_map
+
 
 VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
@@ -51,11 +42,14 @@ def read_system(system, path, ignore_resnames=(), ignh=None, modelidx=None):
 
 # define the processor class. readsystem itself does not have a forcefield. 
 class ReadSystem(Processor):
-    # constructor with parameters 
     def __init__(self, path, ignore_resnames=(), ignh=None, modelidx=None):
-        # save the parameters 
         self.path = path
-        self.ignore_resnames = ignore_resnames
+        # ignore resnames is a list of lists. it needs to be a set of strings.
+        ignore_res = set()
+        for group in ignore_resnames:
+            ignore_res.update(*group)
+
+        self.ignore_resnames = ignore_res
         self.ignh = ignh
         self.modelidx = modelidx
     # define run system 
@@ -95,11 +89,12 @@ class MakeBondsWrapper(WrapperMixin, vermouth.MakeBonds):
 
 class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
     @staticmethod
-    def wrap(modify =None, cter =None, nter =None, mutate =None):
+    def wrap(modify =None, cter =None, nter =None, mutate =None, neutral_termini=False,):
         modify = modify or [] # use an empty list if modify is None
         cter = cter or []
         nter = nter or []
         mutate = mutate or []
+        neutral_termini = neutral_termini or False
 
         # make the list which will contain all the differnet modifications 
         modifications = []
@@ -126,12 +121,19 @@ class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
             # if there are no modifications, make empty lists for resspecs and mods.
             resspecs, mods = [], []
 
-        # if no cter modification was given, add the default cter modification
-        if not any("cter" in resspec for resspec in resspecs):
-            modifications.append(["cter", "+C-ter"])
 
-        if not any("nter" in resspec for resspec in resspecs):
-            modifications.append(["nter", "+N-ter"])
+        if neutral_termini:
+            if not any("cter" in resspec for resspec in resspecs):
+                modifications.append(["cter", "+COOH-ter"])
+            if not any("nter" in resspec for resspec in resspecs):
+                modifications.append(["nter", "+NH2-ter"])
+        else:        
+            # if no cter modification was given, add the default cter modification
+            if not any("cter" in resspec for resspec in resspecs):
+                modifications.append(["cter", "+C-ter"])
+
+            if not any("nter" in resspec for resspec in resspecs):
+                modifications.append(["nter", "+N-ter"])
 
         return(modifications, mutations), {}
  
@@ -225,24 +227,24 @@ class GoModelWrapper(Processor):
         return system
     
 class MergeChainsWrapper(Processor):
-        def __init__(self, merge_chains = None):
-            self.merge_chains = merge_chains
-        def run_system(self, system):
-            if not self.merge_chains:
-                return system 
-            #if all is not in the list of chains to be merged
-            if "all" not in self.merge_chains:
-                input_chain_sets = [i.split(",") for i in self.merge_chains]
-                for chain_set in input_chain_sets:
-                    vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
-            #if all is in the list and is the only argument
-            elif "all" in self.merge_chains and len(self.merge_chains) == 1:
-                vermouth.MergeChains(chains=[], all_chains=True).run_system(system)
-            #otherwise error because you cannot have all and specific chains at the same time.
-            else:
-                raise ValueError("Multiple conflicting merging arguments given. "
-                                "Either specify -merge all or -merge A,B,C (+).")
-            return system   
+    def __init__(self, merge_chains = None):
+        self.merge_chains = merge_chains
+    def run_system(self, system):
+        if not self.merge_chains:
+            return system 
+        #if all is not in the list of chains to be merged
+        if "all" not in self.merge_chains:
+            input_chain_sets = [i.split(",") for i in self.merge_chains]
+            for chain_set in input_chain_sets:
+                vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
+        #if all is in the list and is the only argument
+        elif "all" in self.merge_chains and len(self.merge_chains) == 1:
+            vermouth.MergeChains(chains=[], all_chains=True).run_system(system)
+        #otherwise error because you cannot have all and specific chains at the same time.
+        else:
+            raise ValueError("Multiple conflicting merging arguments given. "
+                            "Either specify -merge all or -merge A,B,C (+).")
+        return system   
         
 class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
     @staticmethod
@@ -365,4 +367,22 @@ class NameMolTypeWrapper(WrapperMixin, vermouth.NameMolType):
         return (), {
             "deduplicate": not keep_duplicate_itp,
             "molname": molname,
+        }
+
+class VirtualSiteCreatorWrapper(vermouth.rcsu.go_vs_includes.VirtualSiteCreator):
+    def run_system(self, system):
+        result = super().run_system(system)
+
+        system.meta["itp_paths"] = {
+            "atomtypes": "virtual_sites_atomtypes.itp",
+            "nonbond_params": "virtual_sites_nonbond_params.itp",
+        }
+
+        return result if result is not None else system
+
+class SetMoleculeMetaIDRWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
+    @staticmethod
+    def wrap(id_regions=None):
+        return (), {
+            "idr": bool(id_regions),
         }

@@ -3,7 +3,6 @@ from copy import deepcopy
 import argparse
 import importlib
 import yaml
-
 from vermouth.processors.processor import Pipeline
 
 
@@ -225,24 +224,24 @@ TYPE_MAP = {
 
 #building a mini parser with the pipelines that we want because we need to know what forcefield to use. 
 def build_mini_parser():
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
 
     parser.add_argument(
-        "-pipeline",
+        "--pipeline",
         nargs="+",
         default=["charmm", "martini3001"],
         help="Pipeline YAML fragments to combine in order.",
     )
 
     parser.add_argument(
-        "-override",
+        "--override",
         type=Path,
         default=None,
         help="Pipeline override YAML file.",
     )
 
     parser.add_argument(
-        "-pipeline-dir",
+        "--pipeline-dir",
         action="append",
         default=[],
         type=Path,
@@ -278,7 +277,7 @@ def find_pipeline_yaml(name, pipeline_dirs):
 # build the CLI based on the pipeline configuration.
 def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     # make parser if not given, otherwise use the given one.
-    parser = parser or argparse.ArgumentParser(**kwargs)
+    parser = parser or argparse.ArgumentParser(allow_abbrev=False, **kwargs)
     # make an empty set of the added_flags. or use the given one. 
     added_flags = set() if added_flags is None else added_flags
     # loop through the cli flags defined in the pipeline config. and don't add the same flag twice. 
@@ -286,8 +285,16 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
         if flag in added_flags:
             continue 
         # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
+        opts = dict(opts)
+        cli_name = opts.pop("cli", flag)
         opts = translate_cli_opts(opts)
-        parser.add_argument(f'{prefix}{flag}', **opts)
+
+        parser.add_argument(
+            f"{prefix}{cli_name}",
+            f"{prefix}{flag}",
+            dest=flag,
+            **opts,
+        )
         added_flags.add(flag)
     # add CLI Flags from the CLI groups. 
     for group_cli in pipeline_conf.get('cli_groups', []):
@@ -422,7 +429,7 @@ def load_pipeline_configs(pipeline_names, pipeline_dirs):
     ----------
     pipeline_names : list[str]
         Names or paths of YAML pipeline fragments.
-    pipeline_dirs : list[Path]
+    pipeline_dirs : list[pathlib.Path]
         Extra directories to search in.
 
     Returns
@@ -709,6 +716,7 @@ def combine_pipeline_configs(configs):
 
 
 class PipelineConfigBuilder:
+    """Build a pipeline configuration from YAML files."""
     def __init__(self, pipeline_names, pipeline_dirs=None):
         self.pipeline_names = pipeline_names
         self.pipeline_dirs = pipeline_dirs or []
@@ -721,6 +729,7 @@ class PipelineConfigBuilder:
 
 
 class CLIBuilder:
+    """Build a command-line interface from a pipeline configuration."""
     def __init__(self, pipeline_conf, prefix="-"):
         self.pipeline_conf = pipeline_conf
         self.prefix = prefix
@@ -739,6 +748,7 @@ class CLIBuilder:
         return vars(self.argparser.parse_args(args))
 
 class PipelineBuilder:
+    """Build an executable pipeline from a pipeline configuration."""
     def __init__(self, pipeline_conf):
         self.pipeline_conf = pipeline_conf
 

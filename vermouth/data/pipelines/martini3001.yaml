@@ -5,27 +5,33 @@ martinize2:
     - mappings
   cli_flags:
     to_ff:
+      cli: ff
       default: martini3001
       help: Which forcefield to use
-    go_write_file:
+    go_write_file: 
+      cli: go-write-file
       nargs: '?'
       const: contact_map_martinize.out
       default: false
       type: path
       help: Write out contact map to file.
     molname:
+      cli: name
       type: str
       default: molecule
       help: Name for the output molecule.
     water_bias:
+      cli: water-bias
       action: store_true
       default: false
       help: Automatically apply water bias.
     water_bias_eps:
+      cli: water-bias-eps
       nargs: +
       type: water_bias
       default: []
     water_bias_idrs:
+      cli: id-regions
       nargs: +
       default: []
     elastic:
@@ -33,6 +39,7 @@ martinize2:
       default: false
       help: Write elastic bonds
     rb_unit:
+      cli: eunit
       type: str
       default: molecule
   steps: !!omap
@@ -62,13 +69,14 @@ martinize2:
                 ignore_missing_graphs:
                   value: true
           - vermouth.AnnotateIDRs:
-              cli_flags:
-                id_regions:
-                  nargs: '*'
-                  default: []
               args:
                 id_regions:
-                  cli: id_regions
+                  cli: water_bias_idrs
+          - vermouth.pipeline_processors.SetMoleculeMetaIDRWrapper:
+              args:
+                id_regions:
+                  cli: water_bias_idrs
+                  
           - vermouth.DoLinks:
               args: {}
           - vermouth.LocateChargeDummies:
@@ -87,6 +95,7 @@ martinize2:
               value: none
         cli_flags:
           posres:
+            cli: p 
             type: str
             default: none
             choices:
@@ -144,6 +153,7 @@ martinize2:
             nargs: '?'
             const: true
             type: path
+            default: null
             help: Use Martini Go model.
         args:
           go_low:
@@ -192,6 +202,7 @@ martinize2:
             value: null
         cli_flags:
           keep_duplicate_itp:
+            cli: sep
             action: store_true
             default: false
             help: Write separate topologies for identical chains
@@ -217,42 +228,60 @@ martinize2:
         id: elastic
         condition:
           all:
-            - equal:
-                cli: elastic
-                value: true
+            - any:
+                - equal:
+                    cli: elastic
+                    value: true
+                - equal:
+                    cli: to_ff
+                    value: elnedyn22
+                - equal:
+                    cli: to_ff
+                    value: elnedyn22p
+                - equal:
+                    cli: to_ff
+                    value: elnedyn21
             - equal:
                 cli: go
                 value: null
         cli_flags:
           rb_force_constant:
+            cli: ef
             type: float
             default: 700
             help: Elastic bond force constant Fc in kJ/mol/nm^2
           rb_lower_bound:
+            cli: el
             type: float
             default: 0
             help: 'Elastic bond lower cutoff: F = Fc if rij < lo'
           rb_upper_bound:
+            cli: eu
             type: float
             default: 0.9
             help: 'Elastic bond upper cutoff: F = 0 if rij > up'
           res_min_dist:
+            cli: ermd
             type: int
             default: null
             help: The minimum separation between two residues to have an RB
           rb_decay_factor:
+            cli: ea
             type: float
             default: 0
             help: Elastic bond decay factor a
           rb_decay_power:
+            cli: ep
             type: float
             default: 1
             help: Elastic bond decay power p
           rb_minimum_force:
+            cli: em
             type: float
             default: 0
             help: Remove elastic bonds with force constant lower than this
           rb_selection:
+            cli: eb
             default: null
             type: str
             help: Comma separated list of bead names for elastic bonds
@@ -277,7 +306,7 @@ martinize2:
             cli: res_min_dist
           force_field:
             variable: ff
-    - vermouth.rcsu.go_vs_includes.VirtualSiteCreator:
+    - vermouth.pipeline_processors.VirtualSiteCreatorWrapper:
         condition:
           all:
             - equal:
@@ -306,6 +335,7 @@ martinize2:
             value: input
         cli_flags:
           resid_handling:
+            cli: resid 
             type: str
             default: mol
             choices:
@@ -332,6 +362,7 @@ martinize2:
     - vermouth.gmx.topology.TopologyWriter:
         cli_flags:
           top_path:
+            cli: o
             type: path
             required: false
             help: Output topology (TOP)
@@ -342,6 +373,7 @@ martinize2:
     - vermouth.pdb.WritePDB:
         cli_flags:
           outpath:
+            cli: x
             type: path
             required: false
             help: Output coarse grained structure (PDB)

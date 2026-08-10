@@ -1,10 +1,14 @@
+"""Command-line entry point for the configurable Martinize2 pipeline."""
+
+import logging
+import sys
 from pathlib import Path
 
 import yaml
+
 import vermouth
 import vermouth.forcefield
-import sys
-import logging
+
 
 from vermouth.log_helpers import CountingHandler, ignore_warnings_and_count
 from vermouth.file_writer import DeferredFileWriter
@@ -32,6 +36,7 @@ LOGGER.addHandler(COUNTER)
 
 
 def force_fields(args, parser):
+    """Load the available force fields and mappings."""
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / "force_fields"
     )
@@ -60,6 +65,7 @@ def force_fields(args, parser):
 
 
 def main():
+    """Build and run the configured Martinize2 pipeline."""
     mini_parser = build_mini_parser()
     mini_args, remaining_args = mini_parser.parse_known_args()
 
@@ -95,19 +101,28 @@ def main():
                     },
                 )
     cli_builder = CLIBuilder(pipeline_conf)
-    parser = cli_builder.build_argparser()
+    cli_builder.build_argparser()
+    parser = cli_builder.argparser
     cli_args = cli_builder.parse_cli_args(remaining_args)
+    
 
     cli_args.update(vars(mini_args))
-
     known_force_fields, mappings = force_fields(cli_args, parser)
 
     variables = {}
+
     for namespace, conf in configs:
         root = conf["martinize2"]
 
-        if namespace in known_force_fields:
-            variables[f"{namespace}.ff"] = known_force_fields[namespace]
+        if "ff" in root.get("variables", []):
+            if "from_ff" in root.get("cli_flags", {}):
+                variables[f"{namespace}.ff"] = known_force_fields[cli_args["from_ff"]]
+
+            elif "to_ff" in root.get("cli_flags", {}):
+                variables[f"{namespace}.ff"] = known_force_fields[cli_args["to_ff"]]
+
+            else:
+                variables[f"{namespace}.ff"] = known_force_fields[namespace]
 
         if "mappings" in root.get("variables", []):
             variables[f"{namespace}.mappings"] = mappings
@@ -117,8 +132,7 @@ def main():
 
 
 
-    first_ff_name = configs[0][0]
-    source_ff = known_force_fields[first_ff_name]
+    source_ff = known_force_fields[cli_args["from_ff"]]
     system = vermouth.System(force_field=source_ff)
 
     pipeline.run_system(system)
@@ -127,7 +141,7 @@ def main():
 
     if leftover_warnings:
         LOGGER.error(
-            "{} warnings were encountered after accounting for the "
+            "%s warnings were encountered after accounting for the "
             "-maxwarn flag. No output files will be "
             "written. Consider fixing the warnings, or if you are sure "
             "they are harmless, use the -maxwarn flag.",
@@ -141,6 +155,7 @@ def main():
 
 
 def entry():
+    """Run the Martinize2 command-line interface."""
     main()
 
 

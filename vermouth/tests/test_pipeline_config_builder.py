@@ -305,12 +305,12 @@ def test_build_mini_parser_custom_arguments():
     parser = build_mini_parser()
 
     args = parser.parse_args([
-        "-pipeline", "charmm", "water", "martini3001",
-        "-pipeline-dir", "my_pipelines",
-        "-extra_ff_dir", "extra_ff",
-        "-extra_map_dir", "extra_maps",
-        "-list_ff",
-    ])
+            "--pipeline", "charmm", "water", "martini3001",
+            "--pipeline-dir", "my_pipelines",
+            "-extra_ff_dir", "extra_ff",
+            "-extra_map_dir", "extra_maps",
+            "-list_ff",
+        ])
 
     assert args.pipeline == ["charmm", "water", "martini3001"]
     assert args.pipeline_dir == [Path("my_pipelines")]
