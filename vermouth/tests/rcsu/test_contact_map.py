@@ -165,8 +165,9 @@ def test_calculate_ov_contacts(test_molecule):
     natoms = len(points)
     vdw_max = 20
     alpha = 1
+    coo = tree.sparse_distance_matrix(tree, 2 * vdw_max * alpha).tocoo()
 
-    overlaps = contact_map._calculate_ov_contacts(tree, vdw_list, natoms, vdw_max, alpha)
+    overlaps = contact_map._calculate_ov_contacts(coo, vdw_list, natoms, vdw_max, alpha)
 
     expected = np.array([[0., 1., 1., 1., 1., 1., 0., 0., 0.],
                          [1., 0., 1., 1., 1., 1., 0., 0., 0.],
@@ -193,13 +194,14 @@ def test_calculate_csu_contacts(test_molecule):
     tree = KDTree(points)
     vdw_max = 20
     water_radius = 1
+    coo = tree.sparse_distance_matrix(tree, (2 * vdw_max) + water_radius).tocoo()
 
     csu_contacts = contact_map._calculate_csu_contacts(points,
                                               vdw_list,
                                               fiba,
                                               fibb,
                                               natoms,
-                                              tree,
+                                              coo,
                                               vdw_max,
                                               water_radius)
 
@@ -227,13 +229,14 @@ def test_classify_contact_types(test_molecule):
     tree = KDTree(points)
     vdw_max = 20
     water_radius = 1
+    coo = tree.sparse_distance_matrix(tree, (2 * vdw_max) + water_radius).tocoo()
 
     hits = contact_map._calculate_csu_contacts(points,
                                       vdw_list,
                                       fiba,
                                       fibb,
                                       natoms,
-                                      tree,
+                                      coo,
                                       vdw_max,
                                       water_radius)
 
