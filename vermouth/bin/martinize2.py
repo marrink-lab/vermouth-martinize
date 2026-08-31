@@ -36,7 +36,26 @@ LOGGER.addHandler(COUNTER)
 
 
 def force_fields(args, parser):
-    """Load the available force fields and mappings."""
+    """
+    Load force fields and mappings used by Martinize2.
+
+    Force fields and mappings are loaded from the default Vermouth data
+    directories and from any additional directories provided through the
+    command-line interface. Self-mappings are generated for all known force
+    fields.
+
+    Parameters
+    ----------
+    args : dict
+        Parsed command-line arguments.
+    parser : argparse.ArgumentParser
+        Argument parser used to exit after listing available force fields.
+
+    Returns
+    -------
+    tuple[dict, dict]
+        The known force fields and available mappings.
+    """ 
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / "force_fields"
     )
@@ -65,7 +84,14 @@ def force_fields(args, parser):
 
 
 def main():
-    """Build and run the configured Martinize2 pipeline."""
+    """
+    Build and run the configured Martinize2 pipeline.
+
+    The function loads the selected pipeline configuration, applies optional
+    overrides, builds the dynamic command-line interface, resolves force
+    fields and mappings, constructs the pipeline, and runs it on a molecular
+    system.
+    """
     mini_parser = build_mini_parser()
     mini_args, remaining_args = mini_parser.parse_known_args()
 

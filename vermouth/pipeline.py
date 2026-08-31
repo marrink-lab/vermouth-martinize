@@ -1,5 +1,7 @@
+from html import parser
 from pathlib import Path
 from copy import deepcopy
+import vermouth 
 import argparse
 import importlib
 import yaml
@@ -9,6 +11,25 @@ from vermouth.processors.processor import Pipeline
 
 # validate conditions  
 def _options_used_in_condition(condition):
+    """
+    Collect CLI option and variable references used in a condition.
+
+    Parameters
+    ----------
+    condition : dict
+        Condition definition from the pipeline configuration.
+
+    Returns
+    -------
+    tuple[set[str], set[str]]
+        Referenced CLI option names and variable names.
+
+    Raises
+    ------
+    ValueError
+        If the condition type is unknown or an ``equal`` condition does not
+        reference a CLI option or variable.
+    """
     type_, cond = next(iter(condition.items()))
     cli_refs = set()
     variable_refs = set()
@@ -49,6 +70,31 @@ def validate_cli_options(
     local_cli_options=None,
     local_variables=None,
 ):
+    """
+    Validate CLI option and variable references in a pipeline configuration.
+
+    The configuration is checked recursively to ensure that options and
+    variables referenced by conditions and processor arguments have been
+    defined.
+
+    Parameters
+    ----------
+    pipeline_conf : dict
+        Pipeline configuration to validate.
+    path : str, optional
+        Configuration path used in error messages.
+    local_cli_options : iterable[str], optional
+        CLI options defined in an enclosing pipeline scope.
+    local_variables : iterable[str], optional
+        Variables defined in an enclosing pipeline scope.
+
+    Raises
+    ------
+    KeyError
+        If an undefined CLI option or variable is referenced.
+    ValueError
+        If a condition definition is invalid.
+    """
     local_cli_options = set() if local_cli_options is None else set(local_cli_options)
     local_variables = set() if local_variables is None else set(local_variables)
 
@@ -123,6 +169,25 @@ def validate_cli_options(
             )
 
 def _cys_argument(value):
+    """
+    Parse a cysteine bridge command-line argument.
+
+    Parameters
+    ----------
+    value : str
+        Value supplied on the command line. Accepted values are ``auto``,
+        ``none``, or a floating-point number.
+
+    Returns
+    -------
+    str or float
+        ``auto``, ``none``, or the parsed floating-point value.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        If the value cannot be parsed.
+    """
     try:
         return float(value)
     except ValueError:
@@ -134,6 +199,24 @@ def _cys_argument(value):
                     'Value must be "auto", "none", or a float.'
                 )
 def water_bias(value):
+    """
+    Parse a water-bias command-line argument.
+
+    Parameters
+    ----------
+    value : str
+        A letter and epsilon value separated by a colon.
+
+    Returns
+    -------
+    tuple[str, float]
+        The letter and corresponding epsilon value.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        If the value does not have the expected format.
+    """
     try:
         letter, epsilon = value.split(":")
         return letter, float(epsilon)
@@ -142,9 +225,43 @@ def water_bias(value):
                 'value must be a letter and a float separated by a colon'
     )
 def ignore_resname(value):
+    """
+    Parse a comma-separated list of residue names.
+
+    Parameters
+    ----------
+    value : str
+        Comma-separated residue names.
+
+    Returns
+    -------
+    list[str]
+        Residue names with whitespace removed.
+    """
     return [item.strip() for item in value.split(",") if item.strip()]
 
 def translate_cli_opts(opts):
+    """
+    Translate YAML CLI options to values accepted by argparse.
+
+    String type definitions are replaced by their corresponding Python
+    callables using ``TYPE_MAP``.
+
+    Parameters
+    ----------
+    opts : dict
+        CLI option configuration.
+
+    Returns
+    -------
+    dict
+        Translated CLI option configuration.
+
+    Raises
+    ------
+    ValueError
+        If an unknown CLI type is specified.
+    """
     opts = dict(opts)
 
     if 'type' in opts and isinstance(opts['type'], str):
@@ -224,6 +341,17 @@ TYPE_MAP = {
 
 #building a mini parser with the pipelines that we want because we need to know what forcefield to use. 
 def build_mini_parser():
+    """
+    Build the preliminary Martinize2 command-line parser.
+
+    The mini parser handles options required before the full pipeline
+    configuration and dynamic CLI are constructed.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        Parser containing the preliminary command-line options.
+    """
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
 
     parser.add_argument(
@@ -248,27 +376,65 @@ def build_mini_parser():
         help="Directory to search pipeline YAML files in.",
     )
 
-    parser.add_argument("-extra_ff_dir", action="append", default=[], type=Path)
-    parser.add_argument("-extra_map_dir", action="append", default=[], type=Path)
+    parser.add_argument(
+        "-extra_ff_dir",
+        dest="extra_ff_dir",
+        action="append",
+        default=[],
+        type=Path,
+    )
+
+    parser.add_argument(
+        "-extra_map_dir",
+        dest="extra_map_dir",
+        action="append",
+        default=[],
+        type=Path,
+    )
+
     parser.add_argument("-list_ff", action="store_true")
 
     return parser
 
 def find_pipeline_yaml(name, pipeline_dirs):
+    """
+    Locate a pipeline YAML file.
+
+    The function first checks whether ``name`` is an existing path, then
+    searches the user-provided pipeline directories, and finally searches the
+    default Vermouth pipeline directory.
+
+    Parameters
+    ----------
+    name : str or pathlib.Path
+        Pipeline name or path.
+    pipeline_dirs : iterable[pathlib.Path]
+        Additional directories to search.
+
+    Returns
+    -------
+    pathlib.Path
+        Path to the pipeline YAML file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the pipeline YAML file cannot be found.
+    """
     path = Path(name)
 
-    # User gaf een volledig pad op
+    # User specified path
     if path.exists():
         return path
 
-    # Zoek in opgegeven directories
+    # search in the user-specified directories
     for directory in pipeline_dirs:
         candidate = Path(directory) / f"{name}.yaml"
         if candidate.exists():
             return candidate
 
-    # Standaard locatie
-    candidate = Path(__file__).parent / "data" / "pipelines" / f"{name}.yaml"
+    # Standard location
+    candidate = vermouth.DATA_PATH / "pipelines" / f"{name}.yaml"
     if candidate.exists():
         return candidate
 
@@ -276,6 +442,30 @@ def find_pipeline_yaml(name, pipeline_dirs):
 
 # build the CLI based on the pipeline configuration.
 def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
+    """
+    Build a command-line parser from a pipeline configuration.
+
+    CLI flags and mutually exclusive groups are added recursively from the
+    pipeline configuration. Flags that have already been added are skipped.
+
+    Parameters
+    ----------
+    pipeline_conf : dict
+        Pipeline configuration containing CLI definitions.
+    prefix : str
+        Prefix used for command-line options.
+    parser : argparse.ArgumentParser, optional
+        Existing parser to extend. A new parser is created when omitted.
+    added_flags : set[str], optional
+        CLI flags that have already been added.
+    **kwargs
+        Additional arguments passed to ``argparse.ArgumentParser``.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        Parser containing the configured CLI options.
+    """
     # make parser if not given, otherwise use the given one.
     parser = parser or argparse.ArgumentParser(allow_abbrev=False, **kwargs)
     # make an empty set of the added_flags. or use the given one. 
@@ -326,6 +516,31 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
 
 # evaluete the condition with the cli values 
 def eval_condition(condition, cli_args, variables):
+    """
+    Evaluate a pipeline condition.
+
+    Supported conditions are ``any``, ``all``, ``not``, ``equal``, and
+    ``has_variable``.
+
+    Parameters
+    ----------
+    condition : dict
+        Condition definition to evaluate.
+    cli_args : dict
+        Parsed command-line argument values.
+    variables : dict
+        Runtime variables available to the pipeline.
+
+    Returns
+    -------
+    bool
+        Result of the condition.
+
+    Raises
+    ------
+    ValueError
+        If the condition has an invalid or unknown condition type.
+    """
     # every condition can only have 1 key 
     if len(condition) != 1:
         raise ValueError(
@@ -359,6 +574,27 @@ def eval_condition(condition, cli_args, variables):
 
 # set the values from the CLI into the pipeline config 
 def set_values(pipeline_conf, cli_args, variables):
+    """
+    Resolve values and conditions in a pipeline configuration.
+
+    Processor arguments are resolved from fixed values, command-line options,
+    or runtime variables. Conditions are evaluated and processor classes are
+    imported recursively.
+
+    Parameters
+    ----------
+    pipeline_conf : dict
+        Pipeline configuration to resolve.
+    cli_args : dict
+        Parsed command-line arguments.
+    variables : dict
+        Runtime variables available to the pipeline.
+
+    Raises
+    ------
+    KeyError
+        If a processor argument does not specify a value source.
+    """
     # check if there is a condition 
     if 'condition' in pipeline_conf:
         pipeline_conf['condition'] = eval_condition(pipeline_conf['condition'], cli_args, variables)
@@ -392,6 +628,19 @@ def set_values(pipeline_conf, cli_args, variables):
 
 # import the processor 
 def import_processor(processor_name):
+    """
+    Import a processor from its fully qualified name.
+
+    Parameters
+    ----------
+    processor_name : str
+        Processor name in ``module.ClassName`` format.
+
+    Returns
+    -------
+    type
+        Imported processor class.
+    """
     # split the processor name into module and name. 
     module, name = processor_name.rsplit('.', 1)
     # import to python module 
@@ -401,6 +650,24 @@ def import_processor(processor_name):
     return proc
 
 def namespace_variables(obj, namespace):
+    """
+    Add a namespace to variable references in a configuration object.
+
+    The configuration is traversed recursively and values associated with a
+    ``variable`` key are prefixed with the supplied namespace.
+
+    Parameters
+    ----------
+    obj : object
+        Configuration object to process.
+    namespace : str
+        Namespace to prepend to variable references.
+
+    Returns
+    -------
+    object
+        The configuration object with namespaced variable references.
+    """
     if isinstance(obj, dict):
         for key, value in obj.items():
             if key == "variable" and isinstance(value, str):
@@ -415,8 +682,21 @@ def namespace_variables(obj, namespace):
             namespace_variables(item, namespace)
     return obj
 
-# load in the yaml files
+
 def load_yaml_file(path):
+    """
+    Load a YAML configuration file.
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Path to the YAML file.
+
+    Returns
+    -------
+    object
+        Parsed contents of the YAML file.
+    """
     with open(path, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
@@ -449,6 +729,22 @@ def load_pipeline_configs(pipeline_names, pipeline_dirs):
     return configs
 
 def iter_cli_flags(pipeline_conf):
+    """
+    Iterate over all CLI flags in a pipeline configuration.
+
+    CLI flags from normal flag definitions, mutually exclusive groups, and
+    nested pipeline steps are yielded recursively.
+
+    Parameters
+    ----------
+    pipeline_conf : dict
+        Pipeline configuration to inspect.
+
+    Yields
+    ------
+    tuple[str, dict]
+        CLI flag name and its configuration.
+    """
     # gather cli_flags defined in cli_flags
     for flag, opts in pipeline_conf.get("cli_flags", {}).items():
         # using yield so that it saves time and memory by not creating a big list of all the flags, but instead giving them one by one.
@@ -465,9 +761,40 @@ def iter_cli_flags(pipeline_conf):
             yield from iter_cli_flags(step)
 
 def find_step_by_id(config, target_id, raise_if_missing=True):
+    """
+    Find a pipeline step by its ID or processor name.
+
+    If a processor does not define an explicit ID, its processor name is used
+    as its effective ID.
+
+    Parameters
+    ----------
+    config : object
+        Pipeline configuration to search.
+    target_id : str
+        ID or processor name to find.
+    raise_if_missing : bool, optional
+        Raise an error when no matching step is found.
+
+    Returns
+    -------
+    dict or None
+        Matching processor configuration, or ``None`` when no match exists and
+        ``raise_if_missing`` is false.
+
+    Raises
+    ------
+    KeyError
+        If no matching processor is found and ``raise_if_missing`` is true.
+    ValueError
+        If more than one processor matches the requested ID.
+    """
     matches = []
 
     def search(value):
+        """
+        Recursively search the configuration for matching pipeline steps.
+        """
         if isinstance(value, dict):
             for child in value.values():
                 search(child)
@@ -585,10 +912,21 @@ def insert_pipeline_step(pipeline_config, step_definition):
     """
     Insert a new processor step into a pipeline configuration.
 
-    step_definition must contain:
-    - 'id': the ID of the new step;
-    - 'processor': the processor to insert;
-    - either '$insert_before' or '$insert_after'.
+    Parameters
+    ----------
+    pipeline_config : dict
+        Pipeline configuration in which the new step is inserted.
+    step_definition : dict
+        Definition of the new processor step. It must contain ``id`` and
+        ``processor``, and either ``$insert_before`` or ``$insert_after``.
+
+    Raises
+    ------
+    ValueError
+        If both or neither insertion directives are specified, or if the
+        target step is not unique.
+    KeyError
+        If the target step cannot be found.
     """
     new_step = deepcopy(step_definition)
     new_step_id = new_step.pop("id")
@@ -716,12 +1054,30 @@ def combine_pipeline_configs(configs):
 
 
 class PipelineConfigBuilder:
-    """Build a pipeline configuration from YAML files."""
+    """
+    Build a combined pipeline configuration from YAML files.
+
+    Parameters
+    ----------
+    pipeline_names : iterable[str]
+        Names or paths of pipeline YAML files.
+    pipeline_dirs : iterable[pathlib.Path], optional
+        Additional directories in which pipeline files are searched.
+    """
     def __init__(self, pipeline_names, pipeline_dirs=None):
         self.pipeline_names = pipeline_names
         self.pipeline_dirs = pipeline_dirs or []
 
     def build_config(self):
+        """
+        Load, combine, and validate the pipeline configuration.
+
+        Returns
+        -------
+        tuple[list[tuple[str, dict]], dict]
+            Loaded individual configurations and the combined pipeline
+            configuration.
+        """
         configs = load_pipeline_configs(self.pipeline_names, self.pipeline_dirs)
         pipeline_conf = combine_pipeline_configs(configs)
         validate_cli_options(pipeline_conf, path="martinize2")
@@ -729,7 +1085,16 @@ class PipelineConfigBuilder:
 
 
 class CLIBuilder:
-    """Build a command-line interface from a pipeline configuration."""
+    """
+    Build a command-line interface from a pipeline configuration.
+
+    Parameters
+    ----------
+    pipeline_conf : dict
+        Pipeline configuration containing the CLI definitions.
+    prefix : str, optional
+        Prefix used for generated command-line options.
+    """
     def __init__(self, pipeline_conf, prefix="-"):
         self.pipeline_conf = pipeline_conf
         self.prefix = prefix
@@ -737,27 +1102,81 @@ class CLIBuilder:
 
     @property
     def argparser(self):
+        """
+        Return the command-line argument parser.
+
+        The parser is built when it is accessed for the first time.
+
+        Returns
+        -------
+        argparse.ArgumentParser
+            Generated command-line parser.
+        """
         if self._argparser is None:
             self.build_argparser()
         return self._argparser
 
     def build_argparser(self, **kwargs):
+        """
+        Build and store the command-line argument parser.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional arguments passed to ``build_cli``.
+        """
         self._argparser = build_cli(self.pipeline_conf, self.prefix, **kwargs)
 
     def parse_cli_args(self, args=None):
+        """
+        Parse command-line arguments.
+
+        Parameters
+        ----------
+        args : sequence[str], optional
+            Arguments to parse. If omitted, arguments are read from
+            ``sys.argv``.
+
+        Returns
+        -------
+        dict
+            Parsed command-line arguments.
+        """
         return vars(self.argparser.parse_args(args))
 
 class PipelineBuilder:
-    """Build an executable pipeline from a pipeline configuration."""
+    """
+    Build an executable pipeline from a pipeline configuration.
+
+    Parameters
+    ----------
+    pipeline_conf : dict
+        Pipeline configuration used to construct the pipeline.
+    """
     def __init__(self, pipeline_conf):
         self.pipeline_conf = pipeline_conf
 
     def build_pipeline(self, cli_args, variables):
+        """
+        Resolve configuration values and build an executable pipeline.
+
+        Parameters
+        ----------
+        cli_args : dict
+            Parsed command-line arguments.
+        variables : dict
+            Runtime variables available to the pipeline.
+
+        Returns
+        -------
+        Pipeline
+            Executable Vermouth pipeline.
+        """
         pipeline_conf = deepcopy(self.pipeline_conf)
-        set_values(self.pipeline_conf, cli_args, variables)
+        set_values(pipeline_conf, cli_args, variables)
 
         return Pipeline.from_dict(
-            self.pipeline_conf,
+            pipeline_conf,
             "martinize2",
         )
     

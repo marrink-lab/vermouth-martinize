@@ -14,26 +14,38 @@ martinize2:
       const: contact_map_martinize.out
       default: false
       type: path
-      help: Write out contact map to file.
+      help: Write out contact map to file if calculating as part of Martinize2.
     molname:
       cli: name
       type: str
       default: molecule
-      help: Name for the output molecule.
+      help: >
+        Name for the output molecule. If not specified, will default to
+        'molecule_{0..n}' for the number of molecules in your system.
     water_bias:
       cli: water-bias
       action: store_true
       default: false
-      help: Automatically apply water bias.
+      help: Automatically apply water bias to different secondary structure elements.
     water_bias_eps:
       cli: water-bias-eps
       nargs: +
       type: water_bias
       default: []
+      help: >
+        Define the strength of the water bias by secondary structure type.
+        For example, use `H:3.6 C:2.1` to bias helixes and coils. Using the
+        idr option (e.g. idr:2.1) intrinsically disordered regions are biased
+        seperately.
     water_bias_idrs:
       cli: id-regions
       nargs: +
       default: []
+      help: >
+        Intrinsically disordered regions specified by resid. These parts are
+        biased differently when applying a water bias. format:
+        [<chain>-]<start_resid_1>:<end_resid_1>
+        [<chain>-]<start_resid_2>:<end_resid_2> ...
     elastic:
       action: store_true
       default: false
@@ -42,6 +54,11 @@ martinize2:
       cli: eunit
       type: str
       default: molecule
+      help: >
+        Establish what is the structural unit for the elastic network. Bonds
+        are only created within a unit. Options are molecule, chain, all, or a
+        specified region defined by resids, with following format:
+        <start_resid_1>:<end_resid_1>, <start_resid_2>:<end_resid_2>...
   steps: !!omap
     - martinize:
         steps: !!omap
@@ -76,7 +93,6 @@ martinize2:
               args:
                 id_regions:
                   cli: water_bias_idrs
-                  
           - vermouth.DoLinks:
               args: {}
           - vermouth.LocateChargeDummies:
@@ -154,7 +170,9 @@ martinize2:
             const: true
             type: path
             default: null
-            help: Use Martini Go model.
+            help: >
+              Use Martini Go model. Accepts either an input file from the server,
+              or just provide the flag to calculate as part of Martinize.
         args:
           go_low:
             cli: go_low
@@ -259,12 +277,14 @@ martinize2:
             cli: eu
             type: float
             default: 0.9
-            help: 'Elastic bond upper cutoff: F = 0 if rij > up'
+            help: 'Elastic bond upper cutoff: F = 0  if rij > up'
           res_min_dist:
             cli: ermd
             type: int
             default: null
-            help: The minimum separation between two residues to have an RB
+            help: >
+              The minimum separation between two residues to have an RB the
+              default value is set by the force-field.
           rb_decay_factor:
             cli: ea
             type: float

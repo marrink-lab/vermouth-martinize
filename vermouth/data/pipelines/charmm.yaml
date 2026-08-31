@@ -26,12 +26,14 @@ martinize2:
 
     list_blocks:
       action: store_true
-      help: "List all known blocks and modifications for the selected force fields."
+      help: "List all Blocks and Modifications known to the force field, and exit."
     go:
         nargs: '?'
         const: true
         type: path
-        help: Use Martini Go model.
+        help: >
+          Use Martini Go model. Accepts either an input file from the server,
+          or just provide the flag to calculate as part of Martinize.
     maxwarn:
         type: maxwarn
         action: append
@@ -56,7 +58,7 @@ martinize2:
         cli_flags:
           inpath:
             cli: f
-            help: path to input file
+            help: "Input file (PDB|GRO)"
             required: true
             type: path
           ignore_res:
@@ -67,11 +69,11 @@ martinize2:
             type: ignore_resname
             help: "Ignore residues with that name: e.g. -ignore HOH,LIG (+)"
           ignore_h:
-            help: ignore hydrogens
+            help: "Ignore all Hydrogen atoms in the input file"
             action: store_true
             default: false
           modelidx:
-            help: model number
+            help: "Which MODEL to select. Only meaningful for PDB files."
             type: int
             default: null
         args:
@@ -130,24 +132,50 @@ martinize2:
                 modify:
                   action: append
                   default: []
-                  help: modifications to apply to a specific residue.
+                  help: >
+                    Add a modification to a residue. Desired modification is
+                    specified as, e.g. A-ASP45:ASP0. The format is
+                    <chain>-<resname><resid>:[+]<modification>. Elements of the
+                    specification can be omitted as required. e.g. ASP45:ASP0
+                    will modify all ASP with resid 45 to ASP0, A-ASP:ASP0 will
+                    modify all ASP on chain A to ASP0. By default the
+                    modifications specified this way will override any
+                    modifications found in the input file. If instead you want
+                    to *add* modifications in addition to what's already in the
+                    input file, add '+' to the modification specification. For
+                    example, 'A-HIS1:+HSE' to add the HSE modification to any
+                    automatically determined terminal modifications.
                 cter:
                   action: append
                   default: []
-                  help: C-terminus modification for a specific c-terminus
+                  help: >
+                    Shorthand for patching C-termini. A C-terminus is defined
+                    as a residue which is connected to 1 other residue, and has
+                    the lowest resid.
                 nter:
                   action: append
                   default: []
-                  help: N-terminus modification for a specific n-terminus
+                  help: >
+                    Shorthand for patching N-termini. An N-terminus is defined
+                    as a residue which is connected to 1 other residue, and has
+                    the highest resid.
                 mutate:
                   action: append
                   default: []
-                  help: mutate a specific amino acid into another one.
+                  help: >
+                    Mutate a residue. Desired mutation is specified as, e.g.
+                    A-PHE45:ALA. The format is
+                    <chain>-<resname><resid>:<new resname>. Elements of the
+                    specification can be omitted as required. e.g. PHE45:ALA
+                    will mutate all PHE with resid 45 to ALA, A-PHE:ALA will
+                    mutate all PHE on chain A to ALA.
                 neutral_termini:
                   cli: nt
                   action: store_true
                   default: false
-                  help: Use neutral N- and C-termini.
+                  help: >
+                    Set neutral termini (charged is default). Alias for
+                    "-nter NH2-ter -cter COOH-ter"
               args:
                 modify:
                   cli: modify
@@ -200,7 +228,7 @@ martinize2:
                     CanonicalizeModifications step. The
                     resulting file may contain "nan"
                     coordinates making it unreadable by most
-                    software."
+                    software.
               args:
                 path:
                   cli: write_canon
@@ -244,9 +272,9 @@ martinize2:
                 type: str
                 default: null
                 help: >
-                  (Manually set the secondary structure of the proteins.
+                  Manually set the secondary structure of the proteins.
                   Either give a dssp sequence for each residue in your input file
-                  or a single letter to be repeated for the entire sequence, e.g. -ss C)
+                  or a single letter to be repeated for the entire sequence, e.g. -ss C
               collagen:
                 action: store_true
                 default: false
@@ -320,7 +348,7 @@ martinize2:
             action: store_true
             default: false
             help: >
-              Use dihedrals for extended regions, rather than elastic bonds
+              Use dihedrals for extended regions rather than elastic bonds
         args:
           extdih:
             cli: extdih
@@ -336,12 +364,14 @@ martinize2:
         args:
           noscfix:
             cli: noscfix
+            
     - cystein_bridges:
         cli_flags:
           cystein_bridge:
             cli: cys 
             type: cys_argument
             default: auto
+            help: "Cystein bonds"
         steps: !!omap
           - vermouth.RemoveCysteinBridgeEdges:
               condition:

@@ -277,8 +277,8 @@ def test_set_values_variable_argument():
 
 def test_pipeline_builder_builds_pipeline():
     """
-    Test that PipelineBuilder fills the pipeline configuration
-    and builds a Pipeline object from it.
+    Test that PipelineBuilder builds a Pipeline without modifying
+    the original pipeline configuration.
     """
     pipeline_conf = {
         "steps": [
@@ -305,8 +305,8 @@ def test_pipeline_builder_builds_pipeline():
     pipeline = builder.build_pipeline(cli_args, variables)
 
     assert isinstance(pipeline, Pipeline)
-    assert pipeline_conf["steps"][0][1]["args"]["path"] == "test.pdb"
-    assert pipeline_conf["steps"][0][1]["processor"] is Path
+    assert pipeline_conf["steps"][0][1]["args"]["path"] == {"cli": "inpath"}
+
 
 
 
