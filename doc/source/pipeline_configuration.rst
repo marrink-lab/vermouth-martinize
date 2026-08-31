@@ -19,10 +19,10 @@ steps.
 Running Martinize2 with a pipeline
 ----------------------------------
 
-Pipeline files are selected with the ``-pipeline`` option::
+Pipeline files are selected with the ``--pipeline`` option::
 
     martinize2 \
-        -pipeline charmm water martini3001 \
+        --pipeline charmm water martini3001 \
         -inpath input.pdb \
         -outpath output.pdb
 
@@ -34,10 +34,10 @@ A path to a custom YAML file can also be used.
 Multiple pipeline files
 -----------------------
 
-Multiple YAML files can be supplied after ``-pipeline``::
+Multiple YAML files can be supplied after ``--pipeline``::
 
     martinize2 \
-        -pipeline charmm water martini3001 \
+        --pipeline charmm water martini3001 \
         -inpath input.pdb \
         -outpath output.pdb
 
@@ -219,8 +219,8 @@ the original pipeline files:
 .. code-block:: console
 
    martinize2 \
-       -pipeline charmm water martini3001 \
-       -override change.yaml \
+       --pipeline charmm water martini3001 \
+       --override change.yaml \
        -inpath input.pdb \
        -outpath output.pdb
 
@@ -288,13 +288,13 @@ Custom pipeline directories
 ---------------------------
 
 Additional directories containing pipeline YAML files can be supplied with
-``-pipeline-dir``.
+``--pipeline-dir``.
 
 A custom pipeline file can also be provided directly:
 
 .. code-block:: console
 
    martinize2 \
-       -pipeline path/to/custom_pipeline.yaml \
+       --pipeline path/to/custom_pipeline.yaml \
        -inpath input.pdb \
        -outpath output.pdb

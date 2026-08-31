@@ -260,6 +260,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         res_min_dist,
         force_field,
         rb_bond_type=None,
+        rb_decay_shift=0,
     ):
         if rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
@@ -300,6 +301,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             "upper_bound": rb_upper_bound,
             "decay_factor": rb_decay_factor,
             "decay_power": rb_decay_power,
+            "decay_shift": rb_decay_shift,
             "base_constant": rb_force_constant,
             "minimum_force": rb_minimum_force,
             "selector": selector,

@@ -254,7 +254,7 @@ martinize2:
             cli: el
             type: float
             default: 0
-            help: 'Elastic bond lower cutoff: F = Fc if rij < lo'
+            help: 'Elastic bond lower cutoff: F = 0 if rij < lo'
           rb_upper_bound:
             cli: eu
             type: float
@@ -275,6 +275,11 @@ martinize2:
             type: float
             default: 1
             help: Elastic bond decay power p
+          rb_decay_shift:
+            cli: es
+            type: float
+            default: 0
+            help: Distance shift applied before the elastic bond decay function is evaluated
           rb_minimum_force:
             cli: em
             type: float
@@ -296,6 +301,8 @@ martinize2:
             cli: rb_decay_factor
           rb_decay_power:
             cli: rb_decay_power
+          rb_decay_shift:
+            cli: rb_decay_shift
           rb_minimum_force:
             cli: rb_minimum_force
           rb_selection:

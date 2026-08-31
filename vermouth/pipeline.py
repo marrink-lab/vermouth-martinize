@@ -226,22 +226,31 @@ TYPE_MAP = {
 def build_mini_parser():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
 
+    # These three flags use a double dash on purpose: argparse's
+    # allow_abbrev=False only suppresses abbreviation matching for
+    # "--long" options, not for single-dash multi-character ones (this is
+    # a long-standing argparse limitation, see _get_option_tuples). Since
+    # this mini parser runs via parse_known_args() before the real,
+    # pipeline-defined flags (many of which are single-dash and
+    # single-character, e.g. "-p", "-o") are even known, a single-dash
+    # "-pipeline"/"-override"/"-pipeline-dir" here would incorrectly
+    # swallow those flags as abbreviations.
     parser.add_argument(
-        "-pipeline",
+        "--pipeline",
         nargs="+",
         default=["charmm", "martini3001"],
         help="Pipeline YAML fragments to combine in order.",
     )
 
     parser.add_argument(
-        "-override",
+        "--override",
         type=Path,
         default=None,
         help="Pipeline override YAML file.",
     )
 
     parser.add_argument(
-        "-pipeline-dir",
+        "--pipeline-dir",
         action="append",
         default=[],
         type=Path,
