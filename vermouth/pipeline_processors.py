@@ -259,6 +259,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         rb_unit,
         res_min_dist,
         force_field,
+        rb_bond_type=None,
     ):
         if rb_unit == "molecule":
             domain_criterion = vermouth.processors.apply_rubber_band.always_true
@@ -304,6 +305,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             "selector": selector,
             "domain_criterion": domain_criterion,
             "res_min_dist": res_min_dist,
+            "bond_type": rb_bond_type,
         }
 
 class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias):

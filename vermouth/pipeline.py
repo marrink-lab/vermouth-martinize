@@ -227,21 +227,21 @@ def build_mini_parser():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
 
     parser.add_argument(
-        "--pipeline",
+        "-pipeline",
         nargs="+",
         default=["charmm", "martini3001"],
         help="Pipeline YAML fragments to combine in order.",
     )
 
     parser.add_argument(
-        "--override",
+        "-override",
         type=Path,
         default=None,
         help="Pipeline override YAML file.",
     )
 
     parser.add_argument(
-        "--pipeline-dir",
+        "-pipeline-dir",
         action="append",
         default=[],
         type=Path,
