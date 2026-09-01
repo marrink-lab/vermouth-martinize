@@ -179,7 +179,9 @@ def test_parse_disorder_resspec(resspec, expected):
             assert i[key] == j[key]
 
 def _make_idr_system():
-    """Build a minimal system with resids 1-4 in chain A."""
+    """
+    Build a minimal system with resids 1-4 in chain A.
+    """
     system = System(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     nodes = [
@@ -194,6 +196,14 @@ def _make_idr_system():
 
 
 def test_missing_idr_regions_warn(caplog):
+    """
+    Tests that a warning is logged when -id-regions requests residues
+    that are not present in the input structure.
+
+    The structure only contains resids 1-4, so requesting 9:11 should
+    trigger exactly one WARNING that mentions how many residues are
+    missing (3).
+    """
     system = _make_idr_system()
 
     caplog.clear()
@@ -207,6 +217,13 @@ def test_missing_idr_regions_warn(caplog):
 
 
 def test_idr_regions_within_structure_no_warning(caplog):
+    """
+    Tests that no warning is logged when -id-regions requests residues
+    that are all present in the input structure.
+
+    The structure contains resids 1-4, so requesting 1:4 should not
+    trigger any warning.
+    """
     system = _make_idr_system()
 
     caplog.clear()
