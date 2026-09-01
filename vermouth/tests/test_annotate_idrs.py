@@ -15,9 +15,15 @@
 """
 Test for the tune idp bonds processor.
 """
+import logging
+
 import pytest
 from vermouth.dssp import dssp
+from vermouth.forcefield import ForceField
+from vermouth.molecule import Molecule
 from vermouth.processors.annotate_idrs import AnnotateIDRs, parse_residues
+from vermouth.system import System
+from vermouth.tests.datafiles import FF_UNIVERSAL_TEST
 from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
 
 @pytest.mark.parametrize('idr_regions, expected', [
@@ -172,3 +178,39 @@ def test_parse_disorder_resspec(resspec, expected):
         for key in i.keys():
             assert i[key] == j[key]
 
+def _make_idr_system():
+    """Build a minimal system with resids 1-4 in chain A."""
+    system = System(force_field=ForceField(FF_UNIVERSAL_TEST))
+    mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
+    nodes = [
+        {'chain': 'A', 'resid': 1, 'stash': {'resid': 1}},
+        {'chain': 'A', 'resid': 2, 'stash': {'resid': 2}},
+        {'chain': 'A', 'resid': 3, 'stash': {'resid': 3}},
+        {'chain': 'A', 'resid': 4, 'stash': {'resid': 4}},
+    ]
+    mol.add_nodes_from(enumerate(nodes))
+    system.add_molecule(mol)
+    return system
+
+
+def test_missing_idr_regions_warn(caplog):
+    system = _make_idr_system()
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        AnnotateIDRs(id_regions=["9:11"]).run_system(system)
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert 'missing' in caplog.records[0].getMessage().lower()
+    assert '3' in caplog.records[0].getMessage()
+
+
+def test_idr_regions_within_structure_no_warning(caplog):
+    system = _make_idr_system()
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        AnnotateIDRs(id_regions=["1:4"]).run_system(system)
+
+    assert caplog.records == []

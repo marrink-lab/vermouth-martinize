@@ -83,6 +83,55 @@ def annotate_disorder(molecule, id_regions, annotation="cgidr"):
                     molecule.nodes[key][annotation] = False
 
 
+def _check_missing_idr_residues(system, id_regions):
+    """
+    Check that all requested residues to be treated as IDR are actually
+    present in the structure, and warn if not.
+
+    Parameters
+    ----------
+    system: :class:`vermouth.system.System`
+        The system to check.
+    id_regions: list[dict]
+        Parsed IDR regions, as stored in :attr:`AnnotateIDRs.id_regions`.
+    """
+    # Rebuild requested_resids from id_regions
+    requested_resids = set()
+    for region in id_regions:
+        for start, end in region['resids']:
+            lo, hi = sorted((start, end))
+            requested_resids.update(range(lo, hi + 1))
+
+    # Collect annotated residues using TRUE PDB numbering
+    annotated_resids = {
+        mol.nodes[n]['stash']['resid']
+        for mol in system.molecules
+        for n in mol.nodes
+        if mol.nodes[n].get("cgidr")
+    }
+
+    # Collect ALL PDB residues present in the structure
+    present_resids = {
+        mol.nodes[n]['stash']['resid']
+        for mol in system.molecules
+        for n in mol.nodes
+    }
+    min_pdb = min(present_resids)
+    max_pdb = max(present_resids)
+
+    # Find missing requested residues
+    missing = sorted(requested_resids - annotated_resids)
+
+    if missing:
+        # show only first 10 missing residues
+        missing_preview = missing[:10]
+        LOGGER.warning(
+            "Requested residues in -id-regions do not exist in the input "
+            "structure. {} residues are missing. Some missing residues: {} ... "
+            "Please select residues within the PDB range {}–{}.",
+            len(missing), missing_preview, min_pdb, max_pdb,
+            type="missing-flag",
+        )
 
 
 class AnnotateIDRs(Processor):
@@ -127,6 +176,7 @@ class AnnotateIDRs(Processor):
             return system
         LOGGER.info("Annotating disordered regions.", type="step")
         super().run_system(system)
+        _check_missing_idr_residues(system, self.id_regions)
 
         if any([molecule.meta.get('modified_cgsecstruct', False) for molecule in system.molecules]):
             supplementary_ss_seq = list(
