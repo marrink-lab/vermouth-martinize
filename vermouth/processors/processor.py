@@ -18,6 +18,10 @@ Provides an abstract base class for processors.
 """
 
 import networkx as nx
+import logging
+from vermouth.log_helpers import TypeAdapter
+LOGGER = TypeAdapter(logging.getLogger("vermouth"))
+
 
 class Processor:
     """
@@ -132,12 +136,12 @@ class Pipeline(nx.DiGraph, Processor):
             else:
                 name = getattr(processor, 'name', None) or processor.__class__.__name__
             if self.nodes[node_idx]['condition']:
-                print(f'Running {name}')
+                LOGGER.info(f'Running {name}')
                 result = processor.run_system(system)
                 if result is not None:
                     system = result
             else:
-                print(f'Not running {name} because the condition is not met')
+                LOGGER.debug(f'Not running {name} because the condition is not met')
         return system
 
     def __str__(self):

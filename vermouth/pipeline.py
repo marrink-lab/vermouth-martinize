@@ -392,6 +392,14 @@ def build_mini_parser():
         type=Path,
     )
 
+    parser.add_argument(
+        "-v",
+        dest="verbosity",
+        action="count",
+        help="Enable debug logging output. Can be given multiple times.",
+        default=0,
+    )
+
     parser.add_argument("-list_ff", action="store_true")
 
     return parser

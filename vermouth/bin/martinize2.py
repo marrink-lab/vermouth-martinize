@@ -10,7 +10,7 @@ import vermouth
 import vermouth.forcefield
 
 
-from vermouth.log_helpers import CountingHandler, ignore_warnings_and_count
+from vermouth.log_helpers import TypeAdapter, StyleAdapter, BipolarFormatter, CountingHandler, ignore_warnings_and_count
 from vermouth.file_writer import DeferredFileWriter
 from vermouth import DATA_PATH
 from vermouth.map_input import (
@@ -28,11 +28,31 @@ from vermouth.pipeline import (
     insert_pipeline_step,
     merge_override,
 )
-logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger("vermouth")
+# logging.basicConfig(level=logging.INFO)
+LOGGER = TypeAdapter(logging.getLogger("vermouth"))
+
+PRETTY_FORMATTER = logging.Formatter(
+    fmt="{levelname:>8} - {type} - {message}", style="{"
+)
+DETAILED_FORMATTER = logging.Formatter(
+    fmt="{levelname:>8} - {type} - {name} - {message}", style="{"
+)
+
 COUNTER = CountingHandler()
+
+# Control above what level message we want to count
 COUNTER.setLevel(logging.WARNING)
+
+CONSOLE_HANDLER = logging.StreamHandler()
+FORMATTER = BipolarFormatter(
+    DETAILED_FORMATTER, PRETTY_FORMATTER, logging.DEBUG, logger=LOGGER
+)
+CONSOLE_HANDLER.setFormatter(FORMATTER)
+LOGGER.addHandler(CONSOLE_HANDLER)
 LOGGER.addHandler(COUNTER)
+
+LOGGER = StyleAdapter(LOGGER)
+
 
 
 def force_fields(args, parser):
@@ -101,7 +121,8 @@ def main():
         with open(mini_args.override, "r", encoding="utf-8") as file:
             override_conf = yaml.safe_load(file)
 
-        
+    loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
+    LOGGER.setLevel(loglevels[mini_args.verbosity])
 
     config_builder = PipelineConfigBuilder(
         mini_args.pipeline,
@@ -177,7 +198,6 @@ def main():
 
     DeferredFileWriter().write()
     vermouth.Quoter().run_system(system)
-    print(system.meta.get("header"))
 
 
 def entry():
