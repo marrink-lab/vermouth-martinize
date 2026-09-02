@@ -49,7 +49,7 @@ def read_system(system, path, ignore_resnames=(), ignh=None, modelidx=None):
         System into which the molecular structure is read.
     path : pathlib.Path
         Path to the input structure file.
-    ignore_resnames : iterable[str], optional
+    ignore_resnames : Iterable[str], optional
         Residue names to exclude while reading.
     ignh : bool, optional
         Whether hydrogen atoms should be ignored.
@@ -87,7 +87,7 @@ class ReadSystem(Processor):
     ----------
     path : pathlib.Path
         Path to the input structure file.
-    ignore_resnames : iterable, optional
+    ignore_resnames : Iterable, optional
         Residue names that should be ignored.
     ignh : bool, optional
         Whether hydrogen atoms should be ignored.
@@ -182,13 +182,13 @@ class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
 
         Parameters
         ----------
-        modify : iterable[str], optional
+        modify : Iterable[str], optional
             Residue modifications.
-        cter : iterable[str], optional
+        cter : Iterable[str], optional
             C-terminal modifications.
-        nter : iterable[str], optional
+        nter : Iterable[str], optional
             N-terminal modifications.
-        mutate : iterable[str], optional
+        mutate : Iterable[str], optional
             Residue mutations.
         neutral_termini : bool, optional
             Use neutral terminal modifications.
@@ -380,9 +380,9 @@ class GoModelWrapper(Processor):
         Molecule type name.
     water_bias : bool, optional
         Whether water-bias interactions are enabled.
-    water_bias_eps : iterable, optional
+    water_bias_eps : Iterable, optional
         Water-bias epsilon values.
-    water_bias_idrs : iterable, optional
+    water_bias_idrs : Iterable, optional
         Regions used for water-bias handling.
     """
     def __init__ (
@@ -449,7 +449,7 @@ class MergeChainsWrapper(Processor):
 
     Parameters
     ----------
-    merge_chains : iterable[str], optional
+    merge_chains : Iterable[str], optional
         Chain groups to merge, or ``"all"`` to merge all chains.
     """
     def __init__(self, merge_chains = None):
@@ -521,7 +521,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             Force decay power.
         rb_minimum_force : float
             Minimum elastic-network force.
-        rb_selection : iterable[str] or None
+        rb_selection : Iterable[str] or None
             Atom names included in the elastic network.
         rb_unit : str
             Unit within which elastic interactions are generated.
@@ -597,9 +597,9 @@ class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias
         ----------
         water_bias : bool
             Whether water bias is enabled.
-        water_bias_eps : iterable, optional
+        water_bias_eps : Iterable, optional
             Residue-specific epsilon values.
-        water_bias_idrs : iterable, optional
+        water_bias_idrs : Iterable, optional
             Intrinsically disordered regions.
 
         Returns
@@ -777,7 +777,7 @@ class SetMoleculeMetaIDRWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
 
         Parameters
         ----------
-        id_regions : iterable, optional
+        id_regions : Iterable, optional
             Configured intrinsically disordered regions.
 
         Returns

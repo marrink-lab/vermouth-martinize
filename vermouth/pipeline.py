@@ -83,9 +83,9 @@ def validate_cli_options(
         Pipeline configuration to validate.
     path : str, optional
         Configuration path used in error messages.
-    local_cli_options : iterable[str], optional
+    local_cli_options : Iterable[str], optional
         CLI options defined in an enclosing pipeline scope.
-    local_variables : iterable[str], optional
+    local_variables : Iterable[str], optional
         Variables defined in an enclosing pipeline scope.
 
     Raises
@@ -408,7 +408,7 @@ def find_pipeline_yaml(name, pipeline_dirs):
     ----------
     name : str or pathlib.Path
         Pipeline name or path.
-    pipeline_dirs : iterable[pathlib.Path]
+    pipeline_dirs : Iterable[pathlib.Path]
         Additional directories to search.
 
     Returns
@@ -1061,9 +1061,9 @@ class PipelineConfigBuilder:
 
     Parameters
     ----------
-    pipeline_names : iterable[str]
+    pipeline_names : Iterable[str]
         Names or paths of pipeline YAML files.
-    pipeline_dirs : iterable[pathlib.Path], optional
+    pipeline_dirs : Iterable[pathlib.Path], optional
         Additional directories in which pipeline files are searched.
     """
     def __init__(self, pipeline_names, pipeline_dirs=None):
@@ -1135,7 +1135,7 @@ class CLIBuilder:
 
         Parameters
         ----------
-        args : sequence[str], optional
+        args : Sequence[str], optional
             Arguments to parse. If omitted, arguments are read from
             ``sys.argv``.
 

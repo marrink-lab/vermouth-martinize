@@ -365,6 +365,7 @@ A custom pipeline file can also be provided directly:
        -pipeline path/to/custom_pipeline.yaml \
        -inpath input.pdb \
        -outpath output.pdb
+
 YAML syntax reference
 ---------------------
 
