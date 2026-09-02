@@ -355,21 +355,21 @@ def build_mini_parser():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
 
     parser.add_argument(
-        "--pipeline",
+        "-pipeline",
         nargs="+",
         default=["charmm", "martini3001"],
         help="Pipeline YAML fragments to combine in order.",
     )
 
     parser.add_argument(
-        "--override",
+        "-override",
         type=Path,
         default=None,
         help="Pipeline override YAML file.",
     )
 
     parser.add_argument(
-        "--pipeline-dir",
+        "-pipeline-dir",
         action="append",
         default=[],
         type=Path,
@@ -1105,7 +1105,8 @@ class CLIBuilder:
     prefix : str, optional
         Prefix used for generated command-line options.
     """
-    def __init__(self, pipeline_conf, prefix="-"):
+    def __init__(self, name, pipeline_conf, prefix="-"):
+        self.name = name
         self.pipeline_conf = pipeline_conf
         self.prefix = prefix
         self._argparser = None
@@ -1135,7 +1136,7 @@ class CLIBuilder:
         **kwargs
             Additional arguments passed to ``build_cli``.
         """
-        self._argparser = build_cli('', self.pipeline_conf, self.prefix, **kwargs)
+        self._argparser = build_cli(self.name, self.pipeline_conf, self.prefix, **kwargs)
 
     def parse_cli_args(self, args=None):
         """

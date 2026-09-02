@@ -147,7 +147,7 @@ def main():
                         "id": step_id,
                     },
                 )
-    cli_builder = CLIBuilder(pipeline_conf)
+    cli_builder = CLIBuilder('martinize2', pipeline_conf)
     cli_builder.build_argparser()
     parser = cli_builder.argparser
     cli_args = cli_builder.parse_cli_args(remaining_args)

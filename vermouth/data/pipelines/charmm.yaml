@@ -257,7 +257,7 @@ martinize2:
     - vermouth.gmx.topology.Header:
         args: {}
 
-    - choose_secstruct:
+    - Choose secondary structure:
         cli_groups:
           - type: mutually_exclusive
             flags:
