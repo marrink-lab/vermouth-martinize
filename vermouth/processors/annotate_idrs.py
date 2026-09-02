@@ -95,20 +95,28 @@ def _check_missing_idr_residues(system, id_regions):
     id_regions: list[dict]
         Parsed IDR regions, as stored in :attr:`AnnotateIDRs.id_regions`.
     """
-    # Rebuild requested_resids from id_regions
+    # A region without a chain specifier matches any chain.
     requested_resids = set()
     for region in id_regions:
+        chain = region.get('chain')
         for start, end in region['resids']:
             lo, hi = sorted((start, end))
-            requested_resids.update(range(lo, hi + 1))
+            requested_resids.update((chain, resid) for resid in range(lo, hi + 1))
 
-    # Collect annotated residues using TRUE PDB numbering
+    # Collect annotated residues using TRUE PDB numbering, as (chain, resid) pairs
     annotated_resids = {
-        mol.nodes[n]['stash']['resid']
+        (mol.nodes[n].get('chain'), mol.nodes[n]['stash']['resid'])
         for mol in system.molecules
         for n in mol.nodes
         if mol.nodes[n].get("cgidr")
     }
+
+    # A requested residue with no chain specifier matches any chain, so
+    # consider it found if the resid is annotated in any chain.
+    if any(chain is None for chain, _ in requested_resids):
+        annotated_resids |= {
+            (None, resid) for _, resid in annotated_resids
+        }
 
     # Collect ALL PDB residues present in the structure
     present_resids = {
@@ -131,6 +139,15 @@ def _check_missing_idr_residues(system, id_regions):
             "Please select residues within the PDB range {}–{}.",
             len(missing), missing_preview, min_pdb, max_pdb,
             type="missing-flag",
+        )
+
+    # Inform the user when a region has no chain specifier, since it will
+    # be applied to all chains in the structure.
+    if any(region.get('chain') is None for region in id_regions):
+        LOGGER.info(
+            "No chain specified in -id-regions. The regions will be applied "
+            "to all chains in the structure.",
+            type="general",
         )
 
 

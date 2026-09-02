@@ -180,7 +180,7 @@ def test_parse_disorder_resspec(resspec, expected):
 
 def _make_idr_system():
     """
-    Build a minimal system with resids 1-4 in chain A.
+    Build a minimal system with resids 1-4 in chain A and resids 1-2 in chain B.
     """
     system = System(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
@@ -189,45 +189,107 @@ def _make_idr_system():
         {'chain': 'A', 'resid': 2, 'stash': {'resid': 2}},
         {'chain': 'A', 'resid': 3, 'stash': {'resid': 3}},
         {'chain': 'A', 'resid': 4, 'stash': {'resid': 4}},
+        {'chain': 'B', 'resid': 1, 'stash': {'resid': 1}},
+        {'chain': 'B', 'resid': 2, 'stash': {'resid': 2}},
     ]
     mol.add_nodes_from(enumerate(nodes))
     system.add_molecule(mol)
     return system
 
 
-def test_missing_idr_regions_warn(caplog):
+@pytest.mark.parametrize('id_regions, expected_cgidr', [
+    # All residues requested are present in the structure. A region without
+    # a chain specifier annotates all chains.
+    (["1:4"], {('A', 1): True, ('A', 2): True, ('A', 3): True, ('A', 4): True,
+               ('B', 1): True, ('B', 2): True}),
+    # Only a subset of the requested residues is present.
+    (["3:9"], {('A', 1): False, ('A', 2): False, ('A', 3): True, ('A', 4): True,
+               ('B', 1): False, ('B', 2): False}),
+    # None of the requested residues are present.
+    (["9:11"], {('A', 1): False, ('A', 2): False, ('A', 3): False, ('A', 4): False,
+                ('B', 1): False, ('B', 2): False}),
+    # Multiple regions, one fully present and one fully absent.
+    (["1:2", "9:11"], {('A', 1): True, ('A', 2): True, ('A', 3): False, ('A', 4): False,
+                       ('B', 1): True, ('B', 2): True}),
+    # Chain-specific region: only chain A is annotated.
+    (["A-1:4"], {('A', 1): True, ('A', 2): True, ('A', 3): True, ('A', 4): True,
+                 ('B', 1): False, ('B', 2): False}),
+    # Chain-specific region: only chain B is annotated.
+    (["B-1:2"], {('A', 1): False, ('A', 2): False, ('A', 3): False, ('A', 4): False,
+                 ('B', 1): True, ('B', 2): True}),
+])
+def test_annotate_idr_regions(id_regions, expected_cgidr):
+    """
+    Tests that the cgidr annotation is set on the residues that are
+    present in the structure and requested via -id-regions.
+    """
+    system = _make_idr_system()
+
+    AnnotateIDRs(id_regions=id_regions).run_system(system)
+
+    for node, (chain, resid) in enumerate(
+            [('A', 1), ('A', 2), ('A', 3), ('A', 4), ('B', 1), ('B', 2)]):
+        assert system.molecules[0].nodes[node].get('cgidr') == expected_cgidr[(chain, resid)]
+
+
+@pytest.mark.parametrize('id_regions, expected', [
+    # All residues requested are present in the structure.
+    (["1:4"], False),
+    # Only a subset of the requested residues is present.
+    (["3:9"], True),
+    # None of the requested residues are present.
+    (["9:11"], True),
+    # Multiple regions, one fully present and one fully absent.
+    (["1:2", "9:11"], True),
+    # Chain-specific region that exists in the structure.
+    (["A-1:4"], False),
+    # Chain-specific region that does not exist in the structure.
+    (["C-1:4"], True),
+    # Chain-specific region on chain B, which only has resids 1-2.
+    (["B-1:4"], True),
+])
+def test_missing_idr_regions_warn(caplog, id_regions, expected):
     """
     Tests that a warning is logged when -id-regions requests residues
     that are not present in the input structure.
 
-    The structure only contains resids 1-4, so requesting 9:11 should
-    trigger exactly one WARNING that mentions how many residues are
-    missing (3).
+    The structure contains resids 1-4 in chain A and resids 1-2 in chain B.
     """
     system = _make_idr_system()
 
     caplog.clear()
     with caplog.at_level(logging.WARNING):
-        AnnotateIDRs(id_regions=["9:11"]).run_system(system)
+        AnnotateIDRs(id_regions=id_regions).run_system(system)
 
-    assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == 'WARNING'
-    assert 'missing' in caplog.records[0].getMessage().lower()
-    assert '3' in caplog.records[0].getMessage()
+    if expected:
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert 'missing' in caplog.records[0].getMessage().lower()
+    else:
+        assert caplog.records == []
 
 
-def test_idr_regions_within_structure_no_warning(caplog):
+@pytest.mark.parametrize('id_regions, expected', [
+    # No chain specified: an info message is logged.
+    (["1:4"], True),
+    # Chain specified: no info message.
+    (["A-1:4"], False),
+    # Mixed: at least one region without a chain.
+    (["A-1:2", "3:4"], True),
+])
+def test_no_chain_specifier_info(caplog, id_regions, expected):
     """
-    Tests that no warning is logged when -id-regions requests residues
-    that are all present in the input structure.
-
-    The structure contains resids 1-4, so requesting 1:4 should not
-    trigger any warning.
+    Tests that an info message is logged when a region has no chain
+    specifier, since it will be applied to all chains.
     """
     system = _make_idr_system()
 
     caplog.clear()
-    with caplog.at_level(logging.WARNING):
-        AnnotateIDRs(id_regions=["1:4"]).run_system(system)
+    with caplog.at_level(logging.INFO):
+        AnnotateIDRs(id_regions=id_regions).run_system(system)
 
-    assert caplog.records == []
+    info_records = [rec for rec in caplog.records if rec.levelname == 'INFO']
+    if expected:
+        assert any('all chains' in rec.getMessage() for rec in info_records)
+    else:
+        assert not any('all chains' in rec.getMessage() for rec in info_records)
