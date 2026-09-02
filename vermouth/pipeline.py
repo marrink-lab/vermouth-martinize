@@ -400,6 +400,18 @@ def build_mini_parser():
         default=0,
     )
 
+    parser.add_argument(
+        "-maxwarn",
+        dest="maxwarn",
+        type=maxwarn,
+        action="append",
+        nargs="+",
+        default=[],
+        help="The maximum number of allowed warnings. If "
+        "more warnings are encountered no output files are"
+        " written.",
+    )
+
     parser.add_argument("-list_ff", action="store_true")
 
     return parser

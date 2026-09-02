@@ -188,16 +188,16 @@ def main():
 
     if leftover_warnings:
         LOGGER.error(
-            "%s warnings were encountered after accounting for the "
+            "{} warnings were encountered after accounting for the "
             "-maxwarn flag. No output files will be "
             "written. Consider fixing the warnings, or if you are sure "
             "they are harmless, use the -maxwarn flag.",
             leftover_warnings,
         )
         sys.exit(2)
-
-    DeferredFileWriter().write()
-    vermouth.Quoter().run_system(system)
+    else:
+        DeferredFileWriter().write()
+        vermouth.Quoter().run_system(system)
 
 
 def entry():
