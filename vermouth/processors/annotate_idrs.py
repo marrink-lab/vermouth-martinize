@@ -138,7 +138,6 @@ def _check_missing_idr_residues(system, id_regions):
             "structure. {} residues are missing. Some missing residues: {} ... "
             "Please select residues within the PDB range {}–{}.",
             len(missing), missing_preview, min_pdb, max_pdb,
-            type="missing-flag",
         )
 
     # Inform the user when a region has no chain specifier, since it will
@@ -190,6 +189,12 @@ class AnnotateIDRs(Processor):
         system: :class:`vermouth.system.System`
         """
         if not self.id_regions:
+            LOGGER.warning(
+                "No IDR regions specified. The -id-regions flag was given "
+                "but no regions were provided, so no residues will be "
+                "annotated as disordered. This means no IDR-specific "
+                "parameters will be applied to the system.",
+            )
             return system
         LOGGER.info("Annotating disordered regions.", type="step")
         super().run_system(system)

@@ -181,16 +181,23 @@ def test_parse_disorder_resspec(resspec, expected):
 def _make_idr_system():
     """
     Build a minimal system with resids 1-4 in chain A and resids 1-2 in chain B.
+
+    The stashed resids differ from the current resids to mimic a structure
+    that has been renumbered, so the tests exercise the use of the TRUE PDB 
+    numbering from the stash.
+
+    Chain A has a gap in the stashed numbering (10, 11, 14, 15) to mimic a
+    PDB structure with missing residues (12, 13).
     """
     system = System(force_field=ForceField(FF_UNIVERSAL_TEST))
     mol = Molecule(force_field=ForceField(FF_UNIVERSAL_TEST))
     nodes = [
-        {'chain': 'A', 'resid': 1, 'stash': {'resid': 1}},
-        {'chain': 'A', 'resid': 2, 'stash': {'resid': 2}},
-        {'chain': 'A', 'resid': 3, 'stash': {'resid': 3}},
-        {'chain': 'A', 'resid': 4, 'stash': {'resid': 4}},
-        {'chain': 'B', 'resid': 1, 'stash': {'resid': 1}},
-        {'chain': 'B', 'resid': 2, 'stash': {'resid': 2}},
+        {'chain': 'A', 'resid': 1, 'stash': {'resid': 10}},
+        {'chain': 'A', 'resid': 2, 'stash': {'resid': 11}},
+        {'chain': 'A', 'resid': 3, 'stash': {'resid': 14}},
+        {'chain': 'A', 'resid': 4, 'stash': {'resid': 15}},
+        {'chain': 'B', 'resid': 1, 'stash': {'resid': 20}},
+        {'chain': 'B', 'resid': 2, 'stash': {'resid': 21}},
     ]
     mol.add_nodes_from(enumerate(nodes))
     system.add_molecule(mol)
@@ -200,23 +207,23 @@ def _make_idr_system():
 @pytest.mark.parametrize('id_regions, expected_cgidr', [
     # All residues requested are present in the structure. A region without
     # a chain specifier annotates all chains.
-    (["1:4"], {('A', 1): True, ('A', 2): True, ('A', 3): True, ('A', 4): True,
-               ('B', 1): True, ('B', 2): True}),
+    (["10:11"], {('A', 10): True, ('A', 11): True, ('A', 14): False, ('A', 15): False,
+                 ('B', 20): False, ('B', 21): False}),
     # Only a subset of the requested residues is present.
-    (["3:9"], {('A', 1): False, ('A', 2): False, ('A', 3): True, ('A', 4): True,
-               ('B', 1): False, ('B', 2): False}),
+    (["10:15"], {('A', 10): True, ('A', 11): True, ('A', 14): True, ('A', 15): True,
+                 ('B', 20): False, ('B', 21): False}),
     # None of the requested residues are present.
-    (["9:11"], {('A', 1): False, ('A', 2): False, ('A', 3): False, ('A', 4): False,
-                ('B', 1): False, ('B', 2): False}),
+    (["30:32"], {('A', 10): False, ('A', 11): False, ('A', 14): False, ('A', 15): False,
+                 ('B', 20): False, ('B', 21): False}),
     # Multiple regions, one fully present and one fully absent.
-    (["1:2", "9:11"], {('A', 1): True, ('A', 2): True, ('A', 3): False, ('A', 4): False,
-                       ('B', 1): True, ('B', 2): True}),
+    (["10:11", "30:32"], {('A', 10): True, ('A', 11): True, ('A', 14): False, ('A', 15): False,
+                          ('B', 20): False, ('B', 21): False}),
     # Chain-specific region: only chain A is annotated.
-    (["A-1:4"], {('A', 1): True, ('A', 2): True, ('A', 3): True, ('A', 4): True,
-                 ('B', 1): False, ('B', 2): False}),
+    (["A-10:15"], {('A', 10): True, ('A', 11): True, ('A', 14): True, ('A', 15): True,
+                   ('B', 20): False, ('B', 21): False}),
     # Chain-specific region: only chain B is annotated.
-    (["B-1:2"], {('A', 1): False, ('A', 2): False, ('A', 3): False, ('A', 4): False,
-                 ('B', 1): True, ('B', 2): True}),
+    (["B-20:21"], {('A', 10): False, ('A', 11): False, ('A', 14): False, ('A', 15): False,
+                   ('B', 20): True, ('B', 21): True}),
 ])
 def test_annotate_idr_regions(id_regions, expected_cgidr):
     """
@@ -228,36 +235,37 @@ def test_annotate_idr_regions(id_regions, expected_cgidr):
     AnnotateIDRs(id_regions=id_regions).run_system(system)
 
     for node, (chain, resid) in enumerate(
-            [('A', 1), ('A', 2), ('A', 3), ('A', 4), ('B', 1), ('B', 2)]):
+            [('A', 10), ('A', 11), ('A', 14), ('A', 15), ('B', 20), ('B', 21)]):
         assert system.molecules[0].nodes[node].get('cgidr') == expected_cgidr[(chain, resid)]
 
 
 @pytest.mark.parametrize('id_regions, expected', [
     # All residues requested are present in the structure.
-    (["1:4"], False),
-    # Only a subset of the requested residues is present.
-    (["3:9"], True),
+    (["10:11"], False),
+    # Requested region spans the gap (12-13 missing).
+    (["10:15"], True),
     # None of the requested residues are present.
-    (["9:11"], True),
+    (["1:4"], True),
     # Multiple regions, one fully present and one fully absent.
-    (["1:2", "9:11"], True),
+    (["10:11", "30:32"], True),
+    # Multiple regions, all fully present.
+    (["10:11", "14:15"], False),
+    # Chain-specific multiple regions, all fully present.
+    (["A-10:11", "B-20:21"], False),
     # Chain-specific region that exists in the structure.
-    (["A-1:4"], False),
+    (["A-10:15"], True),
     # Chain-specific region that does not exist in the structure.
-    (["C-1:4"], True),
-    # Chain-specific region on chain B, which only has resids 1-2.
-    (["B-1:4"], True),
+    (["C-10:15"], True),
+    # Chain-specific region on chain B, which only has resids 20-21.
+    (["B-10:15"], True),
 ])
 def test_missing_idr_regions_warn(caplog, id_regions, expected):
     """
     Tests that a warning is logged when -id-regions requests residues
     that are not present in the input structure.
-
-    The structure contains resids 1-4 in chain A and resids 1-2 in chain B.
     """
     system = _make_idr_system()
 
-    caplog.clear()
     with caplog.at_level(logging.WARNING):
         AnnotateIDRs(id_regions=id_regions).run_system(system)
 
@@ -269,13 +277,26 @@ def test_missing_idr_regions_warn(caplog, id_regions, expected):
         assert caplog.records == []
 
 
+def test_empty_id_regions_warns(caplog):
+    """
+    Tests that a warning is logged when -id-regions is given but no
+    regions are provided, since no residues will be annotated.
+    """
+    system = _make_idr_system()
+
+    with caplog.at_level(logging.WARNING):
+        AnnotateIDRs(id_regions=[]).run_system(system)
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+
 @pytest.mark.parametrize('id_regions, expected', [
     # No chain specified: an info message is logged.
-    (["1:4"], True),
+    (["10:11"], True),
     # Chain specified: no info message.
-    (["A-1:4"], False),
+    (["A-10:15"], False),
     # Mixed: at least one region without a chain.
-    (["A-1:2", "3:4"], True),
+    (["A-10:11", "14:15"], True),
 ])
 def test_no_chain_specifier_info(caplog, id_regions, expected):
     """
@@ -284,7 +305,6 @@ def test_no_chain_specifier_info(caplog, id_regions, expected):
     """
     system = _make_idr_system()
 
-    caplog.clear()
     with caplog.at_level(logging.INFO):
         AnnotateIDRs(id_regions=id_regions).run_system(system)
 
