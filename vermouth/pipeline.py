@@ -441,7 +441,7 @@ def find_pipeline_yaml(name, pipeline_dirs):
     raise FileNotFoundError(f"Could not find pipeline YAML '{name}'.")
 
 # build the CLI based on the pipeline configuration.
-def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
+def build_cli(name, pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     """
     Build a command-line parser from a pipeline configuration.
 
@@ -450,6 +450,7 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
 
     Parameters
     ----------
+    name : str
     pipeline_conf : dict
         Pipeline configuration containing CLI definitions.
     prefix : str
@@ -468,6 +469,7 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     """
     # make parser if not given, otherwise use the given one.
     parser = parser or argparse.ArgumentParser(allow_abbrev=False, **kwargs)
+    base_group = parser.add_argument_group(name)
     # make an empty set of the added_flags. or use the given one. 
     added_flags = set() if added_flags is None else added_flags
     # loop through the cli flags defined in the pipeline config. and don't add the same flag twice. 
@@ -479,7 +481,7 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
         cli_name = opts.pop("cli", flag)
         opts = translate_cli_opts(opts)
 
-        parser.add_argument(
+        base_group.add_argument(
             f"{prefix}{cli_name}",
             f"{prefix}{flag}",
             dest=flag,
@@ -498,7 +500,7 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
         if not flags_to_add:
             continue
 
-        group = parser.add_mutually_exclusive_group()
+        group = base_group.add_mutually_exclusive_group()
 
         for flag, opts in flags_to_add:
             # make the options dict from the options defined in the yaml. and translate the type from a string to a real python type.
@@ -509,7 +511,7 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     # recursion for steps in the pipeline
     if pipeline_conf.get('steps'):
         for name, step in pipeline_conf['steps']:
-            build_cli(step, prefix, parser=parser, added_flags=added_flags)
+            build_cli(name, step, prefix, parser=parser, added_flags=added_flags)
 
     return parser
 
@@ -1125,7 +1127,7 @@ class CLIBuilder:
         **kwargs
             Additional arguments passed to ``build_cli``.
         """
-        self._argparser = build_cli(self.pipeline_conf, self.prefix, **kwargs)
+        self._argparser = build_cli('', self.pipeline_conf, self.prefix, **kwargs)
 
     def parse_cli_args(self, args=None):
         """
