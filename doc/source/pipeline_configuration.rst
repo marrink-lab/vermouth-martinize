@@ -174,6 +174,60 @@ The ``PipelineConfigBuilder`` reads these definitions into the internal
 pipeline configuration. The ``CLIBuilder`` uses this configuration to
 construct the Martinize2 command-line interface.
 
+Command-line help sections
+---------------------------
+
+By default, a flag appears in ``-h`` output under the generic ``options``
+heading. Flags can instead be grouped under a titled section, matching how
+``martinize2 -h`` is laid out.
+
+A step can declare a default section for all the flags it defines with
+``cli_section``, next to its own ``cli_flags``:
+
+.. code-block:: yaml
+
+   - vermouth.pipeline_processors.ElasticWrapper:
+       cli_section: "Protein elastic network"
+       cli_flags:
+         rb_force_constant:
+           cli: ef
+           ...
+
+Individual flags can override the step's default (or set one when a flag is
+defined at the pipeline's top-level ``cli_flags``, which is not owned by any
+single step) with their own ``section`` key:
+
+.. code-block:: yaml
+
+   cli_flags:
+     elastic:
+       action: store_true
+       default: false
+       section: "Protein elastic network"
+       help: Write elastic bonds.
+
+A ``cli_groups`` entry (a mutually exclusive group of flags) can be given a
+``section`` the same way.
+
+The order sections appear in ``-h`` is controlled by a top-level
+``cli_sections`` list, declared once (typically in the base fragment that is
+always loaded first, such as ``charmm.yaml``):
+
+.. code-block:: yaml
+
+   martinize2:
+     cli_sections:
+       - "Input and output files"
+       - "Force field selection"
+       - "Protein elastic network"
+
+When multiple pipeline fragments are combined, their ``cli_sections`` lists
+are concatenated, keeping only the first occurrence of each title. A flag
+tagged with a section title that isn't in ``cli_sections`` still gets its
+own section; it is simply appended wherever it is first encountered while
+walking the pipeline. Tagging is entirely optional and can be adopted
+incrementally: untagged flags keep showing up under ``options``.
+
 Conditions
 ----------
 

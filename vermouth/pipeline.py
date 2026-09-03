@@ -284,28 +284,51 @@ def find_pipeline_yaml(name, pipeline_dirs):
     raise FileNotFoundError(f"Could not find pipeline YAML '{name}'.")
 
 # build the CLI based on the pipeline configuration.
-def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
+def build_cli(pipeline_conf, prefix, parser=None, added_flags=None, sections=None, **kwargs):
     # make parser if not given, otherwise use the given one.
     parser = parser or argparse.ArgumentParser(allow_abbrev=False, **kwargs)
-    # make an empty set of the added_flags. or use the given one. 
+    # make an empty set of the added_flags. or use the given one.
     added_flags = set() if added_flags is None else added_flags
-    # loop through the cli flags defined in the pipeline config. and don't add the same flag twice. 
+    # {section title: argparse argument group}, shared across the whole
+    # recursion so steps in different parts of the pipeline can contribute
+    # flags to the same titled section.
+    sections = {} if sections is None else sections
+    # pre-create sections in the order given by cli_sections, so that the
+    # display order in -h is stable regardless of which step happens to be
+    # the first to add a flag to a given section.
+    for title in pipeline_conf.get('cli_sections', []):
+        if title not in sections:
+            sections[title] = parser.add_argument_group(title)
+
+    def target_for(section_title):
+        if not section_title:
+            return parser
+        if section_title not in sections:
+            sections[section_title] = parser.add_argument_group(section_title)
+        return sections[section_title]
+
+    # a step can set a default section for all the flags it defines,
+    # individual flags can override it with their own 'section' key.
+    default_section = pipeline_conf.get('cli_section')
+
+    # loop through the cli flags defined in the pipeline config. and don't add the same flag twice.
     for flag, opts in pipeline_conf.get('cli_flags', {}).items():
         if flag in added_flags:
-            continue 
+            continue
         # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
         opts = dict(opts)
         cli_name = opts.pop("cli", flag)
+        section_title = opts.pop("section", default_section)
         opts = translate_cli_opts(opts)
 
-        parser.add_argument(
+        target_for(section_title).add_argument(
             f"{prefix}{cli_name}",
             f"{prefix}{flag}",
             dest=flag,
             **opts,
         )
         added_flags.add(flag)
-    # add CLI Flags from the CLI groups. 
+    # add CLI Flags from the CLI groups.
     for group_cli in pipeline_conf.get('cli_groups', []):
         flags_to_add = [
             (flag, opts)
@@ -317,7 +340,8 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
         if not flags_to_add:
             continue
 
-        group = parser.add_mutually_exclusive_group()
+        section_title = group_cli.get('section', default_section)
+        group = target_for(section_title).add_mutually_exclusive_group()
 
         for flag, opts in flags_to_add:
             # make the options dict from the options defined in the yaml. and translate the type from a string to a real python type.
@@ -328,7 +352,7 @@ def build_cli(pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     # recursion for steps in the pipeline
     if pipeline_conf.get('steps'):
         for name, step in pipeline_conf['steps']:
-            build_cli(step, prefix, parser=parser, added_flags=added_flags)
+            build_cli(step, prefix, parser=parser, added_flags=added_flags, sections=sections)
 
     return parser
 
@@ -684,6 +708,7 @@ def combine_pipeline_configs(configs):
     combined = {
         "cli_flags": {},
         "cli_groups": [],
+        "cli_sections": [],
         "variables": [],
         "steps": [],
     }
@@ -702,6 +727,12 @@ def combine_pipeline_configs(configs):
 
             if namespaced_variable not in combined["variables"]:
                 combined["variables"].append(namespaced_variable)
+
+        # collect the CLI help section display order, preserving the
+        # order sections are first declared across the combined fragments
+        for title in root.get("cli_sections", []):
+            if title not in combined["cli_sections"]:
+                combined["cli_sections"].append(title)
 
         # merge normal CLI flags
         for flag, opts in root.get("cli_flags", {}).items():

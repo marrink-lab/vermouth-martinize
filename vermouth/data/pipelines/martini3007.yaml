@@ -7,41 +7,49 @@ martinize2:
     to_ff:
       cli: ff
       default: martini3007
+      section: "Force field selection"
       help: Which forcefield to use
-    go_write_file: 
+    go_write_file:
       cli: go-write-file
       nargs: '?'
       const: contact_map_martinize.out
       default: false
       type: path
+      section: "Virtual site based GoMartini"
       help: Write out contact map to file.
     molname:
       cli: name
       type: str
       default: molecule
+      section: "Input and output files"
       help: Name for the output molecule.
     water_bias:
       cli: water-bias
       action: store_true
       default: false
+      section: "Apply water bias."
       help: Automatically apply water bias.
     water_bias_eps:
       cli: water-bias-eps
       nargs: +
       type: water_bias
       default: []
+      section: "Apply water bias."
     water_bias_idrs:
       cli: id-regions
       nargs: +
       default: []
+      section: "Apply water bias."
     elastic:
       action: store_true
       default: false
+      section: "Protein elastic network"
       help: Write elastic bonds
     rb_unit:
       cli: eunit
       type: str
       default: molecule
+      section: "Protein elastic network"
   steps: !!omap
     - martinize:
         steps: !!omap
@@ -93,6 +101,7 @@ martinize2:
             equal:
               cli: posres
               value: none
+        cli_section: "Position restraints"
         cli_flags:
           posres:
             cli: p 
@@ -120,6 +129,7 @@ martinize2:
             equal:
               cli: go
               value: null
+        cli_section: "Virtual site based GoMartini"
         cli_flags:
           go_low:
             type: float
@@ -182,6 +192,7 @@ martinize2:
             equal:
               cli: merge_chains
               value: []
+        cli_section: "Input and output files"
         cli_flags:
           merge_chains:
             type: str
@@ -200,6 +211,7 @@ martinize2:
           equal:
             cli: go
             value: null
+        cli_section: "Input and output files"
         cli_flags:
           keep_duplicate_itp:
             cli: sep
@@ -244,6 +256,7 @@ martinize2:
             - equal:
                 cli: go
                 value: null
+        cli_section: "Protein elastic network"
         cli_flags:
           rb_force_constant:
             cli: ef
@@ -347,6 +360,7 @@ martinize2:
           equal:
             cli: resid_handling
             value: input
+        cli_section: "Input and output files"
         cli_flags:
           resid_handling:
             cli: resid 
@@ -374,6 +388,7 @@ martinize2:
     - vermouth.OutputLogger:
         args: {}
     - vermouth.gmx.topology.TopologyWriter:
+        cli_section: "Input and output files"
         cli_flags:
           top_path:
             cli: o
@@ -385,6 +400,7 @@ martinize2:
             cli: top_path
 
     - vermouth.pdb.WritePDB:
+        cli_section: "Input and output files"
         cli_flags:
           outpath:
             cli: x

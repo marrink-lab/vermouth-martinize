@@ -2,45 +2,62 @@ $schema: "./schema-pipeline.yaml"
 martinize2:
   variables:
     - ff
+  cli_sections:
+    - "Input and output files"
+    - "Force field selection"
+    - "Position restraints"
+    - "Secondary structure handling"
+    - "Protein elastic network"
+    - "Virtual site based GoMartini"
+    - "Apply water bias."
+    - "Protein description"
+    - "Debugging options"
   cli_flags:
     from_ff:
-      cli: from 
+      cli: from
       default: "charmm"
+      section: "Force field selection"
       help: "Force field of the original structure."
 
     extra_ff_dir:
       action: append
       default: []
       type: path
+      section: "Force field selection"
       help: "Additional repository for custom force fields."
 
     extra_map_dir:
       action: append
       default: []
       type: path
+      section: "Force field selection"
       help: "Additional repository for mapping files."
 
     list_ff:
       action: store_true
+      section: "Force field selection"
       help: "List all known force fields, and exit."
 
     list_blocks:
       action: store_true
+      section: "Force field selection"
       help: "List all known blocks and modifications for the selected force fields."
     go:
         nargs: '?'
         const: true
         type: path
+        section: "Virtual site based GoMartini"
         help: Use Martini Go model.
     maxwarn:
         type: maxwarn
         action: append
         nargs: "+"
         default: []
+        section: "Debugging options"
         help: >
           The maximum number of allowed warnings. If more warnings are encountered
           no output files are written.
-        
+
   steps: !!omap
     - vermouth.pipeline_processors.ListBlocks:
         condition:
@@ -53,6 +70,7 @@ martinize2:
           to_ff:
             variable: ff
     - vermouth.pipeline_processors.ReadSystem:
+        cli_section: "Input and output files"
         cli_flags:
           inpath:
             cli: f
@@ -87,6 +105,7 @@ martinize2:
     - pdb_to_universal:
         steps: !!omap
           - vermouth.pipeline_processors.MakeBondsWrapper:
+              cli_section: "Input and output files"
               cli_flags:
                 bonds_from:
                   type: str
@@ -110,6 +129,7 @@ martinize2:
           - vermouth.MergeNucleicStrands:
               args: {}
           - vermouth.pdb.WritePDB:
+              cli_section: "Debugging options"
               cli_flags:
                 write_graph:
                   type: path
@@ -126,6 +146,7 @@ martinize2:
                   value: false
 
           - vermouth.pipeline_processors.AnnotateMutModWrapper:
+              cli_section: "Protein description"
               cli_flags:
                 modify:
                   action: append
@@ -168,6 +189,7 @@ martinize2:
                   value: false
 
           - vermouth.pdb.WritePDB:
+              cli_section: "Debugging options"
               cli_flags:
                 write_repair:
                   type: path
@@ -191,6 +213,7 @@ martinize2:
               args: {}
 
           - vermouth.pdb.WritePDB:
+              cli_section: "Debugging options"
               cli_flags:
                 write_canon:
                   type: path
@@ -230,6 +253,7 @@ martinize2:
         args: {}
 
     - choose_secstruct:
+        cli_section: "Secondary structure handling"
         cli_groups:
           - type: mutually_exclusive
             flags:
@@ -315,6 +339,7 @@ martinize2:
                   value: "F"
                 
     - vermouth.SetMoleculeMeta:
+        cli_section: "Secondary structure handling"
         cli_flags:
           extdih:
             action: store_true
@@ -326,6 +351,7 @@ martinize2:
             cli: extdih
 
     - vermouth.pipeline_processors.SetMoleculeMetaScFixWrapper:
+        cli_section: "Protein description"
         cli_flags:
           noscfix:
             action: store_true
@@ -337,6 +363,7 @@ martinize2:
           noscfix:
             cli: noscfix
     - cystein_bridges:
+        cli_section: "Protein description"
         cli_flags:
           cystein_bridge:
             cli: cys 
