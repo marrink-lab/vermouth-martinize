@@ -89,6 +89,10 @@ martinize2:
     - pdb_to_universal:
         steps: !!omap
           - vermouth.pipeline_processors.MakeBondsWrapper:
+              log:
+                info:
+                  msg: "Guessing the bonds"
+                  type: step
               cli_flags:
                 bonds_from:
                   type: str
@@ -189,6 +193,10 @@ martinize2:
                   cli: neutral_termini
 
           - vermouth.RepairGraph:
+              log:
+                info:
+                  msg: Repairing the graph
+                  type: step
               args:
                 delete_unknown:
                   value: true
@@ -216,6 +224,10 @@ martinize2:
                   value: true
 
           - vermouth.CanonicalizeModifications:
+              log:
+                info:
+                  msg: Dealing with modifications
+                  type: step
               args: {}
 
           - vermouth.pdb.WritePDB:
@@ -406,6 +418,10 @@ martinize2:
               args: {}
 
           - vermouth.pipeline_processors.GoReader:
+              log:
+                info:
+                  msg: Reading Go model contact map
+                  type: step
               condition:
                 all:
                   - not:
@@ -421,6 +437,10 @@ martinize2:
                   cli: go
 
           - vermouth.rcsu.contact_map.GenerateContactMap:
+              log:
+                info:
+                  msg: Generating Go model contact map
+                  type: step
               condition:
                 equal:
                   cli: go

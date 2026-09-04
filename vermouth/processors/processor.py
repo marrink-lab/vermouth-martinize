@@ -106,7 +106,7 @@ class Pipeline(nx.DiGraph, Processor):
                     obj = processor(**kwargs)
 
             if parent is not None:
-                parent.add(obj, condition=conf.get("condition", True))
+                parent.add(obj, condition=conf.get("condition", True), log=conf.get('log', {}))
             else:
                 return obj
 
@@ -136,7 +136,9 @@ class Pipeline(nx.DiGraph, Processor):
             else:
                 name = getattr(processor, 'name', None) or processor.__class__.__name__
             if self.nodes[node_idx]['condition']:
-                LOGGER.info(f'Running {name}')
+                LOGGER.debug(f'Running {name}')
+                for level, log in self.nodes[node_idx]['log'].items():
+                    LOGGER.log(logging.getLevelNamesMapping()[level.upper()], **log)
                 result = processor.run_system(system)
                 if result is not None:
                     system = result

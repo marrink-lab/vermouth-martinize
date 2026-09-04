@@ -63,6 +63,10 @@ martinize2:
     - martinize:
         steps: !!omap
           - vermouth.DoMapping:
+              log:
+                info:
+                  msg: Creating the graph at the target resolution
+                  type: step
               args:
                 to_ff:
                   variable: ff
@@ -82,10 +86,23 @@ martinize2:
                     - resname
                     - atype
           - vermouth.DoAverageBead:
+              log:
+                info:
+                  msg: Averaging the coordinates
+                  type: step
               args:
                 ignore_missing_graphs:
                   value: true
           - vermouth.AnnotateIDRs:
+              condition:
+                not:
+                  equal:
+                    cli: water_bias_idrs
+                    value: []
+              log:
+                info:
+                  msg: Annotating IDRs
+                  type: step
               args:
                 id_regions:
                   cli: water_bias_idrs
@@ -94,16 +111,32 @@ martinize2:
                 id_regions:
                   cli: water_bias_idrs
           - vermouth.DoLinks:
+              log:
+                info:
+                  msg: Applying the links
+                  type: step
               args: {}
           - vermouth.LocateChargeDummies:
+              log:
+                info:
+                  msg: Placing the charge dummies
+                  type: step
               args: {}
     - vermouth.RTPPolisher:
+        log:
+          info:
+            msg: Generating implicit interactions for RTP force field
+            type: step
         condition:
           has_variable:
             variable: ff
             key: bondedtypes
         args: {}
     - vermouth.pipeline_processors.ApplyPosresWrapper:
+        log:
+          info:
+            msg: Applying positions restraints
+            type: step
         condition:
           not:
             equal:
@@ -131,6 +164,10 @@ martinize2:
           force_field:
             variable: ff
     - vermouth.pipeline_processors.GoModelWrapper:
+        log:
+          info:
+            msg: Generating the Go model
+            type: step
         condition:
           not:
             equal:
@@ -243,6 +280,10 @@ martinize2:
                 value: all
         args: {}
     - vermouth.pipeline_processors.ElasticWrapper:
+        log:
+          info:
+            msg: Stretching the rubber bands
+            type: step
         id: elastic
         condition:
           all:
@@ -372,12 +413,20 @@ martinize2:
           stash_name:
             value: stash
     - vermouth.SortMoleculeAtoms:
+        log:
+          info:
+            msg: Sorting atomids
+            type: step
         condition:
           equal:
             cli: go
             value: null
         args: {}
     - vermouth.OutputLogger:
+        log:
+          info:
+            msg: Writing output
+            type: step
         args: {}
     - vermouth.gmx.topology.TopologyWriter:
         cli_flags:
