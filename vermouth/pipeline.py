@@ -99,18 +99,19 @@ def validate_cli_options(
     local_variables = set() if local_variables is None else set(local_variables)
 
     # gather flags defined in cli_flags
-    normal_cli_options = set(pipeline_conf.get('cli_flags', {}).keys())
+    cli_conf = pipeline_conf.get('cli', {})
+    local_cli_options |= set(cli_conf.get('flags', {}).keys())
+    for excl_group in cli_conf.get('exclusive_groups', []):
+        local_cli_options |= set(excl_group.keys())
+    for name, group in cli_conf.get('groups', {}).items():
+        local_cli_options |= set(group.get('flags', {}).keys())
+        for excl_group in group.get('exclusive_groups', []):
+            local_cli_options |= set(excl_group.keys())
 
-    # gather flags defined in cli_groups
-    group_cli_options = set()
-    for group_conf in pipeline_conf.get('cli_groups', []):
-        group_cli_options |= set(group_conf.get('flags', {}).keys())
-    
     # force_field variable options
     variable_options = set(pipeline_conf.get("variables", []))
 
     # add to the sets of options defined in this scope and globally
-    local_cli_options |= normal_cli_options | group_cli_options
     local_variables |= variable_options
 
     # check for options used in conditions
@@ -460,6 +461,17 @@ def find_pipeline_yaml(name, pipeline_dirs):
 
     raise FileNotFoundError(f"Could not find pipeline YAML '{name}'.")
 
+def add_cli_flag(base_group, flag, opts, prefix='-'):
+    opts = dict(opts)
+    cli_name = opts.pop("cli", flag)
+    opts = translate_cli_opts(opts)
+    base_group.add_argument(
+        f"{prefix}{cli_name}",
+        f"{prefix}{flag}",
+        dest=flag,
+        **opts,
+    )
+
 # build the CLI based on the pipeline configuration.
 def build_cli(name, pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
     """
@@ -489,45 +501,40 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags = None, **kw
     """
     # make parser if not given, otherwise use the given one.
     parser = parser or argparse.ArgumentParser(allow_abbrev=False, **kwargs)
-    base_group = parser.add_argument_group(name)
-    # make an empty set of the added_flags. or use the given one. 
+    # make an empty set of the added_flags. or use the given one.
     added_flags = set() if added_flags is None else added_flags
-    # loop through the cli flags defined in the pipeline config. and don't add the same flag twice. 
-    for flag, opts in pipeline_conf.get('cli_flags', {}).items():
+    # loop through the cli flags defined in the pipeline config. and don't add the same flag twice.
+    cli_conf = pipeline_conf.get('cli', {})
+    for flag, opts in cli_conf.get('flags', {}).items():
         if flag in added_flags:
-            continue 
-        # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
-        opts = dict(opts)
-        cli_name = opts.pop("cli", flag)
-        opts = translate_cli_opts(opts)
-
-        base_group.add_argument(
-            f"{prefix}{cli_name}",
-            f"{prefix}{flag}",
-            dest=flag,
-            **opts,
-        )
-        added_flags.add(flag)
-    # add CLI Flags from the CLI groups. 
-    for group_cli in pipeline_conf.get('cli_groups', []):
-        flags_to_add = [
-            (flag, opts)
-            for flag, opts in group_cli.get('flags', {}).items()
-            if flag not in added_flags
-        ]
-
-        # If all flags were already added earlier, don't create an empty group.
-        if not flags_to_add:
             continue
+        # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
+        add_cli_flag(parser, flag, opts, prefix)
+        added_flags.add(flag)
 
-        group = base_group.add_mutually_exclusive_group()
-
-        for flag, opts in flags_to_add:
-            # make the options dict from the options defined in the yaml. and translate the type from a string to a real python type.
-            opts = translate_cli_opts(opts)
-
-            group.add_argument(f'{prefix}{flag}', **opts)
+    for excl_group in cli_conf.get('exclusive_groups', []):
+        group = parser.add_mutually_exclusive_group()
+        for flag, opts in excl_group.items():
+            if flag in added_flags:
+                continue
+            add_cli_flag(group, flag, opts, prefix)
             added_flags.add(flag)
+
+    for name, grp in cli_conf.get('groups', {}).items():
+        group = parser.add_argument_group(name)
+        for flag, opts in grp.get('flags', {}).items():
+            if flag in added_flags:
+                continue
+            add_cli_flag(group, name, opts, prefix)
+            added_flags.add(flag)
+        for excl_group in grp.get('exclusive_groups', []):
+            exclusive_group = group.add_mutually_exclusive_group()
+            for flag, opts in excl_group.items():
+                if flag in added_flags:
+                    continue
+                add_cli_flag(exclusive_group, flag, opts, prefix)
+                added_flags.add(flag)
+
     # recursion for steps in the pipeline
     if pipeline_conf.get('steps'):
         for name, step in pipeline_conf['steps']:
@@ -1033,8 +1040,7 @@ def combine_pipeline_configs(configs):
     Steps are appended in the order given by the user.
     """
     combined = {
-        "cli_flags": {},
-        "cli_groups": [],
+        "cli": {},
         "variables": [],
         "steps": [],
     }
@@ -1055,7 +1061,9 @@ def combine_pipeline_configs(configs):
                 combined["variables"].append(namespaced_variable)
 
         # merge normal CLI flags
-        for flag, opts in root.get("cli_flags", {}).items():
+        cli_conf = root.get("cli", {})
+        all_cli_flags = extract_all_cli_flags(cli_conf)
+        for flag, opts in all_cli_flags.items():
             if flag in seen_cli_flags:
                 if seen_cli_flags[flag] != opts:
                     raise ValueError(
@@ -1064,15 +1072,33 @@ def combine_pipeline_configs(configs):
                     )
             else:
                 seen_cli_flags[flag] = opts
-                combined["cli_flags"][flag] = opts
 
-        # merge CLI groups
-        combined["cli_groups"].extend(root.get("cli_groups", []))
+        combined['cli']['flags'] = combined['cli'].get('flags', {})
+        combined['cli']['flags'].update(cli_conf.get('flags', {}))
+
+        combined['cli']['exclusive_groups'] = combined['cli'].get('exclusive_groups', [])
+        combined['cli']['exclusive_groups'].extend(cli_conf.get('exclusive_groups', []))
+
+        #FIXME: merging groups this way is too simplistic
+        combined['cli']['groups'] = combined['cli'].get('groups', {})
+        combined['cli']['groups'].update(cli_conf.get('groups', {}))
 
         # append pipeline steps in order
         combined["steps"].extend(root.get("steps", []))
 
     return combined
+
+
+def extract_all_cli_flags(root_cli_conf):
+    result = {}
+    result.update(root_cli_conf["flags"])
+    for excl_group in root_cli_conf.get('exclusive_groups', []):
+        result.update(excl_group)
+    for name, group in root_cli_conf.get("groups", {}).items():
+        result.update(group["flags"])
+        for excl_group in group.get("exclusive_groups", []):
+            result.update(excl_group)
+    return result
 
 
 class PipelineConfigBuilder:

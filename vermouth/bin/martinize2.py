@@ -162,10 +162,10 @@ def main():
         root = conf["martinize2"]
 
         if "ff" in root.get("variables", []):
-            if "from_ff" in root.get("cli_flags", {}):
+            if "from_ff" in root.get("cli", {}).get('flags', {}):
                 variables[f"{namespace}.ff"] = known_force_fields[cli_args["from_ff"]]
 
-            elif "to_ff" in root.get("cli_flags", {}):
+            elif "to_ff" in root.get("cli", {}).get('flags', {}):
                 variables[f"{namespace}.ff"] = known_force_fields[cli_args["to_ff"]]
 
             else:
@@ -176,7 +176,6 @@ def main():
 
     pipeline_builder = PipelineBuilder(pipeline_conf)
     pipeline = pipeline_builder.build_pipeline(cli_args, variables)
-
 
 
     source_ff = known_force_fields[cli_args["from_ff"]]
