@@ -9,22 +9,6 @@ martinize2:
         default: "charmm"
         help: "Force field of the original structure."
 
-      extra_ff_dir:
-        action: append
-        default: []
-        type: path
-        help: "Additional repository for custom force fields."
-
-      extra_map_dir:
-        action: append
-        default: []
-        type: path
-        help: "Additional repository for mapping files."
-
-      list_ff:
-        action: store_true
-        help: "List all known force fields, and exit."
-
       list_blocks:
         action: store_true
         help: "List all Blocks and Modifications known to the force field, and exit."
@@ -36,14 +20,6 @@ martinize2:
           help: >
             Use Martini Go model. Accepts either an input file from the server,
             or just provide the flag to calculate as part of Martinize.
-      maxwarn:
-          type: maxwarn
-          action: append
-          nargs: "+"
-          default: []
-          help: >
-            The maximum number of allowed warnings. If more warnings are encountered
-            no output files are written.
         
   steps: !!omap
     - vermouth.pipeline_processors.ListBlocks:

@@ -148,7 +148,15 @@ def main():
                     },
                 )
     cli_builder = CLIBuilder('martinize2', pipeline_conf)
-    cli_builder.build_argparser()
+    config_paths = []
+    for path in config_builder.paths:
+        try:
+            config_paths.append(path.relative_to(Path.cwd()))
+        except ValueError:
+            config_paths.append(path)
+
+    cli_builder.build_argparser(parents=[mini_parser],
+                                epilog=f'Pipeline and CLI built from {', '.join(str(p) for p in config_paths)}')
     parser = cli_builder.argparser
     cli_args = cli_builder.parse_cli_args(remaining_args)
     

@@ -1,4 +1,3 @@
-from html import parser
 from pathlib import Path
 from copy import deepcopy
 import vermouth 
@@ -6,6 +5,9 @@ import argparse
 import importlib
 import yaml
 from vermouth.processors.processor import Pipeline
+from vermouth.log_helpers import TypeAdapter, StyleAdapter
+import logging
+LOGGER = StyleAdapter(TypeAdapter(logging.getLogger("vermouth")))
 
 
 
@@ -473,7 +475,7 @@ def add_cli_flag(base_group, flag, opts, prefix='-'):
     )
 
 # build the CLI based on the pipeline configuration.
-def build_cli(name, pipeline_conf, prefix, parser=None, added_flags = None, **kwargs):
+def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwargs):
     """
     Build a command-line parser from a pipeline configuration.
 
@@ -730,7 +732,13 @@ def load_yaml_file(path):
         return yaml.safe_load(file)
 
 
-def load_pipeline_configs(pipeline_names, pipeline_dirs):
+def find_pipeline_configs(pipeline_names, pipeline_dirs):
+    for name in pipeline_names:
+        path = find_pipeline_yaml(name, pipeline_dirs)
+        yield path
+
+
+def load_pipeline_configs(pipeline_paths):
     """
     Load multiple pipeline YAML configs.
 
@@ -748,11 +756,10 @@ def load_pipeline_configs(pipeline_names, pipeline_dirs):
     """
     configs = []
 
-    for name in pipeline_names:
-        path = find_pipeline_yaml(name, pipeline_dirs)
+    for path in pipeline_paths:
         conf = load_yaml_file(path)
 
-        namespace = Path(name).stem
+        namespace = Path(path).stem
         configs.append((namespace, conf))
 
     return configs
@@ -1152,6 +1159,7 @@ class PipelineConfigBuilder:
     def __init__(self, pipeline_names, pipeline_dirs=None):
         self.pipeline_names = pipeline_names
         self.pipeline_dirs = pipeline_dirs or []
+        self.paths = []
 
     def build_config(self):
         """
@@ -1163,7 +1171,9 @@ class PipelineConfigBuilder:
             Loaded individual configurations and the combined pipeline
             configuration.
         """
-        configs = load_pipeline_configs(self.pipeline_names, self.pipeline_dirs)
+        self.paths = list(find_pipeline_configs(self.pipeline_names, self.pipeline_dirs))
+        LOGGER.debug('Building a pipeline from {}', ', '.join(map(str, self.paths)))
+        configs = load_pipeline_configs(self.paths)
         pipeline_conf = combine_pipeline_configs(configs)
         validate_cli_options(pipeline_conf, path="martinize2")
         return configs, pipeline_conf
