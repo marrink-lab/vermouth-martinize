@@ -25,6 +25,7 @@ from ..utils import first_alpha, distance, format_atom_string
 from ..parser_utils import LineParser
 from ..truncating_formatter import TruncFormatter
 from ..log_helpers import StyleAdapter, get_logger
+from ..processors.processor import Processor
 
 LOGGER = StyleAdapter(get_logger(__name__))
 
@@ -624,3 +625,28 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
         from builtins import open
     with open(path, 'w', encoding='utf-8') as out:
         out.write(write_pdb_string(system, conect, omit_charges, nan_missing_pos))
+
+# write the current system to a pdb file. This is for testing and bug fixing, not a pipeline step. 
+class WritePDB(Processor):
+    # constructor with parameters
+    def __init__(self, path, omit_charges = True, defer_writing = False, nan_missing_pos = True):
+        # path to the output file 
+        self.path = path
+        # do you count charges 
+        self.omit_charges = omit_charges
+        # do you want to write it now or wait
+        self.defer_writing = defer_writing
+        # give nan to missing atom positions 
+        self.nan_missing_pos = nan_missing_pos
+    # run the system 
+    def run_system(self, system):
+        if self.path is not None:
+            write_pdb(
+                system,
+                str(self.path),
+                omit_charges=self.omit_charges,
+                defer_writing=self.defer_writing,
+                nan_missing_pos=self.nan_missing_pos,
+        )
+        # return a system, otherwise the pipeline will break.
+        return system 

@@ -47,5 +47,6 @@ from .water_bias import ComputeWaterBias
 from .annotate_idrs import AnnotateIDRs
 from .cif_reader import CIFInput
 from .rtp_polisher import RTPPolisher
-from .stash_attributes import StashAttributes
+from .stash_attributes import StashAttributes, UnstashAttributes
 from .idr_cross_domain_interaction_removal import IDRCrossDomainInteractionRemoval
+from .output_logger import OutputLogger

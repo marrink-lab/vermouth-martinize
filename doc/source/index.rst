@@ -12,6 +12,7 @@ Welcome to VerMoUTH's documentation!
 
    general_overview
    martinize2_workflow
+   pipeline_configuration
    technical_background
    file_formats
    tutorials/index
