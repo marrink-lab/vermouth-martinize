@@ -32,6 +32,7 @@ martinize2:
           nargs: '?'
           const: true
           type: path
+          default: null
           help: >
             Use Martini Go model. Accepts either an input file from the server,
             or just provide the flag to calculate as part of Martinize.
@@ -279,24 +280,25 @@ martinize2:
     - Choose secondary structure:
         cli:
           exclusive_groups:
-          - dssp:
-              nargs: "?"
-              const: True
-              help: >
-                DSSP executable for determining structure. If this flag is given
-                but no executable is specified, the mdtraj library will be used
-                to compute the secondary structure, if it can be imported.
-            ss:
-              type: str
-              default: null
-              help: >
-                Manually set the secondary structure of the proteins.
-                Either give a dssp sequence for each residue in your input file
-                or a single letter to be repeated for the entire sequence, e.g. -ss C
-            collagen:
-              action: store_true
-              default: false
-              help: "Use collagen parameters"
+          - flags:
+              dssp:
+                nargs: "?"
+                const: True
+                help: >
+                  DSSP executable for determining structure. If this flag is given
+                  but no executable is specified, the mdtraj library will be used
+                  to compute the secondary structure, if it can be imported.
+              ss:
+                type: str
+                default: null
+                help: >
+                  Manually set the secondary structure of the proteins.
+                  Either give a dssp sequence for each residue in your input file
+                  or a single letter to be repeated for the entire sequence, e.g. -ss C
+              collagen:
+                action: store_true
+                default: false
+                help: "Use collagen parameters"
         steps: !!omap
           - vermouth.pipeline_processors.DSSPWrapper:
               condition:

@@ -102,11 +102,11 @@ def validate_cli_options(
     cli_conf = pipeline_conf.get('cli', {})
     local_cli_options |= set(cli_conf.get('flags', {}).keys())
     for excl_group in cli_conf.get('exclusive_groups', []):
-        local_cli_options |= set(excl_group.keys())
+        local_cli_options |= set(excl_group.get('flags', {}).keys())
     for name, group in cli_conf.get('groups', {}).items():
         local_cli_options |= set(group.get('flags', {}).keys())
         for excl_group in group.get('exclusive_groups', []):
-            local_cli_options |= set(excl_group.keys())
+            local_cli_options |= set(excl_group.get('flags', {}).keys())
 
     # force_field variable options
     variable_options = set(pipeline_conf.get("variables", []))
@@ -513,23 +513,23 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags = None, **kw
         added_flags.add(flag)
 
     for excl_group in cli_conf.get('exclusive_groups', []):
-        group = parser.add_mutually_exclusive_group()
-        for flag, opts in excl_group.items():
+        group = parser.add_mutually_exclusive_group(**{k: v for k, v in excl_group.items() if k != 'flags'})
+        for flag, opts in excl_group.get('flags', {}).items():
             if flag in added_flags:
                 continue
             add_cli_flag(group, flag, opts, prefix)
             added_flags.add(flag)
 
-    for name, grp in cli_conf.get('groups', {}).items():
-        group = parser.add_argument_group(name)
+    for grp in cli_conf.get('groups', []):
+        group = parser.add_argument_group(**{k: v for k, v in grp.items() if k not in ('flags', 'exclusive_groups')})
         for flag, opts in grp.get('flags', {}).items():
             if flag in added_flags:
                 continue
             add_cli_flag(group, name, opts, prefix)
             added_flags.add(flag)
         for excl_group in grp.get('exclusive_groups', []):
-            exclusive_group = group.add_mutually_exclusive_group()
-            for flag, opts in excl_group.items():
+            exclusive_group = group.add_mutually_exclusive_group(**{k: v for k, v in excl_group.items() if k != 'flags'})
+            for flag, opts in excl_group.get('flags', {}).items():
                 if flag in added_flags:
                     continue
                 add_cli_flag(exclusive_group, flag, opts, prefix)
@@ -775,14 +775,14 @@ def iter_cli_flags(pipeline_conf):
         CLI flag name and its configuration.
     """
     # gather cli_flags defined in cli_flags
-    for flag, opts in pipeline_conf.get("cli_flags", {}).items():
-        # using yield so that it saves time and memory by not creating a big list of all the flags, but instead giving them one by one.
-        yield flag, opts
-
-    # gather cli_flags defined in cli_groups
-    for group_conf in pipeline_conf.get("cli_groups", []):
-        for flag, opts in group_conf.get("flags", {}).items():
-            yield flag, opts
+    cli_conf = pipeline_conf.get('cli', {})
+    yield from  cli_conf.get("flags", {}).items()
+    for excl_group in cli_conf.get('exclusive_groups', []):
+        yield from excl_group.get('flags', {}).items()
+    for group_conf in cli_conf.get('groups', []):
+        for excl_group in group_conf.get('exclusive_groups', []):
+            yield from excl_group.get('flags', {}).items()
+        yield from group_conf.get('flags', {}).items()
 
     # recursion for steps in the pipeline
     if pipeline_conf.get("steps"):
@@ -1062,7 +1062,7 @@ def combine_pipeline_configs(configs):
 
         # merge normal CLI flags
         cli_conf = root.get("cli", {})
-        all_cli_flags = extract_all_cli_flags(cli_conf)
+        all_cli_flags = dict(iter_cli_flags(root))
         for flag, opts in all_cli_flags.items():
             if flag in seen_cli_flags:
                 if seen_cli_flags[flag] != opts:
@@ -1073,32 +1073,69 @@ def combine_pipeline_configs(configs):
             else:
                 seen_cli_flags[flag] = opts
 
-        combined['cli']['flags'] = combined['cli'].get('flags', {})
-        combined['cli']['flags'].update(cli_conf.get('flags', {}))
-
-        combined['cli']['exclusive_groups'] = combined['cli'].get('exclusive_groups', [])
-        combined['cli']['exclusive_groups'].extend(cli_conf.get('exclusive_groups', []))
-
-        #FIXME: merging groups this way is too simplistic
-        combined['cli']['groups'] = combined['cli'].get('groups', {})
-        combined['cli']['groups'].update(cli_conf.get('groups', {}))
-
+        combined['cli'] = merge_dictionaries(combined["cli"], cli_conf)
         # append pipeline steps in order
         combined["steps"].extend(root.get("steps", []))
 
     return combined
 
 
-def extract_all_cli_flags(root_cli_conf):
-    result = {}
-    result.update(root_cli_conf["flags"])
-    for excl_group in root_cli_conf.get('exclusive_groups', []):
-        result.update(excl_group)
-    for name, group in root_cli_conf.get("groups", {}).items():
-        result.update(group["flags"])
-        for excl_group in group.get("exclusive_groups", []):
-            result.update(excl_group)
-    return result
+def merge_dictionaries(dict1, dict2):
+    """
+    Recursively merge dictionaries with support for lists and scalar values.
+
+    When keys overlap, values from ``dict2`` take precedence, except for
+    nested dictionaries and lists, which are merged recursively.
+    """
+    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+        raise TypeError("merge_dictionaries expects two dictionaries.")
+
+    def _merge_values(value1, value2, path):
+        if isinstance(value1, dict) and isinstance(value2, dict):
+            return _merge_dicts(value1, value2, path)
+
+        if isinstance(value1, list) and isinstance(value2, list):
+            merged = deepcopy(value1)
+            for index, item2 in enumerate(value2):
+                if index < len(merged):
+                    item1 = merged[index]
+                    if isinstance(item1, (dict, list)) or isinstance(item2, (dict, list)):
+                        if type(item1) is not type(item2):
+                            raise TypeError(
+                                f"Type mismatch at {path}[{index}]: "
+                                f"{type(item1).__name__} vs {type(item2).__name__}."
+                            )
+                        merged[index] = _merge_values(item1, item2, f"{path}[{index}]")
+                    elif type(item1) is type(item2):
+                        merged[index] = deepcopy(item2)
+                    else:
+                        raise TypeError(
+                            f"Type mismatch at {path}[{index}]: "
+                            f"{type(item1).__name__} vs {type(item2).__name__}."
+                        )
+                else:
+                    merged.append(deepcopy(item2))
+            return merged
+
+        if type(value1) is not type(value2):
+            raise TypeError(
+                f"Type mismatch at {path}: "
+                f"{type(value1).__name__} vs {type(value2).__name__}."
+            )
+
+        return deepcopy(value2)
+
+    def _merge_dicts(left, right, path):
+        merged = deepcopy(left)
+        for key, value2 in right.items():
+            child_path = f"{path}.{key}" if path else str(key)
+            if key in merged:
+                merged[key] = _merge_values(merged[key], value2, child_path)
+            else:
+                merged[key] = deepcopy(value2)
+        return merged
+
+    return _merge_dicts(dict1, dict2, path="")
 
 
 class PipelineConfigBuilder:
