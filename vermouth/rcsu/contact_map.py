@@ -439,34 +439,33 @@ def _extract_contact_inputs(molecule):
     LOGGER.debug("Extracted {} atoms from {} residues", len(positions_all), nresidues)
     return vdw_list, atypes, coords, res_serial, resids, chains, resnames, res_idx, ca_pos, nresidues, G
 
-def _calculate_ov_contacts(coo, vdw_list, natoms, vdw_max, alpha=1.24):
+def _calculate_ov_contacts(coo, vdw_list, natoms, cutoff_ov, alpha=1.24):
     """
     Find enlarged (OV) overlap contacts
 
+    Two atoms form an OV contact when their distance is below `alpha`
+    times the sum of their vdW radii, i.e. below `vdw_sum` computed here.
+    `coo` is a shared pairwise-distance matrix built out to at least
+    `cutoff_ov` by the caller (`_compute_residue_contacts`); it may extend
+    further than that, since the same `coo` is reused by
+    `_calculate_csu_contacts`, which can need a larger radius. The
+    `coo.data < cutoff_ov` filter below therefore restricts candidates to
+    genuine OV range regardless of how far `coo` itself extends.
+
     coo: scipy.sparse.coo_matrix
-        precomputed sparse pairwise-distance matrix (COO format) of the
-        input coordinates, out to at least a radius of 2 * vdw_max * alpha.
-        This is shared with _calculate_csu_contacts so that the expensive
-        KDTree-based distance query is only performed once per molecule
-        instead of once per contact type.
+        Shared pairwise-distance matrix (COO format) of the input
+        coordinates.
     vdw_list: list
         list of vdw radii of the input coordinates
     natoms: int
         number of atoms in the molecule
-    vdw_max: float
-        maximum possible vdw radius of atoms
+    cutoff_ov: float
+        OV cutoff radius, 2 * vdw_max * alpha
     alpha: float
         Enlargement factor for attraction effects
     """
     vdw_list = np.asarray(vdw_list)
     vdw_sum = alpha * (vdw_list[coo.row] + vdw_list[coo.col])
-    # cutoff_ov is OV's own cutoff radius (2 * vdw_max * alpha). In normal
-    # usage every per-atom vdw radius is <= vdw_max, so vdw_sum can never
-    # exceed cutoff_ov and this comparison is redundant with the one
-    # above. It is kept explicit so that behaviour is independent of
-    # whichever (possibly larger) radius was used to build the shared
-    # `coo` distance matrix passed in from _compute_residue_contacts.
-    cutoff_ov = 2 * vdw_max * alpha
     keep = (coo.row < coo.col) & (coo.data < vdw_sum) & (coo.data < cutoff_ov)
     rows = coo.row[keep]
     cols = coo.col[keep]
@@ -491,10 +490,12 @@ def _calculate_csu_contacts(coords, vdw_list, fiba, fibb, natoms, coo, vdw_max, 
     natoms: int
         number of atoms in the molecule
     coo: scipy.sparse.coo_matrix
-        precomputed sparse pairwise-distance matrix (COO format) of the
-        input coordinates, out to at least a radius of 2 * vdw_max +
-        water_radius. Shared with _calculate_ov_contacts; see that
-        function's docstring.
+        Shared pairwise-distance matrix (COO format) of the input
+        coordinates, built out to at least cutoff_csu = 2 * vdw_max +
+        water_radius (and possibly further, since the same matrix is
+        reused by _calculate_ov_contacts). Per-pair filtering against the
+        actual vdw radii below means candidates beyond an atom's own
+        cutoff are simply excluded.
     vdw_max: float
         maximum possible vdw radius of atoms
     water_radius: float
@@ -530,18 +531,13 @@ def _calculate_csu_contacts(coords, vdw_list, fiba, fibb, natoms, coo, vdw_max, 
     unique_idx, first_occ = np.unique(sorted_rows, return_index=True)
     ends = np.append(first_occ[1:], len(sorted_rows))
 
-    # The Fibonacci sphere sample *directions* are identical for every
-    # atom - only each atom's centre (its position) and radius (its vdw
-    # radius + water_radius) differ, and those enter only as a
-    # translation and a uniform scaling. Since translation and uniform
-    # scaling preserve nearest-neighbour relationships (up to the scale
-    # factor on the radius), we can build a single KDTree once on the
-    # *unit* sphere directions and, for each atom, transform its
-    # candidate neighbours into that atom's local (centred, unit-radius)
-    # frame before querying the shared tree. Previously a fresh KDTree of
-    # `fibb` points was built from scratch for every one of the natoms
-    # atoms; the per-tree construction overhead, repeated natoms times,
-    # was the dominant cost of this function for large systems.
+    # The Fibonacci sphere sample directions are the same for every atom;
+    # only each atom's centre (its position) and radius (vdw radius +
+    # water_radius) differ, and those enter purely as a translation and a
+    # uniform scaling, which preserve nearest-neighbour relationships. So
+    # a single KDTree is built once on the *unit* sphere directions, and
+    # each atom's candidate neighbours are transformed into that atom's
+    # local (centred, unit-radius) frame before querying the shared tree.
     unit_sphere = _make_fibonacci_sphere(np.zeros(3), fiba, fibb, 1.0)
     unit_tree = KDTree(unit_sphere)
 
@@ -573,20 +569,13 @@ def _classify_contact_types(hit_results, natoms, atypes):
     """
     From CSU contacts, establish contact types from atomtypes
 
-    This is a vectorised replacement for a previous implementation that
-    accumulated results in Python dictionaries keyed by (i, k) tuples.
-    For large systems (many atoms x many Fibonacci sphere sample points
-    per atom), that dict-based approach could hold millions of entries,
-    each carrying substantial Python object overhead well beyond the
-    actual data being stored, which was the dominant source of memory
-    (and time) consumption when computing Go contacts on large structures.
-
-    Here, the hit matrix is flattened once and filtered with array
-    operations, then the (row, col) count matrices are built directly as
-    sparse matrices: converting a COO matrix with repeated (row, col)
-    coordinates to CSR sums the duplicate entries automatically, which is
-    exactly the "count of occurrences" semantics the original dict-based
-    accumulation implemented.
+    For each atom row of hit_results, the (possibly repeated) contact
+    indices are deduplicated and counted with np.unique, giving one
+    (row, col, count) triple per unique atom-atom pair. These triples are
+    then assembled directly into sparse count matrices: building a COO
+    matrix with repeated (row, col) coordinates and converting it to CSR
+    sums the duplicate entries automatically, which is exactly the
+    "count of occurrences per pair" needed here.
 
     hit_results: NxM ndarray
         array for N atoms in molecule for M fibonnaci points on each atom.
@@ -598,18 +587,14 @@ def _classify_contact_types(hit_results, natoms, atypes):
     """
     fibb = hit_results.shape[1]
 
-    # Deduplicate (i, k) pairs and count occurrences per atom row, rather
-    # than flattening the whole natoms x fibb hit matrix up front. In
-    # practice the same (i, k) pair recurs many times within a row (one
-    # large neighbouring atom k covers several of atom i's Fibonacci
-    # sample directions), so the number of unique pairs per atom is
-    # normally a small fraction of fibb. Working row-by-row keeps peak
-    # memory proportional to the number of unique contacts (matching the
-    # dict-based implementation this replaces, `dict.get(key, 0) + 1`,
-    # which deduplicated incrementally) instead of to the much larger
-    # number of raw hits, while still doing the per-row work with
-    # vectorised NumPy calls (np.unique on at most `fibb` elements) rather
-    # than a Python-level loop over every individual hit.
+    # Deduplicate and count per atom row rather than flattening the whole
+    # natoms x fibb hit matrix up front: a single neighbouring atom k
+    # typically covers several of atom i's Fibonacci sample directions, so
+    # the number of unique (i, k) pairs per row is usually a small
+    # fraction of fibb. This keeps peak memory proportional to the number
+    # of unique contacts rather than the much larger number of raw hits,
+    # while still using vectorised NumPy calls (np.unique on at most
+    # `fibb` elements per row) instead of a Python-level loop per hit.
     rows_chunks = []
     cols_chunks = []
     counts_chunks = []
@@ -644,9 +629,8 @@ def _classify_contact_types(hit_results, natoms, atypes):
 
     contact_csr = _to_csr(u_rows, u_cols, counts)
 
-    # Bond type depends only on the (fixed) atom types of the pair, so it
-    # is identical for every occurrence of a given (i, k) pair: compute it
-    # once per unique pair rather than once per raw occurrence.
+    # Bond type depends only on the atom types of the pair, so it is
+    # looked up once per unique pair rather than once per raw occurrence.
     btypes = BOND_TYPE[atypes[u_rows], atypes[u_cols]]
     stab_mask = btypes <= 4
     destab_mask = btypes == 5
@@ -697,12 +681,11 @@ def _compute_residue_contacts(vdw_list, atypes, coords, res_serial, nresidues):
 
     coords_tree = KDTree(coords)
 
-    # OV and CSU contacts both start from a pairwise distance query on the
-    # same coordinate set; the only difference is the cutoff radius used
-    # to prune candidate pairs. Computing this once (at the larger of the
-    # two cutoffs) and reusing it avoids running the expensive KDTree
-    # distance query twice, which previously roughly doubled both the
-    # runtime and peak memory of this step for large systems.
+    # OV and CSU contacts are both derived from a pairwise distance query
+    # on the same coordinate set, differing only in the cutoff radius used
+    # to prune candidate pairs. Query once, at the larger of the two
+    # cutoffs, and reuse the result for both, since each function then
+    # applies its own (possibly smaller) cutoff to the shared candidates.
     alpha = 1.24
     water_radius = 2.80
     cutoff_ov = 2 * vdw_max * alpha
@@ -715,7 +698,7 @@ def _compute_residue_contacts(vdw_list, atypes, coords, res_serial, nresidues):
     coo = sparse_dm.tocoo()
 
     LOGGER.debug("Computing OV overlap contacts for {} atoms", natoms)
-    over = _calculate_ov_contacts(coo, vdw_list, natoms, vdw_max, alpha=alpha)
+    over = _calculate_ov_contacts(coo, vdw_list, natoms, cutoff_ov, alpha=alpha)
 
     LOGGER.debug("Computing CSU surface contacts")
     hit_results = _calculate_csu_contacts(coords, vdw_list, fiba, fibb, natoms, coo, vdw_max, water_radius=water_radius)
