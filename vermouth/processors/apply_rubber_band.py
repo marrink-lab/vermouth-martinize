@@ -83,27 +83,29 @@ def compute_decay(distance, shift, rate, power):
 
 def compute_force_constants(distance_matrix, lower_bound, upper_bound,
                             decay_factor, decay_power, base_constant,
-                            minimum_force):
+                            minimum_force, decay_shift=0):
     """
     Compute the force constant of an elastic network bond.
 
     The force constant can be modified with a decay function, and it can be
     bounded with a minimum threshold, or a distance upper and lower bonds.
-    
+
     If decay_factor = decay_power = 0 all forces applied are = base_constant
-    
-    Forces applied to distances above upper_bound are removed.
-    Forces below minimum_force are removed.
-    
-    If decay_factor or decay_power != 0, forces below lower_bound are greater 
-    than base_constant, in which case they are set back to = base_constant    
+
+    Forces applied to distances above upper_bound or below lower_bound are
+    removed. Forces below minimum_force are removed.
+
+    'decay_shift' is the shift ('s' in :func:`compute_decay`) of the decay
+    function, independent from 'lower_bound'. It defaults to 0, in which case
+    the decay function is centred on a distance of 0.
     """
-    constants = compute_decay(distance_matrix, lower_bound, decay_factor, decay_power)
+    constants = compute_decay(distance_matrix, decay_shift, decay_factor, decay_power)
     np.fill_diagonal(constants, 0)
     constants *= base_constant
     constants[constants < minimum_force] = 0
     constants[constants > base_constant] = base_constant
     constants[distance_matrix > upper_bound] = 0
+    constants[distance_matrix < lower_bound] = 0
     return constants
 
 
@@ -227,7 +229,8 @@ def apply_rubber_band(molecule, selector,
                       lower_bound, upper_bound,
                       decay_factor, decay_power,
                       base_constant, minimum_force,
-                      bond_type, domain_criterion, res_min_dist):
+                      bond_type, domain_criterion, res_min_dist,
+                      decay_shift=0):
     r"""
     Adds a rubber band elastic network to a molecule.
 
@@ -245,9 +248,13 @@ def apply_rubber_band(molecule, selector,
 
     where :math:`r` is the decay rate given by the 'decay_factor' argument,
     :math:`p` is the decay power given by 'decay_power', :math:`s` is a shift
-    given by 'lower_bound', and :math:`d` is the distance between the two atoms
+    given by 'decay_shift', and :math:`d` is the distance between the two atoms
     in the molecule. If the rate or the power are set to 0, then the decay
     function does not modify the force constant.
+
+    'lower_bound' and 'upper_bound' are independent hard distance cutoffs:
+    bonds whose equilibrium distance falls outside of ``[lower_bound,
+    upper_bound]`` are not added, regardless of the decay function.
 
     The 'selector' argument takes a callback that accepts a atom dictionary and
     returns ``True`` if the atom match the conditions to be kept.
@@ -295,6 +302,9 @@ def apply_rubber_band(molecule, selector,
         Minimum separation between two atoms for a bond to be kept.
         Bonds are kept is the separation is greater or equal to the value
         given.
+    decay_shift: float
+        Shift ('s' in the decay function above) applied to the distance
+        before the decay function is evaluated. Defaults to 0.
     """
     selection = []
     coordinates = []
@@ -329,7 +339,8 @@ def apply_rubber_band(molecule, selector,
     distance_matrix = self_distance_matrix(coordinates)
     constants = compute_force_constants(distance_matrix, lower_bound,
                                         upper_bound, decay_factor, decay_power,
-                                        base_constant, minimum_force)
+                                        base_constant, minimum_force,
+                                        decay_shift=decay_shift)
 
     connected = build_connectivity_matrix(molecule, res_min_dist, node_to_idx,
                                           selected_nodes=selection)
@@ -461,6 +472,9 @@ class ApplyRubberBand(Processor):
         Parameter for the decay function.
     decay_power: float
         Parameter for the decay function.
+    decay_shift: float
+        Shift applied to the distance before the decay function is
+        evaluated, independent from 'lower_bound'. Defaults to 0.
     base_constant: float
         The base force constant for the bonds in :math:`kJ.mol^{-1}.nm^{-2}`.
         If 'decay_factor' or 'decay_power' is set to 0, then it will be the
@@ -496,6 +510,7 @@ class ApplyRubberBand(Processor):
                  base_constant, minimum_force,
                  res_min_dist=None,
                  bond_type=None,
+                 decay_shift=0,
                  selector=selectors.select_backbone,
                  bond_type_variable='elastic_network_bond_type',
                  res_min_dist_variable='elastic_network_res_min_dist',
@@ -505,6 +520,7 @@ class ApplyRubberBand(Processor):
         self.upper_bound = upper_bound
         self.decay_factor = decay_factor
         self.decay_power = decay_power
+        self.decay_shift = decay_shift
         self.base_constant = base_constant
         self.minimum_force = minimum_force
         self.bond_type = bond_type
@@ -537,6 +553,7 @@ class ApplyRubberBand(Processor):
                           upper_bound=self.upper_bound,
                           decay_factor=self.decay_factor,
                           decay_power=self.decay_power,
+                          decay_shift=self.decay_shift,
                           base_constant=self.base_constant,
                           minimum_force=self.minimum_force,
                           bond_type=bond_type,
