@@ -485,7 +485,7 @@ def entry():
         dest="rb_lower_bound",
         type=float,
         default=0,
-        help="Elastic bond lower cutoff: F = Fc if rij < lo",
+        help="Elastic bond lower cutoff: F = 0  if rij < lo",
     )
     rb_group.add_argument(
         "-eu",
@@ -517,6 +517,16 @@ def entry():
         type=float,
         default=1,
         help="Elastic bond decay power p",
+    )
+    rb_group.add_argument(
+        "-es",
+        dest="rb_decay_shift",
+        type=float,
+        default=0,
+        help=(
+            "Distance shift s applied before the elastic bond decay "
+            "function is evaluated"
+        ),
     )
     rb_group.add_argument(
         "-em",
@@ -1121,6 +1131,7 @@ def entry():
             upper_bound=args.rb_upper_bound,
             decay_factor=args.rb_decay_factor,
             decay_power=args.rb_decay_power,
+            decay_shift=args.rb_decay_shift,
             base_constant=args.rb_force_constant,
             minimum_force=args.rb_minimum_force,
             selector=selector,
