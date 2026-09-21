@@ -3,6 +3,8 @@ from copy import deepcopy
 import vermouth 
 import argparse
 import importlib
+import jsonschema
+from functools import lru_cache
 import yaml
 from vermouth.processors.processor import Pipeline
 from vermouth.log_helpers import TypeAdapter, StyleAdapter
@@ -714,6 +716,7 @@ def namespace_variables(obj, namespace):
     return obj
 
 
+@lru_cache(maxsize=32)
 def load_yaml_file(path):
     """
     Load a YAML configuration file.
@@ -758,6 +761,14 @@ def load_pipeline_configs(pipeline_paths):
 
     for path in pipeline_paths:
         conf = load_yaml_file(path)
+        schema_uri = conf.get('$schema')
+        if schema_uri:
+            yaml_dir = Path(path).parent
+            schema_path = Path(schema_uri)
+            if not schema_path.is_absolute():
+                schema_path = yaml_dir / schema_path
+            schema = load_yaml_file(schema_path)
+        jsonschema.validate(conf, schema)
 
         namespace = Path(path).stem
         configs.append((namespace, conf))
@@ -1046,6 +1057,7 @@ def combine_pipeline_configs(configs):
     Variables are namespaced per YAML fragment.
     Steps are appended in the order given by the user.
     """
+    # TODO: Check whether $schema is the same for all, and use that to validate the final pipeline?
     combined = {
         "cli": {},
         "variables": [],
