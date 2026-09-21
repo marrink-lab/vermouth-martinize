@@ -1,4 +1,4 @@
-$schema: ./schema-pipeline.yaml
+$schema: ./pipeline-schema.yaml
 martinize2:
   variables:
     - ff

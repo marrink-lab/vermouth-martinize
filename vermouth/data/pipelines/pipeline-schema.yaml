@@ -1,0 +1,200 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+#required:
+#  - cli_prefix
+properties:
+  cli_prefix:
+    type: string
+    default: '-'
+  variables:
+    type: array
+    items:
+      type: string
+additionalProperties:
+  steps:
+    type: array
+    minLength: 1
+    items:
+      type: array
+      minItems: 2
+      maxItems: 2
+      prefixItems:
+        - type: string
+        - $ref: "#/definitions/step"
+      items: false
+#  $ref: "#/definitions/step"
+
+definitions:
+  log_entry:
+    type: object
+    required:
+      - msg
+      - type
+    properties:
+      msg:
+        type: string
+      type:
+        type: string
+        default: 'general'
+
+  step_base:
+    type: object
+    properties:
+      cli:
+        $ref: "#/definitions/cli"
+      condition:
+        $ref: "#/definitions/condition"
+      log:
+        type: object
+        properties:
+          debug:
+            $ref: "#/definitions/log_entry"
+          info:
+            $ref: "#/definitions/log_entry"
+          warning:
+            $ref: "#/definitions/log_entry"
+          error:
+            $ref: "#/definitions/log_entry"
+          critical:
+            $ref: "#/definitions/log_entry"
+
+  step:
+    type: object
+    allOf:
+      - $ref: "#/definitions/step_base"
+      - oneOf:
+        - $ref: "#/definitions/processor"
+        - $ref: "#/definitions/pipeline"
+
+  pipeline:
+    type: object
+    required:
+      - steps
+    properties:
+      steps:
+        type: array
+        minLength: 1
+        items:
+          type: array
+          minItems: 2
+          maxItems: 2
+          prefixItems:
+            - type: string
+            - $ref: "#/definitions/step"
+          items: false
+
+  processor:
+    type: object
+    properties:
+      args:
+        type: object
+        additionalProperties:
+          type: object
+          oneOf:
+            - required: ['value']
+              properties:
+                value: {}
+            - required: ['cli']
+              properties:
+                cli:
+                  type: string
+            - required: ['variable']
+              properties:
+                variable:
+                  type: array
+
+  cli_group:
+    type: object
+    properties:
+      flags:
+        type: object
+        additionalProperties:
+          $ref: "#/definitions/cli_opt"
+      exclusive_groups:
+        type: array
+        items:
+          $ref: "#/definitions/cli_group_exclusive"
+      additionalProperties: true  # Fed to argparse as kwargs
+
+  cli:
+    type: object
+    properties:
+      flags:
+        type: object
+        additionalProperties:
+          $ref: "#/definitions/cli_opt"
+      exclusive_groups:
+        type: array
+        items:
+          $ref: "#/definitions/cli_group_exclusive"
+      groups:
+        type: array
+        items:
+          $ref: "#/definitions/cli_group"
+
+  cli_group_exclusive:
+    type: object
+    properties:
+      flags:
+        type: object
+        additionalProperties:
+          $ref: "#/definitions/cli_opt"
+      additionalProperties: true  # Fed to argparse as kwargs
+
+  cli_opt:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        action:
+          enum:
+            - store
+            - store_true
+            - store_false
+            - append
+            - count
+            - extend
+            - help
+            - version
+            - append_const
+            - store_const
+            - parsers
+            - subparsers
+        nargs:
+          oneOf:
+            - type: integer
+            - enum: ['+', '?', '*']
+        const: {}
+        default: {}
+        type: {}
+        choices:
+          type: array
+          items:
+            type: string
+        required: {type: boolean}
+        help: { type: string }
+        metavar: { type: string }
+
+  condition:
+    type: object
+    minProperties: 1
+    maxProperties: 1
+    properties:
+      all:
+        type: array
+        items: {$ref: "#/definitions/condition"}
+        minItems: 2
+      any:
+        type: array
+        items: { $ref: "#/definitions/condition" }
+        minItems: 2
+      not:
+        $ref: "#/definitions/condition"
+      additionalProperties:
+        type: object
+        properties:
+          value: {}
+          cli:
+            type: string
+          variable:
+            type: array
