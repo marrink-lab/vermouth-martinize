@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import jsonschema
 import pytest
 import vermouth
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_pipeline_mapping, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, rename_variables
+from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, iter_cli_flags, load_pipeline_configs, load_yaml_file, merge_pipeline_mapping, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, rename_variables
 
 def test_options_used_in_condition_equal():
     """
@@ -355,6 +355,12 @@ def test_rename_variables_rewrites_collections():
     assert obj[0]["variable"] == "source_ff"
     assert obj[1]["value"] is True
 
+
+def test_rename_variables_rejects_unknown_source_variable():
+    """Variable renames reject misspelled fragment-local names."""
+    with pytest.raises(KeyError, match="undefined variable"):
+        rename_variables({"variables": ["ff"]}, {"mappings": "source_mappings"})
+
 def test_find_pipeline_yaml_full_path(tmp_path):
     """
     Test that find_pipeline_yaml returns a user-provided
@@ -653,24 +659,6 @@ def test_validate_step_names_allows_reused_processors():
     validate_step_names(pipeline_conf)
 
 
-def test_find_step_by_name_ignores_legacy_ids():
-    """
-    Step keys, rather than the removed id attribute, identify pipeline steps.
-    """
-    step = {
-        "id": "legacy_name",
-        "processor": "pathlib.Path",
-    }
-    pipeline_conf = {"steps": OrderedDict([("current_name", step)])}
-
-    assert find_step_by_name(pipeline_conf, "current_name") is step
-    assert find_step_by_name(
-        pipeline_conf,
-        "legacy_name",
-        raise_if_missing=False,
-    ) is None
-
-
 def test_merge_pipeline_mapping_inserts_between_paired_local_anchors():
     """
     Inserted steps use their mapping key rather than an id attribute.
@@ -697,6 +685,60 @@ def test_merge_pipeline_mapping_inserts_between_paired_local_anchors():
         "last",
     ]
     assert steps["inserted"] == {"processor": "pathlib.Path"}
+
+
+def test_merge_pipeline_mapping_merges_existing_step_at_anchored_position():
+    """Existing step names merge when their local anchors are satisfied."""
+    steps = OrderedDict([
+        ("first", {"processor": "pathlib.Path"}),
+        ("existing", {"processor": "pathlib.PurePath", "args": {}}),
+        ("last", {"processor": "pathlib.Path"}),
+    ])
+
+    merge_pipeline_mapping(
+        steps,
+        {
+            "existing": {
+                "$insert_after": "first",
+                "$insert_before": "last",
+                "args": {"path": {"value": "configured"}},
+            },
+        },
+        source="derived.yaml:martinize2.steps.existing",
+    )
+
+    assert list(steps) == ["first", "existing", "last"]
+    assert steps["existing"] == {
+        "processor": "pathlib.PurePath",
+        "args": {"path": {"value": "configured"}},
+    }
+
+
+def test_merge_pipeline_mapping_rejects_misplaced_existing_step():
+    """Existing step names fail when their requested local anchor is unmet."""
+    steps = OrderedDict([
+        ("first", {"processor": "pathlib.Path"}),
+        ("existing", {"processor": "pathlib.PurePath"}),
+        ("last", {"processor": "pathlib.Path"}),
+    ])
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Cannot position 'existing' from derived\.yaml:"
+            r"martinize2\.steps\.existing: it is not immediately after "
+            r"local anchor 'last'"
+        ),
+    ):
+        merge_pipeline_mapping(
+            steps,
+            {
+                "existing": {
+                    "$insert_after": "last",
+                },
+            },
+            source="derived.yaml:martinize2.steps.existing",
+        )
 
 
 def test_merge_pipeline_mapping_reports_source_for_missing_local_anchor():
@@ -848,9 +890,9 @@ martinize2:
     config = load_yaml_file(source)
 
     by_index = select_include_fragment(config, "martinize2.steps[0].args")
-    by_name = load_include_fragment(
-        "source.yaml:martinize2.steps.read_input.args",
-        source,
+    by_name = select_include_fragment(
+        config,
+        "martinize2.steps.read_input.args",
     )
 
     assert by_index == by_name == {
@@ -923,7 +965,7 @@ martinize2:
         """
 martinize2:
   $include:
-    - included.yaml
+    - included.yaml:martinize2
   steps: !!omap
     - including_step:
         processor: pathlib.PurePath
@@ -936,6 +978,13 @@ martinize2:
     assert [name for name, _ in configs] == ["including"]
     root = configs[0][1]["martinize2"]
     assert "$include" not in root
+    assert list(root["steps"]) == ["included_step", "including_step"]
+    assert root["steps"]["included_step"]["$source"].endswith(
+        "included.yaml:martinize2.steps.included_step"
+    )
+    assert root["steps"]["including_step"]["$source"].endswith(
+        "including.yaml:martinize2.steps.including_step"
+    )
 
 
 def test_load_pipeline_configs_converts_validated_steps_to_ordered_dicts(tmp_path):

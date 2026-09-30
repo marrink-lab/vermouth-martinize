@@ -79,12 +79,15 @@ step, processor, CLI, and argument mappings.
 
    martinize2:
      $include:
-       - common.yaml
-       - optional-water
+       - common.yaml:martinize2
+       - optional-water:martinize2
      steps: !!omap
        - local_step:
            processor: vermouth.DoMapping
            args: {}
+
+A whole-file include merges the included document. To include only its pipeline
+mapping, select it explicitly with ``:martinize2``.
 
 An include can rename variables used by its selected fragment. Keys in
 ``rename_variables`` are names used by the fragment; values are their names in
@@ -97,15 +100,12 @@ the including scope. Names not listed are preserved::
            ff: source_ff
 
 An entry can select a fragment within a YAML file by appending a colon and a
-dot-separated path. Ordered mappings accept their key in the dotted path or a
-numeric index in brackets. The following references select the same argument
-mapping::
+dot-separated path. Ordered mappings accept their key as a dotted path
+component or a numeric index in brackets. The following references select the
+same argument mapping::
 
    charmm.yaml:martinize2.steps[0].args
    charmm.yaml:martinize2.steps.read_input.args
-
-The detailed merge and structural-composition behavior applied to included
-fragments is intentionally not defined yet.
 
 Pipeline structure
 ------------------

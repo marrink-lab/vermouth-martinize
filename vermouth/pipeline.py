@@ -19,6 +19,7 @@ class _LiteralDollarString(str):
 
 
 _STRING_LIKE = (str, bytes, bytearray)
+SOURCE_KEY = "$source"
 
 
 def _escape_literal_dollars(value):
@@ -62,6 +63,18 @@ def resolve_literal_dollars(value):
         return value.__class__(resolve_literal_dollars(item) for item in value)
     if isinstance(value, _LiteralDollarString):
         return str(value)
+    return value
+
+
+def _strip_source_metadata(value):
+    """Remove internal composition provenance before pipeline execution."""
+    if isinstance(value, MutableMapping):
+        value.pop(SOURCE_KEY, None)
+        for item in value.values():
+            _strip_source_metadata(item)
+    elif isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
+        for item in value:
+            _strip_source_metadata(item)
     return value
 
 
@@ -779,6 +792,37 @@ def rename_variables(obj, renames):
     object
         The configuration object with namespaced variable references.
     """
+    available_names = _variable_names(obj)
+    unknown_names = set(renames) - available_names
+    if unknown_names:
+        raise KeyError(
+            f"Cannot rename undefined variable(s) {sorted(unknown_names)!r}."
+        )
+
+    return _rename_variables(obj, renames)
+
+
+def _variable_names(value):
+    """Collect variable declarations and references from a configuration tree."""
+    names = set()
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if key == "variable" and isinstance(item, str):
+                names.add(item)
+            elif key == "variables" and isinstance(item, Collection):
+                names.update(
+                    variable for variable in item if isinstance(variable, str)
+                )
+            else:
+                names.update(_variable_names(item))
+    elif isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
+        for item in value:
+            names.update(_variable_names(item))
+    return names
+
+
+def _rename_variables(obj, renames):
+    """Apply validated variable renames recursively."""
     if isinstance(obj, MutableMapping):
         for key, value in obj.items():
             if key == "variable" and isinstance(value, str):
@@ -786,10 +830,10 @@ def rename_variables(obj, renames):
             elif key == "variables" and isinstance(value, MutableSequence):
                 obj[key] = [renames.get(variable, variable) for variable in value]
             else:
-                rename_variables(value, renames)
+                _rename_variables(value, renames)
     elif isinstance(obj, Collection) and not isinstance(obj, _STRING_LIKE):
         for item in obj:
-            rename_variables(item, renames)
+            _rename_variables(item, renames)
     return obj
 
 
@@ -886,40 +930,55 @@ def _schema_instance(value):
                 else _schema_instance(item)
             )
             for key, item in value.items()
+            if key != SOURCE_KEY
         }
     if isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
         return [_schema_instance(item) for item in value]
     return value
 
 
-def _included_pipeline_paths(config, path, pipeline_dirs):
-    """
-    Extract direct include paths from a pipeline configuration.
+def _annotate_sources(value, source, structural_path=""):
+    """Attach internal YAML provenance to every mapping in a configuration."""
+    if not isinstance(value, MutableMapping):
+        return value
 
-    Included fragments are resolved relative to the including file before the
-    configured pipeline search directories. Recursive include expansion is
-    intentionally deferred to the composition implementation.
-    """
-    root = config.get("martinize2", {})
-    includes = _pop_directive(root, INCLUDE_KEY, [])
-
-    paths = []
-    for include in includes:
-        reference, _ = _parse_include_entry(include)
-        include_path, _ = _parse_include_reference(
-            reference,
-            path,
-            pipeline_dirs,
+    value[SOURCE_KEY] = (
+        str(source)
+        if not structural_path
+        else f"{source}:{structural_path}"
+    )
+    for key, child in value.items():
+        if key == SOURCE_KEY:
+            continue
+        child_path = (
+            str(key)
+            if not structural_path
+            else f"{structural_path}.{key}"
         )
-        paths.append(include_path)
-
-    return paths
+        if key == "steps" and isinstance(child, MutableSequence):
+            for name, step in child:
+                _annotate_sources(
+                    step,
+                    source,
+                    f"{child_path}.{name}",
+                )
+        elif isinstance(child, MutableMapping):
+            _annotate_sources(child, source, child_path)
+        elif isinstance(child, Collection) and not isinstance(child, _STRING_LIKE):
+            for item in child:
+                _annotate_sources(item, source, child_path)
+    return value
 
 
 def _parse_include_entry(include):
     """Return an include reference and its fragment-local variable renames."""
     if isinstance(include, Mapping):
-        return include["path"], include.get("rename_variables", {})
+        renames = {
+            name: replacement
+            for name, replacement in include.get("rename_variables", {}).items()
+            if name != SOURCE_KEY
+        }
+        return include["path"], renames
     return include, {}
 
 
@@ -949,9 +1008,9 @@ def select_include_fragment(config, fragment_path):
     """
     Select a mapping or ordered-map fragment from a loaded YAML document.
 
-    Ordered mappings support either numeric indexes or their step keys inside
-    brackets. For example, ``martinize2.steps[0].args`` and
-    ``martinize2.steps[read_input].args`` select the same argument mapping.
+    Ordered mappings support numeric indexes in brackets and step keys as
+    dotted path components. For example, ``martinize2.steps[0].args`` and
+    ``martinize2.steps.read_input.args`` select the same argument mapping.
     """
     value = config
     if not fragment_path:
@@ -999,20 +1058,6 @@ def select_include_fragment(config, fragment_path):
     return value
 
 
-def load_include_fragment(reference, including_path, pipeline_dirs=()):
-    """
-    Load a complete YAML file or a selected fragment from one.
-    """
-    include_path, fragment_path = _parse_include_reference(
-        reference,
-        including_path,
-        pipeline_dirs,
-    )
-    config = deepcopy(load_yaml_file(include_path))
-    _validate_pipeline_config(config, include_path)
-    return deepcopy(select_include_fragment(config, fragment_path))
-
-
 def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
     """Load and compose a pipeline file, expanding includes depth-first."""
     path = find_pipeline_yaml(path, pipeline_dirs).resolve()
@@ -1021,6 +1066,7 @@ def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
         raise ValueError(f"Include cycle detected: {chain}")
 
     config = deepcopy(load_yaml_file(path))
+    _annotate_sources(config, path)
     _validate_raw_step_names(config["martinize2"], source=path)
     _convert_step_mappings(config["martinize2"])
     _compose_includes(
@@ -1028,7 +1074,7 @@ def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
         path,
         pipeline_dirs,
         (*inclusion_chain, path),
-        "martinize2",
+        "",
     )
     _validate_pipeline_config(config, path)
     return config
@@ -1048,6 +1094,8 @@ def _compose_includes(
     includes = _pop_directive(value, INCLUDE_KEY, [])
     local = deepcopy(value)
     value.clear()
+    if SOURCE_KEY in local:
+        value[SOURCE_KEY] = local[SOURCE_KEY]
 
     for reference in includes:
         reference, renames = _parse_include_entry(reference)
@@ -1079,13 +1127,18 @@ def _compose_includes(
         )
 
     for key, child in local.items():
+        child_path = (
+            str(key)
+            if not structural_path
+            else f"{structural_path}.{key}"
+        )
         if isinstance(child, MutableMapping):
             _compose_includes(
                 child,
                 path,
                 pipeline_dirs,
                 inclusion_chain,
-                f"{structural_path}.{key}",
+                child_path,
             )
         elif isinstance(child, Collection) and not isinstance(child, _STRING_LIKE):
             for item in child:
@@ -1095,7 +1148,7 @@ def _compose_includes(
                         path,
                         pipeline_dirs,
                         inclusion_chain,
-                        f"{structural_path}.{key}",
+                        child_path,
                     )
         merge_pipeline_mapping(
             value,
@@ -1207,71 +1260,63 @@ def iter_cli_flags(pipeline_conf):
         for name, step in pipeline_conf["steps"].items():
             yield from iter_cli_flags(step)
 
-def find_step_by_name(config, target_name, raise_if_missing=True):
-    """
-    Find a pipeline step by its key.
-
-    Parameters
-    ----------
-    config : object
-        Pipeline configuration to search.
-    target_name : str
-        Step key to find.
-    raise_if_missing : bool, optional
-        Raise an error when no matching step is found.
-
-    Returns
-    -------
-    dict or None
-        Matching processor configuration, or ``None`` when no match exists and
-        ``raise_if_missing`` is false.
-
-    Raises
-    ------
-    KeyError
-        If no matching processor is found and ``raise_if_missing`` is true.
-    ValueError
-        If more than one processor has the requested step key.
-    """
-    matches = []
-
-    def search(value):
-        """
-        Recursively search the configuration for matching pipeline steps.
-        """
-        if not isinstance(value, Mapping):
-            return
-
-        steps = value.get("steps")
-        if isinstance(steps, Mapping):
-            for step_name, step_conf in steps.items():
-                if step_name == target_name:
-                    matches.append(step_conf)
-                search(step_conf)
-        else:
-            for child in value.values():
-                search(child)
-
-    search(config)
-
-    if not matches:
-        if raise_if_missing:
-            raise KeyError(
-                f"No pipeline step found with key {target_name!r}."
-            )
-        return None
-
-    if len(matches) > 1:
-        raise ValueError(
-            f"Pipeline step key {target_name!r} is not unique."
-        )
-
-    return matches[0]
-
 REMOVE_VALUE = "$remove"
 STRATEGY_KEY = "$strategy"
 INCLUDE_KEY = "$include"
 VALID_STRATEGIES = {"merge", "replace"}
+
+
+def _insertion_anchors(value):
+    """Remove and return insertion directives from a mapping value."""
+    if not isinstance(value, MutableMapping):
+        return None, None
+    return (
+        _pop_directive(value, "$insert_before", None),
+        _pop_directive(value, "$insert_after", None),
+    )
+
+
+def _validate_existing_insertion_position(
+    target,
+    key,
+    insert_before,
+    insert_after,
+    source,
+):
+    """Ensure an existing sibling satisfies its requested local anchors."""
+    if insert_before is None and insert_after is None:
+        return
+
+    names = list(target)
+    anchors = [
+        anchor
+        for anchor in (insert_before, insert_after)
+        if anchor is not None
+    ]
+    missing = [anchor for anchor in anchors if anchor not in target]
+    if missing:
+        raise KeyError(
+            f"Cannot position {key!r} from {source or 'an unknown source'}: "
+            f"local anchor {missing[0]!r} was not found."
+        )
+
+    key_index = names.index(key)
+    if (
+        insert_after is not None
+        and key_index != names.index(insert_after) + 1
+    ):
+        raise ValueError(
+            f"Cannot position {key!r} from {source or 'an unknown source'}: "
+            f"it is not immediately after local anchor {insert_after!r}."
+        )
+    if (
+        insert_before is not None
+        and key_index != names.index(insert_before) - 1
+    ):
+        raise ValueError(
+            f"Cannot position {key!r} from {source or 'an unknown source'}: "
+            f"it is not immediately before local anchor {insert_before!r}."
+        )
 
 
 def merge_pipeline_mapping(target, incoming, source=None):
@@ -1311,6 +1356,8 @@ def merge_pipeline_mapping(target, incoming, source=None):
         )
 
     for key, value in incoming.items():
+        if key == SOURCE_KEY:
+            continue
         if _is_directive_key(key, STRATEGY_KEY):
             continue
         if _has_escaped_key_collision(target, key):
@@ -1324,22 +1371,27 @@ def merge_pipeline_mapping(target, incoming, source=None):
         ):
             target.pop(key, None)
             continue
-        if key in target and isinstance(target[key], MutableMapping) and isinstance(value, Mapping):
-            merge_pipeline_mapping(target[key], value, source)
+        new_value = deepcopy(value)
+        insert_before, insert_after = _insertion_anchors(new_value)
+        if key in target and isinstance(target[key], MutableMapping) and isinstance(new_value, Mapping):
+            merge_pipeline_mapping(target[key], new_value, source)
+            _validate_existing_insertion_position(
+                target,
+                key,
+                insert_before,
+                insert_after,
+                source,
+            )
         elif key in target:
-            target[key] = deepcopy(value)
+            target[key] = new_value
+            _validate_existing_insertion_position(
+                target,
+                key,
+                insert_before,
+                insert_after,
+                source,
+            )
         else:
-            new_value = deepcopy(value)
-            insert_before = _pop_directive(
-                new_value,
-                "$insert_before",
-                None,
-            ) if isinstance(new_value, MutableMapping) else None
-            insert_after = _pop_directive(
-                new_value,
-                "$insert_after",
-                None,
-            ) if isinstance(new_value, MutableMapping) else None
             if insert_before is None and insert_after is None:
                 target[key] = new_value
             else:
@@ -1382,8 +1434,9 @@ def combine_pipeline_configs(configs):
     Combine multiple pipeline YAML configs into one pipeline config.
 
     Duplicate CLI flags are allowed only if their definitions are exactly equal.
-    Variables are namespaced per YAML fragment.
-    Steps are appended in the order given by the user.
+    Variables retain their declared names; callers must explicitly rename
+    conflicting variables at an include site. Steps are composed by mapping
+    key in the order given by the user.
     """
     # TODO: Check whether $schema is the same for all, and use that to validate the final pipeline?
     combined = {
@@ -1631,6 +1684,7 @@ class PipelineBuilder:
             Executable Vermouth pipeline.
         """
         pipeline_conf = resolve_literal_dollars(deepcopy(self.pipeline_conf))
+        _strip_source_metadata(pipeline_conf)
         _convert_step_mappings(pipeline_conf)
         set_values(pipeline_conf, cli_args, variables)
 
