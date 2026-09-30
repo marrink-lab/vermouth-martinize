@@ -835,9 +835,9 @@ def test_load_pipeline_configs_multiple(tmp_path):
     assert configs[1][0] == "water"
 
 
-def test_load_pipeline_configs_loads_includes_before_including_file(tmp_path):
+def test_load_pipeline_configs_resolves_includes(tmp_path):
     """
-    Direct includes are loaded in declaration order before their includer.
+    Include directives are resolved in loaded configurations.
     """
     (tmp_path / "included.yaml").write_text(
         """
@@ -863,8 +863,9 @@ martinize2:
 
     configs = load_pipeline_configs([including_path])
 
-    assert [name for name, _ in configs] == ["included", "including"]
-    assert "$include" not in configs[1][1]["martinize2"]
+    assert [name for name, _ in configs] == ["including"]
+    root = configs[0][1]["martinize2"]
+    assert "$include" not in root
 
 
 def test_load_pipeline_configs_converts_validated_steps_to_ordered_dicts(tmp_path):

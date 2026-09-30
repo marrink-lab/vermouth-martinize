@@ -863,11 +863,23 @@ def _schema_instance(value):
     Convert ordered YAML mapping tuples to JSON Schema-compatible arrays.
 
     PyYAML represents ``!!omap`` entries as tuples, while the JSON Schema
-    array type accepts lists only. The conversion is limited to the temporary
-    value passed to the schema validator.
+    array type accepts lists only. Runtime configurations instead represent
+    ``steps`` as ``OrderedDict`` objects. Convert both representations to the
+    raw ordered-map array expected by the schema without changing the
+    configuration being validated.
     """
     if isinstance(value, Mapping):
-        return {key: _schema_instance(item) for key, item in value.items()}
+        return {
+            key: (
+                [
+                    [_schema_instance(step_name), _schema_instance(step)]
+                    for step_name, step in item.items()
+                ]
+                if key == "steps" and isinstance(item, OrderedDict)
+                else _schema_instance(item)
+            )
+            for key, item in value.items()
+        }
     if isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
         return [_schema_instance(item) for item in value]
     return value
@@ -1002,6 +1014,7 @@ def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
         pipeline_dirs,
         (*inclusion_chain, path),
     )
+    _validate_pipeline_config(config, path)
     return config
 
 
@@ -1045,7 +1058,14 @@ def _compose_includes(value, path, pipeline_dirs, inclusion_chain):
 
 
 def _validate_pipeline_config(config, path):
-    """Validate a parsed pipeline configuration against its declared schema."""
+    """
+    Validate a raw or composed pipeline configuration.
+
+    Raw YAML ordered maps are duplicate-checked before being converted to
+    ``OrderedDict`` objects. Already-converted composed configurations are
+    schema-checked through ``_schema_instance`` and must not be passed to the
+    raw ordered-map validator again.
+    """
     schema_uri = config.get('$schema')
     if schema_uri:
         yaml_dir = Path(path).parent
@@ -1056,8 +1076,10 @@ def _validate_pipeline_config(config, path):
         jsonschema.validate(_schema_instance(config), schema)
 
     root = config.get("martinize2")
-    _validate_raw_step_names(root)
-    _convert_step_mappings(root)
+    steps = root.get("steps")
+    if isinstance(steps, MutableSequence):
+        _validate_raw_step_names(root)
+        _convert_step_mappings(root)
     validate_step_names(root)
 
 
@@ -1099,7 +1121,6 @@ def load_pipeline_configs(pipeline_paths, pipeline_dirs=()):
     for pipeline_path in pipeline_paths:
         path = find_pipeline_yaml(pipeline_path, pipeline_dirs)
         conf = compose_pipeline_file(path, pipeline_dirs)
-        _validate_pipeline_config(conf, path)
         namespace = Path(path).stem
         configs.append((namespace, conf))
 
