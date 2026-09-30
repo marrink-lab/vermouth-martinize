@@ -758,19 +758,21 @@ def import_processor(processor_name):
     proc = getattr(module, name)
     return proc
 
-def namespace_variables(obj, namespace):
+def rename_variables(obj, renames):
     """
-    Add a namespace to variable references in a configuration object.
+    Rename variables declared and referenced in a configuration object.
 
-    The configuration is traversed recursively and values associated with a
-    ``variable`` key are prefixed with the supplied namespace.
+    The configuration is traversed recursively. Values associated with a
+    ``variable`` key and names declared in a ``variables`` list are rewritten
+    according to ``renames``.
 
     Parameters
     ----------
     obj : object
         Configuration object to process.
-    namespace : str
-        Namespace to prepend to variable references.
+    renames : Mapping[str, str]
+        Mapping from names used by the included fragment to names in the
+        including scope.
 
     Returns
     -------
@@ -780,12 +782,14 @@ def namespace_variables(obj, namespace):
     if isinstance(obj, MutableMapping):
         for key, value in obj.items():
             if key == "variable" and isinstance(value, str):
-                obj[key] = f"{namespace}.{value}"
+                obj[key] = renames.get(value, value)
+            elif key == "variables" and isinstance(value, MutableSequence):
+                obj[key] = [renames.get(variable, variable) for variable in value]
             else:
-                namespace_variables(value, namespace)
+                rename_variables(value, renames)
     elif isinstance(obj, Collection) and not isinstance(obj, _STRING_LIKE):
         for item in obj:
-            namespace_variables(item, namespace)
+            rename_variables(item, renames)
     return obj
 
 
@@ -901,14 +905,22 @@ def _included_pipeline_paths(config, path, pipeline_dirs):
 
     paths = []
     for include in includes:
+        reference, _ = _parse_include_entry(include)
         include_path, _ = _parse_include_reference(
-            include,
+            reference,
             path,
             pipeline_dirs,
         )
         paths.append(include_path)
 
     return paths
+
+
+def _parse_include_entry(include):
+    """Return an include reference and its fragment-local variable renames."""
+    if isinstance(include, Mapping):
+        return include["path"], include.get("rename_variables", {})
+    return include, {}
 
 
 def _parse_include_reference(reference, including_path, pipeline_dirs):
@@ -1038,6 +1050,7 @@ def _compose_includes(
     value.clear()
 
     for reference in includes:
+        reference, renames = _parse_include_entry(reference)
         include_path, fragment_path = _parse_include_reference(
             reference,
             path,
@@ -1049,6 +1062,7 @@ def _compose_includes(
             inclusion_chain,
         )
         fragment = deepcopy(select_include_fragment(included, fragment_path))
+        rename_variables(fragment, renames)
         if not isinstance(fragment, Mapping):
             raise TypeError(
                 f"Included fragment {reference!r} must resolve to a mapping."
@@ -1380,19 +1394,14 @@ def combine_pipeline_configs(configs):
 
     seen_cli_flags = {}
 
-    for namespace, conf in configs:
+    for _, conf in configs:
         root = conf["martinize2"]
-        root = root.get("from", root.get("to", root))
 
-        # namespace all variable references inside this YAML
-        namespace_variables(root, namespace)
-
-        # collect namespaced variables
+        # Included fragments retain their lexical variable names. Callers that
+        # combine otherwise-conflicting roots must rename variables explicitly.
         for variable in root.get("variables", []):
-            namespaced_variable = f"{namespace}.{variable}"
-
-            if namespaced_variable not in combined["variables"]:
-                combined["variables"].append(namespaced_variable)
+            if variable not in combined["variables"]:
+                combined["variables"].append(variable)
 
         # merge normal CLI flags
         cli_conf = root.get("cli", {})

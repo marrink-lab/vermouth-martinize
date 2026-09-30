@@ -18,7 +18,22 @@ definitions:
   include:
     type: array
     items:
-      type: string
+      oneOf:
+        - type: string
+        - $ref: "#/definitions/include_entry"
+
+  include_entry:
+    type: object
+    required:
+      - path
+    properties:
+      path:
+        type: string
+      rename_variables:
+        type: object
+        additionalProperties:
+          type: string
+    additionalProperties: false
 
   steps:
     type: array

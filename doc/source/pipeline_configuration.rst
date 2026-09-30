@@ -64,7 +64,8 @@ Multiple YAML files can be supplied after ``-pipeline``::
 
 The configurations are combined in the order in which they are provided.
 Processor steps are appended, command-line flags are combined, and variables
-are namespaced per YAML file.
+retain their declared names. Pipelines with conflicting variable names should
+be composed through an include with an explicit variable rename.
 
 Including pipeline fragments
 ----------------------------
@@ -84,6 +85,16 @@ step, processor, CLI, and argument mappings.
        - local_step:
            processor: vermouth.DoMapping
            args: {}
+
+An include can rename variables used by its selected fragment. Keys in
+``rename_variables`` are names used by the fragment; values are their names in
+the including scope. Names not listed are preserved::
+
+   martinize2:
+     $include:
+       - path: charmm.yaml:martinize2.steps.from
+         rename_variables:
+           ff: source_ff
 
 An entry can select a fragment within a YAML file by appending a colon and a
 dot-separated path. Ordered mappings accept their key in the dotted path or a

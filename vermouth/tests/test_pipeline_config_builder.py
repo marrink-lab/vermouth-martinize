@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import jsonschema
 import pytest
 import vermouth
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_pipeline_mapping, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
+from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_pipeline_mapping, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, rename_variables
 
 def test_options_used_in_condition_equal():
     """
@@ -321,28 +321,25 @@ def test_build_mini_parser_custom_arguments():
     assert args.extra_map_dir == [Path("extra_maps")]
     assert args.list_ff is True
 
-def test_namespace_variables_dict():
+def test_rename_variables_updates_declarations_and_references():
     """
-    Test that namespace_variables namespaces a variable
-    reference inside a dictionary.
+    Renaming applies to declarations and references in a nested mapping.
     """
     obj = {
-        "args": {
-            "force_field": {
-                "variable": "ff",
-            }
-        }
+        "variables": ["ff", "mappings"],
+        "args": {"force_field": {"variable": "ff"}},
     }
 
-    result = namespace_variables(obj, "charmm")
+    result = rename_variables(obj, {"ff": "source_ff"})
 
     assert result is obj
-    assert obj["args"]["force_field"]["variable"] == "charmm.ff"
+    assert obj["variables"] == ["source_ff", "mappings"]
+    assert obj["args"]["force_field"]["variable"] == "source_ff"
 
-def test_namespace_variables_list():
+
+def test_rename_variables_rewrites_collections():
     """
-    Test that namespace_variables namespaces variable
-    references inside a list.
+    Renaming applies recursively inside mutable and immutable collections.
     """
     obj = [
         {
@@ -353,29 +350,10 @@ def test_namespace_variables_list():
         },
     ]
 
-    namespace_variables(obj, "martini3001")
+    rename_variables(obj, {"ff": "source_ff"})
 
-    assert obj[0]["variable"] == "martini3001.ff"
+    assert obj[0]["variable"] == "source_ff"
     assert obj[1]["value"] is True
-
-def test_namespace_variables_tuple():
-    """
-    Test that namespace_variables namespaces variable
-    references inside a tuple.
-    """
-    obj = (
-        {
-            "variable": "ff",
-        },
-        {
-            "variable": "mappings",
-        },
-    )
-
-    namespace_variables(obj, "martini3001")
-
-    assert obj[0]["variable"] == "martini3001.ff"
-    assert obj[1]["variable"] == "martini3001.mappings"
 
 def test_find_pipeline_yaml_full_path(tmp_path):
     """
@@ -794,6 +772,61 @@ def test_pipeline_schema_accepts_include_in_processor_args():
     }
 
     jsonschema.validate(config, schema)
+
+
+def test_pipeline_schema_accepts_include_variable_renames():
+    """An include mapping may explicitly rename fragment-local variables."""
+    schema = load_yaml_file(vermouth.DATA_PATH / "pipelines" / "pipeline-schema.yaml")
+    config = {
+        "martinize2": {
+            "$include": [
+                {
+                    "path": "common.yaml:martinize2.steps.read_input",
+                    "rename_variables": {"ff": "source_ff"},
+                },
+            ],
+        },
+    }
+
+    jsonschema.validate(config, schema)
+
+
+def test_include_renames_fragment_variable_references(tmp_path):
+    """Variable renames apply only to the included fragment."""
+    (tmp_path / "fragment.yaml").write_text(
+        """
+martinize2:
+  steps: !!omap
+    - read_input:
+        args:
+          force_field:
+            variable: ff
+""",
+        encoding="utf-8",
+    )
+    including_path = tmp_path / "including.yaml"
+    including_path.write_text(
+        """
+martinize2:
+  variables:
+    - source_ff
+  steps: !!omap
+    - consumer:
+        args:
+          $include:
+            - path: fragment.yaml:martinize2.steps.read_input.args
+              rename_variables:
+                ff: source_ff
+""",
+        encoding="utf-8",
+    )
+
+    _, config = load_pipeline_configs([including_path])[0]
+
+    assert (
+        config["martinize2"]["steps"]["consumer"]["args"]["force_field"]["variable"]
+        == "source_ff"
+    )
 
 
 def test_select_include_fragment_by_ordered_map_index_or_name(tmp_path):

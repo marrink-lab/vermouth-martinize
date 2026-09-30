@@ -140,7 +140,6 @@ def main():
 
     for namespace, conf in configs:
         root = conf["martinize2"]
-        root = root.get("from", root.get("to", root))
 
         if "ff" in root.get("variables", []):
             if "from_ff" in root.get("cli", {}).get('flags', {}):
