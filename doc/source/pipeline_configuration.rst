@@ -66,6 +66,36 @@ The configurations are combined in the order in which they are provided.
 Processor steps are appended, command-line flags are combined, and variables
 are namespaced per YAML file.
 
+Including pipeline fragments
+----------------------------
+
+A configuration mapping can declare an ordered ``$include`` directive. Each
+entry is a pipeline name or path; paths relative to the including YAML file
+are supported. The directive is valid at the document root and in pipeline,
+step, processor, CLI, and argument mappings.
+
+.. code-block:: yaml
+
+   martinize2:
+     $include:
+       - common.yaml
+       - optional-water
+     steps: !!omap
+       - local_step:
+           processor: vermouth.DoMapping
+           args: {}
+
+An entry can select a fragment within a YAML file by appending a colon and a
+dot-separated path. Ordered mappings accept their key in the dotted path or a
+numeric index in brackets. The following references select the same argument
+mapping::
+
+   charmm.yaml:martinize2.steps[0].args
+   charmm.yaml:martinize2.steps.read_input.args
+
+The detailed merge and structural-composition behavior applied to included
+fragments is intentionally not defined yet.
+
 Pipeline structure
 ------------------
 

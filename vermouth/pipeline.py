@@ -73,6 +73,14 @@ def _is_directive_key(key, directive):
     )
 
 
+def _pop_directive(mapping, directive, default):
+    """Remove and return an unescaped directive from a mapping."""
+    for key in mapping:
+        if _is_directive_key(key, directive):
+            return mapping.pop(key)
+    return default
+
+
 def _has_escaped_key_collision(mapping, key):
     """Return whether equal mapping keys differ only by dollar escaping."""
     return any(
@@ -861,14 +869,137 @@ def _schema_instance(value):
     return value
 
 
-def load_pipeline_configs(pipeline_paths):
+def _included_pipeline_paths(config, path, pipeline_dirs):
+    """
+    Extract direct include paths from a pipeline configuration.
+
+    Included fragments are resolved relative to the including file before the
+    configured pipeline search directories. Recursive include expansion is
+    intentionally deferred to the composition implementation.
+    """
+    root = config.get("martinize2", {})
+    includes = _pop_directive(root, INCLUDE_KEY, [])
+
+    paths = []
+    for include in includes:
+        include_path, _ = _parse_include_reference(
+            include,
+            path,
+            pipeline_dirs,
+        )
+        paths.append(include_path)
+
+    return paths
+
+
+def _parse_include_reference(reference, including_path, pipeline_dirs):
+    """
+    Resolve an include reference to a file path and optional fragment path.
+
+    The schema validates that ``reference`` is a string. A fragment path
+    follows the first colon and uses dot-separated mapping keys with optional
+    ``[index]`` or ``[ordered-map-key]`` selectors.
+    """
+    filename, separator, fragment_path = reference.partition(":")
+    include_path = Path(filename)
+    relative_path = Path(including_path).parent / include_path
+    if not include_path.is_absolute() and relative_path.exists():
+        resolved_path = relative_path
+    else:
+        resolved_path = find_pipeline_yaml(
+            filename,
+            [Path(including_path).parent, *pipeline_dirs],
+        )
+
+    return resolved_path, fragment_path if separator else None
+
+
+def select_include_fragment(config, fragment_path):
+    """
+    Select a mapping or ordered-map fragment from a loaded YAML document.
+
+    Ordered mappings support either numeric indexes or their step keys inside
+    brackets. For example, ``martinize2.steps[0].args`` and
+    ``martinize2.steps[read_input].args`` select the same argument mapping.
+    """
+    value = config
+    if not fragment_path:
+        return value
+
+    for component in fragment_path.split("."):
+        key, separator, selector = component.partition("[")
+        if key:
+            if isinstance(value, Mapping):
+                value = value[key]
+            else:
+                for entry_key, entry_value in value:
+                    if entry_key == key:
+                        value = entry_value
+                        break
+                else:
+                    raise KeyError(
+                        f"Ordered-map key {key!r} was not found in "
+                        f"{component!r}."
+                    )
+        if separator:
+            if not selector.endswith("]"):
+                raise KeyError(
+                    f"Invalid include fragment selector {component!r}."
+                )
+            selector = selector[:-1]
+            if not selector.isdecimal():
+                raise KeyError(
+                    f"Ordered-map selector {selector!r} must be a numeric "
+                    f"index in {component!r}."
+                )
+            value = value[int(selector)]
+            if (
+                isinstance(value, Collection)
+                and not isinstance(value, _STRING_LIKE)
+                and len(value) == 2
+                and isinstance(value[1], Mapping)
+            ):
+                value = value[1]
+
+    return value
+
+
+def load_include_fragment(reference, including_path, pipeline_dirs=()):
+    """
+    Load a complete YAML file or a selected fragment from one.
+    """
+    include_path, fragment_path = _parse_include_reference(
+        reference,
+        including_path,
+        pipeline_dirs,
+    )
+    config = deepcopy(load_yaml_file(include_path))
+    return deepcopy(select_include_fragment(config, fragment_path))
+
+
+def _validate_pipeline_config(config, path):
+    """Validate a parsed pipeline configuration against its declared schema."""
+    schema_uri = config.get('$schema')
+    if schema_uri:
+        yaml_dir = Path(path).parent
+        schema_path = Path(schema_uri)
+        if not schema_path.is_absolute():
+            schema_path = yaml_dir / schema_path
+        schema = load_yaml_file(schema_path)
+        jsonschema.validate(_schema_instance(config), schema)
+
+    root = config.get("martinize2")
+    validate_step_names(root)
+
+
+def load_pipeline_configs(pipeline_paths, pipeline_dirs=()):
     """
     Load multiple pipeline YAML configs.
 
     Parameters
     ----------
-    pipeline_names : list[str]
-        Names or paths of YAML pipeline fragments.
+    pipeline_paths : Iterable[pathlib.Path]
+        Paths to YAML pipeline fragments.
     pipeline_dirs : list[pathlib.Path]
         Extra directories to search in.
 
@@ -879,18 +1010,17 @@ def load_pipeline_configs(pipeline_paths):
     """
     configs = []
 
-    for path in pipeline_paths:
-        conf = load_yaml_file(path)
-        schema_uri = conf.get('$schema')
-        if schema_uri:
-            yaml_dir = Path(path).parent
-            schema_path = Path(schema_uri)
-            if not schema_path.is_absolute():
-                schema_path = yaml_dir / schema_path
-            schema = load_yaml_file(schema_path)
-            jsonschema.validate(_schema_instance(conf), schema)
-        root = conf.get("martinize2")
-        validate_step_names(root)
+    for pipeline_path in pipeline_paths:
+        path = find_pipeline_yaml(pipeline_path, pipeline_dirs)
+        conf = deepcopy(load_yaml_file(path))
+        _validate_pipeline_config(conf, path)
+        included_paths = _included_pipeline_paths(conf, path, pipeline_dirs)
+
+        for included_path in included_paths:
+            included_conf = deepcopy(load_yaml_file(included_path))
+            _validate_pipeline_config(included_conf, included_path)
+            configs.append((Path(included_path).stem, included_conf))
+
         namespace = Path(path).stem
         configs.append((namespace, conf))
 
@@ -997,6 +1127,7 @@ def find_step_by_name(config, target_name, raise_if_missing=True):
 
 REMOVE_VALUE = "$remove"
 STRATEGY_KEY = "$strategy"
+INCLUDE_KEY = "$include"
 VALID_STRATEGIES = {"merge", "replace"}
 
 
@@ -1321,7 +1452,7 @@ class PipelineConfigBuilder:
         """
         self.paths = list(find_pipeline_configs(self.pipeline_names, self.pipeline_dirs))
         LOGGER.debug('Building a pipeline from {}', ', '.join(map(str, self.paths)))
-        configs = load_pipeline_configs(self.paths)
+        configs = load_pipeline_configs(self.paths, self.pipeline_dirs)
         pipeline_conf = combine_pipeline_configs(configs)
         validate_cli_options(pipeline_conf, path="martinize2")
         return configs, pipeline_conf

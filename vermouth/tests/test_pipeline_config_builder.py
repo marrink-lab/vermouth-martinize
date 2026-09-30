@@ -4,7 +4,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import jsonschema
 import pytest
 import vermouth
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_pipeline_configs, load_yaml_file, merge_override, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
+from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_override, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
 
 def test_options_used_in_condition_equal():
     """
@@ -721,6 +721,74 @@ def test_pipeline_schema_rejects_legacy_id():
         jsonschema.validate(config, schema)
 
 
+def test_pipeline_schema_accepts_include_without_steps():
+    """
+    An include-only pipeline fragment is valid pipeline YAML.
+    """
+    schema = load_yaml_file(vermouth.DATA_PATH / "pipelines" / "pipeline-schema.yaml")
+    config = {
+        "martinize2": {
+            "$include": ["common"],
+        },
+    }
+
+    jsonschema.validate(config, schema)
+
+
+def test_pipeline_schema_accepts_include_in_processor_args():
+    """
+    Includes can be declared inside processor argument mappings.
+    """
+    schema = load_yaml_file(vermouth.DATA_PATH / "pipelines" / "pipeline-schema.yaml")
+    config = {
+        "martinize2": {
+            "steps": [
+                [
+                    "mapping",
+                    {
+                        "args": {
+                            "$include": ["common.yaml:martinize2.steps[0].args"],
+                        }
+                    },
+                ]
+            ],
+        },
+    }
+
+    jsonschema.validate(config, schema)
+
+
+def test_select_include_fragment_by_ordered_map_index_or_name(tmp_path):
+    """
+    Fragment selectors support both numeric and named ordered-map indexes.
+    """
+    source = tmp_path / "source.yaml"
+    source.write_text(
+        """
+martinize2:
+  steps: !!omap
+    - read_input:
+        args:
+          path:
+            value: input.pdb
+""",
+        encoding="utf-8",
+    )
+    config = load_yaml_file(source)
+
+    by_index = select_include_fragment(config, "martinize2.steps[0].args")
+    by_name = load_include_fragment(
+        "source.yaml:martinize2.steps.read_input.args",
+        source,
+    )
+
+    assert by_index == by_name == {
+        "path": {
+            "value": "input.pdb",
+        }
+    }
+
+
 def test_load_pipeline_configs_rejects_duplicate_step_keys(tmp_path):
     """
     Duplicate keys from an ordered YAML mapping are rejected on load.
@@ -764,6 +832,39 @@ def test_load_pipeline_configs_multiple(tmp_path):
     assert len(configs) == 2
     assert configs[0][0] == "charmm"
     assert configs[1][0] == "water"
+
+
+def test_load_pipeline_configs_loads_includes_before_including_file(tmp_path):
+    """
+    Direct includes are loaded in declaration order before their includer.
+    """
+    (tmp_path / "included.yaml").write_text(
+        """
+martinize2:
+  steps: !!omap
+    - included_step:
+        processor: pathlib.Path
+""",
+        encoding="utf-8",
+    )
+    including_path = tmp_path / "including.yaml"
+    including_path.write_text(
+        """
+martinize2:
+  $include:
+    - included.yaml
+  steps: !!omap
+    - including_step:
+        processor: pathlib.PurePath
+""",
+        encoding="utf-8",
+    )
+
+    configs = load_pipeline_configs([including_path])
+
+    assert [name for name, _ in configs] == ["included", "including"]
+    assert "$include" not in configs[1][1]["martinize2"]
+
 
 def test_iter_cli_flags():
     """
