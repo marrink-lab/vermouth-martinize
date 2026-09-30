@@ -789,7 +789,7 @@ def namespace_variables(obj, namespace):
     return obj
 
 
-def _validate_raw_step_names(pipeline_conf, path="martinize2"):
+def _validate_raw_step_names(pipeline_conf, path="martinize2", source=None):
     """
     Validate that step keys are unique within each pipeline.
 
@@ -803,6 +803,8 @@ def _validate_raw_step_names(pipeline_conf, path="martinize2"):
         Pipeline configuration to validate.
     path : str, optional
         Structural path used in error messages.
+    source : pathlib.Path or str, optional
+        YAML file from which the steps were loaded.
 
     Raises
     ------
@@ -813,14 +815,15 @@ def _validate_raw_step_names(pipeline_conf, path="martinize2"):
     for index, (name, step) in enumerate(pipeline_conf.get("steps", [])):
         step_path = f"{path}.steps[{index}].{name}"
         if name in seen_names:
+            provenance = f" in {source}" if source is not None else ""
             raise ValueError(
                 f"Duplicate step key {name!r}: {seen_names[name]} and "
-                f"{step_path}."
+                f"{step_path}{provenance}."
             )
         seen_names[name] = step_path
 
         if step.get("steps"):
-            _validate_raw_step_names(step, step_path)
+            _validate_raw_step_names(step, step_path, source)
 
 
 def validate_step_names(pipeline_conf, path="martinize2"):
@@ -1006,19 +1009,26 @@ def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
         raise ValueError(f"Include cycle detected: {chain}")
 
     config = deepcopy(load_yaml_file(path))
-    _validate_raw_step_names(config["martinize2"])
+    _validate_raw_step_names(config["martinize2"], source=path)
     _convert_step_mappings(config["martinize2"])
     _compose_includes(
         config,
         path,
         pipeline_dirs,
         (*inclusion_chain, path),
+        "martinize2",
     )
     _validate_pipeline_config(config, path)
     return config
 
 
-def _compose_includes(value, path, pipeline_dirs, inclusion_chain):
+def _compose_includes(
+    value,
+    path,
+    pipeline_dirs,
+    inclusion_chain,
+    structural_path,
+):
     """Expand include directives in a mapping, with local keys taking priority."""
     if not isinstance(value, MutableMapping):
         return value
@@ -1043,16 +1053,41 @@ def _compose_includes(value, path, pipeline_dirs, inclusion_chain):
             raise TypeError(
                 f"Included fragment {reference!r} must resolve to a mapping."
             )
-        merge_pipeline_mapping(value, fragment)
+        source = (
+            str(include_path)
+            if fragment_path is None
+            else f"{include_path}:{fragment_path}"
+        )
+        merge_pipeline_mapping(
+            value,
+            fragment,
+            source=source,
+        )
 
     for key, child in local.items():
         if isinstance(child, MutableMapping):
-            _compose_includes(child, path, pipeline_dirs, inclusion_chain)
+            _compose_includes(
+                child,
+                path,
+                pipeline_dirs,
+                inclusion_chain,
+                f"{structural_path}.{key}",
+            )
         elif isinstance(child, Collection) and not isinstance(child, _STRING_LIKE):
             for item in child:
                 if isinstance(item, MutableMapping):
-                    _compose_includes(item, path, pipeline_dirs, inclusion_chain)
-        merge_pipeline_mapping(value, {key: child})
+                    _compose_includes(
+                        item,
+                        path,
+                        pipeline_dirs,
+                        inclusion_chain,
+                        f"{structural_path}.{key}",
+                    )
+        merge_pipeline_mapping(
+            value,
+            {key: child},
+            source=f"{path}:{structural_path}",
+        )
 
     return value
 
@@ -1078,7 +1113,7 @@ def _validate_pipeline_config(config, path):
     root = config.get("martinize2")
     steps = root.get("steps")
     if isinstance(steps, MutableSequence):
-        _validate_raw_step_names(root)
+        _validate_raw_step_names(root, source=path)
         _convert_step_mappings(root)
     validate_step_names(root)
 
@@ -1225,89 +1260,34 @@ INCLUDE_KEY = "$include"
 VALID_STRATEGIES = {"merge", "replace"}
 
 
-def merge_override(target, override):
-    """
-    Apply an override dictionary to a target dictionary.
-
-    Dictionaries are merged recursively by default.
-
-    The default strategy is ``merge``. Use ``$strategy: replace`` to clear
-    the target mapping before applying the override.
-    Lists and ordinary values are replaced.
-    '$remove' removes a key.
-    """
-    if not isinstance(target, MutableMapping):
-        raise TypeError(
-            f"Override target must be a dictionary, "
-            f"not {type(target).__name__}."
-        )
-
-    if not isinstance(override, Mapping):
-        raise TypeError(
-            f"Override must be a dictionary, "
-            f"not {type(override).__name__}."
-        )
-
-    override_values = {
-        key: value
-        for key, value in override.items()
-        if not _is_directive_key(key, STRATEGY_KEY)
-    }
-
-    strategy = next(
-        (
-            value
-            for key, value in override.items()
-            if _is_directive_key(key, STRATEGY_KEY)
-        ),
-        "merge",
-    )
-
-    if strategy not in VALID_STRATEGIES:
-        raise ValueError(
-            f"Unknown override strategy {strategy!r}. "
-            f"Expected 'merge' or 'replace'."
-        )
-
-    if strategy == "replace":
-        target.clear()
-
-    for key, override_value in override_values.items():
-        if _has_escaped_key_collision(target, key):
-            raise ValueError(
-                f"Escaped mapping key {key!r} collides with an existing key."
-            )
-
-        if (
-            isinstance(override_value, str)
-            and not isinstance(override_value, _LiteralDollarString)
-            and override_value == REMOVE_VALUE
-        ):
-            target.pop(key, None)
-            continue
-
-        target_value = target.get(key)
-
-        if (
-            isinstance(target_value, MutableMapping)
-            and isinstance(override_value, Mapping)
-        ):
-            merge_override(target_value, override_value)
-        else:
-            target[key] = override_value
-
-    return target
-
-
-def merge_pipeline_mapping(target, incoming):
+def merge_pipeline_mapping(target, incoming, source=None):
     """
     Compose an incoming pipeline mapping into a target mapping.
 
     Existing mapping keys are merged recursively and scalar values are
     replaced. New keys are appended unless their mapping value declares
-    ``$insert_before`` or ``$insert_after``.
+    ``$insert_before`` or ``$insert_after``. ``source`` identifies the YAML
+    fragment that contributed ``incoming`` in composition errors.
     """
-    strategy = incoming.get(STRATEGY_KEY, "merge")
+    if not isinstance(target, MutableMapping):
+        raise TypeError(
+            f"Composition target must be a mapping, not "
+            f"{type(target).__name__}."
+        )
+    if not isinstance(incoming, Mapping):
+        raise TypeError(
+            f"Composed value must be a mapping, not "
+            f"{type(incoming).__name__}."
+        )
+
+    strategy = next(
+        (
+            value
+            for key, value in incoming.items()
+            if _is_directive_key(key, STRATEGY_KEY)
+        ),
+        "merge",
+    )
     if strategy == "replace":
         target.clear()
     elif strategy != "merge":
@@ -1317,27 +1297,35 @@ def merge_pipeline_mapping(target, incoming):
         )
 
     for key, value in incoming.items():
-        if key == STRATEGY_KEY:
+        if _is_directive_key(key, STRATEGY_KEY):
             continue
-        if value == REMOVE_VALUE:
+        if _has_escaped_key_collision(target, key):
+            raise ValueError(
+                f"Escaped mapping key {key!r} collides with an existing key."
+            )
+        if (
+            isinstance(value, str)
+            and not isinstance(value, _LiteralDollarString)
+            and value == REMOVE_VALUE
+        ):
             target.pop(key, None)
             continue
         if key in target and isinstance(target[key], MutableMapping) and isinstance(value, Mapping):
-            merge_pipeline_mapping(target[key], value)
+            merge_pipeline_mapping(target[key], value, source)
         elif key in target:
             target[key] = deepcopy(value)
         else:
             new_value = deepcopy(value)
-            insert_before = (
-                new_value.pop("$insert_before", None)
-                if isinstance(new_value, MutableMapping)
-                else None
-            )
-            insert_after = (
-                new_value.pop("$insert_after", None)
-                if isinstance(new_value, MutableMapping)
-                else None
-            )
+            insert_before = _pop_directive(
+                new_value,
+                "$insert_before",
+                None,
+            ) if isinstance(new_value, MutableMapping) else None
+            insert_after = _pop_directive(
+                new_value,
+                "$insert_after",
+                None,
+            ) if isinstance(new_value, MutableMapping) else None
             if insert_before is None and insert_after is None:
                 target[key] = new_value
             else:
@@ -1349,7 +1337,8 @@ def merge_pipeline_mapping(target, incoming):
                 missing = [anchor for anchor in anchors if anchor not in target]
                 if missing:
                     raise KeyError(
-                        f"Cannot insert {key!r}: anchor {missing[0]!r} was not found."
+                        f"Cannot insert {key!r} from {source or 'an unknown source'}: "
+                        f"local anchor {missing[0]!r} was not found."
                     )
                 items = list(target.items())
                 names = list(target)
@@ -1358,8 +1347,10 @@ def merge_pipeline_mapping(target, incoming):
                     after_index = names.index(insert_after)
                     if before_index != after_index + 1:
                         raise ValueError(
-                            f"Cannot insert {key!r}: {insert_after!r} and "
-                            f"{insert_before!r} do not define one insertion slot."
+                            f"Cannot insert {key!r} from "
+                            f"{source or 'an unknown source'}: "
+                            f"{insert_after!r} and {insert_before!r} do not "
+                            "define one local insertion slot."
                         )
                     index = before_index
                 elif insert_before is not None:
@@ -1371,86 +1362,6 @@ def merge_pipeline_mapping(target, incoming):
                 target.update(items)
 
     return target
-
-
-def insert_pipeline_step(pipeline_config, step_name, step_definition):
-    """
-    Insert a new processor step into a pipeline configuration.
-
-    Parameters
-    ----------
-    pipeline_config : dict
-        Pipeline configuration in which the new step is inserted.
-    step_name : str
-        Key for the new processor step.
-    step_definition : dict
-        Definition of the new processor step. It must contain ``processor``
-        and either ``$insert_before`` or ``$insert_after``.
-
-    Raises
-    ------
-    ValueError
-        If both or neither insertion directives are specified, or if the
-        target step is not unique.
-    KeyError
-        If the target step cannot be found.
-    """
-    new_step = deepcopy(step_definition)
-
-    insert_before = new_step.pop("$insert_before", None)
-    insert_after = new_step.pop("$insert_after", None)
-
-    if insert_before is not None and insert_after is not None:
-        raise ValueError(
-            f"New step {step_name!r} cannot use both "
-            "'$insert_before' and '$insert_after'."
-        )
-
-    anchor_name = insert_before or insert_after
-
-    if anchor_name is None:
-        raise ValueError(
-            f"New step {step_name!r} must use "
-            "'$insert_before' or '$insert_after'."
-        )
-
-    matches = []
-
-    def search(value):
-        if not isinstance(value, Mapping):
-            return
-
-        steps = value.get("steps")
-        if isinstance(steps, MutableMapping):
-            for existing_step_name, step_config in steps.items():
-                if existing_step_name == anchor_name:
-                    matches.append((steps, existing_step_name))
-                search(step_config)
-        else:
-            for child in value.values():
-                search(child)
-
-    search(pipeline_config)
-
-    if not matches:
-        raise KeyError(
-            f"No pipeline step found with key {anchor_name!r}."
-        )
-
-    if len(matches) > 1:
-        raise ValueError(
-            f"Pipeline step key {anchor_name!r} is not unique."
-        )
-
-    step_mapping, anchor_key = matches[0]
-    steps = list(step_mapping.items())
-    anchor_index = next(
-        index for index, (name, _) in enumerate(steps) if name == anchor_key
-    )
-    insert_index = anchor_index if insert_before is not None else anchor_index + 1
-    steps.insert(insert_index, (step_name, new_step))
-    step_mapping.clear()
-    step_mapping.update(steps)
     
 def combine_pipeline_configs(configs):
     """

@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import jsonschema
 import pytest
 import vermouth
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_override, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
+from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_pipeline_mapping, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
 
 def test_options_used_in_condition_equal():
     """
@@ -483,7 +483,7 @@ literal_value: $$remove
     override = load_yaml_file(file)
     target = {"literal_value": "original"}
 
-    merge_override(target, override)
+    merge_pipeline_mapping(target, override)
 
     assert target == {
         "$strategy": "literal_key",
@@ -508,7 +508,7 @@ $$strategy: literal_key
         load_yaml_file(file)
 
 
-def test_merge_override_rejects_escaped_key_collisions(tmp_path):
+def test_merge_pipeline_mapping_rejects_escaped_key_collisions(tmp_path):
     """
     Literal escaped keys cannot collide with keys from an earlier fragment.
     """
@@ -521,10 +521,10 @@ $$strategy: literal_key
     )
 
     with pytest.raises(ValueError, match="Escaped mapping key"):
-        merge_override({"$strategy": "merge"}, load_yaml_file(file))
+        merge_pipeline_mapping({"$strategy": "merge"}, load_yaml_file(file))
 
 
-def test_merge_override_merges_by_default():
+def test_merge_pipeline_mapping_merges_by_default():
     """
     The default strategy recursively merges mappings, including arg sources.
     """
@@ -537,7 +537,7 @@ def test_merge_override_merges_by_default():
         }
     }
 
-    merge_override(
+    merge_pipeline_mapping(
         target,
         {
             "args": {
@@ -559,7 +559,7 @@ def test_merge_override_merges_by_default():
     }
 
 
-def test_merge_override_replace_clears_the_target_mapping():
+def test_merge_pipeline_mapping_replace_clears_the_target_mapping():
     """
     The replace strategy removes existing keys before applying an override.
     """
@@ -568,7 +568,7 @@ def test_merge_override_replace_clears_the_target_mapping():
         "nested": {"previous": True},
     }
 
-    merge_override(
+    merge_pipeline_mapping(
         target,
         {
             "$strategy": "replace",
@@ -579,13 +579,13 @@ def test_merge_override_replace_clears_the_target_mapping():
     assert target == {"replacement": True}
 
 
-def test_merge_override_remove_is_idempotent():
+def test_merge_pipeline_mapping_remove_is_idempotent():
     """
     Removing an absent key succeeds without changing other values.
     """
     target = {"present": True}
 
-    merge_override(
+    merge_pipeline_mapping(
         target,
         {
             "present": "$remove",
@@ -645,6 +645,22 @@ def test_validate_step_names_reports_nested_collision_paths():
         _validate_raw_step_names(pipeline_conf)
 
 
+def test_validate_step_names_reports_source_file():
+    """Duplicate step key errors identify the YAML source file."""
+    pipeline_conf = {
+        "steps": [
+            ("mapping", {"processor": "pathlib.Path"}),
+            ("mapping", {"processor": "pathlib.PurePath"}),
+        ]
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=r"martinize2\.steps\[1\]\.mapping in included\.yaml",
+    ):
+        _validate_raw_step_names(pipeline_conf, source="included.yaml")
+
+
 def test_validate_step_names_allows_reused_processors():
     """
     Multiple named steps may use the same processor implementation.
@@ -677,32 +693,53 @@ def test_find_step_by_name_ignores_legacy_ids():
     ) is None
 
 
-def test_insert_pipeline_step_uses_the_step_key():
+def test_merge_pipeline_mapping_inserts_between_paired_local_anchors():
     """
     Inserted steps use their override key rather than an id attribute.
     """
-    pipeline_conf = {
-        "steps": OrderedDict([
-            ("first", {"processor": "pathlib.Path"}),
-            ("last", {"processor": "pathlib.PurePath"}),
-        ])
-    }
+    steps = OrderedDict([
+        ("first", {"processor": "pathlib.Path"}),
+        ("last", {"processor": "pathlib.PurePath"}),
+    ])
 
-    insert_pipeline_step(
-        pipeline_conf,
-        "inserted",
+    merge_pipeline_mapping(
+        steps,
         {
-            "processor": "pathlib.Path",
-            "$insert_after": "first",
+            "inserted": {
+                "processor": "pathlib.Path",
+                "$insert_after": "first",
+                "$insert_before": "last",
+            },
         },
     )
 
-    assert list(pipeline_conf["steps"]) == [
+    assert list(steps) == [
         "first",
         "inserted",
         "last",
     ]
-    assert pipeline_conf["steps"]["inserted"] == {"processor": "pathlib.Path"}
+    assert steps["inserted"] == {"processor": "pathlib.Path"}
+
+
+def test_merge_pipeline_mapping_reports_source_for_missing_local_anchor():
+    """Missing insertion anchors identify the YAML fragment and step."""
+    with pytest.raises(
+        KeyError,
+        match=(
+            r"Cannot insert 'inserted' from included\.yaml:"
+            r"martinize2\.steps\.inserted: local anchor 'missing' was not found"
+        ),
+    ):
+        merge_pipeline_mapping(
+            OrderedDict(),
+            {
+                "inserted": {
+                    "processor": "pathlib.Path",
+                    "$insert_after": "missing",
+                },
+            },
+            source="included.yaml:martinize2.steps.inserted",
+        )
 
 
 def test_pipeline_schema_rejects_legacy_id():
