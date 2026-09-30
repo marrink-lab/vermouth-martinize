@@ -60,6 +60,7 @@ definitions:
       type:
         type: string
         default: 'general'
+    additionalProperties: false
 
   step_base:
     type: object
@@ -112,6 +113,7 @@ definitions:
         $ref: "#/definitions/include"
       steps:
         $ref: "#/definitions/steps"
+    unevaluatedProperties: false
 
   processor:
     type: object
@@ -147,6 +149,8 @@ definitions:
                     variable:
                       type: string
             - required: ['$include']
+          additionalProperties: false
+    additionalProperties: false
 
   cli_group:
     type: object
