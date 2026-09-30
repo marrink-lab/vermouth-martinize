@@ -458,10 +458,10 @@ literal_value: $$remove
 """,
         encoding="utf-8",
     )
-    override = load_yaml_file(file)
+    incoming = load_yaml_file(file)
     target = {"literal_value": "original"}
 
-    merge_pipeline_mapping(target, override)
+    merge_pipeline_mapping(target, incoming)
 
     assert target == {
         "$strategy": "literal_key",
@@ -539,7 +539,7 @@ def test_merge_pipeline_mapping_merges_by_default():
 
 def test_merge_pipeline_mapping_replace_clears_the_target_mapping():
     """
-    The replace strategy removes existing keys before applying an override.
+    The replace strategy removes existing keys before applying an incoming map.
     """
     target = {
         "obsolete": True,
@@ -655,7 +655,7 @@ def test_validate_step_names_allows_reused_processors():
 
 def test_find_step_by_name_ignores_legacy_ids():
     """
-    Step keys, rather than the removed id attribute, select override targets.
+    Step keys, rather than the removed id attribute, identify pipeline steps.
     """
     step = {
         "id": "legacy_name",
@@ -673,7 +673,7 @@ def test_find_step_by_name_ignores_legacy_ids():
 
 def test_merge_pipeline_mapping_inserts_between_paired_local_anchors():
     """
-    Inserted steps use their override key rather than an id attribute.
+    Inserted steps use their mapping key rather than an id attribute.
     """
     steps = OrderedDict([
         ("first", {"processor": "pathlib.Path"}),
