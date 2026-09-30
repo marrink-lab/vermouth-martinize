@@ -986,6 +986,64 @@ def load_include_fragment(reference, including_path, pipeline_dirs=()):
     return deepcopy(select_include_fragment(config, fragment_path))
 
 
+def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
+    """Load and compose a pipeline file, expanding includes depth-first."""
+    path = find_pipeline_yaml(path, pipeline_dirs).resolve()
+    if path in inclusion_chain:
+        chain = " -> ".join(map(str, (*inclusion_chain, path)))
+        raise ValueError(f"Include cycle detected: {chain}")
+
+    config = deepcopy(load_yaml_file(path))
+    _validate_raw_step_names(config["martinize2"])
+    _convert_step_mappings(config["martinize2"])
+    _compose_includes(
+        config,
+        path,
+        pipeline_dirs,
+        (*inclusion_chain, path),
+    )
+    return config
+
+
+def _compose_includes(value, path, pipeline_dirs, inclusion_chain):
+    """Expand include directives in a mapping, with local keys taking priority."""
+    if not isinstance(value, MutableMapping):
+        return value
+
+    includes = _pop_directive(value, INCLUDE_KEY, [])
+    local = deepcopy(value)
+    value.clear()
+
+    for reference in includes:
+        include_path, fragment_path = _parse_include_reference(
+            reference,
+            path,
+            pipeline_dirs,
+        )
+        included = compose_pipeline_file(
+            include_path,
+            [Path(include_path).parent, *pipeline_dirs],
+            inclusion_chain,
+        )
+        fragment = deepcopy(select_include_fragment(included, fragment_path))
+        if not isinstance(fragment, Mapping):
+            raise TypeError(
+                f"Included fragment {reference!r} must resolve to a mapping."
+            )
+        merge_pipeline_mapping(value, fragment)
+
+    for key, child in local.items():
+        if isinstance(child, MutableMapping):
+            _compose_includes(child, path, pipeline_dirs, inclusion_chain)
+        elif isinstance(child, Collection) and not isinstance(child, _STRING_LIKE):
+            for item in child:
+                if isinstance(item, MutableMapping):
+                    _compose_includes(item, path, pipeline_dirs, inclusion_chain)
+        merge_pipeline_mapping(value, {key: child})
+
+    return value
+
+
 def _validate_pipeline_config(config, path):
     """Validate a parsed pipeline configuration against its declared schema."""
     schema_uri = config.get('$schema')
@@ -1040,15 +1098,8 @@ def load_pipeline_configs(pipeline_paths, pipeline_dirs=()):
 
     for pipeline_path in pipeline_paths:
         path = find_pipeline_yaml(pipeline_path, pipeline_dirs)
-        conf = deepcopy(load_yaml_file(path))
+        conf = compose_pipeline_file(path, pipeline_dirs)
         _validate_pipeline_config(conf, path)
-        included_paths = _included_pipeline_paths(conf, path, pipeline_dirs)
-
-        for included_path in included_paths:
-            included_conf = deepcopy(load_yaml_file(included_path))
-            _validate_pipeline_config(included_conf, included_path)
-            configs.append((Path(included_path).stem, included_conf))
-
         namespace = Path(path).stem
         configs.append((namespace, conf))
 
