@@ -523,6 +523,78 @@ $$strategy: literal_key
         merge_override({"$strategy": "merge"}, load_yaml_file(file))
 
 
+def test_merge_override_merges_by_default():
+    """
+    The default strategy recursively merges mappings, including arg sources.
+    """
+    target = {
+        "args": {
+            "source": {
+                "cli": "input",
+                "default": "fallback",
+            }
+        }
+    }
+
+    merge_override(
+        target,
+        {
+            "args": {
+                "source": {
+                    "value": "configured",
+                }
+            }
+        },
+    )
+
+    assert target == {
+        "args": {
+            "source": {
+                "cli": "input",
+                "default": "fallback",
+                "value": "configured",
+            }
+        }
+    }
+
+
+def test_merge_override_replace_clears_the_target_mapping():
+    """
+    The replace strategy removes existing keys before applying an override.
+    """
+    target = {
+        "obsolete": True,
+        "nested": {"previous": True},
+    }
+
+    merge_override(
+        target,
+        {
+            "$strategy": "replace",
+            "replacement": True,
+        },
+    )
+
+    assert target == {"replacement": True}
+
+
+def test_merge_override_remove_is_idempotent():
+    """
+    Removing an absent key succeeds without changing other values.
+    """
+    target = {"present": True}
+
+    merge_override(
+        target,
+        {
+            "present": "$remove",
+            "absent": "$remove",
+        },
+    )
+
+    assert target == {}
+
+
 def test_validate_step_names_rejects_duplicate_keys():
     """
     Step keys are unique within a pipeline, including nested pipelines.

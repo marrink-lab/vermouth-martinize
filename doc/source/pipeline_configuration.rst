@@ -341,11 +341,9 @@ The special value ``$remove`` removes a key:
 Merge and replace strategies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Dictionaries are merged by default. If an override contains one of the
-argument source keys ``cli``, ``value``, or ``variable``, the default strategy
-is ``replace``.
-
-The strategy can be selected explicitly with ``$strategy``:
+Dictionaries use ``$strategy: merge`` by default. Use
+``$strategy: replace`` to clear the target mapping before applying the
+override:
 
 .. code-block:: yaml
 
@@ -702,11 +700,10 @@ The special string ``$remove`` removes the corresponding key::
                 $strategy: replace
                 default: 500
 
-The default strategy is ``merge``. A dictionary containing any of the
-argument-source keys ``cli``, ``value``, or ``variable`` instead defaults to
-``replace``. This prevents two different argument sources from being retained
-when changing, for example, an argument from a CLI value to a fixed value.
-``$strategy`` can be used to override this default explicitly.
+``$strategy: merge`` recursively applies the override and preserves keys not
+mentioned by it. ``$strategy: replace`` clears the target mapping first.
+``$remove`` deletes its corresponding key and has no effect when the key is
+already absent.
 
 Inserting a processor
 ~~~~~~~~~~~~~~~~~~~~~

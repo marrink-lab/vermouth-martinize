@@ -995,7 +995,6 @@ def find_step_by_name(config, target_name, raise_if_missing=True):
 
     return matches[0]
 
-ARG_SOURCE_KEYS = {"cli", "value", "variable"}
 REMOVE_VALUE = "$remove"
 STRATEGY_KEY = "$strategy"
 VALID_STRATEGIES = {"merge", "replace"}
@@ -1007,11 +1006,8 @@ def merge_override(target, override):
 
     Dictionaries are merged recursively by default.
 
-    If an override dictionary contains 'cli', 'value', or 'variable',
-    its default strategy is 'replace', because these keys describe
-    alternative argument value sources.
-
-    The default can be changed explicitly with '$strategy'.
+    The default strategy is ``merge``. Use ``$strategy: replace`` to clear
+    the target mapping before applying the override.
     Lists and ordinary values are replaced.
     '$remove' removes a key.
     """
@@ -1033,19 +1029,13 @@ def merge_override(target, override):
         if not _is_directive_key(key, STRATEGY_KEY)
     }
 
-    default_strategy = (
-        "replace"
-        if ARG_SOURCE_KEYS.intersection(override_values)
-        else "merge"
-    )
-
     strategy = next(
         (
             value
             for key, value in override.items()
             if _is_directive_key(key, STRATEGY_KEY)
         ),
-        default_strategy,
+        "merge",
     )
 
     if strategy not in VALID_STRATEGIES:
