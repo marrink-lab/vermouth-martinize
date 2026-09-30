@@ -449,13 +449,6 @@ def build_mini_parser():
     )
 
     parser.add_argument(
-        "-override",
-        type=Path,
-        default=None,
-        help="Pipeline override YAML file.",
-    )
-
-    parser.add_argument(
         "-pipeline-dir",
         action="append",
         default=[],
@@ -1234,6 +1227,80 @@ def merge_override(target, override):
     return target
 
 
+def merge_pipeline_mapping(target, incoming):
+    """
+    Compose an incoming pipeline mapping into a target mapping.
+
+    Existing mapping keys are merged recursively and scalar values are
+    replaced. New keys are appended unless their mapping value declares
+    ``$insert_before`` or ``$insert_after``.
+    """
+    strategy = incoming.get(STRATEGY_KEY, "merge")
+    if strategy == "replace":
+        target.clear()
+    elif strategy != "merge":
+        raise ValueError(
+            f"Unknown composition strategy {strategy!r}; expected 'merge' "
+            "or 'replace'."
+        )
+
+    for key, value in incoming.items():
+        if key == STRATEGY_KEY:
+            continue
+        if value == REMOVE_VALUE:
+            target.pop(key, None)
+            continue
+        if key in target and isinstance(target[key], MutableMapping) and isinstance(value, Mapping):
+            merge_pipeline_mapping(target[key], value)
+        elif key in target:
+            target[key] = deepcopy(value)
+        else:
+            new_value = deepcopy(value)
+            insert_before = (
+                new_value.pop("$insert_before", None)
+                if isinstance(new_value, MutableMapping)
+                else None
+            )
+            insert_after = (
+                new_value.pop("$insert_after", None)
+                if isinstance(new_value, MutableMapping)
+                else None
+            )
+            if insert_before is None and insert_after is None:
+                target[key] = new_value
+            else:
+                anchors = [
+                    anchor
+                    for anchor in (insert_before, insert_after)
+                    if anchor is not None
+                ]
+                missing = [anchor for anchor in anchors if anchor not in target]
+                if missing:
+                    raise KeyError(
+                        f"Cannot insert {key!r}: anchor {missing[0]!r} was not found."
+                    )
+                items = list(target.items())
+                names = list(target)
+                if insert_before is not None and insert_after is not None:
+                    before_index = names.index(insert_before)
+                    after_index = names.index(insert_after)
+                    if before_index != after_index + 1:
+                        raise ValueError(
+                            f"Cannot insert {key!r}: {insert_after!r} and "
+                            f"{insert_before!r} do not define one insertion slot."
+                        )
+                    index = before_index
+                elif insert_before is not None:
+                    index = names.index(insert_before)
+                else:
+                    index = names.index(insert_after) + 1
+                items.insert(index, (key, new_value))
+                target.clear()
+                target.update(items)
+
+    return target
+
+
 def insert_pipeline_step(pipeline_config, step_name, step_definition):
     """
     Insert a new processor step into a pipeline configuration.
@@ -1332,6 +1399,7 @@ def combine_pipeline_configs(configs):
 
     for namespace, conf in configs:
         root = conf["martinize2"]
+        root = root.get("from", root.get("to", root))
 
         # namespace all variable references inside this YAML
         namespace_variables(root, namespace)
@@ -1357,14 +1425,12 @@ def combine_pipeline_configs(configs):
                 seen_cli_flags[flag] = opts
 
         combined['cli'] = merge_dictionaries(combined["cli"], cli_conf)
-        # append pipeline steps in order
-        for step_name, step_config in root.get("steps", {}).items():
-            if step_name in combined["steps"]:
-                raise ValueError(
-                    f"Duplicate step key {step_name!r} while combining "
-                    "pipeline fragments."
-                )
-            combined["steps"][step_name] = step_config
+        merge_pipeline_mapping(
+            combined,
+            {
+                "steps": root.get("steps", OrderedDict()),
+            },
+        )
 
     return combined
 

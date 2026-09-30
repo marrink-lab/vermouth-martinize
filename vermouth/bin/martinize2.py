@@ -4,8 +4,6 @@ import logging
 import sys
 from pathlib import Path
 
-import yaml
-
 import vermouth
 import vermouth.forcefield
 
@@ -24,9 +22,6 @@ from vermouth.pipeline import (
     PipelineConfigBuilder,
     CLIBuilder,
     PipelineBuilder,
-    find_step_by_name,
-    insert_pipeline_step,
-    merge_override,
 )
 # logging.basicConfig(level=logging.INFO)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
@@ -107,19 +102,13 @@ def main():
     """
     Build and run the configured Martinize2 pipeline.
 
-    The function loads the selected pipeline configuration, applies optional
-    overrides, builds the dynamic command-line interface, resolves force
+    The function loads the selected pipeline configuration, builds the dynamic
+    command-line interface, resolves force
     fields and mappings, constructs the pipeline, and runs it on a molecular
     system.
     """
     mini_parser = build_mini_parser()
     mini_args, remaining_args = mini_parser.parse_known_args()
-
-    override_conf = None
-
-    if mini_args.override is not None:
-        with open(mini_args.override, "r", encoding="utf-8") as file:
-            override_conf = yaml.safe_load(file)
 
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
     LOGGER.setLevel(loglevels[mini_args.verbosity])
@@ -130,25 +119,6 @@ def main():
     )
     configs, pipeline_conf = config_builder.build_config()
 
-    
-    if override_conf is not None:
-        overrides = override_conf.get("override", {})
-
-        for step_name, changes in overrides.items():
-            step = find_step_by_name(
-                pipeline_conf,
-                step_name,
-                raise_if_missing=False,
-            )
-
-            if step is not None:
-                merge_override(step, changes)
-            else:
-                insert_pipeline_step(
-                    pipeline_conf,
-                    step_name,
-                    changes,
-                )
     cli_builder = CLIBuilder('martinize2', pipeline_conf)
     config_paths = []
     for path in config_builder.paths:
@@ -170,6 +140,7 @@ def main():
 
     for namespace, conf in configs:
         root = conf["martinize2"]
+        root = root.get("from", root.get("to", root))
 
         if "ff" in root.get("variables", []):
             if "from_ff" in root.get("cli", {}).get('flags', {}):

@@ -84,6 +84,10 @@ definitions:
           - steps
       - required:
           - $include
+      - required:
+          - from
+      - required:
+          - to
     allOf:
       - $ref: "#/definitions/step_base"
     properties:
@@ -93,6 +97,10 @@ definitions:
         type: array
         items:
           type: string
+      from:
+        $ref: "#/definitions/pipeline"
+      to:
+        $ref: "#/definitions/pipeline"
       $include:
         $ref: "#/definitions/include"
       steps:
