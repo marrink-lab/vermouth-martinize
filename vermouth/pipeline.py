@@ -1,5 +1,6 @@
 from pathlib import Path
 from copy import deepcopy
+from collections import OrderedDict
 from collections.abc import Collection, Mapping, MutableMapping, MutableSequence
 import vermouth 
 import argparse
@@ -245,7 +246,7 @@ def validate_cli_options(
                 f"Known variables are {local_variables}."
             )
     else:
-        for idx, (name, step) in enumerate(pipeline_conf['steps']):
+        for idx, (name, step) in enumerate(pipeline_conf["steps"].items()):
             _path = '.'.join([path, f'steps[{idx}]', name])
             validate_cli_options(
                 step,
@@ -622,7 +623,7 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
 
     # recursion for steps in the pipeline
     if pipeline_conf.get('steps'):
-        for name, step in pipeline_conf['steps']:
+        for name, step in pipeline_conf["steps"].items():
             build_cli(name, step, prefix, parser=parser, added_flags=added_flags)
 
     return parser
@@ -733,7 +734,7 @@ def set_values(pipeline_conf, cli_args, variables):
                 raise KeyError(f"{arg_name} must have a value, cli, or variable")
         pipeline_conf['args'] = args
     # if its recursive pipeline, do the same for the steps in the pipeline
-    for name, step in pipeline_conf.get('steps', []):
+    for name, step in pipeline_conf.get("steps", {}).items():
         if not step.get('steps'):
             # go from text to actual processor object
             processor_path = step.get('processor', name)
@@ -795,7 +796,7 @@ def namespace_variables(obj, namespace):
     return obj
 
 
-def validate_step_names(pipeline_conf, path="martinize2"):
+def _validate_raw_step_names(pipeline_conf, path="martinize2"):
     """
     Validate that step keys are unique within each pipeline.
 
@@ -825,6 +826,16 @@ def validate_step_names(pipeline_conf, path="martinize2"):
             )
         seen_names[name] = step_path
 
+        if step.get("steps"):
+            _validate_raw_step_names(step, step_path)
+
+
+def validate_step_names(pipeline_conf, path="martinize2"):
+    """Validate the structure of post-conversion ordered step mappings."""
+    for index, (name, step) in enumerate(
+        pipeline_conf.get("steps", OrderedDict()).items()
+    ):
+        step_path = f"{path}.steps[{index}].{name}"
         if step.get("steps"):
             validate_step_names(step, step_path)
 
@@ -952,7 +963,11 @@ def select_include_fragment(config, fragment_path):
                     f"Ordered-map selector {selector!r} must be a numeric "
                     f"index in {component!r}."
                 )
-            value = value[int(selector)]
+            index = int(selector)
+            if isinstance(value, Mapping):
+                value = list(value.values())[index]
+            else:
+                value = value[index]
             if (
                 isinstance(value, Collection)
                 and not isinstance(value, _STRING_LIKE)
@@ -974,6 +989,7 @@ def load_include_fragment(reference, including_path, pipeline_dirs=()):
         pipeline_dirs,
     )
     config = deepcopy(load_yaml_file(include_path))
+    _validate_pipeline_config(config, include_path)
     return deepcopy(select_include_fragment(config, fragment_path))
 
 
@@ -989,7 +1005,26 @@ def _validate_pipeline_config(config, path):
         jsonschema.validate(_schema_instance(config), schema)
 
     root = config.get("martinize2")
+    _validate_raw_step_names(root)
+    _convert_step_mappings(root)
     validate_step_names(root)
+
+
+def _convert_step_mappings(value):
+    """Convert validated YAML ordered-map step pairs to OrderedDict objects."""
+    if isinstance(value, MutableMapping):
+        for key, child in tuple(value.items()):
+            if key == "steps" and isinstance(child, MutableSequence):
+                steps = OrderedDict()
+                for step_name, step_config in child:
+                    _convert_step_mappings(step_config)
+                    steps[step_name] = step_config
+                value[key] = steps
+            else:
+                _convert_step_mappings(child)
+    elif isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
+        for child in value:
+            _convert_step_mappings(child)
 
 
 def load_pipeline_configs(pipeline_paths, pipeline_dirs=()):
@@ -1055,7 +1090,7 @@ def iter_cli_flags(pipeline_conf):
 
     # recursion for steps in the pipeline
     if pipeline_conf.get("steps"):
-        for name, step in pipeline_conf["steps"]:
+        for name, step in pipeline_conf["steps"].items():
             yield from iter_cli_flags(step)
 
 def find_step_by_name(config, target_name, raise_if_missing=True):
@@ -1090,24 +1125,18 @@ def find_step_by_name(config, target_name, raise_if_missing=True):
         """
         Recursively search the configuration for matching pipeline steps.
         """
-        if isinstance(value, dict):
+        if not isinstance(value, Mapping):
+            return
+
+        steps = value.get("steps")
+        if isinstance(steps, Mapping):
+            for step_name, step_conf in steps.items():
+                if step_name == target_name:
+                    matches.append(step_conf)
+                search(step_conf)
+        else:
             for child in value.values():
                 search(child)
-
-        elif isinstance(value, list):
-            for child in value:
-                if isinstance(child, tuple) and len(child) == 2:
-                    step_name, step_conf = child
-
-                    if not isinstance(step_conf, dict):
-                        continue
-
-                    if step_name == target_name:
-                        matches.append(step_conf)
-
-                    search(step_conf)
-                else:
-                    search(child)
 
     search(config)
 
@@ -1249,24 +1278,18 @@ def insert_pipeline_step(pipeline_config, step_name, step_definition):
     matches = []
 
     def search(value):
-        if isinstance(value, dict):
+        if not isinstance(value, Mapping):
+            return
+
+        steps = value.get("steps")
+        if isinstance(steps, MutableMapping):
+            for existing_step_name, step_config in steps.items():
+                if existing_step_name == anchor_name:
+                    matches.append((steps, existing_step_name))
+                search(step_config)
+        else:
             for child in value.values():
                 search(child)
-
-        elif isinstance(value, list):
-            for index, child in enumerate(value):
-                if isinstance(child, tuple) and len(child) == 2:
-                    existing_step_name, step_config = child
-
-                    if not isinstance(step_config, dict):
-                        continue
-
-                    if existing_step_name == anchor_name:
-                        matches.append((value, index))
-
-                    search(step_config)
-                else:
-                    search(child)
 
     search(pipeline_config)
 
@@ -1280,18 +1303,15 @@ def insert_pipeline_step(pipeline_config, step_name, step_definition):
             f"Pipeline step key {anchor_name!r} is not unique."
         )
 
-    step_list, anchor_index = matches[0]
-
-    insert_index = (
-        anchor_index
-        if insert_before is not None
-        else anchor_index + 1
+    step_mapping, anchor_key = matches[0]
+    steps = list(step_mapping.items())
+    anchor_index = next(
+        index for index, (name, _) in enumerate(steps) if name == anchor_key
     )
-
-    step_list.insert(
-        insert_index,
-        (step_name, new_step),
-    )
+    insert_index = anchor_index if insert_before is not None else anchor_index + 1
+    steps.insert(insert_index, (step_name, new_step))
+    step_mapping.clear()
+    step_mapping.update(steps)
     
 def combine_pipeline_configs(configs):
     """
@@ -1305,7 +1325,7 @@ def combine_pipeline_configs(configs):
     combined = {
         "cli": {},
         "variables": [],
-        "steps": [],
+        "steps": OrderedDict(),
     }
 
     seen_cli_flags = {}
@@ -1338,9 +1358,14 @@ def combine_pipeline_configs(configs):
 
         combined['cli'] = merge_dictionaries(combined["cli"], cli_conf)
         # append pipeline steps in order
-        combined["steps"].extend(root.get("steps", []))
+        for step_name, step_config in root.get("steps", {}).items():
+            if step_name in combined["steps"]:
+                raise ValueError(
+                    f"Duplicate step key {step_name!r} while combining "
+                    "pipeline fragments."
+                )
+            combined["steps"][step_name] = step_config
 
-    validate_step_names(combined)
     return combined
 
 
@@ -1548,6 +1573,7 @@ class PipelineBuilder:
             Executable Vermouth pipeline.
         """
         pipeline_conf = resolve_literal_dollars(deepcopy(self.pipeline_conf))
+        _convert_step_mappings(pipeline_conf)
         set_values(pipeline_conf, cli_args, variables)
 
         return Pipeline.from_dict(

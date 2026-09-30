@@ -90,7 +90,7 @@ class Pipeline(nx.DiGraph, Processor):
         def _recurse(parent, name, conf):
             if 'steps' in conf:
                 obj = cls(name=name)
-                for step_name, step in conf['steps']:
+                for step_name, step in conf['steps'].items():
                     _recurse(obj, step_name, step)
 
             else:

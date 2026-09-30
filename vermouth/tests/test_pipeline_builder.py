@@ -4,6 +4,7 @@ Tests for the Pipeline Builder class.
 
 import sys
 from pathlib import Path
+from collections import OrderedDict
 sys.path.insert(0, str(Path(__file__).parent))
 import pytest
 from vermouth.pipeline import set_values, eval_condition, PipelineBuilder
@@ -202,7 +203,7 @@ def test_set_values_recurses_into_steps_and_imports_processor():
     and imports the processor class for leaf steps.
     """
     pipeline_conf = {
-        "steps": [
+        "steps": OrderedDict([
             (
                 "pathlib.Path",
                 {
@@ -213,7 +214,7 @@ def test_set_values_recurses_into_steps_and_imports_processor():
                     }
                 },
             )
-        ]
+        ])
     }
 
     cli_args = {
@@ -222,7 +223,7 @@ def test_set_values_recurses_into_steps_and_imports_processor():
 
     set_values(pipeline_conf, cli_args, {})
 
-    step = pipeline_conf["steps"][0][1]
+    step = pipeline_conf["steps"]["pathlib.Path"]
 
     assert step["condition"] is True
     assert step["args"]["path"] == "test.pdb"
@@ -234,7 +235,7 @@ def test_set_values_uses_explicit_processor_path():
     A step key identifies the step while processor selects its implementation.
     """
     pipeline_conf = {
-        "steps": [
+        "steps": OrderedDict([
             (
                 "read_input",
                 {
@@ -246,12 +247,12 @@ def test_set_values_uses_explicit_processor_path():
                     },
                 },
             )
-        ]
+        ])
     }
 
     set_values(pipeline_conf, {"inpath": "test.pdb"}, {})
 
-    assert pipeline_conf["steps"][0][1]["processor"] is Path
+    assert pipeline_conf["steps"]["read_input"]["processor"] is Path
 
 def test_set_values_condition():
     """
@@ -306,7 +307,7 @@ def test_pipeline_builder_builds_pipeline():
     the original pipeline configuration.
     """
     pipeline_conf = {
-        "steps": [
+        "steps": OrderedDict([
             (
                 "pathlib.Path",
                 {
@@ -317,7 +318,7 @@ def test_pipeline_builder_builds_pipeline():
                     }
                 },
             )
-        ]
+        ])
     }
 
     cli_args = {
@@ -330,7 +331,8 @@ def test_pipeline_builder_builds_pipeline():
     pipeline = builder.build_pipeline(cli_args, variables)
 
     assert isinstance(pipeline, Pipeline)
-    assert pipeline_conf["steps"][0][1]["args"]["path"] == {"cli": "inpath"}
-
+    assert pipeline_conf["steps"]["pathlib.Path"]["args"]["path"] == {
+        "cli": "inpath",
+    }
 
 

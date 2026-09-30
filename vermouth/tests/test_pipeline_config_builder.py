@@ -1,10 +1,11 @@
 import sys
 from pathlib import Path
+from collections import OrderedDict
 sys.path.insert(0, str(Path(__file__).parent))
 import jsonschema
 import pytest
 import vermouth
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_override, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
+from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_include_fragment, load_pipeline_configs, load_yaml_file, merge_override, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
 
 def test_options_used_in_condition_equal():
     """
@@ -613,7 +614,7 @@ def test_validate_step_names_rejects_duplicate_keys():
             "martinize2.steps\\[1\\].mapping"
         ),
     ):
-        validate_step_names(pipeline_conf)
+        _validate_raw_step_names(pipeline_conf)
 
 
 def test_validate_step_names_reports_nested_collision_paths():
@@ -641,7 +642,7 @@ def test_validate_step_names_reports_nested_collision_paths():
             "martinize2.steps\\[0\\].prepare.steps\\[1\\].mapping"
         ),
     ):
-        validate_step_names(pipeline_conf)
+        _validate_raw_step_names(pipeline_conf)
 
 
 def test_validate_step_names_allows_reused_processors():
@@ -649,10 +650,10 @@ def test_validate_step_names_allows_reused_processors():
     Multiple named steps may use the same processor implementation.
     """
     pipeline_conf = {
-        "steps": [
+        "steps": OrderedDict([
             ("first_path", {"processor": "pathlib.Path"}),
             ("second_path", {"processor": "pathlib.Path"}),
-        ]
+        ])
     }
 
     validate_step_names(pipeline_conf)
@@ -666,7 +667,7 @@ def test_find_step_by_name_ignores_legacy_ids():
         "id": "legacy_name",
         "processor": "pathlib.Path",
     }
-    pipeline_conf = {"steps": [("current_name", step)]}
+    pipeline_conf = {"steps": OrderedDict([("current_name", step)])}
 
     assert find_step_by_name(pipeline_conf, "current_name") is step
     assert find_step_by_name(
@@ -681,10 +682,10 @@ def test_insert_pipeline_step_uses_the_step_key():
     Inserted steps use their override key rather than an id attribute.
     """
     pipeline_conf = {
-        "steps": [
+        "steps": OrderedDict([
             ("first", {"processor": "pathlib.Path"}),
             ("last", {"processor": "pathlib.PurePath"}),
-        ]
+        ])
     }
 
     insert_pipeline_step(
@@ -696,12 +697,12 @@ def test_insert_pipeline_step_uses_the_step_key():
         },
     )
 
-    assert [name for name, _ in pipeline_conf["steps"]] == [
+    assert list(pipeline_conf["steps"]) == [
         "first",
         "inserted",
         "last",
     ]
-    assert pipeline_conf["steps"][1][1] == {"processor": "pathlib.Path"}
+    assert pipeline_conf["steps"]["inserted"] == {"processor": "pathlib.Path"}
 
 
 def test_pipeline_schema_rejects_legacy_id():
@@ -864,6 +865,32 @@ martinize2:
 
     assert [name for name, _ in configs] == ["included", "including"]
     assert "$include" not in configs[1][1]["martinize2"]
+
+
+def test_load_pipeline_configs_converts_validated_steps_to_ordered_dicts(tmp_path):
+    """
+    Validated ordered YAML mappings become OrderedDict step mappings.
+    """
+    pipeline_file = tmp_path / "ordered-steps.yaml"
+    pipeline_file.write_text(
+        """
+martinize2:
+  steps: !!omap
+    - prepare:
+        steps: !!omap
+          - map:
+              processor: pathlib.Path
+""",
+        encoding="utf-8",
+    )
+
+    _, config = load_pipeline_configs([pipeline_file])[0]
+    steps = config["martinize2"]["steps"]
+
+    assert isinstance(steps, OrderedDict)
+    assert list(steps) == ["prepare"]
+    assert isinstance(steps["prepare"]["steps"], OrderedDict)
+    assert list(steps["prepare"]["steps"]) == ["map"]
 
 
 def test_iter_cli_flags():
@@ -1030,7 +1057,9 @@ def test_combine_pipeline_configs_rejects_duplicate_step_keys():
             "first",
             {
                 "martinize2": {
-                    "steps": [("mapping", {"processor": "pathlib.Path"})],
+                    "steps": OrderedDict([
+                        ("mapping", {"processor": "pathlib.Path"}),
+                    ]),
                 }
             },
         ),
@@ -1038,7 +1067,9 @@ def test_combine_pipeline_configs_rejects_duplicate_step_keys():
             "second",
             {
                 "martinize2": {
-                    "steps": [("mapping", {"processor": "pathlib.PurePath"})],
+                    "steps": OrderedDict([
+                        ("mapping", {"processor": "pathlib.PurePath"}),
+                    ]),
                 }
             },
         ),
