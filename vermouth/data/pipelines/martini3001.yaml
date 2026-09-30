@@ -284,12 +284,12 @@ martinize2:
                 cli: rb_unit
                 value: all
         args: {}
-    - vermouth.pipeline_processors.ElasticWrapper:
+    - elastic:
+        processor: vermouth.pipeline_processors.ElasticWrapper
         log:
           info:
             msg: Stretching the rubber bands
             type: step
-        id: elastic
         condition:
           all:
             - any:

@@ -95,7 +95,8 @@ martinize2:
 
           - vermouth.MergeNucleicStrands:
               args: {}
-          - vermouth.pdb.WritePDB:
+          - write_graph:
+              processor: vermouth.pdb.WritePDB
               cli:
                 flags:
                   write_graph:
@@ -185,7 +186,8 @@ martinize2:
                 include_graph:
                   value: false
 
-          - vermouth.pdb.WritePDB:
+          - write_repaired_graph:
+              processor: vermouth.pdb.WritePDB
               cli:
                 flags:
                   write_repair:
@@ -213,7 +215,8 @@ martinize2:
                   type: step
               args: {}
 
-          - vermouth.pdb.WritePDB:
+          - write_canonical_graph:
+              processor: vermouth.pdb.WritePDB
               cli:
                 flags:
                   write_canon:
@@ -288,7 +291,8 @@ martinize2:
                 savedir:
                   value: "."
 
-          - vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures:
+          - annotate_dssp_secondary_structure:
+              processor: vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures
               condition:
                 not:
                   equal:
@@ -296,7 +300,8 @@ martinize2:
                     value: null
               args: {}
 
-          - vermouth.pipeline_processors.SSWrapper:
+          - apply_manual_secondary_structure:
+              processor: vermouth.pipeline_processors.SSWrapper
               condition:
                 all:
                   - not:
@@ -312,7 +317,8 @@ martinize2:
                 seq:
                   cli: ss
 
-          - vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures:
+          - annotate_manual_secondary_structure:
+              processor: vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures
               condition:
                 not:
                   equal:
@@ -320,7 +326,8 @@ martinize2:
                     value: null
               args: {}
 
-          - vermouth.pipeline_processors.SSWrapper:
+          - apply_collagen_secondary_structure:
+              processor: vermouth.pipeline_processors.SSWrapper
               condition:
                 all:
                   - equal:

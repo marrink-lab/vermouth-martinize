@@ -228,6 +228,31 @@ def test_set_values_recurses_into_steps_and_imports_processor():
     assert step["args"]["path"] == "test.pdb"
     assert step["processor"] is Path
 
+
+def test_set_values_uses_explicit_processor_path():
+    """
+    A step key identifies the step while processor selects its implementation.
+    """
+    pipeline_conf = {
+        "steps": [
+            (
+                "read_input",
+                {
+                    "processor": "pathlib.Path",
+                    "args": {
+                        "path": {
+                            "cli": "inpath",
+                        }
+                    },
+                },
+            )
+        ]
+    }
+
+    set_values(pipeline_conf, {"inpath": "test.pdb"}, {})
+
+    assert pipeline_conf["steps"][0][1]["processor"] is Path
+
 def test_set_values_condition():
     """
     Test that set_values evaluates and replaces a condition.
@@ -306,7 +331,6 @@ def test_pipeline_builder_builds_pipeline():
 
     assert isinstance(pipeline, Pipeline)
     assert pipeline_conf["steps"][0][1]["args"]["path"] == {"cli": "inpath"}
-
 
 
 

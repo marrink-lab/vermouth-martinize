@@ -1,8 +1,10 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
+import jsonschema
 import pytest
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, combine_pipeline_configs, find_pipeline_yaml, iter_cli_flags, load_pipeline_configs, load_yaml_file, validate_cli_options, build_mini_parser, namespace_variables
+import vermouth
+from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_pipeline_configs, load_yaml_file, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
 
 def test_options_used_in_condition_equal():
     """
@@ -446,6 +448,153 @@ def test_load_yaml_file_not_found():
     with pytest.raises(FileNotFoundError):
         load_yaml_file("this_file_does_not_exist.yaml")
 
+
+def test_validate_step_names_rejects_duplicate_keys():
+    """
+    Step keys are unique within a pipeline, including nested pipelines.
+    """
+    pipeline_conf = {
+        "steps": [
+            ("mapping", {"processor": "pathlib.Path"}),
+            ("mapping", {"processor": "pathlib.PurePath"}),
+        ]
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "martinize2.steps\\[0\\].mapping and "
+            "martinize2.steps\\[1\\].mapping"
+        ),
+    ):
+        validate_step_names(pipeline_conf)
+
+
+def test_validate_step_names_reports_nested_collision_paths():
+    """
+    Duplicate step key errors identify both full nested step paths.
+    """
+    pipeline_conf = {
+        "steps": [
+            (
+                "prepare",
+                {
+                    "steps": [
+                        ("mapping", {"processor": "pathlib.Path"}),
+                        ("mapping", {"processor": "pathlib.PurePath"}),
+                    ]
+                },
+            )
+        ]
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "martinize2.steps\\[0\\].prepare.steps\\[0\\].mapping and "
+            "martinize2.steps\\[0\\].prepare.steps\\[1\\].mapping"
+        ),
+    ):
+        validate_step_names(pipeline_conf)
+
+
+def test_validate_step_names_allows_reused_processors():
+    """
+    Multiple named steps may use the same processor implementation.
+    """
+    pipeline_conf = {
+        "steps": [
+            ("first_path", {"processor": "pathlib.Path"}),
+            ("second_path", {"processor": "pathlib.Path"}),
+        ]
+    }
+
+    validate_step_names(pipeline_conf)
+
+
+def test_find_step_by_name_ignores_legacy_ids():
+    """
+    Step keys, rather than the removed id attribute, select override targets.
+    """
+    step = {
+        "id": "legacy_name",
+        "processor": "pathlib.Path",
+    }
+    pipeline_conf = {"steps": [("current_name", step)]}
+
+    assert find_step_by_name(pipeline_conf, "current_name") is step
+    assert find_step_by_name(
+        pipeline_conf,
+        "legacy_name",
+        raise_if_missing=False,
+    ) is None
+
+
+def test_insert_pipeline_step_uses_the_step_key():
+    """
+    Inserted steps use their override key rather than an id attribute.
+    """
+    pipeline_conf = {
+        "steps": [
+            ("first", {"processor": "pathlib.Path"}),
+            ("last", {"processor": "pathlib.PurePath"}),
+        ]
+    }
+
+    insert_pipeline_step(
+        pipeline_conf,
+        "inserted",
+        {
+            "processor": "pathlib.Path",
+            "$insert_after": "first",
+        },
+    )
+
+    assert [name for name, _ in pipeline_conf["steps"]] == [
+        "first",
+        "inserted",
+        "last",
+    ]
+    assert pipeline_conf["steps"][1][1] == {"processor": "pathlib.Path"}
+
+
+def test_pipeline_schema_rejects_legacy_id():
+    """
+    The pipeline schema rejects the superseded id attribute.
+    """
+    schema = load_yaml_file(vermouth.DATA_PATH / "pipelines" / "pipeline-schema.yaml")
+    config = {
+        "martinize2": {
+            "steps": [
+                ["mapping", {"id": "legacy_mapping"}],
+            ],
+        },
+    }
+
+    with pytest.raises(jsonschema.ValidationError, match="'id'"):
+        jsonschema.validate(config, schema)
+
+
+def test_load_pipeline_configs_rejects_duplicate_step_keys(tmp_path):
+    """
+    Duplicate keys from an ordered YAML mapping are rejected on load.
+    """
+    pipeline_file = tmp_path / "duplicate-steps.yaml"
+    pipeline_file.write_text(
+        """
+martinize2:
+  steps: !!omap
+    - mapping:
+        processor: pathlib.Path
+    - mapping:
+        processor: pathlib.PurePath
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Duplicate step key 'mapping'"):
+        load_pipeline_configs([pipeline_file])
+
 def test_load_pipeline_configs_multiple(tmp_path):
     """
     Test that load_pipeline_configs loads multiple
@@ -623,6 +772,34 @@ def test_combine_pipeline_configs_rejects_same_cli_flag_with_different_options()
 
     with pytest.raises(ValueError):
         combine_pipeline_configs(configs)
+
+
+def test_combine_pipeline_configs_rejects_duplicate_step_keys():
+    """
+    Combined fragments cannot introduce duplicate root step keys.
+    """
+    configs = [
+        (
+            "first",
+            {
+                "martinize2": {
+                    "steps": [("mapping", {"processor": "pathlib.Path"})],
+                }
+            },
+        ),
+        (
+            "second",
+            {
+                "martinize2": {
+                    "steps": [("mapping", {"processor": "pathlib.PurePath"})],
+                }
+            },
+        ),
+    ]
+
+    with pytest.raises(ValueError, match="Duplicate step key 'mapping'"):
+        combine_pipeline_configs(configs)
+
 
 def test_pipeline_config_builder_build_config(tmp_path):
     """

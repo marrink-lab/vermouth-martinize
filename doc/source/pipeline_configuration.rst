@@ -138,10 +138,12 @@ For example:
 Processor steps
 ---------------
 
-Each item in ``steps`` defines a processor (or sub-pipeline) and its configuration. Processors
-are executed in the order in which they occur in the YAML file.
+Each item in ``steps`` defines a uniquely named processor (or sub-pipeline)
+and its configuration. Processors are executed in the order in which they
+occur in the YAML file. Step keys must be unique within their containing
+pipeline.
 
-The key is the import path of the processor:
+By default, the key is also the import path of the processor:
 
 .. code-block:: yaml
 
@@ -149,6 +151,20 @@ The key is the import path of the processor:
        args:
          mappings:
            variable: mappings
+
+Use ``processor`` to give a step a stable name while importing a different
+processor path. Several uniquely named steps may use the same processor:
+
+.. code-block:: yaml
+
+   - map_protein:
+       processor: vermouth.DoMapping
+       args: {}
+   - map_ligand:
+       processor: vermouth.DoMapping
+       args: {}
+
+The processor class is imported when the pipeline is built.
 
 For more information about Vermouth processors, see :doc:`processors`.
 
@@ -291,8 +307,7 @@ the original pipeline files:
        -inpath input.pdb \
        -outpath output.pdb
 
-Override entries target processor IDs. If a processor does not define an
-explicit ``id``, its processor name is used as the default ID.
+Override entries target unique step keys.
 
 Changing values
 ~~~~~~~~~~~~~~~
@@ -349,7 +364,7 @@ New processors can be inserted before or after an existing processor:
        $insert_after: vermouth.DoMapping
        args: {}
 
-If the target processor is not unique, explicit processor IDs must be used.
+The insertion anchor is a unique step key.
 
 Custom pipeline directories
 ---------------------------
@@ -402,7 +417,7 @@ the following fields:
 ``steps``
     An ordered list of processor steps or nested pipeline groups.
 
-A processor step can additionally contain ``id``, ``args``, and
+A processor step can additionally contain ``processor``, ``args``, and
 ``condition``. A nested pipeline group contains another ``steps`` mapping and
 may also define CLI options, variables, or a condition.
 
@@ -410,8 +425,8 @@ may also define CLI options, variables, or a condition.
 ~~~~~~~~~
 
 ``steps`` is an ordered mapping. Entries are executed in the order in which
-they occur. Processor entries use the fully qualified Python import path of
-the processor as their key::
+they occur. Its keys must be unique within the pipeline. A processor step
+uses its key as the processor import path unless it defines ``processor``::
 
     steps: !!omap
       - vermouth.DoMapping:
@@ -435,21 +450,6 @@ identified by the presence of another ``steps`` field::
 
 Nested pipelines can themselves contain nested pipelines. CLI options and
 variables defined in a parent scope are available to its child steps.
-
-``id``
-~~~~~~
-
-``id`` is an optional identifier for a processor step::
-
-    - vermouth.pipeline_processors.ElasticWrapper:
-        id: elastic
-        args: {}
-
-IDs are used by override files to locate a processor. If ``id`` is omitted,
-the fully qualified processor name is used as the effective ID. An ID used as
-an override target must identify exactly one processor. If the same processor
-occurs more than once, explicit unique IDs are required to address the steps
-individually.
 
 ``cli_flags``
 ~~~~~~~~~~~~~
@@ -725,5 +725,5 @@ of ``$insert_before`` or ``$insert_after``::
 ``$insert_after``
     ID or effective processor ID after which the new processor is inserted.
 
-The new override key becomes the explicit ``id`` of the inserted processor.
+The new override key becomes the key of the inserted processor.
 The insertion target must identify exactly one existing step.

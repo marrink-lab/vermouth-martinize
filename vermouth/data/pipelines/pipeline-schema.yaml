@@ -1,19 +1,18 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 type: object
-#required:
-#  - cli_prefix
 properties:
-  cli_prefix:
+  $schema:
     type: string
-    default: '-'
-  variables:
-    type: array
-    items:
-      type: string
-additionalProperties:
+  martinize2:
+    $ref: "#/definitions/pipeline"
+required:
+  - martinize2
+additionalProperties: false
+
+definitions:
   steps:
     type: array
-    minLength: 1
+    minItems: 1
     items:
       type: array
       minItems: 2
@@ -22,9 +21,7 @@ additionalProperties:
         - type: string
         - $ref: "#/definitions/step"
       items: false
-#  $ref: "#/definitions/step"
 
-definitions:
   log_entry:
     type: object
     required:
@@ -70,22 +67,26 @@ definitions:
     type: object
     required:
       - steps
+    allOf:
+      - $ref: "#/definitions/step_base"
     properties:
-      steps:
+      cli_prefix:
+        type: string
+      variables:
         type: array
-        minLength: 1
         items:
-          type: array
-          minItems: 2
-          maxItems: 2
-          prefixItems:
-            - type: string
-            - $ref: "#/definitions/step"
-          items: false
+          type: string
+      steps:
+        $ref: "#/definitions/steps"
 
   processor:
     type: object
+    not:
+      required:
+        - steps
     properties:
+      processor:
+        type: string
       args:
         type: object
         additionalProperties:
@@ -101,7 +102,7 @@ definitions:
             - required: ['variable']
               properties:
                 variable:
-                  type: array
+                  type: string
 
   cli_group:
     type: object
@@ -143,37 +144,37 @@ definitions:
 
   cli_opt:
     type: object
-    additionalProperties:
-      type: object
-      properties:
-        action:
-          enum:
-            - store
-            - store_true
-            - store_false
-            - append
-            - count
-            - extend
-            - help
-            - version
-            - append_const
-            - store_const
-            - parsers
-            - subparsers
-        nargs:
-          oneOf:
-            - type: integer
-            - enum: ['+', '?', '*']
-        const: {}
-        default: {}
-        type: {}
-        choices:
-          type: array
-          items:
-            type: string
-        required: {type: boolean}
-        help: { type: string }
-        metavar: { type: string }
+    properties:
+      action:
+        enum:
+          - store
+          - store_true
+          - store_false
+          - append
+          - count
+          - extend
+          - help
+          - version
+          - append_const
+          - store_const
+          - parsers
+          - subparsers
+      cli:
+        type: string
+      nargs:
+        oneOf:
+          - type: integer
+          - enum: ['+', '?', '*']
+      const: {}
+      default: {}
+      type: {}
+      choices:
+        type: array
+        items:
+          type: string
+      required: {type: boolean}
+      help: { type: string }
+      metavar: { type: string }
 
   condition:
     type: object
@@ -197,4 +198,4 @@ definitions:
           cli:
             type: string
           variable:
-            type: array
+            type: string

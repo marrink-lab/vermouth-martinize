@@ -529,7 +529,7 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
         for flag, opts in grp.get('flags', {}).items():
             if flag in added_flags:
                 continue
-            add_cli_flag(group, name, opts, prefix)
+            add_cli_flag(group, flag, opts, prefix)
             added_flags.add(flag)
         for excl_group in grp.get('exclusive_groups', []):
             exclusive_group = group.add_mutually_exclusive_group(**{k: v for k, v in excl_group.items() if k != 'flags'})
@@ -655,7 +655,8 @@ def set_values(pipeline_conf, cli_args, variables):
     for name, step in pipeline_conf.get('steps', []):
         if not step.get('steps'):
             # go from text to actual processor object
-            step['processor'] = import_processor(name)
+            processor_path = step.get('processor', name)
+            step['processor'] = import_processor(processor_path)
         # call itself 
         set_values(step, cli_args, variables)
 
@@ -716,6 +717,40 @@ def namespace_variables(obj, namespace):
     return obj
 
 
+def validate_step_names(pipeline_conf, path="martinize2"):
+    """
+    Validate that step keys are unique within each pipeline.
+
+    Step keys identify a step independently of its processor import path.
+    The same processor may therefore be used by multiple uniquely named
+    steps.
+
+    Parameters
+    ----------
+    pipeline_conf : dict
+        Pipeline configuration to validate.
+    path : str, optional
+        Structural path used in error messages.
+
+    Raises
+    ------
+    ValueError
+        If a pipeline contains the same step key more than once.
+    """
+    seen_names = {}
+    for index, (name, step) in enumerate(pipeline_conf.get("steps", [])):
+        step_path = f"{path}.steps[{index}].{name}"
+        if name in seen_names:
+            raise ValueError(
+                f"Duplicate step key {name!r}: {seen_names[name]} and "
+                f"{step_path}."
+            )
+        seen_names[name] = step_path
+
+        if step.get("steps"):
+            validate_step_names(step, step_path)
+
+
 @lru_cache(maxsize=32)
 def load_yaml_file(path):
     """
@@ -739,6 +774,21 @@ def find_pipeline_configs(pipeline_names, pipeline_dirs):
     for name in pipeline_names:
         path = find_pipeline_yaml(name, pipeline_dirs)
         yield path
+
+
+def _schema_instance(value):
+    """
+    Convert ordered YAML mapping tuples to JSON Schema-compatible arrays.
+
+    PyYAML represents ``!!omap`` entries as tuples, while the JSON Schema
+    array type accepts lists only. The conversion is limited to the temporary
+    value passed to the schema validator.
+    """
+    if isinstance(value, dict):
+        return {key: _schema_instance(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_schema_instance(item) for item in value]
+    return value
 
 
 def load_pipeline_configs(pipeline_paths):
@@ -768,8 +818,9 @@ def load_pipeline_configs(pipeline_paths):
             if not schema_path.is_absolute():
                 schema_path = yaml_dir / schema_path
             schema = load_yaml_file(schema_path)
-        jsonschema.validate(conf, schema)
-
+            jsonschema.validate(_schema_instance(conf), schema)
+        root = conf.get("martinize2")
+        validate_step_names(root)
         namespace = Path(path).stem
         configs.append((namespace, conf))
 
@@ -807,19 +858,16 @@ def iter_cli_flags(pipeline_conf):
         for name, step in pipeline_conf["steps"]:
             yield from iter_cli_flags(step)
 
-def find_step_by_id(config, target_id, raise_if_missing=True):
+def find_step_by_name(config, target_name, raise_if_missing=True):
     """
-    Find a pipeline step by its ID or processor name.
-
-    If a processor does not define an explicit ID, its processor name is used
-    as its effective ID.
+    Find a pipeline step by its key.
 
     Parameters
     ----------
     config : object
         Pipeline configuration to search.
-    target_id : str
-        ID or processor name to find.
+    target_name : str
+        Step key to find.
     raise_if_missing : bool, optional
         Raise an error when no matching step is found.
 
@@ -834,7 +882,7 @@ def find_step_by_id(config, target_id, raise_if_missing=True):
     KeyError
         If no matching processor is found and ``raise_if_missing`` is true.
     ValueError
-        If more than one processor matches the requested ID.
+        If more than one processor has the requested step key.
     """
     matches = []
 
@@ -849,15 +897,12 @@ def find_step_by_id(config, target_id, raise_if_missing=True):
         elif isinstance(value, list):
             for child in value:
                 if isinstance(child, tuple) and len(child) == 2:
-                    processor_name, step_conf = child
+                    step_name, step_conf = child
 
                     if not isinstance(step_conf, dict):
                         continue
 
-                    # Explicit id, otherwise processor name as default id
-                    effective_id = step_conf.get("id", processor_name)
-
-                    if effective_id == target_id:
+                    if step_name == target_name:
                         matches.append(step_conf)
 
                     search(step_conf)
@@ -869,15 +914,13 @@ def find_step_by_id(config, target_id, raise_if_missing=True):
     if not matches:
         if raise_if_missing:
             raise KeyError(
-                f"No pipeline step found with id or processor name "
-                f"{target_id!r}."
+                f"No pipeline step found with key {target_name!r}."
             )
         return None
 
     if len(matches) > 1:
         raise ValueError(
-            f"Pipeline step {target_id!r} is not unique. "
-            "Add explicit unique ids to these processors."
+            f"Pipeline step key {target_name!r} is not unique."
         )
 
     return matches[0]
@@ -955,7 +998,7 @@ def merge_override(target, override):
     return target
 
 
-def insert_pipeline_step(pipeline_config, step_definition):
+def insert_pipeline_step(pipeline_config, step_name, step_definition):
     """
     Insert a new processor step into a pipeline configuration.
 
@@ -963,9 +1006,11 @@ def insert_pipeline_step(pipeline_config, step_definition):
     ----------
     pipeline_config : dict
         Pipeline configuration in which the new step is inserted.
+    step_name : str
+        Key for the new processor step.
     step_definition : dict
-        Definition of the new processor step. It must contain ``id`` and
-        ``processor``, and either ``$insert_before`` or ``$insert_after``.
+        Definition of the new processor step. It must contain ``processor``
+        and either ``$insert_before`` or ``$insert_after``.
 
     Raises
     ------
@@ -976,22 +1021,21 @@ def insert_pipeline_step(pipeline_config, step_definition):
         If the target step cannot be found.
     """
     new_step = deepcopy(step_definition)
-    new_step_id = new_step.pop("id")
 
     insert_before = new_step.pop("$insert_before", None)
     insert_after = new_step.pop("$insert_after", None)
 
     if insert_before is not None and insert_after is not None:
         raise ValueError(
-            f"New step {new_step_id!r} cannot use both "
+            f"New step {step_name!r} cannot use both "
             "'$insert_before' and '$insert_after'."
         )
 
-    anchor_id = insert_before or insert_after
+    anchor_name = insert_before or insert_after
 
-    if anchor_id is None:
+    if anchor_name is None:
         raise ValueError(
-            f"New step {new_step_id!r} must use "
+            f"New step {step_name!r} must use "
             "'$insert_before' or '$insert_after'."
         )
 
@@ -1005,14 +1049,12 @@ def insert_pipeline_step(pipeline_config, step_definition):
         elif isinstance(value, list):
             for index, child in enumerate(value):
                 if isinstance(child, tuple) and len(child) == 2:
-                    processor_name, step_config = child
+                    existing_step_name, step_config = child
 
                     if not isinstance(step_config, dict):
                         continue
 
-                    effective_id = step_config.get("id", processor_name)
-
-                    if effective_id == anchor_id:
+                    if existing_step_name == anchor_name:
                         matches.append((value, index))
 
                     search(step_config)
@@ -1023,14 +1065,12 @@ def insert_pipeline_step(pipeline_config, step_definition):
 
     if not matches:
         raise KeyError(
-            f"No pipeline step found with id or processor name "
-            f"{anchor_id!r}."
+            f"No pipeline step found with key {anchor_name!r}."
         )
 
     if len(matches) > 1:
         raise ValueError(
-            f"Pipeline step {anchor_id!r} is not unique. "
-            "Add explicit unique ids to these processors."
+            f"Pipeline step key {anchor_name!r} is not unique."
         )
 
     step_list, anchor_index = matches[0]
@@ -1041,12 +1081,9 @@ def insert_pipeline_step(pipeline_config, step_definition):
         else anchor_index + 1
     )
 
-    processor_name = new_step.pop("processor")
-    new_step["id"] = new_step_id
-
     step_list.insert(
         insert_index,
-        (processor_name, new_step),
+        (step_name, new_step),
     )
     
 def combine_pipeline_configs(configs):
@@ -1096,6 +1133,7 @@ def combine_pipeline_configs(configs):
         # append pipeline steps in order
         combined["steps"].extend(root.get("steps", []))
 
+    validate_step_names(combined)
     return combined
 
 

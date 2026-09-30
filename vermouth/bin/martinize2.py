@@ -24,7 +24,7 @@ from vermouth.pipeline import (
     PipelineConfigBuilder,
     CLIBuilder,
     PipelineBuilder,
-    find_step_by_id,
+    find_step_by_name,
     insert_pipeline_step,
     merge_override,
 )
@@ -134,18 +134,20 @@ def main():
     if override_conf is not None:
         overrides = override_conf.get("override", {})
 
-        for step_id, changes in overrides.items():
-            step = find_step_by_id(pipeline_conf, step_id, raise_if_missing=False)
+        for step_name, changes in overrides.items():
+            step = find_step_by_name(
+                pipeline_conf,
+                step_name,
+                raise_if_missing=False,
+            )
 
             if step is not None:
                 merge_override(step, changes)
             else:
                 insert_pipeline_step(
                     pipeline_conf,
-                    {
-                        **changes,
-                        "id": step_id,
-                    },
+                    step_name,
+                    changes,
                 )
     cli_builder = CLIBuilder('martinize2', pipeline_conf)
     config_paths = []
