@@ -4,7 +4,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import jsonschema
 import pytest
 import vermouth
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_pipeline_configs, load_yaml_file, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
+from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, combine_pipeline_configs, find_pipeline_yaml, find_step_by_name, insert_pipeline_step, iter_cli_flags, load_pipeline_configs, load_yaml_file, merge_override, validate_cli_options, validate_step_names, build_mini_parser, namespace_variables
 
 def test_options_used_in_condition_equal():
     """
@@ -447,6 +447,80 @@ def test_load_yaml_file_not_found():
     """
     with pytest.raises(FileNotFoundError):
         load_yaml_file("this_file_does_not_exist.yaml")
+
+
+def test_load_yaml_file_escapes_leading_dollar_keys_and_values(tmp_path):
+    """
+    A double leading dollar sign creates literal mapping keys and values.
+    """
+    file = tmp_path / "escaped-dollars.yaml"
+    file.write_text(
+        """
+$$literal_key: $$literal_value
+""",
+        encoding="utf-8",
+    )
+
+    result = load_yaml_file(file)
+
+    assert list(result) == ["$literal_key"]
+    assert result["$literal_key"] == "$literal_value"
+
+
+def test_escaped_dollars_are_not_composition_directives(tmp_path):
+    """
+    Escaped strategy keys and remove values are merged as literal strings.
+    """
+    file = tmp_path / "escaped-directives.yaml"
+    file.write_text(
+        """
+$$strategy: literal_key
+literal_value: $$remove
+""",
+        encoding="utf-8",
+    )
+    override = load_yaml_file(file)
+    target = {"literal_value": "original"}
+
+    merge_override(target, override)
+
+    assert target == {
+        "$strategy": "literal_key",
+        "literal_value": "$remove",
+    }
+
+
+def test_load_yaml_file_rejects_escaped_key_collisions(tmp_path):
+    """
+    Literal escaped keys cannot collide with directive keys after unescaping.
+    """
+    file = tmp_path / "escaped-key-collision.yaml"
+    file.write_text(
+        """
+$strategy: merge
+$$strategy: literal_key
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Escaped mapping key"):
+        load_yaml_file(file)
+
+
+def test_merge_override_rejects_escaped_key_collisions(tmp_path):
+    """
+    Literal escaped keys cannot collide with keys from an earlier fragment.
+    """
+    file = tmp_path / "escaped-key.yaml"
+    file.write_text(
+        """
+$$strategy: literal_key
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Escaped mapping key"):
+        merge_override({"$strategy": "merge"}, load_yaml_file(file))
 
 
 def test_validate_step_names_rejects_duplicate_keys():

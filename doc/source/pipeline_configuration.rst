@@ -309,6 +309,11 @@ the original pipeline files:
 
 Override entries target unique step keys.
 
+Composition directives use mapping keys or values beginning with ``$``.
+To use a literal mapping key or value that begins with ``$``, escape its
+first dollar sign as ``$$``. For example, ``$$remove`` produces the literal
+string ``$remove`` rather than the ``$remove`` directive.
+
 Changing values
 ~~~~~~~~~~~~~~~
 

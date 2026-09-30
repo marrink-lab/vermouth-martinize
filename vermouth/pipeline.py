@@ -1,5 +1,6 @@
 from pathlib import Path
 from copy import deepcopy
+from collections.abc import Collection, Mapping, MutableMapping, MutableSequence
 import vermouth 
 import argparse
 import importlib
@@ -10,6 +11,78 @@ from vermouth.processors.processor import Pipeline
 from vermouth.log_helpers import TypeAdapter, StyleAdapter
 import logging
 LOGGER = StyleAdapter(TypeAdapter(logging.getLogger("vermouth")))
+
+
+class _LiteralDollarString(str):
+    """A string whose leading dollar sign was escaped in YAML."""
+
+
+_STRING_LIKE = (str, bytes, bytearray)
+
+
+def _escape_literal_dollars(value):
+    """
+    Mark YAML strings whose leading dollar sign is escaped.
+
+    A leading ``$$`` represents a literal leading ``$``. The marker preserves
+    that distinction until composition directives have been processed.
+    """
+    if isinstance(value, Mapping):
+        escaped = {}
+        for key, item in value.items():
+            escaped_key = _escape_literal_dollars(key)
+            if escaped_key in escaped:
+                raise ValueError(
+                    f"Escaped mapping key {escaped_key!r} collides with an "
+                    "existing key."
+                )
+            escaped[escaped_key] = _escape_literal_dollars(item)
+        return escaped
+    if isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
+        return value.__class__(_escape_literal_dollars(item) for item in value)
+    if isinstance(value, str) and value.startswith("$$"):
+        return _LiteralDollarString(value[1:])
+    return value
+
+
+def resolve_literal_dollars(value):
+    """
+    Convert escaped YAML dollar strings to ordinary strings recursively.
+
+    This is called after composition directives have been evaluated, before
+    the pipeline configuration is executed.
+    """
+    if isinstance(value, Mapping):
+        return {
+            resolve_literal_dollars(key): resolve_literal_dollars(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
+        return value.__class__(resolve_literal_dollars(item) for item in value)
+    if isinstance(value, _LiteralDollarString):
+        return str(value)
+    return value
+
+
+def _is_directive_key(key, directive):
+    """Return whether a mapping key is an unescaped composition directive."""
+    return (
+        isinstance(key, str)
+        and not isinstance(key, _LiteralDollarString)
+        and key == directive
+    )
+
+
+def _has_escaped_key_collision(mapping, key):
+    """Return whether equal mapping keys differ only by dollar escaping."""
+    return any(
+        existing_key == key
+        and (
+            isinstance(existing_key, _LiteralDollarString)
+            != isinstance(key, _LiteralDollarString)
+        )
+        for existing_key in mapping
+    )
 
 
 
@@ -702,16 +775,13 @@ def namespace_variables(obj, namespace):
     object
         The configuration object with namespaced variable references.
     """
-    if isinstance(obj, dict):
+    if isinstance(obj, MutableMapping):
         for key, value in obj.items():
             if key == "variable" and isinstance(value, str):
                 obj[key] = f"{namespace}.{value}"
             else:
                 namespace_variables(value, namespace)
-    elif isinstance(obj, list): 
-        for item in obj: 
-            namespace_variables(item, namespace)
-    elif isinstance(obj, tuple):
+    elif isinstance(obj, Collection) and not isinstance(obj, _STRING_LIKE):
         for item in obj:
             namespace_variables(item, namespace)
     return obj
@@ -767,7 +837,7 @@ def load_yaml_file(path):
         Parsed contents of the YAML file.
     """
     with open(path, "r", encoding="utf-8") as file:
-        return yaml.safe_load(file)
+        return _escape_literal_dollars(yaml.safe_load(file))
 
 
 def find_pipeline_configs(pipeline_names, pipeline_dirs):
@@ -784,9 +854,9 @@ def _schema_instance(value):
     array type accepts lists only. The conversion is limited to the temporary
     value passed to the schema validator.
     """
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return {key: _schema_instance(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
         return [_schema_instance(item) for item in value]
     return value
 
@@ -945,13 +1015,13 @@ def merge_override(target, override):
     Lists and ordinary values are replaced.
     '$remove' removes a key.
     """
-    if not isinstance(target, dict):
+    if not isinstance(target, MutableMapping):
         raise TypeError(
             f"Override target must be a dictionary, "
             f"not {type(target).__name__}."
         )
 
-    if not isinstance(override, dict):
+    if not isinstance(override, Mapping):
         raise TypeError(
             f"Override must be a dictionary, "
             f"not {type(override).__name__}."
@@ -960,7 +1030,7 @@ def merge_override(target, override):
     override_values = {
         key: value
         for key, value in override.items()
-        if key != STRATEGY_KEY
+        if not _is_directive_key(key, STRATEGY_KEY)
     }
 
     default_strategy = (
@@ -969,7 +1039,14 @@ def merge_override(target, override):
         else "merge"
     )
 
-    strategy = override.get(STRATEGY_KEY, default_strategy)
+    strategy = next(
+        (
+            value
+            for key, value in override.items()
+            if _is_directive_key(key, STRATEGY_KEY)
+        ),
+        default_strategy,
+    )
 
     if strategy not in VALID_STRATEGIES:
         raise ValueError(
@@ -981,15 +1058,24 @@ def merge_override(target, override):
         target.clear()
 
     for key, override_value in override_values.items():
-        if override_value == REMOVE_VALUE:
+        if _has_escaped_key_collision(target, key):
+            raise ValueError(
+                f"Escaped mapping key {key!r} collides with an existing key."
+            )
+
+        if (
+            isinstance(override_value, str)
+            and not isinstance(override_value, _LiteralDollarString)
+            and override_value == REMOVE_VALUE
+        ):
             target.pop(key, None)
             continue
 
         target_value = target.get(key)
 
         if (
-            isinstance(target_value, dict)
-            and isinstance(override_value, dict)
+            isinstance(target_value, MutableMapping)
+            and isinstance(override_value, Mapping)
         ):
             merge_override(target_value, override_value)
         else:
@@ -1144,40 +1230,62 @@ def merge_dictionaries(dict1, dict2):
     When keys overlap, values from ``dict2`` take precedence, except for
     nested dictionaries and lists, which are merged recursively.
     """
-    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
-        raise TypeError("merge_dictionaries expects two dictionaries.")
+    if not isinstance(dict1, MutableMapping) or not isinstance(dict2, Mapping):
+        raise TypeError("merge_dictionaries expects two mappings.")
+
+    def _compatible_types(value1, value2):
+        if isinstance(value1, Mapping) and isinstance(value2, Mapping):
+            return True
+        if (
+            isinstance(value1, MutableSequence)
+            and isinstance(value2, MutableSequence)
+        ):
+            return True
+        return (
+            isinstance(value1, value2.__class__)
+            or isinstance(value2, value1.__class__)
+        )
 
     def _merge_values(value1, value2, path):
-        if isinstance(value1, dict) and isinstance(value2, dict):
+        if isinstance(value1, MutableMapping) and isinstance(value2, Mapping):
             return _merge_dicts(value1, value2, path)
 
-        if isinstance(value1, list) and isinstance(value2, list):
+        if (
+            isinstance(value1, MutableSequence)
+            and isinstance(value2, MutableSequence)
+        ):
             merged = deepcopy(value1)
             for index, item2 in enumerate(value2):
                 if index < len(merged):
                     item1 = merged[index]
-                    if isinstance(item1, (dict, list)) or isinstance(item2, (dict, list)):
-                        if type(item1) is not type(item2):
+                    if (
+                        isinstance(item1, (Mapping, MutableSequence))
+                        or isinstance(item2, (Mapping, MutableSequence))
+                    ):
+                        if not _compatible_types(item1, item2):
                             raise TypeError(
                                 f"Type mismatch at {path}[{index}]: "
-                                f"{type(item1).__name__} vs {type(item2).__name__}."
+                                f"{item1.__class__.__name__} vs "
+                                f"{item2.__class__.__name__}."
                             )
                         merged[index] = _merge_values(item1, item2, f"{path}[{index}]")
-                    elif type(item1) is type(item2):
+                    elif _compatible_types(item1, item2):
                         merged[index] = deepcopy(item2)
                     else:
                         raise TypeError(
                             f"Type mismatch at {path}[{index}]: "
-                            f"{type(item1).__name__} vs {type(item2).__name__}."
+                            f"{item1.__class__.__name__} vs "
+                            f"{item2.__class__.__name__}."
                         )
                 else:
                     merged.append(deepcopy(item2))
             return merged
 
-        if type(value1) is not type(value2):
+        if not _compatible_types(value1, value2):
             raise TypeError(
                 f"Type mismatch at {path}: "
-                f"{type(value1).__name__} vs {type(value2).__name__}."
+                f"{value1.__class__.__name__} vs "
+                f"{value2.__class__.__name__}."
             )
 
         return deepcopy(value2)
@@ -1318,7 +1426,7 @@ class PipelineBuilder:
         Pipeline
             Executable Vermouth pipeline.
         """
-        pipeline_conf = deepcopy(self.pipeline_conf)
+        pipeline_conf = resolve_literal_dollars(deepcopy(self.pipeline_conf))
         set_values(pipeline_conf, cli_args, variables)
 
         return Pipeline.from_dict(
