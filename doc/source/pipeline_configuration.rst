@@ -36,17 +36,19 @@ The pipeline configuration is processed by three builder classes:
 Running Martinize2 with a pipeline
 ----------------------------------
 
-Pipeline files are selected with the ``-pipeline`` option::
+Source and target pipeline fragments are selected with ``-from`` and ``-ff``::
 
     martinize2 \
-        -pipeline charmm martini3001 \
+        -from charmm \
+        -ff martini3001 \
         -inpath input.pdb \
         -outpath output.pdb
 
-Pipeline names such as ``charmm`` and ``martini3001`` are resolved from the
-default pipeline directory. The default pipeline configurations distributed
-with Vermouth are located in ``vermouth/data/pipelines``. 
-A path to a custom YAML file can also be used.
+``-from`` and ``-ff`` select the source and target pipeline fragments,
+respectively. Names such as ``charmm`` and ``martini3001`` are resolved from
+the default pipeline directory. The default pipeline configurations
+distributed with Vermouth are located in ``vermouth/data/pipelines``. A path
+to a custom YAML file can also be used.
 
 Complete, working configurations can be found in the
 `pipeline configuration directory <https://github.com/marrink-lab/vermouth-martinize/tree/main/vermouth/data/pipelines>`_.
@@ -55,16 +57,19 @@ These can be used as examples when writing new pipeline fragments.
 Multiple pipeline files
 -----------------------
 
-Multiple YAML files can be supplied after ``-pipeline``::
+Additional YAML files can be supplied after ``-pipeline``::
 
     martinize2 \
-        -pipeline charmm water martini3001 \
+        -from charmm \
+        -ff martini3001 \
+        -pipeline water \
         -inpath input.pdb \
         -outpath output.pdb
 
-The configurations are combined in the order in which they are provided.
-Processor steps are appended, command-line flags are combined, and variables
-retain their declared names. Pipelines with conflicting variable names should
+Additional pipelines are included in the generated root document. Mappings,
+including ordered step mappings, are composed by key. Command-line flags are
+collected into one interface and repeated definitions must match. Variables
+retain their declared names; pipelines with conflicting variable names should
 be composed through an include with an explicit variable rename.
 
 Including pipeline fragments

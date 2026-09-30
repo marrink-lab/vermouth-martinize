@@ -285,6 +285,75 @@ def test_validate_cli_options_cli_group():
     validate_cli_options(pipeline_conf)
 
 
+def test_validate_cli_options_accepts_flags_defined_in_sibling_pipeline():
+    """CLI references are global across the final composed pipeline root."""
+    pipeline_conf = {
+        "steps": OrderedDict([
+            (
+                "from",
+                {
+                    "steps": OrderedDict([
+                        (
+                            "consumer",
+                            {"args": {"option": {"cli": "shared"}}},
+                        ),
+                    ]),
+                },
+            ),
+            (
+                "to",
+                {
+                    "cli": {"flags": {"shared": {"default": "value"}}},
+                    "args": {},
+                },
+            ),
+        ]),
+    }
+
+    validate_cli_options(pipeline_conf, path="martinize2")
+
+
+def test_combine_pipeline_configs_rejects_conflicting_global_cli_flags():
+    """Fragments may repeat only identical global CLI flag definitions."""
+    configs = [
+        (
+            "from",
+            {
+                "martinize2": {
+                    "steps": OrderedDict([
+                        (
+                            "from",
+                            {
+                                "cli": {"flags": {"shared": {"default": "one"}}},
+                                "args": {},
+                            },
+                        ),
+                    ]),
+                },
+            },
+        ),
+        (
+            "to",
+            {
+                "martinize2": {
+                    "steps": OrderedDict([
+                        (
+                            "to",
+                            {
+                                "cli": {"flags": {"shared": {"default": "two"}}},
+                                "args": {},
+                            },
+                        ),
+                    ]),
+                },
+            },
+        ),
+    ]
+
+    with pytest.raises(ValueError, match="CLI flag 'shared'"):
+        combine_pipeline_configs(configs)
+
+
 def test_build_mini_parser_defaults():
     """
     Test that the mini parser returns the default values
@@ -294,7 +363,9 @@ def test_build_mini_parser_defaults():
 
     args = parser.parse_args([])
 
-    assert args.pipeline == ["charmm", "martini3001"]
+    assert args.from_ff == "charmm"
+    assert args.to_ff == "martini3001"
+    assert args.pipeline == []
     assert args.pipeline_dir == []
     assert args.extra_ff_dir == []
     assert args.extra_map_dir == []
@@ -308,14 +379,18 @@ def test_build_mini_parser_custom_arguments():
     parser = build_mini_parser()
 
     args = parser.parse_args([
-            "--pipeline", "charmm", "water", "martini3001",
-            "--pipeline-dir", "my_pipelines",
+            "-from", "source",
+            "-ff", "target",
+            "-pipeline", "water",
+            "-pipeline-dir", "my_pipelines",
             "-extra_ff_dir", "extra_ff",
             "-extra_map_dir", "extra_maps",
             "-list_ff",
         ])
 
-    assert args.pipeline == ["charmm", "water", "martini3001"]
+    assert args.from_ff == "source"
+    assert args.to_ff == "target"
+    assert args.pipeline == ["water"]
     assert args.pipeline_dir == [Path("my_pipelines")]
     assert args.extra_ff_dir == [Path("extra_ff")]
     assert args.extra_map_dir == [Path("extra_maps")]
@@ -1208,8 +1283,9 @@ def test_pipeline_config_builder_build_config(tmp_path):
     file.write_text(
         """
 martinize2:
-  cli_flags:
-    inpath: {}
+  cli:
+    flags:
+      inpath: {}
   steps: !!omap
     - ReadSystem:
         args:
@@ -1222,8 +1298,50 @@ martinize2:
     builder = PipelineConfigBuilder(["charmm"], [tmp_path])
 
     configs, pipeline_conf = builder.build_config()
+    assert pipeline_conf["$schema"] == "./pipeline-schema.yaml"
+    pipeline_conf = pipeline_conf["martinize2"]
 
     assert configs[0][0] == "charmm"
-    assert pipeline_conf["cli_flags"] == {"inpath": {}}
-    assert pipeline_conf["steps"][0][0] == "ReadSystem"
-    assert pipeline_conf["steps"][0][1]["args"]["path"]["cli"] == "inpath"
+    assert pipeline_conf["cli"]["flags"]["inpath"].get("cli") is None
+    assert list(pipeline_conf["steps"]) == ["ReadSystem"]
+    assert pipeline_conf["steps"]["ReadSystem"]["args"]["path"]["cli"] == "inpath"
+
+
+def test_pipeline_config_builder_generates_source_target_document(tmp_path):
+    """Source and target selections are resolved through generated includes."""
+    (tmp_path / "source.yaml").write_text(
+        """
+martinize2:
+  steps: !!omap
+    - from:
+        steps: !!omap
+          - read:
+              args: {}
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "target.yaml").write_text(
+        """
+martinize2:
+  steps: !!omap
+    - to:
+        steps: !!omap
+          - write:
+              args: {}
+""",
+        encoding="utf-8",
+    )
+
+    _, document = PipelineConfigBuilder(
+        pipeline_dirs=[tmp_path],
+        from_pipeline="source",
+        to_pipeline="target",
+    ).build_config()
+
+    assert document["$schema"] == "./pipeline-schema.yaml"
+    root = document["martinize2"]
+    assert list(root["steps"]) == ["from", "to"]
+    assert list(root["steps"]["from"]["steps"]) == ["read"]
+    assert list(root["steps"]["to"]["steps"]) == ["write"]
+    assert "$include" not in root["steps"]["from"]
+    assert "$include" not in root["steps"]["to"]

@@ -116,8 +116,11 @@ def main():
     config_builder = PipelineConfigBuilder(
         mini_args.pipeline,
         mini_args.pipeline_dir,
+        mini_args.from_ff,
+        mini_args.to_ff,
     )
-    configs, pipeline_conf = config_builder.build_config()
+    configs, pipeline_document = config_builder.build_config()
+    pipeline_conf = pipeline_document["martinize2"]
 
     cli_builder = CLIBuilder('martinize2', pipeline_conf)
     config_paths = []
@@ -127,8 +130,11 @@ def main():
         except ValueError:
             config_paths.append(path)
 
-    cli_builder.build_argparser(parents=[mini_parser],
-                                epilog=f'Pipeline and CLI built from {', '.join(str(p) for p in config_paths)}')
+    cli_builder.build_argparser(
+        parents=[mini_parser],
+        added_flags={"from_ff", "to_ff"},
+        epilog=f'Pipeline and CLI built from {', '.join(str(p) for p in config_paths)}',
+    )
     parser = cli_builder.argparser
     cli_args = cli_builder.parse_cli_args(remaining_args)
     

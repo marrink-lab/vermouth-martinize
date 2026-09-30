@@ -129,7 +129,11 @@ def _options_used_in_condition(condition):
         If the condition type is unknown or an ``equal`` condition does not
         reference a CLI option or variable.
     """
-    type_, cond = next(iter(condition.items()))
+    type_, cond = next(
+        (key, value)
+        for key, value in condition.items()
+        if key != SOURCE_KEY
+    )
     cli_refs = set()
     variable_refs = set()
 
@@ -194,7 +198,10 @@ def validate_cli_options(
     ValueError
         If a condition definition is invalid.
     """
-    local_cli_options = set() if local_cli_options is None else set(local_cli_options)
+    if local_cli_options is None:
+        local_cli_options = set(_collect_cli_flags(pipeline_conf))
+    else:
+        local_cli_options = set(local_cli_options)
     local_variables = set() if local_variables is None else set(local_variables)
 
     # gather flags defined in cli_flags
@@ -457,8 +464,22 @@ def build_mini_parser():
     parser.add_argument(
         "-pipeline",
         nargs="+",
-        default=["charmm", "martini3001"],
-        help="Pipeline YAML fragments to combine in order.",
+        default=[],
+        help="Additional pipeline YAML fragments to include.",
+    )
+
+    parser.add_argument(
+        "-from",
+        dest="from_ff",
+        default="charmm",
+        help="Source force field and source pipeline name.",
+    )
+
+    parser.add_argument(
+        "-ff",
+        dest="to_ff",
+        default="martini3001",
+        help="Target force field and target pipeline name.",
     )
 
     parser.add_argument(
@@ -598,6 +619,8 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
     # loop through the cli flags defined in the pipeline config. and don't add the same flag twice.
     cli_conf = pipeline_conf.get('cli', {})
     for flag, opts in cli_conf.get('flags', {}).items():
+        if flag == SOURCE_KEY:
+            continue
         if flag in added_flags:
             continue
         # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
@@ -607,6 +630,8 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
     for excl_group in cli_conf.get('exclusive_groups', []):
         group = parser.add_mutually_exclusive_group(**{k: v for k, v in excl_group.items() if k != 'flags'})
         for flag, opts in excl_group.get('flags', {}).items():
+            if flag == SOURCE_KEY:
+                continue
             if flag in added_flags:
                 continue
             add_cli_flag(group, flag, opts, prefix)
@@ -615,6 +640,8 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
     for grp in cli_conf.get('groups', []):
         group = parser.add_argument_group(**{k: v for k, v in grp.items() if k not in ('flags', 'exclusive_groups')})
         for flag, opts in grp.get('flags', {}).items():
+            if flag == SOURCE_KEY:
+                continue
             if flag in added_flags:
                 continue
             add_cli_flag(group, flag, opts, prefix)
@@ -622,6 +649,8 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
         for excl_group in grp.get('exclusive_groups', []):
             exclusive_group = group.add_mutually_exclusive_group(**{k: v for k, v in excl_group.items() if k != 'flags'})
             for flag, opts in excl_group.get('flags', {}).items():
+                if flag == SOURCE_KEY:
+                    continue
                 if flag in added_flags:
                     continue
                 add_cli_flag(exclusive_group, flag, opts, prefix)
@@ -956,7 +985,15 @@ def _annotate_sources(value, source, structural_path=""):
             else f"{structural_path}.{key}"
         )
         if key == "steps" and isinstance(child, MutableSequence):
-            for name, step in child:
+            step_items = child
+        elif key == "steps" and isinstance(child, Mapping):
+            step_items = child.items()
+        else:
+            step_items = None
+        if step_items is not None:
+            for name, step in step_items:
+                if name == SOURCE_KEY:
+                    continue
                 _annotate_sources(
                     step,
                     source,
@@ -1061,14 +1098,27 @@ def select_include_fragment(config, fragment_path):
 def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
     """Load and compose a pipeline file, expanding includes depth-first."""
     path = find_pipeline_yaml(path, pipeline_dirs).resolve()
+    config = deepcopy(load_yaml_file(path))
+    return compose_pipeline_config(
+        config,
+        path,
+        pipeline_dirs,
+        inclusion_chain,
+    )
+
+
+def compose_pipeline_config(config, path, pipeline_dirs=(), inclusion_chain=()):
+    """Compose an in-memory pipeline document with ordinary include semantics."""
+    path = Path(path).resolve()
     if path in inclusion_chain:
         chain = " -> ".join(map(str, (*inclusion_chain, path)))
         raise ValueError(f"Include cycle detected: {chain}")
 
-    config = deepcopy(load_yaml_file(path))
     _annotate_sources(config, path)
-    _validate_raw_step_names(config["martinize2"], source=path)
-    _convert_step_mappings(config["martinize2"])
+    root = config["martinize2"]
+    if isinstance(root.get("steps"), MutableSequence):
+        _validate_raw_step_names(root, source=path)
+        _convert_step_mappings(root)
     _compose_includes(
         config,
         path,
@@ -1228,6 +1278,51 @@ def load_pipeline_configs(pipeline_paths, pipeline_dirs=()):
 
     return configs
 
+
+def build_pipeline_document(
+    from_pipeline,
+    to_pipeline,
+    pipeline_dirs=(),
+    additional_pipelines=(),
+):
+    """Build and compose the CLI-generated source/target pipeline document."""
+    document = {
+        "$schema": "./pipeline-schema.yaml",
+        "martinize2": {
+            "$include": [
+                f"{pipeline}:martinize2"
+                for pipeline in additional_pipelines
+            ],
+            "steps": OrderedDict([
+                (
+                    "from",
+                    {
+                        "$include": [
+                            f"{from_pipeline}:martinize2.steps.from",
+                        ],
+                    },
+                ),
+                (
+                    "to",
+                    {
+                        "$include": [
+                            f"{to_pipeline}:martinize2.steps.to",
+                        ],
+                    },
+                ),
+            ]),
+        },
+    }
+    generated_path = vermouth.DATA_PATH / "pipelines" / "generated-pipeline.yaml"
+    document = compose_pipeline_config(
+        document,
+        generated_path,
+        pipeline_dirs,
+    )
+    validate_cli_options(document["martinize2"], path="martinize2")
+    return document
+
+
 def iter_cli_flags(pipeline_conf):
     """
     Iterate over all CLI flags in a pipeline configuration.
@@ -1247,18 +1342,49 @@ def iter_cli_flags(pipeline_conf):
     """
     # gather cli_flags defined in cli_flags
     cli_conf = pipeline_conf.get('cli', {})
-    yield from  cli_conf.get("flags", {}).items()
+    yield from (
+        (flag, options)
+        for flag, options in cli_conf.get("flags", {}).items()
+        if flag != SOURCE_KEY
+    )
     for excl_group in cli_conf.get('exclusive_groups', []):
-        yield from excl_group.get('flags', {}).items()
+        yield from (
+            (flag, options)
+            for flag, options in excl_group.get('flags', {}).items()
+            if flag != SOURCE_KEY
+        )
     for group_conf in cli_conf.get('groups', []):
         for excl_group in group_conf.get('exclusive_groups', []):
-            yield from excl_group.get('flags', {}).items()
-        yield from group_conf.get('flags', {}).items()
+            yield from (
+                (flag, options)
+                for flag, options in excl_group.get('flags', {}).items()
+                if flag != SOURCE_KEY
+            )
+        yield from (
+            (flag, options)
+            for flag, options in group_conf.get('flags', {}).items()
+            if flag != SOURCE_KEY
+        )
 
     # recursion for steps in the pipeline
     if pipeline_conf.get("steps"):
         for name, step in pipeline_conf["steps"].items():
             yield from iter_cli_flags(step)
+
+
+def _collect_cli_flags(pipeline_conf):
+    """Collect globally visible CLI flags with consistent definitions."""
+    flags = {}
+    for flag, options in iter_cli_flags(pipeline_conf):
+        normalized_options = _strip_source_metadata(deepcopy(options))
+        if flag in flags and flags[flag] != normalized_options:
+            raise ValueError(
+                f"CLI flag {flag!r} is defined multiple times with "
+                "different options."
+            )
+        flags[flag] = normalized_options
+    return flags
+
 
 REMOVE_VALUE = "$remove"
 STRATEGY_KEY = "$strategy"
@@ -1431,133 +1557,41 @@ def merge_pipeline_mapping(target, incoming, source=None):
     
 def combine_pipeline_configs(configs):
     """
-    Combine multiple pipeline YAML configs into one pipeline config.
+    Combine multiple pipeline YAML configs into one pipeline document.
 
     Duplicate CLI flags are allowed only if their definitions are exactly equal.
     Variables retain their declared names; callers must explicitly rename
     conflicting variables at an include site. Steps are composed by mapping
     key in the order given by the user.
     """
-    # TODO: Check whether $schema is the same for all, and use that to validate the final pipeline?
     combined = {
-        "cli": {},
-        "variables": [],
-        "steps": OrderedDict(),
+        "$schema": "./pipeline-schema.yaml",
+        "martinize2": {
+            "cli": {},
+            "variables": [],
+            "steps": OrderedDict(),
+        },
     }
-
-    seen_cli_flags = {}
+    root = combined["martinize2"]
 
     for _, conf in configs:
-        root = conf["martinize2"]
+        incoming_root = conf["martinize2"]
 
         # Included fragments retain their lexical variable names. Callers that
         # combine otherwise-conflicting roots must rename variables explicitly.
-        for variable in root.get("variables", []):
-            if variable not in combined["variables"]:
-                combined["variables"].append(variable)
+        for variable in incoming_root.get("variables", []):
+            if variable not in root["variables"]:
+                root["variables"].append(variable)
 
-        # merge normal CLI flags
-        cli_conf = root.get("cli", {})
-        all_cli_flags = dict(iter_cli_flags(root))
-        for flag, opts in all_cli_flags.items():
-            if flag in seen_cli_flags:
-                if seen_cli_flags[flag] != opts:
-                    raise ValueError(
-                        f"CLI flag {flag!r} is defined multiple times "
-                        "with different options."
-                    )
-            else:
-                seen_cli_flags[flag] = opts
+        _collect_cli_flags(incoming_root)
+        merge_pipeline_mapping(root, incoming_root)
 
-        combined['cli'] = merge_dictionaries(combined["cli"], cli_conf)
-        merge_pipeline_mapping(
-            combined,
-            {
-                "steps": root.get("steps", OrderedDict()),
-            },
-        )
-
+    _validate_pipeline_config(
+        combined,
+        vermouth.DATA_PATH / "pipelines" / "composed-pipeline.yaml",
+    )
+    validate_cli_options(root, path="martinize2")
     return combined
-
-
-def merge_dictionaries(dict1, dict2):
-    """
-    Recursively merge dictionaries with support for lists and scalar values.
-
-    When keys overlap, values from ``dict2`` take precedence, except for
-    nested dictionaries and lists, which are merged recursively.
-    """
-    if not isinstance(dict1, MutableMapping) or not isinstance(dict2, Mapping):
-        raise TypeError("merge_dictionaries expects two mappings.")
-
-    def _compatible_types(value1, value2):
-        if isinstance(value1, Mapping) and isinstance(value2, Mapping):
-            return True
-        if (
-            isinstance(value1, MutableSequence)
-            and isinstance(value2, MutableSequence)
-        ):
-            return True
-        return (
-            isinstance(value1, value2.__class__)
-            or isinstance(value2, value1.__class__)
-        )
-
-    def _merge_values(value1, value2, path):
-        if isinstance(value1, MutableMapping) and isinstance(value2, Mapping):
-            return _merge_dicts(value1, value2, path)
-
-        if (
-            isinstance(value1, MutableSequence)
-            and isinstance(value2, MutableSequence)
-        ):
-            merged = deepcopy(value1)
-            for index, item2 in enumerate(value2):
-                if index < len(merged):
-                    item1 = merged[index]
-                    if (
-                        isinstance(item1, (Mapping, MutableSequence))
-                        or isinstance(item2, (Mapping, MutableSequence))
-                    ):
-                        if not _compatible_types(item1, item2):
-                            raise TypeError(
-                                f"Type mismatch at {path}[{index}]: "
-                                f"{item1.__class__.__name__} vs "
-                                f"{item2.__class__.__name__}."
-                            )
-                        merged[index] = _merge_values(item1, item2, f"{path}[{index}]")
-                    elif _compatible_types(item1, item2):
-                        merged[index] = deepcopy(item2)
-                    else:
-                        raise TypeError(
-                            f"Type mismatch at {path}[{index}]: "
-                            f"{item1.__class__.__name__} vs "
-                            f"{item2.__class__.__name__}."
-                        )
-                else:
-                    merged.append(deepcopy(item2))
-            return merged
-
-        if not _compatible_types(value1, value2):
-            raise TypeError(
-                f"Type mismatch at {path}: "
-                f"{value1.__class__.__name__} vs "
-                f"{value2.__class__.__name__}."
-            )
-
-        return deepcopy(value2)
-
-    def _merge_dicts(left, right, path):
-        merged = deepcopy(left)
-        for key, value2 in right.items():
-            child_path = f"{path}.{key}" if path else str(key)
-            if key in merged:
-                merged[key] = _merge_values(merged[key], value2, child_path)
-            else:
-                merged[key] = deepcopy(value2)
-        return merged
-
-    return _merge_dicts(dict1, dict2, path="")
 
 
 class PipelineConfigBuilder:
@@ -1571,9 +1605,17 @@ class PipelineConfigBuilder:
     pipeline_dirs : Iterable[pathlib.Path], optional
         Additional directories in which pipeline files are searched.
     """
-    def __init__(self, pipeline_names, pipeline_dirs=None):
+    def __init__(
+        self,
+        pipeline_names=(),
+        pipeline_dirs=None,
+        from_pipeline=None,
+        to_pipeline=None,
+    ):
         self.pipeline_names = pipeline_names
         self.pipeline_dirs = pipeline_dirs or []
+        self.from_pipeline = from_pipeline
+        self.to_pipeline = to_pipeline
         self.paths = []
 
     def build_config(self):
@@ -1586,11 +1628,31 @@ class PipelineConfigBuilder:
             Loaded individual configurations and the combined pipeline
             configuration.
         """
+        if self.from_pipeline is not None or self.to_pipeline is not None:
+            if self.from_pipeline is None or self.to_pipeline is None:
+                raise ValueError(
+                    "Both source and target pipelines must be specified."
+                )
+            selected_pipelines = [
+                self.from_pipeline,
+                self.to_pipeline,
+                *self.pipeline_names,
+            ]
+            self.paths = list(
+                find_pipeline_configs(selected_pipelines, self.pipeline_dirs)
+            )
+            pipeline_conf = build_pipeline_document(
+                self.from_pipeline,
+                self.to_pipeline,
+                self.pipeline_dirs,
+                self.pipeline_names,
+            )
+            return [], pipeline_conf
+
         self.paths = list(find_pipeline_configs(self.pipeline_names, self.pipeline_dirs))
         LOGGER.debug('Building a pipeline from {}', ', '.join(map(str, self.paths)))
         configs = load_pipeline_configs(self.paths, self.pipeline_dirs)
         pipeline_conf = combine_pipeline_configs(configs)
-        validate_cli_options(pipeline_conf, path="martinize2")
         return configs, pipeline_conf
 
 
@@ -1607,7 +1669,7 @@ class CLIBuilder:
     """
     def __init__(self, name, pipeline_conf, prefix="-"):
         self.name = name
-        self.pipeline_conf = pipeline_conf
+        self.pipeline_conf = _strip_source_metadata(deepcopy(pipeline_conf))
         self.prefix = prefix
         self._argparser = None
 

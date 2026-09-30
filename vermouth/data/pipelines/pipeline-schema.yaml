@@ -12,7 +12,7 @@ anyOf:
       - martinize2
   - required:
       - $include
-additionalProperties: false
+unevaluatedProperties: false
 
 definitions:
   include:
@@ -113,13 +113,15 @@ definitions:
         $ref: "#/definitions/include"
       steps:
         $ref: "#/definitions/steps"
-    unevaluatedProperties: false
 
   processor:
     type: object
     not:
-      required:
-        - steps
+      anyOf:
+        - required:
+            - steps
+        - required:
+            - id
     properties:
       $include:
         $ref: "#/definitions/include"
@@ -131,26 +133,30 @@ definitions:
           $include:
             $ref: "#/definitions/include"
         additionalProperties:
-          type: object
-          properties:
-            $include:
-              $ref: "#/definitions/include"
-          anyOf:
-            - oneOf:
-                - required: ['value']
-                  properties:
-                    value: {}
-                - required: ['cli']
-                  properties:
-                    cli:
-                      type: string
-                - required: ['variable']
-                  properties:
-                    variable:
-                      type: string
-            - required: ['$include']
-          additionalProperties: false
-    additionalProperties: false
+          oneOf:
+            - type: object
+              required: ['value']
+              properties:
+                value: {}
+              additionalProperties: false
+            - type: object
+              required: ['cli']
+              properties:
+                cli:
+                  type: string
+              additionalProperties: false
+            - type: object
+              required: ['variable']
+              properties:
+                variable:
+                  type: string
+              additionalProperties: false
+            - type: object
+              required: ['$include']
+              properties:
+                $include:
+                  $ref: "#/definitions/include"
+              additionalProperties: false
 
   cli_group:
     type: object
