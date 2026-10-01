@@ -1,4 +1,4 @@
-$schema: "./pipeline-schema.yaml"
+$schema: "../../pipelines/pipeline-schema.yaml"
 martinize2:
   steps: !!omap
     - from:

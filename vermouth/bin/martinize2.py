@@ -113,11 +113,18 @@ def main():
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
     LOGGER.setLevel(loglevels[mini_args.verbosity])
 
+    known_force_fields, mappings = force_fields(vars(mini_args), mini_parser)
+    try:
+        source_force_field = known_force_fields[mini_args.from_ff]
+        target_force_field = known_force_fields[mini_args.to_ff]
+    except KeyError as error:
+        mini_parser.error(f"Unknown force field: {error.args[0]!r}")
+
     config_builder = PipelineConfigBuilder(
         mini_args.pipeline,
         mini_args.pipeline_dir,
-        mini_args.from_ff,
-        mini_args.to_ff,
+        source_force_field,
+        target_force_field,
     )
     configs, pipeline_document = config_builder.build_config()
     pipeline_conf = pipeline_document["martinize2"]
@@ -140,32 +147,17 @@ def main():
     
 
     cli_args.update(vars(mini_args))
-    known_force_fields, mappings = force_fields(cli_args, parser)
-
-    variables = {}
-
-    for namespace, conf in configs:
-        root = conf["martinize2"]
-
-        if "ff" in root.get("variables", []):
-            if "from_ff" in root.get("cli", {}).get('flags', {}):
-                variables[f"{namespace}.ff"] = known_force_fields[cli_args["from_ff"]]
-
-            elif "to_ff" in root.get("cli", {}).get('flags', {}):
-                variables[f"{namespace}.ff"] = known_force_fields[cli_args["to_ff"]]
-
-            else:
-                variables[f"{namespace}.ff"] = known_force_fields[namespace]
-
-        if "mappings" in root.get("variables", []):
-            variables[f"{namespace}.mappings"] = mappings
+    variables = {
+        "source_ff": source_force_field,
+        "ff": target_force_field,
+        "mappings": mappings,
+    }
 
     pipeline_builder = PipelineBuilder(pipeline_conf)
     pipeline = pipeline_builder.build_pipeline(cli_args, variables)
 
 
-    source_ff = known_force_fields[cli_args["from_ff"]]
-    system = vermouth.System(force_field=source_ff)
+    system = vermouth.System(force_field=source_force_field)
 
     pipeline.run_system(system)
 

@@ -472,14 +472,14 @@ def build_mini_parser():
         "-from",
         dest="from_ff",
         default="charmm",
-        help="Source force field and source pipeline name.",
+        help="Source force field and pipeline name.",
     )
 
     parser.add_argument(
         "-ff",
         dest="to_ff",
         default="martini3001",
-        help="Target force field and target pipeline name.",
+        help="Target force field and pipeline name.",
     )
 
     parser.add_argument(
@@ -555,6 +555,16 @@ def find_pipeline_yaml(name, pipeline_dirs):
     FileNotFoundError
         If the pipeline YAML file cannot be found.
     """
+    force_field_directory = getattr(name, "directory", None)
+    if force_field_directory is not None:
+        candidate = Path(force_field_directory) / "pipeline.yaml"
+        if candidate.exists():
+            return candidate
+        raise FileNotFoundError(
+            f"Force field {name.name!r} does not provide a pipeline YAML "
+            f"at '{candidate}'."
+        )
+
     path = Path(name)
 
     # User specified path
@@ -567,8 +577,13 @@ def find_pipeline_yaml(name, pipeline_dirs):
         if candidate.exists():
             return candidate
 
-    # Standard location
+    # Standard pipeline location
     candidate = vermouth.DATA_PATH / "pipelines" / f"{name}.yaml"
+    if candidate.exists():
+        return candidate
+
+    # A force field provides its pipeline alongside its definitions.
+    candidate = vermouth.DATA_PATH / "force_fields" / str(name) / "pipeline.yaml"
     if candidate.exists():
         return candidate
 
@@ -1298,7 +1313,10 @@ def build_pipeline_document(
                     "from",
                     {
                         "$include": [
-                            f"{from_pipeline}:martinize2.steps.from",
+                            {
+                                "path": f"{from_pipeline}:martinize2.steps.from",
+                                "rename_variables": {"ff": "source_ff"},
+                            },
                         ],
                     },
                 ),
@@ -1642,8 +1660,8 @@ class PipelineConfigBuilder:
                 find_pipeline_configs(selected_pipelines, self.pipeline_dirs)
             )
             pipeline_conf = build_pipeline_document(
-                self.from_pipeline,
-                self.to_pipeline,
+                self.paths[0],
+                self.paths[1],
                 self.pipeline_dirs,
                 self.pipeline_names,
             )

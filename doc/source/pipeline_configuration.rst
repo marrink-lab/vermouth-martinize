@@ -44,14 +44,17 @@ Source and target pipeline fragments are selected with ``-from`` and ``-ff``::
         -inpath input.pdb \
         -outpath output.pdb
 
-``-from`` and ``-ff`` select the source and target pipeline fragments,
-respectively. Names such as ``charmm`` and ``martini3001`` are resolved from
-the default pipeline directory. The default pipeline configurations
-distributed with Vermouth are located in ``vermouth/data/pipelines``. A path
-to a custom YAML file can also be used.
+``-from`` and ``-ff`` select the source and target force fields and their
+corresponding pipeline fragments, respectively. Each bundled force field
+provides ``force_fields/<name>/pipeline.yaml``. Target Martini and ELNEDYN
+pipelines include the shared ``pipelines/base_martini.yaml`` definition. A
+path to a custom YAML file can also be used.
+
+Force fields loaded with ``-extra_ff_dir`` are treated the same way: their
+``pipeline.yaml`` is resolved from the selected force field's own directory.
 
 Complete, working configurations can be found in the
-`pipeline configuration directory <https://github.com/marrink-lab/vermouth-martinize/tree/main/vermouth/data/pipelines>`_.
+`force-field data directory <https://github.com/marrink-lab/vermouth-martinize/tree/main/vermouth/data/force_fields>`_.
 These can be used as examples when writing new pipeline fragments.
 
 Multiple pipeline files
@@ -100,7 +103,7 @@ the including scope. Names not listed are preserved::
 
    martinize2:
      $include:
-       - path: charmm.yaml:martinize2.steps.from
+       - path: ../force_fields/charmm/pipeline.yaml:martinize2.steps.from
          rename_variables:
            ff: source_ff
 
@@ -109,8 +112,8 @@ dot-separated path. Ordered mappings accept their key as a dotted path
 component or a numeric index in brackets. The following references select the
 same argument mapping::
 
-   charmm.yaml:martinize2.steps[0].args
-   charmm.yaml:martinize2.steps.read_input.args
+   ../force_fields/charmm/pipeline.yaml:martinize2.steps[0].args
+   ../force_fields/charmm/pipeline.yaml:martinize2.steps.read_input.args
 
 Pipeline structure
 ------------------

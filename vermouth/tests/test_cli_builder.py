@@ -4,6 +4,7 @@ Tests for the CLIBuilder class.
 
 import sys
 from pathlib import Path
+from collections import OrderedDict
 sys.path.insert(0, str(Path(__file__).parent))
 import pytest
 from vermouth.pipeline import CLIBuilder
@@ -16,21 +17,23 @@ def simple_pipeline_conf():
     A simple pipeline config with only CLI flags and no steps.
     """
     return {
-        "cli_flags": {
-            "inpath": {
-                "type": "path",
-                "required": True,
-            },
-            "elastic": {
-                "action": "store_true",
-                "default": False,
-            },
-            "maxwarn": {
-                "type": "int",
-                "default": 0,
+        "cli": {
+            "flags": {
+                "inpath": {
+                    "type": "path",
+                    "required": True,
+                },
+                "elastic": {
+                    "action": "store_true",
+                    "default": False,
+                },
+                "maxwarn": {
+                    "type": "int",
+                    "default": 0,
+                },
             },
         },
-        "steps": [],
+        "steps": OrderedDict(),
     }
 
 def test_inpath_flag(simple_pipeline_conf):
@@ -38,7 +41,7 @@ def test_inpath_flag(simple_pipeline_conf):
     Test that CLIBuilder can correctly parse a simple CLI flag.
     """
 
-    cli_builder = CLIBuilder(simple_pipeline_conf)
+    cli_builder = CLIBuilder("test", simple_pipeline_conf)
 
     args = cli_builder.parse_cli_args(['-inpath', 'test.pdb'])
 
@@ -49,7 +52,7 @@ def test_default_value(simple_pipeline_conf):
     Test that CLIBuilder can correctly handle default values.
     """
     
-    cli_builder = CLIBuilder(simple_pipeline_conf)
+    cli_builder = CLIBuilder("test", simple_pipeline_conf)
 
     args = cli_builder.parse_cli_args(["-inpath", "test.pdb"])
 
@@ -60,7 +63,7 @@ def test_store_true_flag(simple_pipeline_conf):
     Test that CLIBuilder can correctly parse a store_true CLI flag.
     """
 
-    cli_builder = CLIBuilder(simple_pipeline_conf)
+    cli_builder = CLIBuilder("test", simple_pipeline_conf)
 
     args = cli_builder.parse_cli_args([
         "-inpath", "test.pdb",
@@ -74,7 +77,7 @@ def test_int_type(simple_pipeline_conf):
     Test that CLIBuilder can correctly parse an integer CLI flag.
     """
 
-    cli_builder = CLIBuilder(simple_pipeline_conf)
+    cli_builder = CLIBuilder("test", simple_pipeline_conf)
 
     args = cli_builder.parse_cli_args([
         "-inpath", "test.pdb",
@@ -91,20 +94,22 @@ def nested_pipeline_conf():
     """
 
     return {
-        "steps": [
+        "steps": OrderedDict([
             (
                 "group",
                 {
-                    "cli_flags": {
-                        "molname": {
-                            "type": "str",
-                            "default": "molecule",
-                        }
+                    "cli": {
+                        "flags": {
+                            "molname": {
+                                "type": "str",
+                                "default": "molecule",
+                            },
+                        },
                     },
-                    "steps": [],
+                    "steps": OrderedDict(),
                 },
-            )
-        ]
+            ),
+        ]),
     }
 
 
@@ -113,7 +118,7 @@ def test_nested_cli_flags(nested_pipeline_conf):
     Test that CLIBuilder can correctly parse CLI flags in nested steps.
     """
 
-    cli_builder = CLIBuilder(nested_pipeline_conf)
+    cli_builder = CLIBuilder("test", nested_pipeline_conf)
 
     args = cli_builder.parse_cli_args(["-molname", "protein 1"])
 
@@ -124,29 +129,33 @@ def test_duplicate_cli_flag_is_added_once():
     Test that duplicate CLI flags are not added multiple times.
     """
     pipeline_conf = {
-        "cli_flags": {
-            "inpath": {
-                "type": "path",
-                "required": True,
+        "cli": {
+            "flags": {
+                "inpath": {
+                    "type": "path",
+                    "required": True,
+                },
             },
         },
-        "steps": [
+        "steps": OrderedDict([
             (
                 "nested_step",
                 {
-                    "cli_flags": {
-                        "inpath": {
-                            "type": "path",
-                            "required": True,
+                    "cli": {
+                        "flags": {
+                            "inpath": {
+                                "type": "path",
+                                "required": True,
+                            },
                         },
                     },
-                    "steps": [],
+                    "steps": OrderedDict(),
                 },
-            )
-        ],
+            ),
+        ]),
     }
 
-    cli_builder = CLIBuilder(pipeline_conf)
+    cli_builder = CLIBuilder("test", pipeline_conf)
     parser = cli_builder.argparser
 
     inpath_actions = [
@@ -162,9 +171,9 @@ def test_mutually_exclusive_cli_group():
     Test that CLIBuilder creates a mutually exclusive CLI group.
     """
     pipeline_conf = {
-        "cli_groups": [
+        "cli": {
+            "exclusive_groups": [
             {
-                "type": "mutually_exclusive",
                 "flags": {
                     "dssp": {
                         "action": "store_true",
@@ -176,11 +185,12 @@ def test_mutually_exclusive_cli_group():
                     },
                 },
             }
-        ],
-        "steps": [],
+            ],
+        },
+        "steps": OrderedDict(),
     }
 
-    cli_builder = CLIBuilder(pipeline_conf)
+    cli_builder = CLIBuilder("test", pipeline_conf)
 
     with pytest.raises(SystemExit):
         cli_builder.parse_cli_args([
@@ -193,15 +203,17 @@ def test_unknown_cli_type_raises_error():
     Test that an unknown CLI type raises a ValueError.
     """
     pipeline_conf = {
-        "cli_flags": {
-            "bad_flag": {
-                "type": "unknown_type",
+        "cli": {
+            "flags": {
+                "bad_flag": {
+                    "type": "unknown_type",
+                },
             },
         },
-        "steps": [],
+        "steps": OrderedDict(),
     }
 
-    cli_builder = CLIBuilder(pipeline_conf)
+    cli_builder = CLIBuilder("test", pipeline_conf)
 
     with pytest.raises(ValueError):
         cli_builder.build_argparser()
@@ -211,38 +223,38 @@ def test_empty_cli_group_is_skipped():
     Test that CLIBuilder skips a CLI group when all group flags already exist.
     """
     pipeline_conf = {
-        "cli_flags": {
-            "dssp": {
-                "action": "store_true",
-                "default": False,
+        "cli": {
+            "flags": {
+                "dssp": {
+                    "action": "store_true",
+                    "default": False,
+                },
+                "ss": {
+                    "action": "store_true",
+                    "default": False,
+                },
             },
-            "ss": {
-                "action": "store_true",
-                "default": False,
-            },
-        },
-        "cli_groups": [
-            {
-                "type": "mutually_exclusive",
-                "flags": {
-                    "dssp": {
-                        "action": "store_true",
-                        "default": False,
-                    },
-                    "ss": {
-                        "action": "store_true",
-                        "default": False,
+            "exclusive_groups": [
+                {
+                    "flags": {
+                        "dssp": {
+                            "action": "store_true",
+                            "default": False,
+                        },
+                        "ss": {
+                            "action": "store_true",
+                            "default": False,
+                        },
                     },
                 },
-            }
-        ],
-        "steps": [],
+            ],
+        },
+        "steps": OrderedDict(),
     }
 
-    cli_builder = CLIBuilder(pipeline_conf)
+    cli_builder = CLIBuilder("test", pipeline_conf)
 
     parser = cli_builder.argparser
 
     assert parser is not None
-
 

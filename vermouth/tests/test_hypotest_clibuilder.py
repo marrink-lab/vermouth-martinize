@@ -1,6 +1,7 @@
 from hypothesis import note, strategies as st
 from hypothesis import given, settings 
 from pathlib import Path
+from collections import OrderedDict
 import sys
 
 import pytest 
@@ -26,10 +27,23 @@ def cli_flags(draw, known_cli_flags, **opts):
 
 def cli_group(known_cli_flags, **opts):
     group = st.lists(st.fixed_dictionaries({
-        "type": st.just('mutually_exclusive'),
         "flags": cli_flags(known_cli_flags, min_size=2, max_size=4),
     }), **opts)
     return group
+
+
+def collect_cli_definitions(config):
+    """Collect flags and exclusive groups from a generated configuration."""
+    flags = {}
+    groups = []
+    cli = config["cli"]
+    flags.update(cli.get("flags", {}))
+    groups.extend(cli.get("exclusive_groups", []))
+    for step in config["steps"].values():
+        step_flags, step_groups = collect_cli_definitions(step)
+        flags.update(step_flags)
+        groups.extend(step_groups)
+    return flags, groups
 
 
 
@@ -40,11 +54,16 @@ def build_cli_conf(draw, known_cli_flags=None, *, min_depth=0, max_depth=3, dept
 
     go_deeper = (draw(st.booleans()) and depth < max_depth) or depth < min_depth
     this_depth = st.fixed_dictionaries({}, optional={
-            "cli_flags": cli_flags(known_cli_flags, min_size=1, max_size=4),
-            "cli_groups": cli_group(known_cli_flags, min_size=1, max_size=3)})
+        "flags": cli_flags(known_cli_flags, min_size=1, max_size=4),
+        "exclusive_groups": cli_group(
+            known_cli_flags,
+            min_size=1,
+            max_size=3,
+        ),
+    })
     this_depth = draw(this_depth)
 
-    groups = this_depth.get('cli_groups', [])
+    groups = this_depth.get('exclusive_groups', [])
     new_cli_groups.extend(groups)
 
     if go_deeper:
@@ -54,11 +73,12 @@ def build_cli_conf(draw, known_cli_flags=None, *, min_depth=0, max_depth=3, dept
             name, (conf, flags, groups) = draw(st.tuples(st.text(min_size=1), build_cli_conf(known_cli_flags, min_depth=min_depth, max_depth=max_depth, depth=depth+1)))
             confs.append((name, conf))
             new_cli_groups.extend(groups)
-        rest = {"steps": confs}
+        rest = {"steps": OrderedDict(confs)}
     else:
-        rest = {"steps": []}
-    config = dict(**this_depth, **rest)
-    return config, known_cli_flags, new_cli_groups
+        rest = {"steps": OrderedDict()}
+    config = dict(cli=this_depth, **rest)
+    flags, groups = collect_cli_definitions(config)
+    return config, flags, groups
 
 
 
@@ -66,7 +86,7 @@ def build_cli_conf(draw, known_cli_flags=None, *, min_depth=0, max_depth=3, dept
 @given(st.data())
 def test_something(data):
     conf, flags, groups = data.draw(build_cli_conf())
-    cli_builder = CLIBuilder(conf)
+    cli_builder = CLIBuilder("test", conf)
     note(f'{groups=}')
     cli_args = []
     ungrouped_flags = set(flags)

@@ -5,6 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import jsonschema
 import pytest
 import vermouth
+from vermouth.forcefield import ForceField
 from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, iter_cli_flags, load_pipeline_configs, load_yaml_file, merge_pipeline_mapping, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, rename_variables
 
 def test_options_used_in_condition_equal():
@@ -136,8 +137,10 @@ def test_validate_cli_options_valid():
     pipeline configuration.
     """
     pipeline_conf = {
-        "cli_flags": {
-            "elastic": {},
+        "cli": {
+            "flags": {
+                "elastic": {},
+            },
         },
         "args": {
             "arg": {
@@ -154,7 +157,7 @@ def test_validate_cli_options_unknown_cli():
     for an undefined CLI option.
     """
     pipeline_conf = {
-        "cli_flags": {},
+        "cli": {"flags": {}},
         "args": {
             "arg": {
                 "cli": "elastic",
@@ -188,8 +191,10 @@ def test_validate_cli_options_condition():
     that references a defined CLI option.
     """
     pipeline_conf = {
-        "cli_flags": {
-            "elastic": {},
+        "cli": {
+            "flags": {
+                "elastic": {},
+            },
         },
         "condition": {
             "equal": {
@@ -207,10 +212,12 @@ def test_validate_cli_options_recursive_step():
     nested pipeline steps.
     """
     pipeline_conf = {
-        "cli_flags": {
-            "elastic": {},
+        "cli": {
+            "flags": {
+                "elastic": {},
+            },
         },
-        "steps": [
+        "steps": OrderedDict([
             (
                 "dummy",
                 {
@@ -220,8 +227,8 @@ def test_validate_cli_options_recursive_step():
                         }
                     }
                 },
-            )
-        ],
+            ),
+        ]),
     }
 
     validate_cli_options(pipeline_conf)
@@ -232,7 +239,7 @@ def test_validate_cli_options_unknown_condition_cli():
     when a condition references an undefined CLI option.
     """
     pipeline_conf = {
-        "cli_flags": {},
+        "cli": {"flags": {}},
         "condition": {
             "equal": {
                 "cli": "elastic",
@@ -268,13 +275,15 @@ def test_validate_cli_options_cli_group():
     defined in a CLI group.
     """
     pipeline_conf = {
-        "cli_groups": [
+        "cli": {
+            "exclusive_groups": [
             {
                 "flags": {
                     "elastic": {},
                 }
             }
-        ],
+            ],
+        },
         "args": {
             "arg": {
                 "cli": "elastic",
@@ -462,12 +471,63 @@ def test_find_pipeline_yaml_pipeline_dir(tmp_path):
 
 def test_find_pipeline_yaml_default_directory():
     """
-    Test that find_pipeline_yaml finds a YAML file
-    in the default pipelines directory.
+    Test that find_pipeline_yaml finds a force-field pipeline.
     """
     result = find_pipeline_yaml("charmm", [])
 
-    assert result.name == "charmm.yaml"
+    assert result == vermouth.DATA_PATH / "force_fields" / "charmm" / "pipeline.yaml"
+
+
+@pytest.mark.parametrize(
+    "force_field",
+    [
+        "martini3001",
+        "martini22",
+        "martini22p",
+        "elnedyn21",
+        "elnedyn22",
+        "elnedyn22p",
+    ],
+)
+def test_find_pipeline_yaml_force_field_targets(force_field):
+    """Each shipped Martini and ELNEDYN force field provides a pipeline."""
+    assert find_pipeline_yaml(force_field, []) == (
+        vermouth.DATA_PATH / "force_fields" / force_field / "pipeline.yaml"
+    )
+
+
+def test_find_pipeline_yaml_force_field_directory(tmp_path):
+    """A loaded force field resolves its pipeline from its own directory."""
+    directory = tmp_path / "custom"
+    directory.mkdir()
+    pipeline = directory / "pipeline.yaml"
+    pipeline.write_text("martinize2: {}", encoding="utf-8")
+    force_field = ForceField(directory)
+
+    assert find_pipeline_yaml(force_field, []) == pipeline
+
+
+@pytest.mark.parametrize(
+    "force_field",
+    [
+        "martini3001",
+        "martini22",
+        "martini22p",
+        "elnedyn21",
+        "elnedyn22",
+        "elnedyn22p",
+    ],
+)
+def test_force_field_target_pipeline_includes_base_martini(force_field):
+    """Each target wrapper composes the shared Martini processing pipeline."""
+    _, document = PipelineConfigBuilder(
+        from_pipeline="charmm",
+        to_pipeline=force_field,
+    ).build_config()
+
+    assert list(document["martinize2"]["steps"]) == ["from", "to"]
+    assert "mappings" in document["martinize2"]["steps"]["to"]["variables"]
+
 
 def test_find_pipeline_yaml_not_found():
     """
@@ -1094,10 +1154,7 @@ def test_iter_cli_flags():
     in cli_flags.
     """
     pipeline_conf = {
-        "cli_flags": {
-            "ff": {},
-            "go": {},
-        }
+        "cli": {"flags": {"ff": {}, "go": {}}},
     }
 
     result = list(iter_cli_flags(pipeline_conf))
@@ -1113,13 +1170,15 @@ def test_iter_cli_flags_group():
     in cli_groups.
     """
     pipeline_conf = {
-        "cli_groups": [
+        "cli": {
+            "exclusive_groups": [
             {
                 "flags": {
                     "elastic": {},
                 }
             }
-        ]
+            ],
+        },
     }
 
     result = list(iter_cli_flags(pipeline_conf))
@@ -1134,16 +1193,18 @@ def test_iter_cli_flags_recursive():
     from nested pipeline steps.
     """
     pipeline_conf = {
-        "steps": [
+        "steps": OrderedDict([
             (
                 "dummy",
                 {
-                    "cli_flags": {
-                        "inpath": {},
+                    "cli": {
+                        "flags": {
+                            "inpath": {},
+                        },
                     }
                 },
-            )
-        ]
+            ),
+        ]),
     }
 
     result = list(iter_cli_flags(pipeline_conf))
@@ -1164,15 +1225,15 @@ def test_combine_pipeline_configs_combines_configs():
             {
                 "martinize2": {
                     "variables": ["ff"],
-                    "cli_flags": {
-                        "inpath": {"type": "path"},
+                    "cli": {
+                        "flags": {"inpath": {"type": "path"}},
+                        "exclusive_groups": [
+                            {"flags": {"ss": {"type": "str"}}},
+                        ],
                     },
-                    "cli_groups": [
-                        {"flags": {"ss": {"type": "str"}}},
-                    ],
-                    "steps": [
+                    "steps": OrderedDict([
                         ("ReadSystem", {"args": {}}),
-                    ],
+                    ]),
                 }
             },
         ),
@@ -1181,32 +1242,30 @@ def test_combine_pipeline_configs_combines_configs():
             {
                 "martinize2": {
                     "variables": ["ff", "mappings"],
-                    "cli_flags": {
-                        "outpath": {"type": "path"},
+                    "cli": {
+                        "flags": {"outpath": {"type": "path"}},
                     },
-                    "steps": [
+                    "steps": OrderedDict([
                         ("DoMapping", {"args": {}}),
-                    ],
+                    ]),
                 }
             },
         ),
     ]
 
     combined = combine_pipeline_configs(configs)
+    root = combined["martinize2"]
 
-    assert combined["variables"] == [
-        "charmm.ff",
-        "martini3001.ff",
-        "martini3001.mappings",
-    ]
-    assert combined["cli_flags"] == {
+    assert combined["$schema"] == "./pipeline-schema.yaml"
+    assert root["variables"] == ["ff", "mappings"]
+    assert root["cli"]["flags"] == {
         "inpath": {"type": "path"},
         "outpath": {"type": "path"},
     }
-    assert combined["cli_groups"] == [
+    assert root["cli"]["exclusive_groups"] == [
         {"flags": {"ss": {"type": "str"}}},
     ]
-    assert combined["steps"] == [
+    assert list(root["steps"].items()) == [
         ("ReadSystem", {"args": {}}),
         ("DoMapping", {"args": {}}),
     ]
@@ -1221,9 +1280,12 @@ def test_combine_pipeline_configs_rejects_same_cli_flag_with_different_options()
             "first",
             {
                 "martinize2": {
-                    "cli_flags": {
-                        "maxwarn": {"default": 0},
-                    },
+                    "steps": OrderedDict([
+                        (
+                            "first",
+                            {"cli": {"flags": {"maxwarn": {"default": 0}}}},
+                        ),
+                    ]),
                 }
             },
         ),
@@ -1231,9 +1293,12 @@ def test_combine_pipeline_configs_rejects_same_cli_flag_with_different_options()
             "second",
             {
                 "martinize2": {
-                    "cli_flags": {
-                        "maxwarn": {"default": 1},
-                    },
+                    "steps": OrderedDict([
+                        (
+                            "second",
+                            {"cli": {"flags": {"maxwarn": {"default": 1}}}},
+                        ),
+                    ]),
                 }
             },
         ),
@@ -1243,9 +1308,9 @@ def test_combine_pipeline_configs_rejects_same_cli_flag_with_different_options()
         combine_pipeline_configs(configs)
 
 
-def test_combine_pipeline_configs_rejects_duplicate_step_keys():
+def test_combine_pipeline_configs_merges_duplicate_step_keys():
     """
-    Combined fragments cannot introduce duplicate root step keys.
+    Combined fragments merge same-named steps by mapping key.
     """
     configs = [
         (
@@ -1270,8 +1335,11 @@ def test_combine_pipeline_configs_rejects_duplicate_step_keys():
         ),
     ]
 
-    with pytest.raises(ValueError, match="Duplicate step key 'mapping'"):
-        combine_pipeline_configs(configs)
+    combined = combine_pipeline_configs(configs)
+
+    assert combined["martinize2"]["steps"]["mapping"]["processor"] == (
+        "pathlib.PurePath"
+    )
 
 
 def test_pipeline_config_builder_build_config(tmp_path):
@@ -1314,6 +1382,7 @@ def test_pipeline_config_builder_generates_source_target_document(tmp_path):
 martinize2:
   steps: !!omap
     - from:
+        variables: [ff]
         steps: !!omap
           - read:
               args: {}
