@@ -508,17 +508,20 @@ def test_find_pipeline_yaml_force_field_directory(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "force_field",
+    "force_field, bond_type",
     [
-        "martini3001",
-        "martini22",
-        "martini22p",
-        "elnedyn21",
-        "elnedyn22",
-        "elnedyn22p",
+        ("martini3001", 1),
+        ("martini22", 6),
+        ("martini22p", 6),
+        ("elnedyn21", 1),
+        ("elnedyn22", 1),
+        ("elnedyn22p", 1),
     ],
 )
-def test_force_field_target_pipeline_includes_base_martini(force_field):
+def test_force_field_target_pipeline_includes_base_martini(
+    force_field,
+    bond_type,
+):
     """Each target wrapper composes the shared Martini processing pipeline."""
     _, document = PipelineConfigBuilder(
         from_pipeline="charmm",
@@ -527,6 +530,13 @@ def test_force_field_target_pipeline_includes_base_martini(force_field):
 
     assert list(document["martinize2"]["steps"]) == ["from", "to"]
     assert "mappings" in document["martinize2"]["steps"]["to"]["variables"]
+    elastic_args = document["martinize2"]["steps"]["to"]["steps"]["elastic"][
+        "args"
+    ]
+    assert elastic_args["bond_type"]["value"] == bond_type
+    assert elastic_args["default_res_min_dist"]["value"] == 2
+    assert elastic_args["bb_atomname"]["value"] == "BB"
+    assert "force_field" not in elastic_args
 
 
 def test_find_pipeline_yaml_not_found():

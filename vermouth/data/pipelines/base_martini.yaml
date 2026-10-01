@@ -96,6 +96,8 @@ martinize2:
                     args:
                       ignore_missing_graphs:
                         value: true
+                      weight:
+                        value: mass
                 - vermouth.AnnotateIDRs:
                     condition:
                       not:
@@ -130,10 +132,6 @@ martinize2:
                 info:
                   msg: Generating implicit interactions for RTP force field
                   type: step
-              condition:
-                has_variable:
-                  variable: ff
-                  key: bondedtypes
               args: {}
           - vermouth.pipeline_processors.ApplyPosresWrapper:
               log:
@@ -165,8 +163,8 @@ martinize2:
                   cli: posres
                 posres_fc:
                   cli: posres_fc
-                force_field:
-                  variable: ff
+                bb_atomname:
+                  value: BB
           - vermouth.pipeline_processors.GoModelWrapper:
               log:
                 info:
@@ -236,6 +234,13 @@ martinize2:
                   cli: water_bias_eps
                 water_bias_idrs:
                   cli: water_bias_idrs
+                water_type:
+                  value: W
+                water_bead_sizes:
+                  value:
+                    regular: 0.47
+                    small: 0.41
+                    tiny: 0.34
           - vermouth.pipeline_processors.MergeChainsWrapper:
               condition:
                 not:
@@ -373,8 +378,12 @@ martinize2:
                   cli: rb_unit
                 res_min_dist:
                   cli: res_min_dist
-                force_field:
-                  variable: ff
+                default_res_min_dist:
+                  value: 2
+                bond_type:
+                  value: 1
+                bb_atomname:
+                  value: BB
           - vermouth.pipeline_processors.VirtualSiteCreatorWrapper:
               condition:
                 all:
@@ -397,6 +406,13 @@ martinize2:
                   cli: water_bias_eps
                 water_bias_idrs:
                   cli: water_bias_idrs
+                water_type:
+                  value: W
+                water_bead_sizes:
+                  value:
+                    regular: 0.47
+                    small: 0.41
+                    tiny: 0.34
           - vermouth.UnstashAttributes:
               condition:
                 equal:

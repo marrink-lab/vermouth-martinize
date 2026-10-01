@@ -60,6 +60,7 @@ class ForceField:
     renamed_residues: dict
     name: str
     directory: pathlib.Path or None
+    bondedtypes: object or None
     variables: dict
     """
 
@@ -71,6 +72,7 @@ class ForceField:
         self.variables = {}
         self.name = None
         self.directory = None
+        self.bondedtypes = None
         self.citations = {}
         if directory is not None:
             self.name = os.path.basename(str(directory))

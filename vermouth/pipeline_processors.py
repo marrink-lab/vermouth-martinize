@@ -328,7 +328,7 @@ class GoReader(Processor):
 class ApplyPosresWrapper(WrapperMixin, vermouth.ApplyPosres):
     """Adapt position-restraint options for ``ApplyPosres``."""
     @staticmethod
-    def wrap(posres, posres_fc, force_field):
+    def wrap(posres, posres_fc, bb_atomname):
         """
         Build the selector and force constant for position restraints.
 
@@ -338,8 +338,8 @@ class ApplyPosresWrapper(WrapperMixin, vermouth.ApplyPosres):
             Atom selection used for position restraints.
         posres_fc : float
             Position-restraint force constant.
-        force_field : vermouth.forcefield.ForceField
-            Force field used to determine backbone atoms.
+        bb_atomname : str
+            Atom name used to select backbone beads.
 
         Returns
         -------
@@ -349,11 +349,10 @@ class ApplyPosresWrapper(WrapperMixin, vermouth.ApplyPosres):
         LOGGER.info("Applying position restraints.", type="step")
         node_selectors = {
             "all": (selectors.select_all, None),
-            # look if the forcefield has the variable bb_atomname. the force_field object comes in the yaml from target_ff.
             "backbone": (
                 selectors.select_backbone,
-                force_field.variables["bb_atomname"]
-            )   
+                bb_atomname,
+            ),
         }
         node_selector = node_selectors[posres]
         return(node_selector, posres_fc), {}
@@ -396,7 +395,9 @@ class GoModelWrapper(Processor):
             molname,
             water_bias = False,
             water_bias_eps = None,
-            water_bias_idrs = None
+            water_bias_idrs = None,
+            water_type = "W",
+            water_bead_sizes = None,
         ):
         self.go_low = go_low
         self.go_up = go_up
@@ -408,6 +409,8 @@ class GoModelWrapper(Processor):
         self.water_bias = water_bias
         self.water_bias_eps = water_bias_eps or []
         self.water_bias_idrs = water_bias_idrs or []
+        self.water_type = water_type
+        self.water_bead_sizes = water_bead_sizes
 
     def run_system(self, system):
         """
@@ -440,6 +443,8 @@ class GoModelWrapper(Processor):
                 vermouth.processors.ComputeWaterBias(self.water_bias,
                                                     dict(self.water_bias_eps),
                                                     self.water_bias_idrs,
+                                                    self.water_type,
+                                                    self.water_bead_sizes,
                                                     ).run_system(system)
         return system
     
@@ -502,7 +507,9 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         rb_selection,
         rb_unit,
         res_min_dist,
-        force_field,
+        default_res_min_dist,
+        bond_type,
+        bb_atomname,
     ):
         """
         Translate elastic-network options.
@@ -526,9 +533,13 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         rb_unit : str
             Unit within which elastic interactions are generated.
         res_min_dist : int
-            Minimum residue separation.
-        force_field : vermouth.forcefield.ForceField
-            Force field used to determine backbone atoms.
+            Command-line override for the minimum residue separation.
+        default_res_min_dist : int
+            Force-field default minimum residue separation.
+        bond_type : int
+            Gromacs bond function type for elastic-network bonds.
+        bb_atomname : str
+            Atom name used to select backbone beads.
 
         Returns
         -------
@@ -571,7 +582,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         else:
             selector = functools.partial(
                 selectors.select_backbone,
-                bb_atomname=force_field.variables['bb_atomname'],
+                bb_atomname=bb_atomname,
             )
 
         return (), {
@@ -583,13 +594,24 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             "minimum_force": rb_minimum_force,
             "selector": selector,
             "domain_criterion": domain_criterion,
-            "res_min_dist": res_min_dist,
+            "res_min_dist": (
+                default_res_min_dist
+                if res_min_dist is None
+                else res_min_dist
+            ),
+            "bond_type": bond_type,
         }
 
 class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias):
     """Adapt water-bias options for ``ComputeWaterBias``."""
     @staticmethod
-    def wrap(water_bias, water_bias_eps=None, water_bias_idrs=None):
+    def wrap(
+        water_bias,
+        water_bias_eps=None,
+        water_bias_idrs=None,
+        water_type="W",
+        water_bead_sizes=None,
+    ):
         """
         Translate water-bias options.
 
@@ -611,6 +633,8 @@ class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias
             water_bias,
             dict(water_bias_eps) or [],
             water_bias_idrs or [],
+            water_type,
+            water_bead_sizes,
         ), {}
 
 class OutputWriterWrapper(Processor):
