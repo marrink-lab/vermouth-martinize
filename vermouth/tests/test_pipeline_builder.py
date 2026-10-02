@@ -332,6 +332,7 @@ def test_pipeline_builder_builds_pipeline():
     pipeline = builder.build_pipeline(cli_args, variables)
 
     assert isinstance(pipeline, Pipeline)
+    assert pipeline.name == "pipeline"
     assert pipeline_conf["steps"]["pathlib.Path"]["args"]["path"] == {
         "cli": "inpath",
     }

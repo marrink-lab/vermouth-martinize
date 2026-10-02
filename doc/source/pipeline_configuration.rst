@@ -8,7 +8,7 @@ Martinize2 pipelines define which processors are run, their order, their
 arguments, and the conditions under which they are executed.
 
 Pipeline configurations can be written in YAML. The YAML files are read by
-the :class:`~vermouth.pipeline.PipelineConfigBuilder` and converted into an internal pipeline
+the :class:`~vermouth.martinize2_pipeline.PipelineConfigBuilder` and converted into an internal pipeline
 configuration. This configuration is then used to construct the command-line
 interface and the executable pipeline.
 
@@ -21,7 +21,7 @@ Pipeline builders
 
 The pipeline configuration is processed by three builder classes:
 
-:class:`~vermouth.pipeline.PipelineConfigBuilder`
+:class:`~vermouth.martinize2_pipeline.PipelineConfigBuilder`
     Loads one or more YAML pipeline files and combines them into a single
     pipeline configuration.
 
@@ -274,7 +274,7 @@ Pipeline files can define command-line options under ``cli_flags``:
        default: false
        help: Generate an elastic network.
 
-The :class:`~vermouth.pipeline.PipelineConfigBuilder` reads these definitions into the internal
+The :class:`~vermouth.martinize2_pipeline.PipelineConfigBuilder` reads these definitions into the internal
 pipeline configuration. The :class:`~vermouth.pipeline.CLIBuilder` uses this configuration to
 construct the Martinize2 command-line interface.
 

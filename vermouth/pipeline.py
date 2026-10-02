@@ -13,6 +13,13 @@ from vermouth.log_helpers import TypeAdapter, StyleAdapter
 import logging
 LOGGER = StyleAdapter(TypeAdapter(logging.getLogger("vermouth")))
 
+DEFAULT_CLI_TYPE_MAP = {
+    "str": str,
+    "int": int,
+    "float": float,
+    "path": Path,
+}
+
 
 class _LiteralDollarString(str):
     """A string whose leading dollar sign was escaped in YAML."""
@@ -275,279 +282,6 @@ def validate_cli_options(
                 local_variables,   
             )
 
-def _cys_argument(value):
-    """
-    Parse a cysteine bridge command-line argument.
-
-    Parameters
-    ----------
-    value : str
-        Value supplied on the command line. Accepted values are ``auto``,
-        ``none``, or a floating-point number.
-
-    Returns
-    -------
-    str or float
-        ``auto``, ``none``, or the parsed floating-point value.
-
-    Raises
-    ------
-    argparse.ArgumentTypeError
-        If the value cannot be parsed.
-    """
-    try:
-        return float(value)
-    except ValueError:
-        match value.lower():
-            case "auto" | "none" as v:
-                return v
-            case _:
-                raise argparse.ArgumentTypeError(
-                    'Value must be "auto", "none", or a float.'
-                )
-def water_bias(value):
-    """
-    Parse a water-bias command-line argument.
-
-    Parameters
-    ----------
-    value : str
-        A letter and epsilon value separated by a colon.
-
-    Returns
-    -------
-    tuple[str, float]
-        The letter and corresponding epsilon value.
-
-    Raises
-    ------
-    argparse.ArgumentTypeError
-        If the value does not have the expected format.
-    """
-    try:
-        letter, epsilon = value.split(":")
-        return letter, float(epsilon)
-    except Exception:
-        raise argparse.ArgumentTypeError(
-                'value must be a letter and a float separated by a colon'
-    )
-def ignore_resname(value):
-    """
-    Parse a comma-separated list of residue names.
-
-    Parameters
-    ----------
-    value : str
-        Comma-separated residue names.
-
-    Returns
-    -------
-    list[str]
-        Residue names with whitespace removed.
-    """
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-def translate_cli_opts(opts):
-    """
-    Translate YAML CLI options to values accepted by argparse.
-
-    String type definitions are replaced by their corresponding Python
-    callables using ``TYPE_MAP``.
-
-    Parameters
-    ----------
-    opts : dict
-        CLI option configuration.
-
-    Returns
-    -------
-    dict
-        Translated CLI option configuration.
-
-    Raises
-    ------
-    ValueError
-        If an unknown CLI type is specified.
-    """
-    opts = dict(opts)
-
-    if 'type' in opts and isinstance(opts['type'], str):
-        type_name = opts['type']
-        if type_name not in TYPE_MAP:
-            raise ValueError(f"Unknown CLI type: {type_name}")
-        opts['type'] = TYPE_MAP[type_name]
-
-    return opts
-
-def maxwarn(value):
-    """
-    Given a maxwarn specification, split it in a warning type, and the number
-    to ignore.
-
-    >>> maxwarn('3')
-    (None, 3)
-    >>> maxwarn('general:15')
-    ('general', 15)
-    >>> maxwarn('inconsistent-data')
-    ('inconsistent-data, None)
-
-    Parameters
-    ----------
-    value: str
-        A warning type and a count, separated by a colon.
-
-    Returns
-    -------
-    tuple[str, int]
-        A warning type and the associated count to ignore. Either element can be
-        None if not specified.
-
-    Raises
-    ------
-    argparse.ArgumentTypeError
-    """
-    msg = (
-        "Values for the -maxwarn option must be the name of a "
-        "warning type, a number, or following the format "
-        "'<warning-type>:<count>' where <warning-type> is the name "
-        "of the warning type to ignore, and <count> is the number of "
-        "warning of that type to ignore. "
-        "'{value}' is not a valid value.".format(value=value)
-    )
-    splitted = value.split(":")
-    if len(splitted) == 1:
-        try:
-            count = int(value)
-        except ValueError:
-            # The value is not an int, so a warning type to ignore an
-            # an unspecified number of
-            return (value, None)
-        else:
-            return (None, count)
-    elif len(splitted) == 2:
-        try:
-            count = int(splitted[1])
-        except ValueError:
-            pass  # The exception will be raised at the end of the function
-        else:
-            return (splitted[0], count)
-    raise argparse.ArgumentTypeError(msg)
-
-
-# translation table 
-TYPE_MAP = {
-    'str': str,
-    'int': int,
-    'float': float,
-    'path': Path,
-    'cys_argument': _cys_argument,
-    'water_bias': water_bias,
-    'ignore_resname': ignore_resname,
-    'maxwarn': maxwarn,
-}
-
-
-class _MiniArgumentParser(argparse.ArgumentParser):
-    """Defer abbreviated single-dash options to the full CLI parser."""
-
-    def _get_option_tuples(self, option_string):
-        if (
-            option_string.startswith("-")
-            and not option_string.startswith("--")
-            and option_string not in self._option_string_actions
-            and any(
-                option.startswith(option_string)
-                for option in self._option_string_actions
-            )
-        ):
-            return []
-        return super()._get_option_tuples(option_string)
-
-
-#building a mini parser with the pipelines that we want because we need to know what forcefield to use.
-def build_mini_parser():
-    """
-    Build the preliminary Martinize2 command-line parser.
-
-    The mini parser handles options required before the full pipeline
-    configuration and dynamic CLI are constructed.
-
-    Returns
-    -------
-    argparse.ArgumentParser
-        Parser containing the preliminary command-line options.
-    """
-    parser = _MiniArgumentParser(add_help=False, allow_abbrev=False)
-
-    parser.add_argument(
-        "-pipeline",
-        nargs="+",
-        default=[],
-        help="Additional pipeline YAML fragments to include.",
-    )
-
-    parser.add_argument(
-        "-from",
-        dest="from_ff",
-        default="charmm",
-        help="Source force field and pipeline name.",
-    )
-
-    parser.add_argument(
-        "-ff",
-        dest="to_ff",
-        default="martini3001",
-        help="Target force field and pipeline name.",
-    )
-
-    parser.add_argument(
-        "-pipeline-dir",
-        action="append",
-        default=[],
-        type=Path,
-        help="Directory to search pipeline YAML files in.",
-    )
-
-    parser.add_argument(
-        "-extra_ff_dir",
-        dest="extra_ff_dir",
-        action="append",
-        default=[],
-        type=Path,
-    )
-
-    parser.add_argument(
-        "-extra_map_dir",
-        dest="extra_map_dir",
-        action="append",
-        default=[],
-        type=Path,
-    )
-
-    parser.add_argument(
-        "-v",
-        dest="verbosity",
-        action="count",
-        help="Enable debug logging output. Can be given multiple times.",
-        default=0,
-    )
-
-    parser.add_argument(
-        "-maxwarn",
-        dest="maxwarn",
-        type=maxwarn,
-        action="append",
-        nargs="+",
-        default=[],
-        help="The maximum number of allowed warnings. If "
-        "more warnings are encountered no output files are"
-        " written.",
-    )
-
-    parser.add_argument("-list_ff", action="store_true")
-
-    return parser
-
 def find_pipeline_yaml(name, pipeline_dirs):
     """
     Locate a pipeline YAML file.
@@ -607,10 +341,21 @@ def find_pipeline_yaml(name, pipeline_dirs):
 
     raise FileNotFoundError(f"Could not find pipeline YAML '{name}'.")
 
-def add_cli_flag(base_group, flag, opts, prefix='-'):
+def translate_cli_opts(opts, type_map=None):
+    """Translate string-defined CLI types with the supplied type mapping."""
+    opts = dict(opts)
+    if "type" in opts and isinstance(opts["type"], str):
+        try:
+            opts["type"] = (type_map or DEFAULT_CLI_TYPE_MAP)[opts["type"]]
+        except KeyError as error:
+            raise ValueError(f"Unknown CLI type: {opts['type']}") from error
+    return opts
+
+
+def add_cli_flag(base_group, flag, opts, prefix="-", type_map=None):
     opts = dict(opts)
     cli_name = opts.pop("cli", flag)
-    opts = translate_cli_opts(opts)
+    opts = translate_cli_opts(opts, type_map)
     base_group.add_argument(
         f"{prefix}{cli_name}",
         f"{prefix}{flag}",
@@ -619,7 +364,15 @@ def add_cli_flag(base_group, flag, opts, prefix='-'):
     )
 
 # build the CLI based on the pipeline configuration.
-def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwargs):
+def build_cli(
+    name,
+    pipeline_conf,
+    prefix,
+    parser=None,
+    added_flags=None,
+    type_map=None,
+    **kwargs,
+):
     """
     Build a command-line parser from a pipeline configuration.
 
@@ -657,7 +410,7 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
         if flag in added_flags:
             continue
         # make a options dict from the options defined in the yaml. and translate the type from a string to a real python type.
-        add_cli_flag(parser, flag, opts, prefix)
+        add_cli_flag(parser, flag, opts, prefix, type_map)
         added_flags.add(flag)
 
     for excl_group in cli_conf.get('exclusive_groups', []):
@@ -667,7 +420,7 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
                 continue
             if flag in added_flags:
                 continue
-            add_cli_flag(group, flag, opts, prefix)
+            add_cli_flag(group, flag, opts, prefix, type_map)
             added_flags.add(flag)
 
     for grp in cli_conf.get('groups', []):
@@ -677,7 +430,7 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
                 continue
             if flag in added_flags:
                 continue
-            add_cli_flag(group, flag, opts, prefix)
+            add_cli_flag(group, flag, opts, prefix, type_map)
             added_flags.add(flag)
         for excl_group in grp.get('exclusive_groups', []):
             exclusive_group = group.add_mutually_exclusive_group(**{k: v for k, v in excl_group.items() if k != 'flags'})
@@ -686,13 +439,20 @@ def build_cli(name, pipeline_conf, prefix, parser=None, added_flags=None, **kwar
                     continue
                 if flag in added_flags:
                     continue
-                add_cli_flag(exclusive_group, flag, opts, prefix)
+                add_cli_flag(exclusive_group, flag, opts, prefix, type_map)
                 added_flags.add(flag)
 
     # recursion for steps in the pipeline
     if pipeline_conf.get('steps'):
         for name, step in pipeline_conf["steps"].items():
-            build_cli(name, step, prefix, parser=parser, added_flags=added_flags)
+            build_cli(
+                name,
+                step,
+                prefix,
+                parser=parser,
+                added_flags=added_flags,
+                type_map=type_map,
+            )
 
     return parser
 
@@ -1312,53 +1072,6 @@ def load_pipeline_configs(pipeline_paths, pipeline_dirs=()):
     return configs
 
 
-def build_pipeline_document(
-    from_pipeline,
-    to_pipeline,
-    pipeline_dirs=(),
-    additional_pipelines=(),
-):
-    """Build and compose the CLI-generated source/target pipeline document."""
-    document = {
-        "$schema": "./pipeline-schema.yaml",
-        "martinize2": {
-            "$include": [
-                f"{pipeline}:martinize2"
-                for pipeline in additional_pipelines
-            ],
-            "steps": OrderedDict([
-                (
-                    "from",
-                    {
-                        "$include": [
-                            {
-                                "path": f"{from_pipeline}:martinize2.steps.from",
-                                "rename_variables": {"ff": "source_ff"},
-                            },
-                        ],
-                    },
-                ),
-                (
-                    "to",
-                    {
-                        "$include": [
-                            f"{to_pipeline}:martinize2.steps.to",
-                        ],
-                    },
-                ),
-            ]),
-        },
-    }
-    generated_path = vermouth.DATA_PATH / "pipelines" / "generated-pipeline.yaml"
-    document = compose_pipeline_config(
-        document,
-        generated_path,
-        pipeline_dirs,
-    )
-    validate_cli_options(document["martinize2"], path="martinize2")
-    return document
-
-
 def iter_cli_flags(pipeline_conf):
     """
     Iterate over all CLI flags in a pipeline configuration.
@@ -1591,107 +1304,6 @@ def merge_pipeline_mapping(target, incoming, source=None):
 
     return target
     
-def combine_pipeline_configs(configs):
-    """
-    Combine multiple pipeline YAML configs into one pipeline document.
-
-    Duplicate CLI flags are allowed only if their definitions are exactly equal.
-    Variables retain their declared names; callers must explicitly rename
-    conflicting variables at an include site. Steps are composed by mapping
-    key in the order given by the user.
-    """
-    combined = {
-        "$schema": "./pipeline-schema.yaml",
-        "martinize2": {
-            "cli": {},
-            "variables": [],
-            "steps": OrderedDict(),
-        },
-    }
-    root = combined["martinize2"]
-
-    for _, conf in configs:
-        incoming_root = conf["martinize2"]
-
-        # Included fragments retain their lexical variable names. Callers that
-        # combine otherwise-conflicting roots must rename variables explicitly.
-        for variable in incoming_root.get("variables", []):
-            if variable not in root["variables"]:
-                root["variables"].append(variable)
-
-        _collect_cli_flags(incoming_root)
-        merge_pipeline_mapping(root, incoming_root)
-
-    _validate_pipeline_config(
-        combined,
-        vermouth.DATA_PATH / "pipelines" / "composed-pipeline.yaml",
-    )
-    validate_cli_options(root, path="martinize2")
-    return combined
-
-
-class PipelineConfigBuilder:
-    """
-    Build a combined pipeline configuration from YAML files.
-
-    Parameters
-    ----------
-    pipeline_names : Iterable[str]
-        Names or paths of pipeline YAML files.
-    pipeline_dirs : Iterable[pathlib.Path], optional
-        Additional directories in which pipeline files are searched.
-    """
-    def __init__(
-        self,
-        pipeline_names=(),
-        pipeline_dirs=None,
-        from_pipeline=None,
-        to_pipeline=None,
-    ):
-        self.pipeline_names = pipeline_names
-        self.pipeline_dirs = pipeline_dirs or []
-        self.from_pipeline = from_pipeline
-        self.to_pipeline = to_pipeline
-        self.paths = []
-
-    def build_config(self):
-        """
-        Load, combine, and validate the pipeline configuration.
-
-        Returns
-        -------
-        tuple[list[tuple[str, dict]], dict]
-            Loaded individual configurations and the combined pipeline
-            configuration.
-        """
-        if self.from_pipeline is not None or self.to_pipeline is not None:
-            if self.from_pipeline is None or self.to_pipeline is None:
-                raise ValueError(
-                    "Both source and target pipelines must be specified."
-                )
-            selected_pipelines = [
-                self.from_pipeline,
-                self.to_pipeline,
-                *self.pipeline_names,
-            ]
-            self.paths = list(
-                find_pipeline_configs(selected_pipelines, self.pipeline_dirs)
-            )
-            pipeline_conf = build_pipeline_document(
-                self.paths[0],
-                self.paths[1],
-                self.pipeline_dirs,
-                self.pipeline_names,
-            )
-            return [], pipeline_conf
-
-        self.paths = list(find_pipeline_configs(self.pipeline_names, self.pipeline_dirs))
-        LOGGER.debug('Building a pipeline from {}', ', '.join(map(str, self.paths)))
-        configs = load_pipeline_configs(self.paths, self.pipeline_dirs)
-        pipeline_conf = combine_pipeline_configs(configs)
-        return configs, pipeline_conf
-
-
 class CLIBuilder:
     """
     Build a command-line interface from a pipeline configuration.
@@ -1703,10 +1315,11 @@ class CLIBuilder:
     prefix : str, optional
         Prefix used for generated command-line options.
     """
-    def __init__(self, name, pipeline_conf, prefix="-"):
+    def __init__(self, name, pipeline_conf, prefix="-", type_map=None):
         self.name = name
         self.pipeline_conf = _strip_source_metadata(deepcopy(pipeline_conf))
         self.prefix = prefix
+        self.type_map = type_map
         self._argparser = None
 
     @property
@@ -1734,7 +1347,13 @@ class CLIBuilder:
         **kwargs
             Additional arguments passed to ``build_cli``.
         """
-        self._argparser = build_cli(self.name, self.pipeline_conf, self.prefix, **kwargs)
+        self._argparser = build_cli(
+            self.name,
+            self.pipeline_conf,
+            self.prefix,
+            type_map=self.type_map,
+            **kwargs,
+        )
 
     def parse_cli_args(self, args=None):
         """
@@ -1762,8 +1381,9 @@ class PipelineBuilder:
     pipeline_conf : dict
         Pipeline configuration used to construct the pipeline.
     """
-    def __init__(self, pipeline_conf):
+    def __init__(self, pipeline_conf, name="pipeline"):
         self.pipeline_conf = pipeline_conf
+        self.name = name
 
     def build_pipeline(self, cli_args, variables):
         """
@@ -1788,6 +1408,6 @@ class PipelineBuilder:
 
         return Pipeline.from_dict(
             pipeline_conf,
-            "martinize2",
+            self.name,
         )
     

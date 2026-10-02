@@ -6,7 +6,23 @@ import jsonschema
 import pytest
 import vermouth
 from vermouth.forcefield import ForceField
-from vermouth.pipeline import PipelineConfigBuilder, _options_used_in_condition, _validate_raw_step_names, combine_pipeline_configs, find_pipeline_yaml, iter_cli_flags, load_pipeline_configs, load_yaml_file, merge_pipeline_mapping, select_include_fragment, validate_cli_options, validate_step_names, build_mini_parser, rename_variables
+from vermouth.martinize2_pipeline import (
+    PipelineConfigBuilder,
+    build_mini_parser,
+)
+from vermouth.pipeline import (
+    _options_used_in_condition,
+    _validate_raw_step_names,
+    find_pipeline_yaml,
+    iter_cli_flags,
+    load_pipeline_configs,
+    load_yaml_file,
+    merge_pipeline_mapping,
+    rename_variables,
+    select_include_fragment,
+    validate_cli_options,
+    validate_step_names,
+)
 
 def test_options_used_in_condition_equal():
     """
@@ -322,47 +338,6 @@ def test_validate_cli_options_accepts_flags_defined_in_sibling_pipeline():
     validate_cli_options(pipeline_conf, path="martinize2")
 
 
-def test_combine_pipeline_configs_rejects_conflicting_global_cli_flags():
-    """Fragments may repeat only identical global CLI flag definitions."""
-    configs = [
-        (
-            "from",
-            {
-                "martinize2": {
-                    "steps": OrderedDict([
-                        (
-                            "from",
-                            {
-                                "cli": {"flags": {"shared": {"default": "one"}}},
-                                "args": {},
-                            },
-                        ),
-                    ]),
-                },
-            },
-        ),
-        (
-            "to",
-            {
-                "martinize2": {
-                    "steps": OrderedDict([
-                        (
-                            "to",
-                            {
-                                "cli": {"flags": {"shared": {"default": "two"}}},
-                                "args": {},
-                            },
-                        ),
-                    ]),
-                },
-            },
-        ),
-    ]
-
-    with pytest.raises(ValueError, match="CLI flag 'shared'"):
-        combine_pipeline_configs(configs)
-
-
 def test_build_mini_parser_defaults():
     """
     Test that the mini parser returns the default values
@@ -379,6 +354,7 @@ def test_build_mini_parser_defaults():
     assert args.extra_ff_dir == []
     assert args.extra_map_dir == []
     assert args.list_ff is False
+
 
 def test_build_mini_parser_custom_arguments():
     """
@@ -536,10 +512,7 @@ def test_force_field_target_pipeline_includes_base_martini(
     bond_type,
 ):
     """Each target wrapper composes the shared Martini processing pipeline."""
-    _, document = PipelineConfigBuilder(
-        from_pipeline="charmm",
-        to_pipeline=force_field,
-    ).build_config()
+    document = PipelineConfigBuilder("charmm", force_field).build_config()
 
     assert list(document["martinize2"]["steps"]) == ["from", "to"]
     assert "mappings" in document["martinize2"]["steps"]["to"]["variables"]
@@ -1237,167 +1210,6 @@ def test_iter_cli_flags_recursive():
     ]
 
 
-def test_combine_pipeline_configs_combines_configs():
-    """
-    Test that combine_pipeline_configs combines variables,
-    CLI flags, CLI groups, and steps from multiple configs.
-    """
-    configs = [
-        (
-            "charmm",
-            {
-                "martinize2": {
-                    "variables": ["ff"],
-                    "cli": {
-                        "flags": {"inpath": {"type": "path"}},
-                        "exclusive_groups": [
-                            {"flags": {"ss": {"type": "str"}}},
-                        ],
-                    },
-                    "steps": OrderedDict([
-                        ("ReadSystem", {"args": {}}),
-                    ]),
-                }
-            },
-        ),
-        (
-            "martini3001",
-            {
-                "martinize2": {
-                    "variables": ["ff", "mappings"],
-                    "cli": {
-                        "flags": {"outpath": {"type": "path"}},
-                    },
-                    "steps": OrderedDict([
-                        ("DoMapping", {"args": {}}),
-                    ]),
-                }
-            },
-        ),
-    ]
-
-    combined = combine_pipeline_configs(configs)
-    root = combined["martinize2"]
-
-    assert combined["$schema"] == "./pipeline-schema.yaml"
-    assert root["variables"] == ["ff", "mappings"]
-    assert root["cli"]["flags"] == {
-        "inpath": {"type": "path"},
-        "outpath": {"type": "path"},
-    }
-    assert root["cli"]["exclusive_groups"] == [
-        {"flags": {"ss": {"type": "str"}}},
-    ]
-    assert list(root["steps"].items()) == [
-        ("ReadSystem", {"args": {}}),
-        ("DoMapping", {"args": {}}),
-    ]
-
-def test_combine_pipeline_configs_rejects_same_cli_flag_with_different_options():
-    """
-    Test that combine_pipeline_configs raises a ValueError
-    when duplicate CLI flags have different option definitions.
-    """
-    configs = [
-        (
-            "first",
-            {
-                "martinize2": {
-                    "steps": OrderedDict([
-                        (
-                            "first",
-                            {"cli": {"flags": {"maxwarn": {"default": 0}}}},
-                        ),
-                    ]),
-                }
-            },
-        ),
-        (
-            "second",
-            {
-                "martinize2": {
-                    "steps": OrderedDict([
-                        (
-                            "second",
-                            {"cli": {"flags": {"maxwarn": {"default": 1}}}},
-                        ),
-                    ]),
-                }
-            },
-        ),
-    ]
-
-    with pytest.raises(ValueError):
-        combine_pipeline_configs(configs)
-
-
-def test_combine_pipeline_configs_merges_duplicate_step_keys():
-    """
-    Combined fragments merge same-named steps by mapping key.
-    """
-    configs = [
-        (
-            "first",
-            {
-                "martinize2": {
-                    "steps": OrderedDict([
-                        ("mapping", {"processor": "pathlib.Path"}),
-                    ]),
-                }
-            },
-        ),
-        (
-            "second",
-            {
-                "martinize2": {
-                    "steps": OrderedDict([
-                        ("mapping", {"processor": "pathlib.PurePath"}),
-                    ]),
-                }
-            },
-        ),
-    ]
-
-    combined = combine_pipeline_configs(configs)
-
-    assert combined["martinize2"]["steps"]["mapping"]["processor"] == (
-        "pathlib.PurePath"
-    )
-
-
-def test_pipeline_config_builder_build_config(tmp_path):
-    """
-    Test that PipelineConfigBuilder loads, combines,
-    validates, and returns pipeline configs.
-    """
-    file = tmp_path / "charmm.yaml"
-    file.write_text(
-        """
-martinize2:
-  cli:
-    flags:
-      inpath: {}
-  steps: !!omap
-    - ReadSystem:
-        args:
-          path:
-            cli: inpath
-""",
-        encoding="utf-8",
-    )
-
-    builder = PipelineConfigBuilder(["charmm"], [tmp_path])
-
-    configs, pipeline_conf = builder.build_config()
-    assert pipeline_conf["$schema"] == "./pipeline-schema.yaml"
-    pipeline_conf = pipeline_conf["martinize2"]
-
-    assert configs[0][0] == "charmm"
-    assert pipeline_conf["cli"]["flags"]["inpath"].get("cli") is None
-    assert list(pipeline_conf["steps"]) == ["ReadSystem"]
-    assert pipeline_conf["steps"]["ReadSystem"]["args"]["path"]["cli"] == "inpath"
-
-
 def test_pipeline_config_builder_generates_source_target_document(tmp_path):
     """Source and target selections are resolved through generated includes."""
     (tmp_path / "source.yaml").write_text(
@@ -1424,10 +1236,10 @@ martinize2:
         encoding="utf-8",
     )
 
-    _, document = PipelineConfigBuilder(
+    document = PipelineConfigBuilder(
+        "source",
+        "target",
         pipeline_dirs=[tmp_path],
-        from_pipeline="source",
-        to_pipeline="target",
     ).build_config()
 
     assert document["$schema"] == "./pipeline-schema.yaml"

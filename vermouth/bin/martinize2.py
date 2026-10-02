@@ -32,10 +32,13 @@ from vermouth.map_input import (
 )
 
 from vermouth.pipeline import (
-    build_mini_parser,
-    PipelineConfigBuilder,
     CLIBuilder,
     PipelineBuilder,
+)
+from vermouth.martinize2_pipeline import (
+    TYPE_MAP,
+    PipelineConfigBuilder,
+    build_mini_parser,
 )
 # logging.basicConfig(level=logging.INFO)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
@@ -135,15 +138,19 @@ def main():
         mini_parser.error(f"Unknown force field: {error.args[0]!r}")
 
     config_builder = PipelineConfigBuilder(
-        mini_args.pipeline,
-        mini_args.pipeline_dir,
         source_force_field,
         target_force_field,
+        pipeline_names=mini_args.pipeline,
+        pipeline_dirs=mini_args.pipeline_dir,
     )
-    configs, pipeline_document = config_builder.build_config()
+    pipeline_document = config_builder.build_config()
     pipeline_conf = pipeline_document["martinize2"]
 
-    cli_builder = CLIBuilder('martinize2', pipeline_conf)
+    cli_builder = CLIBuilder(
+        "martinize2",
+        pipeline_conf,
+        type_map=TYPE_MAP,
+    )
     config_paths = []
     for path in config_builder.paths:
         try:
@@ -167,7 +174,7 @@ def main():
         "mappings": mappings,
     }
 
-    pipeline_builder = PipelineBuilder(pipeline_conf)
+    pipeline_builder = PipelineBuilder(pipeline_conf, name="martinize2")
     pipeline = pipeline_builder.build_pipeline(cli_args, variables)
 
 
