@@ -446,7 +446,25 @@ TYPE_MAP = {
     'maxwarn': maxwarn,
 }
 
-#building a mini parser with the pipelines that we want because we need to know what forcefield to use. 
+
+class _MiniArgumentParser(argparse.ArgumentParser):
+    """Defer abbreviated single-dash options to the full CLI parser."""
+
+    def _get_option_tuples(self, option_string):
+        if (
+            option_string.startswith("-")
+            and not option_string.startswith("--")
+            and option_string not in self._option_string_actions
+            and any(
+                option.startswith(option_string)
+                for option in self._option_string_actions
+            )
+        ):
+            return []
+        return super()._get_option_tuples(option_string)
+
+
+#building a mini parser with the pipelines that we want because we need to know what forcefield to use.
 def build_mini_parser():
     """
     Build the preliminary Martinize2 command-line parser.
@@ -459,7 +477,7 @@ def build_mini_parser():
     argparse.ArgumentParser
         Parser containing the preliminary command-line options.
     """
-    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser = _MiniArgumentParser(add_help=False, allow_abbrev=False)
 
     parser.add_argument(
         "-pipeline",

@@ -405,6 +405,19 @@ def test_build_mini_parser_custom_arguments():
     assert args.extra_map_dir == [Path("extra_maps")]
     assert args.list_ff is True
 
+
+def test_build_mini_parser_defers_ambiguous_pipeline_flag():
+    """
+    Pipeline flags that prefix mini-parser options are left for the full CLI.
+    """
+    parser = build_mini_parser()
+
+    args, remaining = parser.parse_known_args(["-f", "input.pdb"])
+
+    assert args.from_ff == "charmm"
+    assert remaining == ["-f", "input.pdb"]
+
+
 def test_rename_variables_updates_declarations_and_references():
     """
     Renaming applies to declarations and references in a nested mapping.
