@@ -63,19 +63,9 @@ The format recognizes the following directives:
         prot_default_bb_type P2
 
 - ``[ variables ]``
-    - ``optional``
-    - The variables section has no further subsections and lists a
-      number of variable stored as key value pairs in the `force field
-      object <data: force field>`. This allows retrieving the parameters
-      using ``force_field.variables[key] = value``.
-    - Variables are used to control force field wide parameters that
-      are tied to a specific force field version.
-    - For example, the text below specifies that the bond type of the
-      elastic networkx should be 1 for the force field.
-      .. code-block:: 
-
-        [ variables ]
-        elastic_network_bond_type 1
+    - Deprecated. New force-field files should not use this section.
+      Force-field-specific processor settings belong in the force field's
+      ``pipeline.yaml`` and are passed as explicit processor arguments.
 
 - ``[ citations ]``
 

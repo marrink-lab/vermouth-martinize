@@ -482,11 +482,8 @@ class ApplyRubberBand(Processor):
     minimum_force: float
         Minimum force constant in :math:`kJ.mol^{-1}.nm^{-2}` under which bonds
         are not kept.
-    bond_type: int or None
+    bond_type: int
         Gromacs bond function type to apply to the elastic network bonds.
-    bond_type_variable: str
-        If bond_type is not given, it will be taken from the force field, using
-        this variable name.
     domain_criterion: collections.abc.Callable
         Function to establish if two atoms are part of the same domain. Elastic
         bonds are only added within a domain. By default, all the atoms in
@@ -494,13 +491,10 @@ class ApplyRubberBand(Processor):
         expects a graph (e.g. a :class:`~vermouth.molecule.Molecule`) and two
         atom node keys as argument and returns ``True`` if the two atoms are
         part of the same domain; returns ``False`` otherwise.
-    res_min_dist: int or None
+    res_min_dist: int
         Minimum separation between two atoms for a bond to be kept.
         Bonds are kept is the separation is greater or equal to the value
         given.
-    res_min_dist_variable: str
-        If res_min_dist is not given it will be taken from the force field using
-        this variable name.
 
     See Also
     --------
@@ -508,12 +502,10 @@ class ApplyRubberBand(Processor):
     """
     def __init__(self, lower_bound, upper_bound, decay_factor, decay_power,
                  base_constant, minimum_force,
-                 res_min_dist=None,
-                 bond_type=None,
+                 res_min_dist=DEFAULT_RMD,
+                 bond_type=DEFAULT_BOND_TYPE,
                  decay_shift=0,
                  selector=selectors.select_backbone,
-                 bond_type_variable='elastic_network_bond_type',
-                 res_min_dist_variable='elastic_network_res_min_dist',
                  domain_criterion=always_true):
         super().__init__()
         self.lower_bound = lower_bound
@@ -525,29 +517,10 @@ class ApplyRubberBand(Processor):
         self.minimum_force = minimum_force
         self.bond_type = bond_type
         self.selector = selector
-        self.bond_type_variable = bond_type_variable
         self.domain_criterion = domain_criterion
         self.res_min_dist = res_min_dist
-        self.res_min_dist_variable = res_min_dist_variable
 
     def run_molecule(self, molecule):
-        # Choose the bond type. From high to low, the priority order is:
-        # * what is set as an argument to the processor
-        # * what is written in the force field variables
-        #   under the key `self.bond_type_variable`
-        # * the default value set in DEFAULT_BOND_TYPE
-        bond_type = self.bond_type
-        if self.bond_type is None:
-            bond_type = molecule.force_field.variables.get(self.bond_type_variable,
-                                                           DEFAULT_BOND_TYPE)
-
-        # Same procedure for res_min_dist the minimum distance between
-        # the resids of two beads for them to have a RB
-        res_min_dist = self.res_min_dist
-        if self.res_min_dist is None:
-            res_min_dist = molecule.force_field.variables.get(self.res_min_dist_variable,
-                                                              DEFAULT_RMD)
-
         apply_rubber_band(molecule, self.selector,
                           lower_bound=self.lower_bound,
                           upper_bound=self.upper_bound,
@@ -556,7 +529,7 @@ class ApplyRubberBand(Processor):
                           decay_shift=self.decay_shift,
                           base_constant=self.base_constant,
                           minimum_force=self.minimum_force,
-                          bond_type=bond_type,
+                          bond_type=self.bond_type,
                           domain_criterion=self.domain_criterion,
-                          res_min_dist=res_min_dist)
+                          res_min_dist=self.res_min_dist)
         return molecule

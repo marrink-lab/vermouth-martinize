@@ -106,10 +106,5 @@ class DoAverageBead(Processor):
         self.weight = weight
 
     def run_molecule(self, molecule):
-        if self.weight is None:
-            weight = molecule.force_field.variables.get('center_weight', None)
-        elif self.weight is False:
-            weight = None
-        else:
-            weight = self.weight
+        weight = None if self.weight is False else self.weight
         return do_average_bead(molecule, self.ignore_missing_graphs, weight=weight)

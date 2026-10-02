@@ -1,0 +1,11 @@
+$schema: "../../pipelines/pipeline-schema.yaml"
+martinize2:
+  $include:
+    - "../../pipelines/base_martini.yaml:martinize2"
+  steps: !!omap
+    - to:
+        steps: !!omap
+          - elastic:
+              args:
+                default_res_min_dist:
+                  value: 2

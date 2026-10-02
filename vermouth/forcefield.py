@@ -19,6 +19,7 @@ Provides a class used to describe a forcefield and all associated data.
 import itertools
 from glob import glob
 import os
+import pathlib
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
 from .citation_parser import read_bib
@@ -58,6 +59,8 @@ class ForceField:
     citations: dict
     renamed_residues: dict
     name: str
+    directory: pathlib.Path or None
+    bondedtypes: object or None
     variables: dict
     """
 
@@ -68,6 +71,8 @@ class ForceField:
         self.renamed_residues = {}
         self.variables = {}
         self.name = None
+        self.directory = None
+        self.bondedtypes = None
         self.citations = {}
         if directory is not None:
             self.name = os.path.basename(str(directory))
@@ -93,7 +98,8 @@ class ForceField:
         The provided directory must contain a subdirectory with the same name
         as the force field.
         """
-        source_files = iter_force_field_files(directory)
+        self.directory = pathlib.Path(directory)
+        source_files = iter_force_field_files(self.directory)
         for source in sorted(source_files):
             self._read_from_file(source)
 

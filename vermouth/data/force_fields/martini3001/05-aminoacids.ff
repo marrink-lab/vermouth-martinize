@@ -18,10 +18,6 @@ protein_resnames_non_pro "CYSG|CYSF|CYSP|GLYM|GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GL
 prot_default_bb_type P2
 stiff_fc 1000000
 
-[ variables ]
-elastic_network_bond_type 1
-res_min_dist 3
-
 [ citations ]
 Martini3
 

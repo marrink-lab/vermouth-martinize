@@ -502,4 +502,4 @@ def read_rtp(lines, force_field):
 
     force_field.blocks.update(blocks)
     force_field.links.extend(links)
-    force_field.variables['bondedtypes'] = bondedtypes
+    force_field.bondedtypes = bondedtypes

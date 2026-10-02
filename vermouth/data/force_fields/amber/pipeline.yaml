@@ -1,0 +1,4 @@
+$schema: "../../pipelines/pipeline-schema.yaml"
+martinize2:
+  $include:
+    - "../charmm/pipeline.yaml:martinize2"

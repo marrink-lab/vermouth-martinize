@@ -1,0 +1,267 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+properties:
+  $schema:
+    type: string
+  $include:
+    $ref: "#/definitions/include"
+  martinize2:
+    $ref: "#/definitions/pipeline"
+anyOf:
+  - required:
+      - martinize2
+  - required:
+      - $include
+unevaluatedProperties: false
+
+definitions:
+  include:
+    type: array
+    items:
+      oneOf:
+        - type: string
+        - $ref: "#/definitions/include_entry"
+
+  include_entry:
+    type: object
+    required:
+      - path
+    properties:
+      path:
+        type: string
+      rename_variables:
+        type: object
+        additionalProperties:
+          type: string
+    additionalProperties: false
+
+  steps:
+    type: array
+    minItems: 1
+    items:
+      type: array
+      minItems: 2
+      maxItems: 2
+      prefixItems:
+        - type: string
+        - $ref: "#/definitions/step"
+      items: false
+
+  log_entry:
+    type: object
+    required:
+      - msg
+      - type
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      msg:
+        type: string
+      type:
+        type: string
+        default: 'general'
+    additionalProperties: false
+
+  step_base:
+    type: object
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      cli:
+        $ref: "#/definitions/cli"
+      condition:
+        $ref: "#/definitions/condition"
+      log:
+        type: object
+        properties:
+          debug:
+            $ref: "#/definitions/log_entry"
+          info:
+            $ref: "#/definitions/log_entry"
+          warning:
+            $ref: "#/definitions/log_entry"
+          error:
+            $ref: "#/definitions/log_entry"
+          critical:
+            $ref: "#/definitions/log_entry"
+
+  step:
+    type: object
+    allOf:
+      - $ref: "#/definitions/step_base"
+      - oneOf:
+        - $ref: "#/definitions/processor"
+        - $ref: "#/definitions/pipeline"
+
+  pipeline:
+    type: object
+    anyOf:
+      - required:
+          - steps
+      - required:
+          - $include
+    allOf:
+      - $ref: "#/definitions/step_base"
+    properties:
+      cli_prefix:
+        type: string
+      variables:
+        type: array
+        items:
+          type: string
+      $include:
+        $ref: "#/definitions/include"
+      steps:
+        $ref: "#/definitions/steps"
+
+  processor:
+    type: object
+    not:
+      anyOf:
+        - required:
+            - steps
+        - required:
+            - id
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      processor:
+        type: string
+      args:
+        type: object
+        properties:
+          $include:
+            $ref: "#/definitions/include"
+        additionalProperties:
+          oneOf:
+            - type: object
+              required: ['value']
+              properties:
+                value: {}
+              additionalProperties: false
+            - type: object
+              required: ['cli']
+              properties:
+                cli:
+                  type: string
+              additionalProperties: false
+            - type: object
+              required: ['variable']
+              properties:
+                variable:
+                  type: string
+              additionalProperties: false
+            - type: object
+              required: ['$include']
+              properties:
+                $include:
+                  $ref: "#/definitions/include"
+              additionalProperties: false
+
+  cli_group:
+    type: object
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      flags:
+        type: object
+        additionalProperties:
+          $ref: "#/definitions/cli_opt"
+      exclusive_groups:
+        type: array
+        items:
+          $ref: "#/definitions/cli_group_exclusive"
+      additionalProperties: true  # Fed to argparse as kwargs
+
+  cli:
+    type: object
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      flags:
+        type: object
+        additionalProperties:
+          $ref: "#/definitions/cli_opt"
+      exclusive_groups:
+        type: array
+        items:
+          $ref: "#/definitions/cli_group_exclusive"
+      groups:
+        type: array
+        items:
+          $ref: "#/definitions/cli_group"
+
+  cli_group_exclusive:
+    type: object
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      flags:
+        type: object
+        additionalProperties:
+          $ref: "#/definitions/cli_opt"
+      additionalProperties: true  # Fed to argparse as kwargs
+
+  cli_opt:
+    type: object
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      action:
+        enum:
+          - store
+          - store_true
+          - store_false
+          - append
+          - count
+          - extend
+          - help
+          - version
+          - append_const
+          - store_const
+          - parsers
+          - subparsers
+      cli:
+        type: string
+      nargs:
+        oneOf:
+          - type: integer
+          - enum: ['+', '?', '*']
+      const: {}
+      default: {}
+      type: {}
+      choices:
+        type: array
+        items:
+          type: string
+      required: {type: boolean}
+      help: { type: string }
+      metavar: { type: string }
+
+  condition:
+    type: object
+    properties:
+      $include:
+        $ref: "#/definitions/include"
+      all:
+        type: array
+        items: {$ref: "#/definitions/condition"}
+        minItems: 2
+      any:
+        type: array
+        items: { $ref: "#/definitions/condition" }
+        minItems: 2
+      not:
+        $ref: "#/definitions/condition"
+      additionalProperties:
+        type: object
+        properties:
+          value: {}
+          cli:
+            type: string
+          variable:
+            type: string
+    anyOf:
+      - required: ['$include']
+      - minProperties: 1
+        maxProperties: 1

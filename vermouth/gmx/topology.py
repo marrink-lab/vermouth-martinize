@@ -5,6 +5,7 @@ import itertools
 from collections import namedtuple, ChainMap
 import textwrap
 import vermouth
+import sys
 from vermouth.file_writer import deferred_open
 from vermouth.citation_parser import citation_formatter
 from ..log_helpers import StyleAdapter, get_logger
@@ -12,6 +13,7 @@ from .itp import _interaction_sorting_key
 from ..data import COMMON_CITATIONS
 from ..dssp.dssp import sequence_from_residues
 from ..selectors import is_protein
+from ..processors.processor import Processor
 LOGGER = StyleAdapter(get_logger(__name__))
 
 Atomtype = namedtuple('Atomtype', 'molecule node sigma epsilon meta')
@@ -254,3 +256,28 @@ def write_gmx_topology(system,
                 )
             )
         )
+
+class Header(Processor):
+    def run_system(self, system):
+        # add a header to system with all command line arguments and the used version 
+        system.meta["header"].extend((
+            "This file was generated using the following command:",
+            " ".join(sys.argv),
+            f"vermouth {vermouth.__version__}",
+        ))
+        return system
+    
+class TopologyWriter(Processor):
+    def __init__(self, top_path):
+        self.top_path = top_path
+
+    def run_system(self, system):
+        if self.top_path is not None:
+            write_gmx_topology(
+                system,
+                self.top_path,
+                itp_paths=system.meta.get("itp_paths", {}),
+                C6C12=False,
+                defines=system.meta.get("defines", ()),
+            )
+        return system
