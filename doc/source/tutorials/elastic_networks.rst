@@ -19,11 +19,12 @@ Elastic networks are applied in Martinize2 as per the section of the help::
   -elastic              Write elastic bonds (default: False)
   -ef RB_FORCE_CONSTANT
                         Elastic bond force constant Fc in kJ/mol/nm^2 (default: 700)
-  -el RB_LOWER_BOUND    Elastic bond lower cutoff: F = Fc if rij < lo (default: 0)
+  -el RB_LOWER_BOUND    Elastic bond lower cutoff: F = 0 if rij < lo (default: 0)
   -eu RB_UPPER_BOUND    Elastic bond upper cutoff: F = 0 if rij > up (default: 0.9)
   -ermd RES_MIN_DIST    The minimum separation between two residues to have an RB the default value is set by the force-field. (default: None)
   -ea RB_DECAY_FACTOR   Elastic bond decay factor a (default: 0)
   -ep RB_DECAY_POWER    Elastic bond decay power p (default: 1)
+  -es RB_DECAY_SHIFT    Distance shift s applied before the elastic bond decay function is evaluated (default: 0)
   -em RB_MINIMUM_FORCE  Remove elastic bonds with force constant lower than this (default: 0)
   -eb RB_SELECTION      Comma separated list of bead names for elastic bonds (default: None)
   -eunit RB_UNIT        Establish what is the structural unit for the elastic network. Bonds are only created within a unit. Options are molecule, chain,
@@ -55,25 +56,34 @@ the region for the force to be applied in can be customised using the ``-el`` an
 ``martinize2 -f protein.pdb -o topol.top -x cg_protein.pdb -ff martini3001 -dssp -elastic -el 0.1 -eu 0.5``
 
 In this example, the elastic network will only be applied between backbone beads which are between 0.1 and 0.5 nm
-apart.
+apart. Both cutoffs are hard: no elastic bond is written for pairs closer than ``-el`` or further apart than ``-eu``,
+regardless of any decay function applied (see below).
 
 Using decays
 ------------
 
 The strength of the elastic bond can be tuned with distance using an exponential decay function,
-which uses the ``-ea`` and ``-ep`` flags as input parameters:
+which uses the ``-ea``, ``-ep`` and ``-es`` flags as input parameters:
 
 
 .. math::
     :label: decay
 
-    decay = e^{(- f * ((x - l) ^ p)}
+    decay = e^{(- f * ((x - s) ^ p)}
 
 where:
 
-- ``l`` = lower bound  (``-el``)
 - ``f`` = decay factor (``-ea``)
 - ``p`` = decay power  (``-ep``)
+- ``s`` = decay shift  (``-es``)
+
+The force constant of a bond is ``-ef`` multiplied by this decay, and is never allowed to exceed ``-ef``.
+The shift ``s`` moves the decay function along the distance axis, and is independent of the cutoffs:
+setting ``-es`` does not remove any bonds.
+
+NOTE! In earlier versions of martinize2, the lower cutoff ``-el`` was used as the shift of the decay function,
+and did not remove bonds. ``-el`` is now a hard cutoff only, and the shift is set with ``-es``. To reproduce
+a command written for the old behaviour, replace ``-el`` with ``-es``.
 
 Combining parameters
 --------------------
@@ -88,9 +98,9 @@ applied between all backbone beads within the cutoff.
 
 The second and third examples use a slightly longer cutoff, and apply a gentle decay function
 to the strength of the network. In the first case, the decay is applied naively, and as such its
-strength decays from 0 distance. In the second case, combining the decay with a lower cutoff means that
-for backbone beads that are close the elastic network strength is constand, but is lower between pairs slightly
-further away.
+strength decays from 0 distance. In the second case, the decay is shifted with ``-es``, so that the
+elastic network is strongest for backbone beads around 0.2 nm apart, and is lower between pairs further away.
+Because the decay power is even, the strength also decreases slightly for pairs closer than the shift.
 
 The fourth example shows a similar function to the second example, but with a longer cutoff and a stronger decay.
 (note the form of the exponential decay above)
@@ -99,6 +109,9 @@ The fifth example adds an additional parameter ``-em`` into the function. As des
 calculated to be lower than this force, they are removed and set to zero. Note how the input values are almost identical
 to the fourth example, which would otherwise get cutoff at 0.9 nm. Because the decay function reduces the force below
 the minimum before the cutoff, it overrides it and the force is zeroed before the upper cutoff anyway.
+
+The sixth example combines a hard lower cutoff with a decay shifted to the same distance. No bonds are written between
+backbone beads closer than 0.4 nm, and the strength of the network decays from ``-ef`` for pairs further apart.
 
 
 Defining structural units

@@ -1,4 +1,18 @@
-"""Command-line entry point for the configurable Martinize2 pipeline."""
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright 2018 University of Groningen
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import logging
 import sys
@@ -70,7 +84,7 @@ def force_fields(args, parser):
     -------
     tuple[dict, dict]
         The known force fields and available mappings.
-    """ 
+    """
     known_force_fields = vermouth.forcefield.find_force_fields(
         Path(DATA_PATH) / "force_fields"
     )
@@ -144,7 +158,7 @@ def main():
     )
     parser = cli_builder.argparser
     cli_args = cli_builder.parse_cli_args(remaining_args)
-    
+
 
     cli_args.update(vars(mini_args))
     variables = {

@@ -488,38 +488,46 @@ def test_bail_out_on_nan(caplog, test_molecule):
     assert test_molecule.interactions['bonds'] == []
 
 
-@pytest.mark.parametrize('lower_bound, upper_bound, decay_factor, decay_power, base_constant, minimum_force, expected_output', 
-                          ([1, 2, 0, 0, 500, 400, np.array([[  0,500,500,  0],
+@pytest.mark.parametrize('lower_bound, upper_bound, decay_factor, decay_power, decay_shift, base_constant, minimum_force, expected_output',
+                          ([1, 2, 0, 0, 0, 500, 400, np.array([[  0,500,500,  0],
                                                             [500,  0,500,500],
                                                             [500,500,  0,500],
                                                             [  0,500,500,  0]])], # no decays, return the base constant within the bounds
-                           [1, 2, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
+                           [1, 2, 0, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0]])], # all forces less than the minumum force
-                           [1, 0.5, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
+                           [1, 0.5, 0, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
                                                               [  0,  0,  0,  0],
                                                               [  0,  0,  0,  0],
                                                               [  0,  0,  0,  0]])], # all distances larger than the upper bound
-                           [4, 2, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
+                           [4, 2, 0, 0, 0, 500, 600, np.array([[  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0],
                                                             [  0,  0,  0,  0]])], # all distances less than the lower bound
-                           [1, 3, 0.1, 0, 500, 400, np.array([[  0.        , 452.41870902, 452.41870902, 452.41870902],
+                           [1, 3, 0.1, 0, 0, 500, 400, np.array([[  0.        , 452.41870902, 452.41870902, 452.41870902],
                                                               [452.41870902,   0.        , 452.41870902, 452.41870902],
                                                               [452.41870902, 452.41870902,   0.        , 452.41870902],
                                                               [452.41870902, 452.41870902, 452.41870902,   0.        ]])], # with a decay factor
-                           [1, 3, 0, 2, 500, 400, np.array([[  0,500,500,500],
+                           [1, 3, 0, 2, 0, 500, 400, np.array([[  0,500,500,500],
                                                             [500,  0,500,500],
                                                             [500,500,  0,500],
                                                             [500,500,500,  0]])], # with a decay factor
-                           [1, 3, 0.1, 2, 500, 400, np.array([[  0.        , 500.        , 452.41870902,   0.        ],
+                           [1, 3, 0.1, 2, 1, 500, 400, np.array([[  0.        , 500.        , 452.41870902,   0.        ],
                                                               [500.        ,   0.        , 500.        , 452.41870902],
                                                               [452.41870902, 500.        ,   0.        , 500.        ],
-                                                              [  0.        , 452.41870902, 500.        ,   0.        ]])], # with a complex decay
+                                                              [  0.        , 452.41870902, 500.        ,   0.        ]])], # with a complex decay, shifted to match the old lower_bound-as-shift behaviour
+                           [2, 3, 0, 0, 0, 500, 100, np.array([[  0,  0,500,500],
+                                                            [  0,  0,  0,500],
+                                                            [500,  0,  0,  0],
+                                                            [500,500,  0,  0]])], # lower_bound is a hard cutoff, independent of decay_shift
+                           [0, 10, 1, 1, 2, 500, 0, np.array([[  0.        , 500.        , 500.        , 183.93972059],
+                                                              [500.        ,   0.        , 500.        , 500.        ],
+                                                              [500.        , 500.        ,   0.        , 500.        ],
+                                                              [183.93972059, 500.        , 500.        ,   0.        ]])], # decay_shift moves the decay curve without acting as a cutoff
                           )
                         )
-def test_compute_force_constants(lower_bound, upper_bound, decay_factor, decay_power, base_constant, minimum_force, expected_output):
+def test_compute_force_constants(lower_bound, upper_bound, decay_factor, decay_power, decay_shift, base_constant, minimum_force, expected_output):
     # Define the constant distance_matrix for the test cases
     distance_matrix = np.array([[0, 1, 2, 3],
                                 [1, 0, 1, 2],
@@ -527,9 +535,9 @@ def test_compute_force_constants(lower_bound, upper_bound, decay_factor, decay_p
                                 [3, 2, 1, 0]])
 
     # Call the compute_force_constants function with the constant distance_matrix and varied parameters
-    result = vermouth.processors.apply_rubber_band.compute_force_constants(distance_matrix, lower_bound, upper_bound, 
-                                                                           decay_factor, decay_power, base_constant, 
-                                                                           minimum_force)
+    result = vermouth.processors.apply_rubber_band.compute_force_constants(distance_matrix, lower_bound, upper_bound,
+                                                                           decay_factor, decay_power, base_constant,
+                                                                           minimum_force, decay_shift=decay_shift)
 
     # Assert the result against the expected output
     assert result == pytest.approx(expected_output)

@@ -282,7 +282,7 @@ here in detail. Instead, see for example
 :class:`~vermouth.rcsu.go_vs_includes.VirtualSiteCreator`.
 
 Relevant CLI options: ``-elastic``, ``-ef``, ``-el``, ``-eu``, ``-ermd``,
-``-ea``, ``-ep``, ``-em``, ``-eb``, ``-eunit``, ``-go``,
+``-ea``, ``-ep``, ``-es``, ``-em``, ``-eb``, ``-eunit``, ``-go``,
 ``-go-eps``, ``-go-moltype``, ``-go-low``, ``-go-up``, ``-go-res-dist`` 
 
 6) Write output
