@@ -138,7 +138,7 @@ class Pipeline(nx.DiGraph, Processor):
             if self.nodes[node_idx]['condition']:
                 LOGGER.debug(f'Running {name}')
                 for level, log in self.nodes[node_idx]['log'].items():
-                    LOGGER.log(logging.getLevelNamesMapping()[level.upper()], **log)
+                    LOGGER.log(logging.getLevelName(level.upper()), **log)
                 result = processor.run_system(system)
                 if result is not None:
                     system = result

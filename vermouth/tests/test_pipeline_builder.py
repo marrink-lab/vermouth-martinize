@@ -5,6 +5,7 @@ Tests for the Pipeline Builder class.
 import sys
 from pathlib import Path
 from collections import OrderedDict
+import logging
 sys.path.insert(0, str(Path(__file__).parent))
 import pytest
 from vermouth.pipeline import set_values, eval_condition, PipelineBuilder
@@ -336,3 +337,22 @@ def test_pipeline_builder_builds_pipeline():
     }
 
 
+def test_pipeline_logs_configured_messages(caplog):
+    """
+    Pipeline log entries use logging level names supported by Python 3.10.
+    """
+    class DummyProcessor:
+        def run_system(self, system):
+            return system
+
+    pipeline = Pipeline()
+    pipeline.add(
+        DummyProcessor(),
+        condition=True,
+        log={"info": {"msg": "Running dummy processor", "type": "step"}},
+    )
+
+    with caplog.at_level(logging.INFO, logger="vermouth"):
+        pipeline.run_system(object())
+
+    assert "Running dummy processor" in caplog.messages
