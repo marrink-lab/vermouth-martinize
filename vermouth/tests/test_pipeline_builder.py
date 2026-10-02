@@ -8,6 +8,7 @@ from collections import OrderedDict
 import logging
 sys.path.insert(0, str(Path(__file__).parent))
 import pytest
+import vermouth
 from vermouth.pipeline import set_values, eval_condition, PipelineBuilder
 from vermouth.processors.processor import Pipeline
 
@@ -157,6 +158,49 @@ def test_set_values_fixed_value():
     set_values(pipeline_conf, cli_args, variables)
 
     assert pipeline_conf["args"]["delete_unknown"] is True
+
+
+def test_set_values_resolves_yaml_path_values(tmp_path):
+    """Fixed YAML paths resolve from their declaration or Vermouth data."""
+    pipeline_path = tmp_path / "pipeline.yaml"
+    pipeline_conf = {
+        "args": {
+            "relative": {
+                "value": {
+                    "$path": "input.pdb",
+                    "$source": f"{pipeline_path}:martinize2.steps.input",
+                },
+            },
+            "data": {
+                "value": {
+                    "$data": "pipelines/base_martini.yaml",
+                },
+            },
+        },
+    }
+
+    set_values(pipeline_conf, {}, {})
+
+    assert pipeline_conf["args"]["relative"] == tmp_path / "input.pdb"
+    assert pipeline_conf["args"]["data"] == (
+        vermouth.DATA_PATH / "pipelines" / "base_martini.yaml"
+    ).resolve()
+
+
+def test_set_values_rejects_data_path_outside_data_directory():
+    """Data path declarations cannot escape Vermouth's data directory."""
+    pipeline_conf = {
+        "args": {
+            "data": {
+                "value": {
+                    "$data": "../outside",
+                },
+            },
+        },
+    }
+
+    with pytest.raises(ValueError, match="must remain"):
+        set_values(pipeline_conf, {}, {})
 
 
 def test_set_values_cli_argument():

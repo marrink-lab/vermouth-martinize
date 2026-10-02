@@ -515,7 +515,46 @@ def eval_condition(condition, cli_args, variables):
 
     return verdict
 
-# set the values from the CLI into the pipeline config 
+def resolve_config_paths(value):
+    """Resolve declarative YAML path values recursively."""
+    if isinstance(value, Mapping):
+        path_directives = [
+            directive
+            for directive in ("$path", "$data")
+            if any(
+                _is_directive_key(key, directive)
+                for key in value
+            )
+        ]
+        if path_directives:
+            if len(path_directives) != 1:
+                raise ValueError(
+                    "A path value must contain exactly one path directive."
+                )
+            directive = path_directives[0]
+            reference = Path(value[directive])
+            if directive == "$path":
+                source = value.get(SOURCE_KEY)
+                if source is None:
+                    raise ValueError("$path requires YAML source metadata.")
+                return (Path(str(source).split(":", 1)[0]).parent / reference).resolve()
+
+            data_path = Path(vermouth.DATA_PATH).resolve()
+            resolved = (data_path / reference).resolve()
+            if reference.is_absolute() or not resolved.is_relative_to(data_path):
+                raise ValueError("$data paths must remain under Vermouth's data directory.")
+            return resolved
+
+        return {
+            key: resolve_config_paths(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, Collection) and not isinstance(value, _STRING_LIKE):
+        return value.__class__(resolve_config_paths(item) for item in value)
+    return value
+
+
+# set the values from the CLI into the pipeline config
 def set_values(pipeline_conf, cli_args, variables):
     """
     Resolve values and conditions in a pipeline configuration.
@@ -551,7 +590,7 @@ def set_values(pipeline_conf, cli_args, variables):
         for arg_name, value in pipeline_conf['args'].items():
             if "value" in value:
                 # check if its a fixed value
-                args[arg_name] = value['value']
+                args[arg_name] = resolve_config_paths(value['value'])
             elif "cli" in value:
                 # if not, use the CLI value 
                 args[arg_name] = cli_args[value['cli']]
@@ -1402,9 +1441,9 @@ class PipelineBuilder:
             Executable Vermouth pipeline.
         """
         pipeline_conf = resolve_literal_dollars(deepcopy(self.pipeline_conf))
-        _strip_source_metadata(pipeline_conf)
         _convert_step_mappings(pipeline_conf)
         set_values(pipeline_conf, cli_args, variables)
+        _strip_source_metadata(pipeline_conf)
 
         return Pipeline.from_dict(
             pipeline_conf,

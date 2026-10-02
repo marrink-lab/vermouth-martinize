@@ -534,6 +534,21 @@ processor argument should use one of the following source fields.
           delete_unknown:
             value: true
 
+    A fixed path can be made relative to the YAML file that declares it, or
+    to Vermouth's data directory::
+
+        args:
+          input_file:
+            value:
+              $path: input.pdb
+          base_pipeline:
+            value:
+              $data: pipelines/base_martini.yaml
+
+    ``$path`` values may use normal relative path components. ``$data`` values
+    must remain inside Vermouth's data directory. Untagged strings are passed
+    to processors unchanged.
+
 ``cli``
     The value of a command-line option::
 
