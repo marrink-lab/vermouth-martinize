@@ -95,7 +95,7 @@ class MergeNucleicStrands(AddMoleculeEdgesAtDistance):
     ----------
     threshold: float
         Distance threshold in nanometers under which to create an edge.
-    templates_donnors: list[dict]
+    templates_donors: list[dict]
         List of templates describing hydrogen donnors.
     templates_acceptors: list[dict]
         List of templates describing hydrogen acceptors.
@@ -103,12 +103,12 @@ class MergeNucleicStrands(AddMoleculeEdgesAtDistance):
         Name of the attribute under which are store the node coordinates.
     """
     def __init__(self, threshold=DNA_HB_DIST,
-                 templates_donnors=DNA_DONORS,
+                 templates_donors=DNA_DONORS,
                  templates_acceptors=DNA_ACCEPTORS,
                  attribute='position'):
         super().__init__(
             threshold=threshold,
-            templates_from=templates_donnors,
+            templates_from=templates_donors,
             templates_to=templates_acceptors,
             attribute=attribute,
             min_edges=4
