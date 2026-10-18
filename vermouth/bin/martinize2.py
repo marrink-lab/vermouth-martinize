@@ -48,7 +48,7 @@ from vermouth.map_input import (
     combine_mappings,
 )
 from vermouth.rcsu.contact_map import GenerateContactMap, read_go_map
-from vermouth.rcsu.go_pipeline import GoPipeline
+from vermouth.rcsu.go_pipeline import GoPipeline, MultiGoPipeline, assign_go_mol_idx
 from vermouth.gmx.topology import write_gmx_topology
 
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
@@ -564,53 +564,86 @@ def entry():
              "or just provide the flag to calculate as part of Martinize."
     )
     go_group.add_argument(
+        "-go-eps",
+        dest="go_eps",
+        type=float,
+        default=None,
+        help=("The strength of the Go model structural bias in kJ/mol, for "
+              "the single-virtual-site Go model; falls back to 9.414 if not given."),
+    )
+    go_group.add_argument(
+        "-go-low",
+        dest="go_low",
+        type=float,
+        default=None,
+        help=("Minimum distance (nm) below which contacts are removed; "
+              "falls back to 0.3 if not given."),
+    )
+    go_group.add_argument(
+        "-go-up",
+        dest="go_up",
+        type=float,
+        default=None,
+        help=("Maximum distance (nm) above which contacts are removed; "
+              "falls back to 1.1 if not given."),
+    )
+    go_group.add_argument(
         "-go-ff",
         dest="go_ff",
         type=Path,
         default=None,
-        help=("Path to martini_v3.0.0.itp"),
+        help=("Path to martini_v3.0.0.itp. Required to select the "
+              "multi-virtual-site Go model."),
     )
     go_group.add_argument(
         "-go-eps-inter",
         dest="go_eps_inter",
         type=float,
-        default=9.414,
-        help=("The strength of the Go model structural bias in kJ/mol for intermolecular go bonds."),
+        default=None,
+        help=("The strength of the Go model structural bias in kJ/mol for "
+              "intermolecular go bonds, for the multi-virtual-site Go model; "
+              "falls back to 9.414 if not given."),
     )
     go_group.add_argument(
         "-go-low-inter",
         dest="go_low_inter",
         type=float,
-        default=0.3,
-        help=("Minimum distance (nm) below which contacts are removed for intermolecular go bonds."),
+        default=None,
+        help=("Minimum distance (nm) below which contacts are removed for "
+              "intermolecular go bonds; falls back to 0.3 if not given."),
     )
     go_group.add_argument(
         "-go-up-inter",
         dest="go_up_inter",
         type=float,
-        default=1.1,
-        help=("Maximum distance (nm) above which contacts are removed for intermolecular go bonds."),
+        default=None,
+        help=("Maximum distance (nm) above which contacts are removed for "
+              "intermolecular go bonds; falls back to 1.1 if not given."),
     )
     go_group.add_argument(
         "-go-eps-intra",
         dest="go_eps_intra",
         type=float,
-        default=9.414,
-        help=("The strength of the Go model structural bias in kJ/mol for intramolecular go bonds."),
+        default=None,
+        help=("The strength of the Go model structural bias in kJ/mol for "
+              "intramolecular go bonds, for the multi-virtual-site Go model; "
+              "falls back to 9.414 if not given."),
     )
     go_group.add_argument(
         "-go-low-intra",
         dest="go_low_intra",
         type=float,
-        default=0.3,
-        help=("Minimum distance (nm) below which contacts are removed for intramolecular go bonds."),
+        default=None,
+        help=("Minimum distance (nm) below which contacts are removed for "
+              "intramolecular go bonds; falls back to 0.3 if not given."),
     )
     go_group.add_argument(
         "-go-up-intra",
         dest="go_up_intra",
         type=float,
-        default=1.1,
-        help=("Maximum distance (nm) above which contacts are removed for intramolecular go bonds."),
+        default=None,
+        help=("Maximum distance (nm) above which contacts are removed for "
+              "intramolecular go bonds; falls back to 1.1 if not given."),
     )
     go_group.add_argument(
         "-go-res-dist",
@@ -897,9 +930,59 @@ def entry():
     if args.elastic and args.go:
         parser.error(
             "A rubber band elastic network and GoMartini are not "
-            "compatible. The -elastic and -govs-include flags cannot "
+            "compatible. The -elastic and -go flags cannot "
             "be used together."
         )
+
+    # Two Go-model implementations are available: the original
+    # single-virtual-site method (upstream-compatible, selected by default,
+    # or explicitly via -go-eps/-go-low/-go-up), and a multi-virtual-site
+    # method that distinguishes intra-/inter-molecular Go bonds (selected by
+    # -go-ff or any of the -go-*-inter/-go-*-intra flags). Only add flags
+    # here, never remove or rename the old ones, so scripts that only use
+    # -go/-go-eps/-go-low/-go-up/-go-res-dist/-go-write-file/-go-backbone/
+    # -go-atomname keep working unchanged.
+    _old_go_flags = ('go_eps', 'go_low', 'go_up')
+    _new_go_flags = ('go_ff', 'go_eps_inter', 'go_eps_intra',
+                      'go_low_inter', 'go_up_inter',
+                      'go_low_intra', 'go_up_intra')
+    _old_go_given = [f for f in _old_go_flags if getattr(args, f) is not None]
+    _new_go_given = [f for f in _new_go_flags if getattr(args, f) is not None]
+    if _old_go_given and _new_go_given:
+        parser.error(
+            "Cannot mix the single-virtual-site Go-model flags ({}) with "
+            "the multi-virtual-site Go-model flags ({}).".format(
+                ", ".join(f"-{f.replace('_', '-')}" for f in _old_go_given),
+                ", ".join(f"-{f.replace('_', '-')}" for f in _new_go_given),
+            )
+        )
+    if _new_go_given and args.go_ff is None:
+        parser.error(
+            "The multi-virtual-site Go model requires -go-ff (path to a "
+            "force field itp with [nonbond_params] entries for the "
+            "backbone bead types)."
+        )
+    args.go_multi = bool(_new_go_given)
+    # Apply the real upstream-matching defaults now that we know whether
+    # each flag was explicitly given.
+    if args.go_eps is None:
+        args.go_eps = 9.414
+    if args.go_low is None:
+        args.go_low = 0.3
+    if args.go_up is None:
+        args.go_up = 1.1
+    if args.go_eps_inter is None:
+        args.go_eps_inter = 9.414
+    if args.go_eps_intra is None:
+        args.go_eps_intra = 9.414
+    if args.go_low_inter is None:
+        args.go_low_inter = 0.3
+    if args.go_up_inter is None:
+        args.go_up_inter = 1.1
+    if args.go_low_intra is None:
+        args.go_low_intra = 0.3
+    if args.go_up_intra is None:
+        args.go_up_intra = 1.1
 
     if args.to_ff.startswith("elnedyn"):
         # FIXME: This type of thing should be added to the FF itself.
@@ -1044,6 +1127,11 @@ def entry():
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
     if args.go:
+        if args.go_multi:
+            assign_go_mol_idx(system)
+        else:
+            # need this here because have to get contact map at atomistic resolution
+            system = vermouth.MergeAllMolecules().run_system(system)
         if isinstance(args.go, Path):
             LOGGER.info("Reading Go model contact map.", type="step")
             read_go_map(system=system, file_path=args.go)
@@ -1079,27 +1167,38 @@ def entry():
         if system.go_params["go_map"]:
             go_name_prefix = args.molname
             LOGGER.info("Generating the Go model.", type="step")
-            GoPipeline.run_system(system,
-                                moltype=go_name_prefix,
-                                cutoff_short_inter=args.go_low_inter,
-                                cutoff_long_inter=args.go_up_inter,
-                                go_eps_inter=args.go_eps_inter,
-                                cutoff_short_intra=args.go_low_intra,
-                                cutoff_long_intra=args.go_up_intra,
-                                go_eps_intra=args.go_eps_intra,
-                                res_dist=args.go_res_dist,
-                                go_anchor_bead=args.go_backbone,
-                                go_ff=args.go_ff)
+            if args.go_multi:
+                MultiGoPipeline.run_system(system,
+                                    moltype=go_name_prefix,
+                                    cutoff_short_inter=args.go_low_inter,
+                                    cutoff_long_inter=args.go_up_inter,
+                                    go_eps_inter=args.go_eps_inter,
+                                    cutoff_short_intra=args.go_low_intra,
+                                    cutoff_long_intra=args.go_up_intra,
+                                    go_eps_intra=args.go_eps_intra,
+                                    res_dist=args.go_res_dist,
+                                    go_anchor_bead=args.go_backbone,
+                                    go_atomname=args.go_atomname,
+                                    go_ff=args.go_ff)
+                if not args.water_bias:
+                    # this ensures that disordered-folded go bonds get removed regardless of force field.
+                    vermouth.processors.ComputeWaterBias(args.water_bias,
+                                                        {s: float(eps) for s, eps in args.water_bias_eps},
+                                                        [(int(start), int(stop)) for start, stop in args.id_regions],
+                                                        ).run_system(system)
+            else:
+                GoPipeline.run_system(system,
+                                    moltype=go_name_prefix,
+                                    cutoff_short=args.go_low,
+                                    cutoff_long=args.go_up,
+                                    go_eps=args.go_eps,
+                                    res_dist=args.go_res_dist,
+                                    go_anchor_bead=args.go_backbone,
+                                    go_atomname=args.go_atomname)
 
             defines = ("GO_VIRT",)
             itp_paths = {"atomtypes": "go_atomtypes.itp",
                         "nonbond_params": "go_nbparams.itp"}
-            if not args.water_bias:
-                # this ensures that disordered-folded go bonds get removed regardless of force field.
-                vermouth.processors.ComputeWaterBias(args.water_bias,
-                                                    {s: float(eps) for s, eps in args.water_bias_eps},
-                                                    [(int(start), int(stop)) for start, stop in args.id_regions],
-                                                    ).run_system(system)
         else:
             raise ValueError('No system has been found that has the go contact information ["go_map"]')
     else:
