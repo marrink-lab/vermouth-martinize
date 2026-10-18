@@ -413,7 +413,7 @@ def _extract_contact_inputs(system):
             resids.append(G.nodes[residue]['resid'])
             chains.append(G.nodes[residue]['chain'])
             res_idx.append(G.nodes[residue]['_res_serial'])
-            mol_idx.append(G.nodes[residue]['mol_idx'])
+            mol_idx.append(G.nodes[residue].get('go_mol_idx', 0))
             subgraph = G.nodes[residue]['graph']
 
             for atom in sorted(subgraph.nodes):
@@ -895,7 +895,7 @@ def read_go_map(system, file_path):
     mol_dict = {}
     check_dup = []
 
-    # this new block is nessecairy for the mol_idx attribute that needs to be given in contacts
+    # this new block is nessecairy for the go_mol_idx attribute that needs to be given in contacts
     for molecule in system.molecules:
         G = make_residue_graph(molecule)
         for residue in G.nodes:
@@ -903,7 +903,7 @@ def read_go_map(system, file_path):
             chain = (G.nodes[residue]['chain'])
             if (resid, chain) in check_dup:
                 raise IOError(f'Warning, there are multiple instances of {chain} (chain), {resid} (residue id)')
-            mol_idx = (G.nodes[residue]['mol_idx'])
+            mol_idx = G.nodes[residue].get('go_mol_idx', 0)
             mol_dict[(resid, chain)] = mol_idx
             check_dup.append((resid, chain))
 

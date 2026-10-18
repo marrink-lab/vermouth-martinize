@@ -29,6 +29,39 @@ def get_go_type_from_attributes(molecule, prefix, **kwargs):
     kwargs:
         any number of attributes
 
+    Yields
+    ------
+    str
+        the atom-type
+
+    Raises
+    ------
+    KeyError
+        If no node can be found that matches attributes
+        and prefix an KeyError is raised.
+    """
+    for node in molecule.nodes:
+        attrs = molecule.nodes[node]
+        if attributes_match(attrs, kwargs) and attrs['atype'].startswith(prefix):
+            yield attrs['atype']
+    else:
+        resid = kwargs['resid']
+        chain = kwargs['chain']
+        raise KeyError(f"Could not find GoVs with resid {resid} in chain {chain}.")
+
+def get_go_types_and_exclusions_from_attributes(molecule, prefix, **kwargs):
+    """
+    Find all nodes that satisfy a number of attributes specified
+    as kwargs and have a specific atomtype prefix.
+
+    Parameters
+    ----------
+    molecule: :class:`vermouth.molecule.Molecule`
+    prefix: str
+        the atom-type prefix of the Go virtual side
+    kwargs:
+        any number of attributes
+
     Returns
     ------
     list
