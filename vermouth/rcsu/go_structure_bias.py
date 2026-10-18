@@ -173,7 +173,10 @@ class ComputeStructuralGoBias(Processor):
                                                                  cutoff=self.res_dist))
         bad_chains_warning = False
         for contact in self.system.go_params["go_map"][0]:
-            resIDA, chainA, resIDB, chainB = contact
+            # contact_map.py always returns (resid, chain, go_mol_idx) pairs;
+            # go_mol_idx is irrelevant here since the system is one merged
+            # molecule by this point.
+            resIDA, chainA, _, resIDB, chainB, _ = contact
             # identify the contact in the residue graph based on
             # chain ID and resid
             resA = self._chain_id_to_resnode(chainA, resIDA)
