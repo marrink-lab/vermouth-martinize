@@ -176,7 +176,7 @@ def martinize(system, mappings, to_ff, delete_unknown=False, disordered_regions=
         mappings=mappings,
         to_ff=to_ff,
         delete_unknown=delete_unknown,
-        attribute_keep=("cgsecstruct", "chain", "aasecstruct", "resname", "stash", "mol_idx"),
+        attribute_keep=("cgsecstruct", "chain", "aasecstruct", "resname", "stash"),
         attribute_must=("resname", "atype"),
     ).run_system(system)
     LOGGER.info("Averaging the coordinates.", type="step")
