@@ -1098,7 +1098,7 @@ def entry():
                 # this ensures that disordered-folded go bonds get removed regardless of force field.
                 vermouth.processors.ComputeWaterBias(args.water_bias,
                                                     {s: float(eps) for s, eps in args.water_bias_eps},
-                                                    [(int(start), int(stop)) for start, stop in args.water_idrs],
+                                                    [(int(start), int(stop)) for start, stop in args.id_regions],
                                                     ).run_system(system)
         else:
             raise ValueError('No system has been found that has the go contact information ["go_map"]')
