@@ -250,6 +250,7 @@ def make_residue_graph(graph, attrs=('chain', 'resid', 'resname', 'insertion_cod
         The resulting coarser graph, where equivalent nodes are contracted to a
         single node.
     """
+
     # Create partitions. These will contain all nodes, even those without e.g.
     # a resname, since those will get resname None
     residue_idxs = collect_residues(graph, attrs)
