@@ -54,6 +54,33 @@ def build_graph_mapping_collection(from_ff, to_ff, mappings):
     return mappings[from_ff.name][to_ff.name].values()
 
 
+def _block_mapping_target(molecule, mapping, nodes_by_resname, targets):
+    """
+    The part of `molecule` a block mapping is searched in.
+
+    :func:`node_matcher` requires every attribute of a node of the mapping's
+    `block_from` other than a few (not including resname) to equal that of the
+    molecule node, so a block can only match nodes with one of its residue
+    names. Searching a view of just those nodes, which keeps the node and
+    neighbour order of the molecule, gives the same matches in the same order,
+    without trying every block against every atom of the molecule. If a node
+    of the block has no plain residue name (e.g. a predicate), the whole
+    molecule is searched. Views are cached in `targets` per set of residue
+    names.
+    """
+    resnames = set()
+    for attributes in mapping.block_from.nodes.values():
+        resname = attributes.get('resname')
+        if not isinstance(resname, str):
+            return molecule
+        resnames.add(resname)
+    key = frozenset(resnames)
+    if key not in targets:
+        nodes = set().union(*(nodes_by_resname.get(resname, ()) for resname in resnames))
+        targets[key] = nx.subgraph_view(molecule, filter_node=nx.filters.show_nodes(nodes))
+    return targets[key]
+
+
 def edge_matcher(graph1, graph2, node11, node12, node21, node22):
     """
     Checks whether the resids for node11 and node12 in graph1 are the same, and
@@ -587,9 +614,14 @@ def do_mapping(molecule, mappings, to_ff, attribute_keep=(), attribute_must=()):
     graph_out.citations.update(molecule.citations)
     mappings = build_graph_mapping_collection(molecule.force_field, to_ff, mappings)
     block_matches = []
+    nodes_by_resname = defaultdict(set)
+    for node, resname in molecule.nodes(data='resname'):
+        nodes_by_resname[resname].add(node)
+    targets = {}
     for mapping in mappings:
         if mapping.type == 'block':
-            block_matches.extend(mapping.map(molecule, node_match=_old_atomname_match,
+            target = _block_mapping_target(molecule, mapping, nodes_by_resname, targets)
+            block_matches.extend(mapping.map(target, node_match=_old_atomname_match,
                                              edge_match=edge_matcher))
     mod_matches = modification_matches(molecule, mappings)
 

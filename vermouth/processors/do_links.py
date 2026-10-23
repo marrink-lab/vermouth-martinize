@@ -234,11 +234,30 @@ def match_order(order1, resid1, order2, resid2):
     return True
 
 
+class _AtomNameGraphMatcher(nx.isomorphism.GraphMatcher):
+    """
+    A GraphMatcher that skips candidate pairs whose atom names differ when the
+    link's atom has a plain atom name. :func:`_atoms_match` rejects such pairs,
+    so the matches and their order are unchanged, but the matcher no longer
+    runs its feasibility checks for every atom of the molecule against every
+    link. Names are read when each pair is considered, as links may rename
+    atoms while matches are being applied.
+    """
+    def candidate_pairs_iter(self):
+        nodes1 = self.G1.nodes
+        nodes2 = self.G2.nodes
+        for node1, node2 in super().candidate_pairs_iter():
+            name = nodes2[node2].get('atomname')
+            if isinstance(name, str) and nodes1[node1].get('atomname') != name:
+                continue
+            yield node1, node2
+
+
 def match_link(molecule, link):
     if not attributes_match(molecule.meta, link.molecule_meta):
         return
 
-    GM = nx.isomorphism.GraphMatcher(molecule, link, node_match=_atoms_match)
+    GM = _AtomNameGraphMatcher(molecule, link, node_match=_atoms_match)
 
     raw_matches = GM.subgraph_isomorphisms_iter()
     for raw_match in raw_matches:

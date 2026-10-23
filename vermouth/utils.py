@@ -141,7 +141,15 @@ def are_all_equal(iterable):
 
     iterator = iter(iterable)
     first = next(iterator, None)
-    return all(np.all(item == first) for item in iterator)
+    for item in iterator:
+        equal = item == first
+        # Plain values compare to a bool; np.all is only needed for arrays,
+        # and calling it for every value is slow
+        if equal is True:
+            continue
+        if equal is False or not np.all(equal):
+            return False
+    return True
 
 
 def are_different(left, right):
