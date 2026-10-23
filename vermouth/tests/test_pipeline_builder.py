@@ -37,6 +37,24 @@ def test_eval_condition_equal_cli_true():
     ) is True
 
 
+def test_eval_condition_ignores_source_metadata():
+    """Source metadata does not count as a condition type."""
+    assert eval_condition(
+        {
+            "$source": "pipeline.yaml:martinize2.steps.list_blocks.condition",
+            "equal": {
+                "$source": (
+                    "pipeline.yaml:martinize2.steps.list_blocks.condition.equal"
+                ),
+                "cli": "list_blocks",
+                "value": True,
+            },
+        },
+        {"list_blocks": True},
+        {},
+    ) is True
+
+
 def test_eval_condition_equal_cli_false():
     """
     Test that eval_condition returns False for an equal condition not matching a CLI argument.
@@ -146,6 +164,7 @@ def test_set_values_fixed_value():
     """
     pipeline_conf = {
         "args": {
+            "$source": "pipeline.yaml:martinize2.steps.example.args",
             "delete_unknown": {
                 "value": True,
             }
@@ -158,6 +177,7 @@ def test_set_values_fixed_value():
     set_values(pipeline_conf, cli_args, variables)
 
     assert pipeline_conf["args"]["delete_unknown"] is True
+    assert "$source" not in pipeline_conf["args"]
 
 
 def test_set_values_resolves_yaml_path_values(tmp_path):
@@ -256,7 +276,7 @@ def test_set_values_recurses_into_steps_and_imports_processor():
                         "path": {
                             "cli": "inpath",
                         }
-                    }
+                    },
                 },
             )
         ])
@@ -356,19 +376,13 @@ def test_pipeline_builder_builds_pipeline():
             (
                 "pathlib.Path",
                 {
-                    "args": {
-                        "path": {
-                            "cli": "inpath",
-                        }
-                    }
+                    "args": {},
                 },
             )
         ])
     }
 
-    cli_args = {
-        "inpath": "test.pdb",
-    }
+    cli_args = {}
 
     variables = {}
 
@@ -377,9 +391,7 @@ def test_pipeline_builder_builds_pipeline():
 
     assert isinstance(pipeline, Pipeline)
     assert pipeline.name == "pipeline"
-    assert pipeline_conf["steps"]["pathlib.Path"]["args"]["path"] == {
-        "cli": "inpath",
-    }
+    assert pipeline_conf["steps"]["pathlib.Path"]["args"] == {}
 
 
 def test_pipeline_logs_configured_messages(caplog):

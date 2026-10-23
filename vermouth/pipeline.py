@@ -484,14 +484,18 @@ def eval_condition(condition, cli_args, variables):
     ValueError
         If the condition has an invalid or unknown condition type.
     """
-    # every condition can only have 1 key 
-    if len(condition) != 1:
+    condition_entries = [
+        (key, value)
+        for key, value in condition.items()
+        if key != SOURCE_KEY
+    ]
+    if len(condition_entries) != 1:
         raise ValueError(
             f"Condition must contain exactly one condition type, got {condition}."
         )
     
     # get the type and arguments of the condition
-    type_, args = next(iter(condition.items()))
+    type_, args = condition_entries[0]
     # what type of condition is it and what to do with it 
     match type_:
         case 'any':
@@ -588,6 +592,8 @@ def set_values(pipeline_conf, cli_args, variables):
         args = {}
         # loop through the arguments defined in the pipeline config
         for arg_name, value in pipeline_conf['args'].items():
+            if arg_name == SOURCE_KEY:
+                continue
             if "value" in value:
                 # check if its a fixed value
                 args[arg_name] = resolve_config_paths(value['value'])
