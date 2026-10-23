@@ -482,10 +482,10 @@ class Molecule(nx.Graph):
         new.log_entries = copy.deepcopy(self.log_entries)
         return new
 
-    def subgraph(self, nodes):
+    def _subgraph_without_interactions(self, nodes):
         """
-        Creates a subgraph from the molecule.
-
+        Creates a subgraph from the molecule with its nodes and edges, but no
+        interactions.
 
         Returns
         -------
@@ -511,13 +511,67 @@ class Molecule(nx.Graph):
         #    for node2 in set(self[node]) & nodes
         #]
         subgraph.add_edges_from(self.edges_between(nodes, nodes, data=True))
+        return subgraph
 
+    def subgraph(self, nodes):
+        """
+        Creates a subgraph from the molecule.
+
+
+        Returns
+        -------
+        Molecule
+        """
+        subgraph = self._subgraph_without_interactions(nodes)
+        nodes = set(nodes)
         for interaction_type, interactions in self.interactions.items():
             for interaction in interactions:
                 if all(atom in nodes for atom in interaction.atoms):
                     subgraph.interactions[interaction_type].append(interaction)
 
         return subgraph
+
+    def _partition_subgraphs(self, partitions):
+        """
+        Creates the subgraphs of the molecule for disjoint groups of nodes.
+
+        The result is the same as ``[self.subgraph(nodes) for nodes in
+        partitions]``, but the interactions are distributed in one pass over
+        them rather than one pass per group, so splitting a molecule into its
+        residues scales linearly rather than quadratically with its size.
+
+        Parameters
+        ----------
+        partitions: list[collections.abc.Collection[collections.abc.Hashable]]
+            Groups of node keys. No node may be in more than one group.
+
+        Returns
+        -------
+        list[Molecule]
+        """
+        if type(self).subgraph is not Molecule.subgraph:
+            # A subclass with its own subgraph keeps its behaviour
+            return [self.subgraph(nodes) for nodes in partitions]
+        owner = {}
+        for idx, nodes in enumerate(partitions):
+            for node in nodes:
+                owner[node] = idx
+        if len(owner) != sum(len(nodes) for nodes in partitions):
+            # Overlapping groups
+            return [self.subgraph(nodes) for nodes in partitions]
+        subgraphs = [self._subgraph_without_interactions(nodes) for nodes in partitions]
+        for interaction_type, interactions in self.interactions.items():
+            for interaction in interactions:
+                atoms = interaction.atoms
+                if not atoms:
+                    # all() of nothing is True: subgraph() gives these to every group
+                    for subgraph in subgraphs:
+                        subgraph.interactions[interaction_type].append(interaction)
+                    continue
+                idx = owner.get(atoms[0])
+                if idx is not None and all(owner.get(atom) == idx for atom in atoms):
+                    subgraphs[idx].interactions[interaction_type].append(interaction)
+        return subgraphs
 
     def add_interaction(self, type_, atoms, parameters, meta=None):
         """

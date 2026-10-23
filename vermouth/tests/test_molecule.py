@@ -265,6 +265,48 @@ def test_subgraph_interactions(molecule_subgraph):
     assert (0, 1) not in bond_atoms
 
 
+def _assert_same_subgraph(found, expected):
+    assert list(found.nodes(data=True)) == list(expected.nodes(data=True))
+    assert {frozenset(edge): data for *edge, data in found.edges(data=True)} \
+        == {frozenset(edge): data for *edge, data in expected.edges(data=True)}
+    assert dict(found.interactions) == dict(expected.interactions)
+    assert list(found.interactions) == list(expected.interactions)
+    assert found.meta == expected.meta
+    assert found.name == expected.name
+
+
+@pytest.mark.parametrize('partitions', [
+    [[0, 1], [2]],
+    [[2, 0], [1]],
+    [[0], [1], [2]],
+    [[0, 1, 2]],
+    [[1]],
+    [[0, 1], [1, 2]],  # overlapping
+])
+def test_partition_subgraphs(molecule, partitions):
+    """
+    _partition_subgraphs gives the same subgraphs as calling subgraph for
+    each group, including interactions spanning groups and without atoms.
+    """
+    molecule.add_interaction(type_='angles', atoms=(1, 0, 2), parameters=[])
+    molecule.add_interaction(type_='angles', atoms=(2, 0), parameters=['x'])
+    molecule.add_interaction(type_='exclusions', atoms=(), parameters=[])
+    found = molecule._partition_subgraphs(partitions)
+    assert len(found) == len(partitions)
+    for nodes, subgraph in zip(partitions, found):
+        _assert_same_subgraph(subgraph, molecule.subgraph(nodes))
+
+
+@hypothesis.given(random_molecule(max_nodes=12), st.integers(min_value=1, max_value=4), st.randoms())
+def test_partition_subgraphs_random(molecule, nparts, rand):
+    nodes = list(molecule.nodes)
+    rand.shuffle(nodes)
+    partitions = [nodes[i::nparts] for i in range(nparts)]
+    partitions = [part for part in partitions if part]
+    for nodes, subgraph in zip(partitions, molecule._partition_subgraphs(partitions)):
+        _assert_same_subgraph(subgraph, molecule.subgraph(nodes))
+
+
 def test_link_predicate_match():
     lp = vermouth.molecule.LinkPredicate(None)
     with pytest.raises(NotImplementedError):
