@@ -223,6 +223,10 @@ definitions:
           - subparsers
       cli:
         type: string
+      aliases:
+        type: array
+        items:
+          type: string
       nargs:
         oneOf:
           - type: integer

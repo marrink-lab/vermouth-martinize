@@ -160,7 +160,10 @@ def main():
 
     cli_builder.build_argparser(
         parents=[mini_parser],
-        added_flags={"from_ff", "to_ff"},
+        added_flags={
+            "from_ff", "to_ff", "extra_ff_dir", "extra_map_dir", "list_ff",
+            "pipeline", "pipeline_dir", "verbosity", "maxwarn",
+        },
         epilog=f'Pipeline and CLI built from {", ".join(str(p) for p in config_paths)}',
     )
     parser = cli_builder.argparser

@@ -215,11 +215,11 @@ def validate_cli_options(
     cli_conf = pipeline_conf.get('cli', {})
     local_cli_options |= set(cli_conf.get('flags', {}).keys())
     for excl_group in cli_conf.get('exclusive_groups', []):
-        local_cli_options |= set(excl_group.get('flags', {}).keys())
-    for name, group in cli_conf.get('groups', {}).items():
-        local_cli_options |= set(group.get('flags', {}).keys())
+        local_cli_options |= set(excl_group.get('flags', {}))
+    for group in cli_conf.get('groups', []):
+        local_cli_options |= set(group.get('flags', {}))
         for excl_group in group.get('exclusive_groups', []):
-            local_cli_options |= set(excl_group.get('flags', {}).keys())
+            local_cli_options |= set(excl_group.get('flags', {}))
 
     # force_field variable options
     variable_options = set(pipeline_conf.get("variables", []))
@@ -355,10 +355,11 @@ def translate_cli_opts(opts, type_map=None):
 def add_cli_flag(base_group, flag, opts, prefix="-", type_map=None):
     opts = dict(opts)
     cli_name = opts.pop("cli", flag)
+    aliases = opts.pop("aliases", [])
     opts = translate_cli_opts(opts, type_map)
     base_group.add_argument(
         f"{prefix}{cli_name}",
-        f"{prefix}{flag}",
+        *aliases,
         dest=flag,
         **opts,
     )
@@ -456,8 +457,7 @@ def build_cli(
 
     return parser
 
-
-# evaluete the condition with the cli values 
+# evaluate the condition with the cli values
 def eval_condition(condition, cli_args, variables):
     """
     Evaluate a pipeline condition.

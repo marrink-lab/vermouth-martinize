@@ -97,6 +97,44 @@ class _MiniArgumentParser(argparse.ArgumentParser):
 def build_mini_parser():
     """Build the preliminary parser used to select Martinize2 pipelines."""
     parser = _MiniArgumentParser(add_help=False, allow_abbrev=False)
+    force_field_group = parser.add_argument_group("Force field selection")
+    force_field_group.add_argument(
+        "-from",
+        dest="from_ff",
+        default="charmm",
+        help="Source force field and pipeline name.",
+    )
+    force_field_group.add_argument(
+        "-ff",
+        dest="to_ff",
+        default="martini3001",
+        help="Target force field and pipeline name.",
+    )
+    force_field_group.add_argument(
+        "-ff-dir",
+        "-extra_ff_dir",
+        dest="extra_ff_dir",
+        action="append",
+        default=[],
+        type=Path,
+        help="Additional repository for custom force fields.",
+    )
+    force_field_group.add_argument(
+        "-map-dir",
+        "-extra_map_dir",
+        dest="extra_map_dir",
+        action="append",
+        default=[],
+        type=Path,
+        help="Additional repository for mapping files.",
+    )
+    force_field_group.add_argument(
+        "-list-ff",
+        "-list_ff",
+        dest="list_ff",
+        action="store_true",
+        help="List all known force fields, and exit.",
+    )
     parser.add_argument(
         "-pipeline",
         nargs="+",
@@ -104,37 +142,11 @@ def build_mini_parser():
         help="Additional pipeline YAML fragments to include.",
     )
     parser.add_argument(
-        "-from",
-        dest="from_ff",
-        default="charmm",
-        help="Source force field and pipeline name.",
-    )
-    parser.add_argument(
-        "-ff",
-        dest="to_ff",
-        default="martini3001",
-        help="Target force field and pipeline name.",
-    )
-    parser.add_argument(
         "-pipeline-dir",
         action="append",
         default=[],
         type=Path,
         help="Directory to search pipeline YAML files in.",
-    )
-    parser.add_argument(
-        "-extra_ff_dir",
-        dest="extra_ff_dir",
-        action="append",
-        default=[],
-        type=Path,
-    )
-    parser.add_argument(
-        "-extra_map_dir",
-        dest="extra_map_dir",
-        action="append",
-        default=[],
-        type=Path,
     )
     parser.add_argument(
         "-v",
@@ -152,7 +164,12 @@ def build_mini_parser():
         default=[],
         help="The maximum number of allowed warnings.",
     )
-    parser.add_argument("-list_ff", action="store_true")
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version="martinize2",
+    )
     return parser
 
 
@@ -167,8 +184,7 @@ def build_pipeline_document(
         "$schema": "./pipeline-schema.yaml",
         "martinize2": {
             "$include": [
-                f"{pipeline}:martinize2"
-                for pipeline in additional_pipelines
+                *(f"{pipeline}:martinize2" for pipeline in additional_pipelines),
             ],
             "steps": OrderedDict([
                 (
