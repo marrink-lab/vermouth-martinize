@@ -71,7 +71,8 @@ Additional YAML files can be supplied after ``-pipeline``::
 
 Additional pipelines are included in the generated root document. Mappings,
 including ordered step mappings, are composed by key. Command-line flags are
-collected into one interface and repeated definitions must match. Variables
+collected into one interface. A repeated flag definition must have the same
+settings in every location where it appears. Variables
 retain their declared names; pipelines with conflicting variable names should
 be composed through an include with an explicit variable rename.
 
@@ -128,14 +129,15 @@ A simplified example is shown below:
   martinize2:
      variables:
        - mappings
-     cli_flags:
-       elastic:
-         action: store_true
-         default: false
-         help: Generate an elastic network.
-       inpath:
-         type: str
-         help: Path to read
+       cli:
+         flags:
+           elastic:
+             action: store_true
+             default: false
+             help: Generate an elastic network.
+           inpath:
+             type: str
+             help: Path to read
      steps:
        - vermouth.pipeline_processors.ReadSystem:
            args:
@@ -264,15 +266,16 @@ can be created by Martinize2 and referenced from the pipeline configuration.
 Command-line flags
 ------------------
 
-Pipeline files can define command-line options under ``cli_flags``:
+Pipeline files can define command-line options under ``cli.flags``:
 
 .. code-block:: yaml
 
-   cli_flags:
-     elastic:
-       action: store_true
-       default: false
-       help: Generate an elastic network.
+   cli:
+     flags:
+       elastic:
+         action: store_true
+         default: false
+         help: Generate an elastic network.
 
 The :class:`~vermouth.martinize2_pipeline.PipelineConfigBuilder` reads these definitions into the internal
 pipeline configuration. The :class:`~vermouth.pipeline.CLIBuilder` uses this configuration to
@@ -369,8 +372,10 @@ A pipeline YAML file must contain a ``martinize2`` mapping::
 
     martinize2:
       variables: []
-      cli_flags: {}
-      cli_groups: []
+      cli:
+        flags: {}
+        groups: []
+        exclusive_groups: []
       steps: []
 
 The ``martinize2`` mapping, and nested pipeline mappings below it, can contain
@@ -380,12 +385,10 @@ the following fields:
     A list of runtime variable names that can be referenced by ``args`` and
     ``condition`` entries.
 
-``cli_flags``
+``cli``
     A mapping of internal command-line option names to argparse option
-    definitions.
-
-``cli_groups``
-    A list of mutually exclusive command-line option groups.
+    definitions in ``flags``, optionally arranged in ordered ``groups`` and
+    mutually exclusive ``exclusive_groups``.
 
 ``steps``
     An ordered list of processor steps or nested pipeline groups.
@@ -424,25 +427,27 @@ identified by the presence of another ``steps`` field::
 Nested pipelines can themselves contain nested pipelines. CLI options and
 variables defined in a parent scope are available to its child steps.
 
-``cli_flags``
+``cli.flags``
 ~~~~~~~~~~~~~
 
-``cli_flags`` defines command-line arguments. The mapping key is the internal
+``cli.flags`` defines command-line arguments. The mapping key is the internal
 name under which the parsed value is stored::
 
-    cli_flags:
-      rb_force_constant:
-        cli: ef
-        type: float
-        default: 700
-        help: Elastic bond force constant Fc in kJ/mol/nm^2
+    cli:
+      flags:
+        rb_force_constant:
+          cli: ef
+          type: float
+          default: 700
+          help: Elastic bond force constant Fc in kJ/mol/nm^2
 
 The following fields are supported by the pipeline configuration layer:
 
 ``cli``
     Optional alternative spelling of the command-line flag. For example,
     ``cli: ef`` makes ``-ef`` available while the parsed value is stored as
-    ``rb_force_constant``. The internal name is also accepted as a flag.
+    ``rb_force_constant``. Additional spellings can be declared with
+    ``aliases``.
 
 ``type``
     Converts the command-line value. Supported string values are ``str``,
@@ -457,6 +462,59 @@ The following fields are supported by the pipeline configuration layer:
 
 ``help``
     Help text shown by the command-line parser.
+
+``cli.groups`` and ``cli.exclusive_groups``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``groups`` is an ordered list of argparse help groups. Each item accepts a
+``title``, optional argparse group keyword arguments, ``flags``, and nested
+``exclusive_groups``. ``exclusive_groups`` at either level preserve argparse
+mutual exclusion. The ``flags`` mappings define the options displayed in that
+group.
+
+.. code-block:: yaml
+
+   cli:
+     groups:
+       - title: Input files
+         flags:
+           inpath:
+             type: path
+       - title: Structure handling
+         exclusive_groups:
+           - flags:
+               dssp: {nargs: "?"}
+               ss: {type: str}
+
+Define a group at the lowest pipeline level that contains every processor
+using its flags. When a category spans several sibling processors, introduce a
+named sub-pipeline and place the group on that sub-pipeline. For example,
+input parsing and repair steps can share an ``Input files`` group:
+
+.. code-block:: yaml
+
+   - input:
+       cli:
+         groups:
+           - title: Input files
+             flags:
+               inpath:
+                 cli: f
+                 type: path
+               ignore_h:
+                 cli: ignh
+                 action: store_true
+       steps: !!omap
+         - vermouth.pipeline_processors.ReadSystem:
+             args:
+               path:
+                 cli: inpath
+         - prepare_structure:
+             steps: !!omap
+               - vermouth.pipeline_processors.MakeBondsWrapper:
+                   args:
+                     ignh:
+                       cli: ignore_h
 
 ``required``
     Whether the option must be supplied.
@@ -480,31 +538,6 @@ and processor definitions. A CLI option is visible in the scope where it is
 defined and in child scopes. When multiple pipeline YAML files are combined,
 a CLI flag may occur more than once only when its definitions are identical.
 
-``cli_groups``
-~~~~~~~~~~~~~~
-
-``cli_groups`` defines mutually exclusive command-line options. Each group has
-a ``flags`` mapping containing the options in the group::
-
-    cli_groups:
-      - type: mutually_exclusive
-        flags:
-          dssp:
-            nargs: "?"
-            const: true
-          ss:
-            type: str
-            default: null
-          collagen:
-            action: store_true
-            default: false
-
-The currently supported group semantics are mutually exclusive: argparse
-rejects a command line that supplies more than one flag from the same group.
-The flag definitions use the same argparse option fields as ``cli_flags``,
-except that the ``cli`` alias field is not interpreted for flags inside a
-``cli_groups`` entry.
-
 ``variables``
 ~~~~~~~~~~~~~
 
@@ -516,10 +549,8 @@ than read from YAML or the command line::
       - mappings
 
 A variable can be referenced from processor arguments and conditions. When
-multiple pipeline files are combined, variable references are namespaced with
-the stem of the YAML file. For example, ``ff`` in ``charmm.yaml`` becomes
-``charmm.ff`` internally. This allows multiple fragments to define variables
-with the same local name without collisions.
+including a fragment whose variables would conflict with its parent, use the
+``rename_variables`` mapping described in "Including pipeline fragments".
 
 ``args``
 ~~~~~~~~

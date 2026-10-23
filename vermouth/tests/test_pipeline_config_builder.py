@@ -7,10 +7,12 @@ import pytest
 import vermouth
 from vermouth.forcefield import ForceField
 from vermouth.martinize2_pipeline import (
+    TYPE_MAP,
     PipelineConfigBuilder,
     build_mini_parser,
 )
 from vermouth.pipeline import (
+    CLIBuilder,
     _options_used_in_condition,
     _validate_raw_step_names,
     find_pipeline_yaml,
@@ -380,6 +382,96 @@ def test_build_mini_parser_custom_arguments():
     assert args.extra_ff_dir == [Path("extra_ff")]
     assert args.extra_map_dir == [Path("extra_maps")]
     assert args.list_ff is True
+
+
+def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
+    """Groups are defined at the narrowest pipeline scope that owns their flags."""
+    config = PipelineConfigBuilder("charmm", "martini3001").build_config()
+    source = config["martinize2"]["steps"]["from"]
+    target = config["martinize2"]["steps"]["to"]
+
+    assert [group["title"] for group in source["cli"]["groups"]] == [
+        "Force field selection",
+    ]
+    assert source["steps"]["input"]["cli"]["groups"][0]["title"] == "Input files"
+    assert (
+        source["steps"]["input"]["steps"]["pdb_to_universal"]["cli"]["groups"][0]
+        ["title"]
+        == "Debugging options"
+    )
+    assert (
+        source["steps"]["protein_description"]["cli"]["groups"][0]["title"]
+        == "Protein description"
+    )
+    assert (
+        source["steps"]["protein_description"]["steps"][
+            "Choose secondary structure"
+        ]["cli"]["groups"][0]["title"]
+        == "Secondary structure handling"
+    )
+    assert [group["title"] for group in target["cli"]["groups"]] == [
+        "Force field selection",
+        "Output files",
+        "Apply water bias.",
+    ]
+    assert (
+        target["steps"]["vermouth.pipeline_processors.ApplyPosresWrapper"][
+            "cli"
+        ]["groups"][0]["title"]
+        == "Position restraints"
+    )
+    assert (
+        target["steps"]["vermouth.pipeline_processors.GoModelWrapper"]["cli"][
+            "groups"
+        ][0]["title"]
+        == "Virtual site based GoMartini"
+    )
+    assert target["steps"]["elastic"]["cli"]["groups"][0]["title"] == (
+        "Protein elastic network"
+    )
+
+    parser = CLIBuilder(
+        "martinize2", config["martinize2"], type_map=TYPE_MAP
+    ).argparser
+    titles = [group.title for group in parser._action_groups]
+    assert titles[2:] == [
+        "Force field selection",
+        "Input files",
+        "Debugging options",
+        "Protein description",
+        "Secondary structure handling",
+        "Force field selection",
+        "Output files",
+        "Apply water bias.",
+        "Position restraints",
+        "Virtual site based GoMartini",
+        "Protein elastic network",
+    ]
+    with pytest.raises(SystemExit):
+        parser.parse_args(["-f", "input.pdb", "-dssp", "-ss", "C"])
+
+
+def test_mini_parser_force_field_group_is_available_in_full_help():
+    """Pre-parser and source-pipeline force-field groups remain distinct."""
+    mini_parser = build_mini_parser()
+    config = PipelineConfigBuilder("charmm", "martini3001").build_config()
+    parser = CLIBuilder(
+        "martinize2", config["martinize2"], type_map=TYPE_MAP
+    )
+    parser.build_argparser(
+        parents=[mini_parser],
+        added_flags={
+            "from_ff", "to_ff", "extra_ff_dir", "extra_map_dir", "list_ff",
+            "pipeline", "pipeline_dir", "verbosity", "maxwarn",
+        },
+    )
+
+    help_text = parser.argparser.format_help()
+
+    assert help_text.count("Force field selection:") == 2
+    assert "-ff TO_FF" in help_text
+    assert "-list-blocks" in help_text
+    assert "-go-write-file [GO_WRITE_FILE]" in help_text
 
 
 def test_build_mini_parser_defers_ambiguous_pipeline_flag():
@@ -1147,7 +1239,7 @@ martinize2:
 def test_iter_cli_flags():
     """
     Test that iter_cli_flags yields flags defined
-    in cli_flags.
+    in cli.flags.
     """
     pipeline_conf = {
         "cli": {"flags": {"ff": {}, "go": {}}},
@@ -1163,7 +1255,7 @@ def test_iter_cli_flags():
 def test_iter_cli_flags_group():
     """
     Test that iter_cli_flags yields flags defined
-    in cli_groups.
+    in cli.exclusive_groups.
     """
     pipeline_conf = {
         "cli": {

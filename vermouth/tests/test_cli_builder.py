@@ -258,3 +258,53 @@ def test_empty_cli_group_is_skipped():
 
     assert parser is not None
 
+
+def test_nested_cli_groups_preserve_order_and_mutual_exclusion():
+    """Nested pipelines keep their local help groups and exclusion rules."""
+    pipeline_conf = {
+        "steps": OrderedDict([
+            (
+                "prepare_structure",
+                {
+                    "cli": {
+                        "groups": [
+                            {
+                                "title": "Input",
+                                "flags": {"input": {"type": "str"}},
+                            },
+                        ],
+                    },
+                },
+            ),
+            (
+                "secondary_structure",
+                {
+                    "cli": {
+                        "groups": [
+                            {
+                                "title": "Secondary structure",
+                                "exclusive_groups": [
+                                    {
+                                        "flags": {
+                                            "dssp": {"action": "store_true"},
+                                            "ss": {"action": "store_true"},
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            ),
+        ]),
+    }
+
+    cli_builder = CLIBuilder("test", pipeline_conf)
+    parser = cli_builder.argparser
+
+    assert [group.title for group in parser._action_groups][-2:] == [
+        "Input",
+        "Secondary structure",
+    ]
+    with pytest.raises(SystemExit):
+        cli_builder.parse_cli_args(["-dssp", "-ss"])
