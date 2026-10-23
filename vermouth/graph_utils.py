@@ -203,9 +203,13 @@ def partition_graph(graph, partitions):
     """
     new_graph = nx.Graph()
     partitions = sorted(partitions, key=min)
+    if hasattr(graph, '_partition_subgraphs'):
+        # Molecules: one pass over the interactions for all partitions
+        subgraphs = graph._partition_subgraphs(partitions)
+    else:
+        subgraphs = [nx.subgraph(graph, node_idxs) for node_idxs in partitions]
     mapping = {}
-    for idx, node_idxs in enumerate(partitions):
-        subgraph = nx.subgraph(graph, node_idxs)
+    for idx, (node_idxs, subgraph) in enumerate(zip(partitions, subgraphs)):
         new_graph.add_node(idx,
                            graph=subgraph,
                            nnodes=len(subgraph),
