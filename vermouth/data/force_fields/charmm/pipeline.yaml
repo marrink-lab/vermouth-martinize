@@ -14,165 +14,6 @@ martinize2:
               default: false
               help: "List all Blocks and Modifications known to the force field, and
                 exit."
-        - title: Protein description
-          flags:
-            scfix:
-              action: store_true
-              default: false
-              help: "Old -scfix argument. Side chain fixes are now assumed by default,
-                and the flag does not need to be specified. Will be deprecated in
-                future."
-            noscfix:
-              action: store_true
-              default: false
-              help: >
-                Don't apply side chain corrections. Please note the change
-                in behaviour from martinize v0.11.0
-            cystein_bridge:
-              cli: cys
-              type: cys_argument
-              default: auto
-              help: "Cystein bonds"
-        - title: Input files
-          flags:
-            inpath:
-              cli: f
-              help: "Input file (PDB|GRO)"
-              required: true
-              type: path
-            ignore_res:
-              cli: ignore
-              nargs: "+"
-              default: []
-              action: append
-              type: ignore_resname
-              help: "Ignore residues with that name: e.g. -ignore HOH,LIG (+)"
-            ignore_h:
-              cli: ignh
-              help: "Ignore all Hydrogen atoms in the input file"
-              action: store_true
-              default: false
-            modelidx:
-              cli: model
-              help: "Which MODEL to select. Only meaningful for PDB files."
-              type: int
-              default:
-            bonds_from:
-              cli: bonds-from
-              type: str
-              choices: ["name", "distance", "none", "both"]
-              default: "both"
-              help: >
-                How to determine connectivity in the input.
-                If 'none', only bonds from the input file (CONECT) will be used.
-            fudge:
-              cli: bonds-fudge
-              type: float
-              default: 1.2
-              help: >
-                Factor with which Van der Waals radii should be scaled when determining
-                bonds based on distances.
-            modify:
-              action: append
-              default: []
-              help: >
-                Add a modification to a residue. Desired modification is
-                specified as, e.g. A-ASP45:ASP0. The format is
-                <chain>-<resname><resid>:[+]<modification>. Elements of the
-                specification can be omitted as required. e.g. ASP45:ASP0
-                will modify all ASP with resid 45 to ASP0, A-ASP:ASP0 will
-                modify all ASP on chain A to ASP0. By default the
-                modifications specified this way will override any
-                modifications found in the input file. If instead you want
-                to *add* modifications in addition to what's already in the
-                input file, add '+' to the modification specification. For
-                example, 'A-HIS1:+HSE' to add the HSE modification to any
-                automatically determined terminal modifications.
-            cter:
-              action: append
-              default: []
-              help: >
-                Shorthand for patching C-termini. A C-terminus is defined
-                as a residue which is connected to 1 other residue, and has
-                the lowest resid.
-            nter:
-              action: append
-              default: []
-              help: >
-                Shorthand for patching N-termini. An N-terminus is defined
-                as a residue which is connected to 1 other residue, and has
-                the highest resid.
-            mutate:
-              action: append
-              default: []
-              help: >
-                Mutate a residue. Desired mutation is specified as, e.g.
-                A-PHE45:ALA. The format is
-                <chain>-<resname><resid>:<new resname>. Elements of the
-                specification can be omitted as required. e.g. PHE45:ALA
-                will mutate all PHE with resid 45 to ALA, A-PHE:ALA will
-                mutate all PHE on chain A to ALA.
-            neutral_termini:
-              cli: nt
-              action: store_true
-              default: false
-              help: >
-                Set neutral termini (charged is default). Alias for
-                "-nter NH2-ter -cter COOH-ter"
-        - title: Secondary structure handling
-          flags:
-            extdih:
-              cli: ed
-              action: store_true
-              default: false
-              help: >
-                Use dihedrals for extended regions rather than elastic bonds
-          exclusive_groups:
-          - flags:
-              dssp:
-                nargs: "?"
-                const: true
-                help: >
-                  DSSP executable for determining structure. If this flag is given
-                  but no executable is specified, the mdtraj library will be used
-                  to compute the secondary structure, if it can be imported.
-              ss:
-                type: str
-                default:
-                help: >
-                  Manually set the secondary structure of the proteins.
-                  Either give a dssp sequence for each residue in your input file
-                  or a single letter to be repeated for the entire sequence, e.g.
-                  -ss C
-              collagen:
-                action: store_true
-                default: false
-                help: "Use collagen parameters"
-        - title: Debugging options
-          flags:
-            write_graph:
-              cli: write-graph
-              type: path
-              required: false
-              help: "Write the graph as PDB after the MakeBonds step."
-            write_repair:
-              cli: write-repair
-              type: path
-              required: false
-              help: >
-                Write the graph as PDB after the RepairGraph step. The resulting file
-                may
-                contain "nan" coordinates making it unreadable by most softwares.
-            write_canon:
-              cli: write-canon
-              type: path
-              required: false
-              help: >
-                Write the graph as PDB after the CanonicalizeModifications step. The
-                resulting file may contain "nan" coordinates making it unreadable
-                by most
-                software.
-
       steps: !!omap
       - vermouth.pipeline_processors.ListBlocks:
           condition:
@@ -184,118 +25,237 @@ martinize2:
               variable: ff
             to_ff:
               variable: ff
-      - vermouth.pipeline_processors.ReadSystem:
+      - input:
           cli:
-            flags: {}
-          args:
-            path:
-              cli: inpath
-            ignore_resnames:
-              cli: ignore_res
-            ignh:
-              cli: ignore_h
-            modelidx:
-              cli: modelidx
-
-      - pdb_to_universal:
-          steps: !!omap
-          - vermouth.pipeline_processors.MakeBondsWrapper:
-              log:
-                info:
-                  msg: "Guessing the bonds"
-                  type: step
-              cli:
-                flags: {}
-              args:
+            groups:
+            - title: Input files
+              flags:
+                inpath:
+                  cli: f
+                  help: "Input file (PDB|GRO)"
+                  required: true
+                  type: path
+                ignore_res:
+                  cli: ignore
+                  nargs: "+"
+                  default: []
+                  action: append
+                  type: ignore_resname
+                  help: "Ignore residues with that name: e.g. -ignore HOH,LIG (+)"
+                ignore_h:
+                  cli: ignh
+                  help: "Ignore all Hydrogen atoms in the input file"
+                  action: store_true
+                  default: false
+                modelidx:
+                  cli: model
+                  help: "Which MODEL to select. Only meaningful for PDB files."
+                  type: int
+                  default:
                 bonds_from:
-                  cli: bonds_from
+                  cli: bonds-from
+                  type: str
+                  choices: ["name", "distance", "none", "both"]
+                  default: "both"
+                  help: >
+                    How to determine connectivity in the input.
+                    If 'none', only bonds from the input file (CONECT) will be used.
                 fudge:
-                  cli: fudge
-
-          - vermouth.MergeNucleicStrands:
-              args: {}
-          - write_graph:
-              processor: vermouth.pdb.WritePDB
-              cli:
-                flags: {}
-              args:
-                path:
-                  cli: write_graph
-                omit_charges:
-                  value: true
-                defer_writing:
-                  value: false
-                nan_missing_pos:
-                  value: false
-
-          - vermouth.pipeline_processors.AnnotateMutModWrapper:
-              cli:
-                flags: {}
-              args:
+                  cli: bonds-fudge
+                  type: float
+                  default: 1.2
+                  help: >
+                    Factor with which Van der Waals radii should be scaled when determining
+                    bonds based on distances.
                 modify:
-                  cli: modify
+                  action: append
+                  default: []
+                  help: >
+                    Add a modification to a residue. Desired modification is
+                    specified as, e.g. A-ASP45:ASP0. The format is
+                    <chain>-<resname><resid>:[+]<modification>. Elements of the
+                    specification can be omitted as required. e.g. ASP45:ASP0
+                    will modify all ASP with resid 45 to ASP0, A-ASP:ASP0 will
+                    modify all ASP on chain A to ASP0. By default the
+                    modifications specified this way will override any
+                    modifications found in the input file. If instead you want
+                    to *add* modifications in addition to what's already in the
+                    input file, add '+' to the modification specification. For
+                    example, 'A-HIS1:+HSE' to add the HSE modification to any
+                    automatically determined terminal modifications.
                 cter:
-                  cli: cter
+                  action: append
+                  default: []
+                  help: >
+                    Shorthand for patching C-termini. A C-terminus is defined
+                    as a residue which is connected to 1 other residue, and has
+                    the lowest resid.
                 nter:
-                  cli: nter
+                  action: append
+                  default: []
+                  help: >
+                    Shorthand for patching N-termini. An N-terminus is defined
+                    as a residue which is connected to 1 other residue, and has
+                    the highest resid.
                 mutate:
-                  cli: mutate
+                  action: append
+                  default: []
+                  help: >
+                    Mutate a residue. Desired mutation is specified as, e.g.
+                    A-PHE45:ALA. The format is
+                    <chain>-<resname><resid>:<new resname>. Elements of the
+                    specification can be omitted as required. e.g. PHE45:ALA
+                    will mutate all PHE with resid 45 to ALA, A-PHE:ALA will
+                    mutate all PHE on chain A to ALA.
                 neutral_termini:
-                  cli: neutral_termini
-
-          - vermouth.RepairGraph:
-              log:
-                info:
-                  msg: Repairing the graph
-                  type: step
-              args:
-                delete_unknown:
-                  value: true
-                include_graph:
-                  value: false
-
-          - write_repaired_graph:
-              processor: vermouth.pdb.WritePDB
+                  cli: nt
+                  action: store_true
+                  default: false
+                  help: >
+                    Set neutral termini (charged is default). Alias for
+                    "-nter NH2-ter -cter COOH-ter"
+          steps: !!omap
+          - vermouth.pipeline_processors.ReadSystem:
               cli:
                 flags: {}
               args:
                 path:
-                  cli: write_repair
-                omit_charges:
-                  value: true
-                defer_writing:
-                  value: false
-                nan_missing_pos:
-                  value: true
+                  cli: inpath
+                ignore_resnames:
+                  cli: ignore_res
+                ignh:
+                  cli: ignore_h
+                modelidx:
+                  cli: modelidx
 
-          - vermouth.CanonicalizeModifications:
-              log:
-                info:
-                  msg: Dealing with modifications
-                  type: step
-              args: {}
+          - pdb_to_universal:
+              steps: !!omap
+              - vermouth.pipeline_processors.MakeBondsWrapper:
+                  log:
+                    info:
+                      msg: "Guessing the bonds"
+                      type: step
+                  cli:
+                    flags: {}
+                  args:
+                    bonds_from:
+                      cli: bonds_from
+                    fudge:
+                      cli: fudge
 
-          - write_canonical_graph:
-              processor: vermouth.pdb.WritePDB
+              - vermouth.MergeNucleicStrands:
+                  args: {}
+              - write_graph:
+                  processor: vermouth.pdb.WritePDB
+                  cli:
+                    flags: {}
+                  args:
+                    path:
+                      cli: write_graph
+                    omit_charges:
+                      value: true
+                    defer_writing:
+                      value: false
+                    nan_missing_pos:
+                      value: false
+
+              - vermouth.pipeline_processors.AnnotateMutModWrapper:
+                  cli:
+                    flags: {}
+                  args:
+                    modify:
+                      cli: modify
+                    cter:
+                      cli: cter
+                    nter:
+                      cli: nter
+                    mutate:
+                      cli: mutate
+                    neutral_termini:
+                      cli: neutral_termini
+
+              - vermouth.RepairGraph:
+                  log:
+                    info:
+                      msg: Repairing the graph
+                      type: step
+                  args:
+                    delete_unknown:
+                      value: true
+                    include_graph:
+                      value: false
+
+              - write_repaired_graph:
+                  processor: vermouth.pdb.WritePDB
+                  cli:
+                    flags: {}
+                  args:
+                    path:
+                      cli: write_repair
+                    omit_charges:
+                      value: true
+                    defer_writing:
+                      value: false
+                    nan_missing_pos:
+                      value: true
+
+              - vermouth.CanonicalizeModifications:
+                  log:
+                    info:
+                      msg: Dealing with modifications
+                      type: step
+                  args: {}
+
+              - write_canonical_graph:
+                  processor: vermouth.pdb.WritePDB
+                  cli:
+                    flags: {}
+                  args:
+                    path:
+                      cli: write_canon
+                    omit_charges:
+                      value: true
+                    defer_writing:
+                      value: false
+                    nan_missing_pos:
+                      value: true
+
+              - vermouth.AttachMass:
+                  args:
+                    attribute:
+                      value: mass
+
+              - vermouth.SortMoleculeAtoms:
+                  args: {}
+
               cli:
-                flags: {}
-              args:
-                path:
-                  cli: write_canon
-                omit_charges:
-                  value: true
-                defer_writing:
-                  value: false
-                nan_missing_pos:
-                  value: true
-
-          - vermouth.AttachMass:
-              args:
-                attribute:
-                  value: mass
-
-          - vermouth.SortMoleculeAtoms:
-              args: {}
+                groups:
+                - title: Debugging options
+                  flags:
+                    write_graph:
+                      cli: write-graph
+                      type: path
+                      required: false
+                      help: "Write the graph as PDB after the MakeBonds step."
+                    write_repair:
+                      cli: write-repair
+                      type: path
+                      required: false
+                      help: >
+                        Write the graph as PDB after the RepairGraph step. The resulting
+                        file
+                        may
+                        contain "nan" coordinates making it unreadable by most softwares.
+                    write_canon:
+                      cli: write-canon
+                      type: path
+                      required: false
+                      help: >
+                        Write the graph as PDB after the CanonicalizeModifications
+                        step. The
+                        resulting file may contain "nan" coordinates making it unreadable
+                        by most
+                        software.
 
       - vermouth.StashAttributes:
           args:
@@ -306,113 +266,170 @@ martinize2:
 
       - vermouth.gmx.topology.Header:
           args: {}
-
-      - Choose secondary structure:
+      - protein_description:
+          cli:
+            groups:
+            - title: Protein description
+              flags:
+                scfix:
+                  action: store_true
+                  default: false
+                  help: "Old -scfix argument. Side chain fixes are now assumed by
+                    default, and the flag does not need to be specified. Will be deprecated
+                    in future."
+                noscfix:
+                  action: store_true
+                  default: false
+                  help: >
+                    Don't apply side chain corrections. Please note the change
+                    in behaviour from martinize v0.11.0
+                cystein_bridge:
+                  cli: cys
+                  type: cys_argument
+                  default: auto
+                  help: "Cystein bonds"
           steps: !!omap
-          - vermouth.pipeline_processors.DSSPWrapper:
-              condition:
-                not:
-                  equal:
-                    cli: dssp
-                    value:
-              args:
-                executable:
-                  cli: dssp
-                savedir:
-                  value: "."
+          - Choose secondary structure:
+              steps: !!omap
+              - vermouth.pipeline_processors.DSSPWrapper:
+                  condition:
+                    not:
+                      equal:
+                        cli: dssp
+                        value:
+                  args:
+                    executable:
+                      cli: dssp
+                    savedir:
+                      value: "."
 
-          - annotate_dssp_secondary_structure:
-              processor: vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures
-              condition:
-                not:
-                  equal:
-                    cli: dssp
-                    value:
-              args: {}
+              - annotate_dssp_secondary_structure:
+                  processor: vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures
+                  condition:
+                    not:
+                      equal:
+                        cli: dssp
+                        value:
+                  args: {}
 
-          - apply_manual_secondary_structure:
-              processor: vermouth.pipeline_processors.SSWrapper
-              condition:
-                all:
-                - not:
-                    equal:
+              - apply_manual_secondary_structure:
+                  processor: vermouth.pipeline_processors.SSWrapper
+                  condition:
+                    all:
+                    - not:
+                        equal:
+                          cli: ss
+                          value:
+                    - equal:
+                        cli: dssp
+                        value:
+                  args:
+                    attr:
+                      value: aasecstruct
+                    seq:
                       cli: ss
-                      value:
-                - equal:
-                    cli: dssp
-                    value:
+
+              - annotate_manual_secondary_structure:
+                  processor: vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures
+                  condition:
+                    not:
+                      equal:
+                        cli: ss
+                        value:
+                  args: {}
+
+              - apply_collagen_secondary_structure:
+                  processor: vermouth.pipeline_processors.SSWrapper
+                  condition:
+                    all:
+                    - equal:
+                        cli: ss
+                        value:
+                    - equal:
+                        cli: dssp
+                        value:
+                    - equal:
+                        cli: collagen
+                        value: true
+                  args:
+                    attr:
+                      value: cgsecstruct
+                    seq:
+                      value: "F"
+              cli:
+                groups:
+                - title: Secondary structure handling
+                  flags:
+                    extdih:
+                      cli: ed
+                      action: store_true
+                      default: false
+                      help: >
+                        Use dihedrals for extended regions rather than elastic bonds
+                  exclusive_groups:
+                  - flags:
+                      dssp:
+                        nargs: "?"
+                        const: true
+                        help: >
+                          DSSP executable for determining structure. If this flag
+                          is given
+                          but no executable is specified, the mdtraj library will
+                          be used
+                          to compute the secondary structure, if it can be imported.
+                      ss:
+                        type: str
+                        default:
+                        help: >
+                          Manually set the secondary structure of the proteins.
+                          Either give a dssp sequence for each residue in your input
+                          file
+                          or a single letter to be repeated for the entire sequence,
+                          e.g.
+                          -ss C
+                      collagen:
+                        action: store_true
+                        default: false
+                        help: "Use collagen parameters"
+          - vermouth.SetMoleculeMeta:
+              cli:
+                flags: {}
               args:
-                attr:
-                  value: aasecstruct
-                seq:
-                  cli: ss
+                extdih:
+                  cli: extdih
 
-          - annotate_manual_secondary_structure:
-              processor: vermouth.dssp.dssp.AnnotateMartiniSecondaryStructures
-              condition:
-                not:
-                  equal:
-                    cli: ss
-                    value:
-              args: {}
-
-          - apply_collagen_secondary_structure:
-              processor: vermouth.pipeline_processors.SSWrapper
-              condition:
-                all:
-                - equal:
-                    cli: ss
-                    value:
-                - equal:
-                    cli: dssp
-                    value:
-                - equal:
-                    cli: collagen
-                    value: true
+          - vermouth.pipeline_processors.SetMoleculeMetaScFixWrapper:
+              cli:
+                flags: {}
               args:
-                attr:
-                  value: cgsecstruct
-                seq:
-                  value: "F"
-      - vermouth.SetMoleculeMeta:
-          cli:
-            flags: {}
-          args:
-            extdih:
-              cli: extdih
+                noscfix:
+                  cli: noscfix
 
-      - vermouth.pipeline_processors.SetMoleculeMetaScFixWrapper:
-          cli:
-            flags: {}
-          args:
-            noscfix:
-              cli: noscfix
-
-      - cystein_bridges:
-          cli:
-            flags: {}
-          steps: !!omap
-          - vermouth.RemoveCysteinBridgeEdges:
-              condition:
-                equal:
-                  cli: cystein_bridge
-                  value: "none"
-              args: {}
-
-          - vermouth.AddCysteinBridgesThreshold:
-              condition:
-                all:
-                - not:
-                    equal:
-                      cli: cystein_bridge
-                      value: "auto"
-                - not:
+          - cystein_bridges:
+              cli:
+                flags: {}
+              steps: !!omap
+              - vermouth.RemoveCysteinBridgeEdges:
+                  condition:
                     equal:
                       cli: cystein_bridge
                       value: "none"
-              args:
-                threshold:
-                  cli: cystein_bridge
+                  args: {}
+
+              - vermouth.AddCysteinBridgesThreshold:
+                  condition:
+                    all:
+                    - not:
+                        equal:
+                          cli: cystein_bridge
+                          value: "auto"
+                    - not:
+                        equal:
+                          cli: cystein_bridge
+                          value: "none"
+                  args:
+                    threshold:
+                      cli: cystein_bridge
 
       - go_system:
           steps: !!omap
