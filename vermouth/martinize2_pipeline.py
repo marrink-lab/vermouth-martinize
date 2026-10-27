@@ -102,13 +102,13 @@ def build_mini_parser():
         "-from",
         dest="from_ff",
         default="charmm",
-        help="Force field of the original structure.",
+        help="Force field of the original structure (default: charmm)",
     )
     force_field_group.add_argument(
         "-ff",
         dest="to_ff",
         default="martini3001",
-        help="Target force field.",
+        help="Target force field (default: martini3001)",
     )
     force_field_group.add_argument(
         "-ff-dir",
@@ -116,7 +116,7 @@ def build_mini_parser():
         action="append",
         default=[],
         type=Path,
-        help="Additional repository for custom force fields.",
+        help="Additional repository for custom force fields (default: [])",
     )
     force_field_group.add_argument(
         "-map-dir",
@@ -124,32 +124,32 @@ def build_mini_parser():
         action="append",
         default=[],
         type=Path,
-        help="Additional repository for mapping files.",
+        help="Additional repository for mapping files (default: [])",
     )
     force_field_group.add_argument(
         "-list-ff",
         dest="list_ff",
         action="store_true",
-        help="List all known force fields, and exit.",
+        help="List all known force fields, and exit",
     )
     parser.add_argument(
         "-pipeline",
         nargs="+",
         default=[],
-        help="Additional pipeline YAML fragments to include.",
+        help="Additional pipeline YAML fragments to include (default: [])",
     )
     parser.add_argument(
         "-pipeline-dir",
         action="append",
         default=[],
         type=Path,
-        help="Directory to search pipeline YAML files in.",
+        help="Additional repository for pipeline YAML files (default: [])",
     )
     parser.add_argument(
         "-v",
         dest="verbosity",
         action="count",
-        help="Enable debug logging output. Can be given multiple times. (default: 0)",
+        help="Enable debug logging output. Can be given multiple times (default: 0)",
         default=0,
     )
     parser.add_argument(
@@ -159,7 +159,7 @@ def build_mini_parser():
         action="append",
         nargs="+",
         default=[],
-        help="The maximum number of allowed warnings. If more warnings are encountered no output files are written. (default: [])",
+        help="The maximum number of allowed warnings. If more warnings are encountered no output files are written (default: [])",
     )
     parser.add_argument(
         "-V",
