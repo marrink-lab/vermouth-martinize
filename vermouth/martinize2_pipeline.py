@@ -172,7 +172,7 @@ def build_mini_parser():
         "-V",
         "-version",
         action="version",
-        version="martinize2",
+        version=f"%(prog)s {vermouth.__version__}",
     )
     return parser
 
