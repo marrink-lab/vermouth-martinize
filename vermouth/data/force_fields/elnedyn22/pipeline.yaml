@@ -6,6 +6,13 @@ martinize2:
     - to:
         steps: !!omap
           - elastic:
-              args:
-                default_res_min_dist:
-                  value: 2
+              cli:
+                groups:
+                  - $include:
+                      - "../../pipelines/base_martini.yaml:martinize2.steps.to.steps.elastic.cli.groups[0]"
+                    flags:
+                      elastic:
+                        cli: noelastic
+                        action: store_false
+                        default: true
+                        help: "Don't write elastic bonds"

@@ -613,7 +613,6 @@ def test_force_field_target_pipeline_includes_base_martini(
         "args"
     ]
     assert elastic_args["bond_type"]["value"] == bond_type
-    assert elastic_args["default_res_min_dist"]["value"] == 2
     assert elastic_args["bb_atomname"]["value"] == "BB"
     assert "force_field" not in elastic_args
 

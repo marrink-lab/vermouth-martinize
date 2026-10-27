@@ -508,7 +508,6 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
         rb_selection,
         rb_unit,
         res_min_dist,
-        default_res_min_dist,
         bond_type,
         bb_atomname,
     ):
@@ -535,8 +534,6 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             Unit within which elastic interactions are generated.
         res_min_dist : int
             Command-line override for the minimum residue separation.
-        default_res_min_dist : int
-            Force-field default minimum residue separation.
         bond_type : int
             Gromacs bond function type for elastic-network bonds.
         bb_atomname : str
@@ -596,11 +593,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             "minimum_force": rb_minimum_force,
             "selector": selector,
             "domain_criterion": domain_criterion,
-            "res_min_dist": (
-                default_res_min_dist
-                if res_min_dist is None
-                else res_min_dist
-            ),
+            "res_min_dist": res_min_dist,
             "bond_type": bond_type,
         }
 
