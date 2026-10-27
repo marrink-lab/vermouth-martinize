@@ -370,9 +370,10 @@ def test_build_mini_parser_custom_arguments():
             "-ff", "target",
             "-pipeline", "water",
             "-pipeline-dir", "my_pipelines",
-            "-extra_ff_dir", "extra_ff",
-            "-extra_map_dir", "extra_maps",
-            "-list_ff",
+            "-ff-dir", "extra_ff",
+            "-map-dir", "extra_maps",
+            "-list-ff",
+            "-list-blocks"
         ])
 
     assert args.from_ff == "source"
@@ -381,7 +382,8 @@ def test_build_mini_parser_custom_arguments():
     assert args.pipeline_dir == [Path("my_pipelines")]
     assert args.extra_ff_dir == [Path("extra_ff")]
     assert args.extra_map_dir == [Path("extra_maps")]
-    assert args.list_ff is True
+    assert args.list_ff
+    assert args.list_blocks
 
 
 def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
@@ -390,9 +392,6 @@ def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
     source = config["martinize2"]["steps"]["from"]
     target = config["martinize2"]["steps"]["to"]
 
-    assert [group["title"] for group in source["cli"]["groups"]] == [
-        "Force field selection",
-    ]
     assert source["steps"]["input"]["cli"]["groups"][0]["title"] == "Input files"
     assert (
         source["steps"]["input"]["steps"]["pdb_to_universal"]["cli"]["groups"][0]
@@ -433,8 +432,10 @@ def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
     parser = CLIBuilder(
         "martinize2", config["martinize2"], type_map=TYPE_MAP
     ).argparser
-    titles = [group.title for group in parser._action_groups]
-    assert titles[2:] == [
+    titles = {group.title for group in parser._action_groups}
+    assert titles == {
+        "positional arguments",
+        "options",
         "Force field selection",
         "Input files",
         "Debugging options",
@@ -446,7 +447,7 @@ def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
         "Position restraints",
         "Virtual site based GoMartini",
         "Protein elastic network",
-    ]
+    }, titles
     with pytest.raises(SystemExit):
         parser.parse_args(["-f", "input.pdb", "-dssp", "-ss", "C"])
 
@@ -468,7 +469,7 @@ def test_mini_parser_force_field_group_is_available_in_full_help():
 
     help_text = parser.argparser.format_help()
 
-    assert help_text.count("Force field selection:") == 2
+    assert help_text.count("Force field selection:") == 1
     assert "-ff TO_FF" in help_text
     assert "-list-blocks" in help_text
     assert "-go-write-file [GO_WRITE_FILE]" in help_text
