@@ -102,17 +102,16 @@ def build_mini_parser():
         "-from",
         dest="from_ff",
         default="charmm",
-        help="Source force field and pipeline name.",
+        help="Force field of the original structure.",
     )
     force_field_group.add_argument(
         "-ff",
         dest="to_ff",
         default="martini3001",
-        help="Target force field and pipeline name.",
+        help="Target force field.",
     )
     force_field_group.add_argument(
         "-ff-dir",
-        "-extra_ff_dir",
         dest="extra_ff_dir",
         action="append",
         default=[],
@@ -121,7 +120,6 @@ def build_mini_parser():
     )
     force_field_group.add_argument(
         "-map-dir",
-        "-extra_map_dir",
         dest="extra_map_dir",
         action="append",
         default=[],
@@ -130,7 +128,6 @@ def build_mini_parser():
     )
     force_field_group.add_argument(
         "-list-ff",
-        "-list_ff",
         dest="list_ff",
         action="store_true",
         help="List all known force fields, and exit.",
@@ -152,7 +149,7 @@ def build_mini_parser():
         "-v",
         dest="verbosity",
         action="count",
-        help="Enable debug logging output. Can be given multiple times.",
+        help="Enable debug logging output. Can be given multiple times. (default: 0)",
         default=0,
     )
     parser.add_argument(
@@ -162,11 +159,11 @@ def build_mini_parser():
         action="append",
         nargs="+",
         default=[],
-        help="The maximum number of allowed warnings.",
+        help="The maximum number of allowed warnings. If more warnings are encountered no output files are written. (default: [])",
     )
     parser.add_argument(
         "-V",
-        "--version",
+        "-version",
         action="version",
         version="martinize2",
     )

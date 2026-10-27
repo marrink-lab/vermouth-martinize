@@ -13,7 +13,7 @@ martinize2:
               action: store_true
               default: false
               help: "List all Blocks and Modifications known to the force field, and
-                exit."
+                exit (default: false)"
       steps: !!omap
       - vermouth.pipeline_processors.ListBlocks:
           condition:
@@ -41,15 +41,15 @@ martinize2:
                   default: []
                   action: append
                   type: ignore_resname
-                  help: "Ignore residues with that name: e.g. -ignore HOH,LIG (+)"
+                  help: "Ignore residues with that name: e.g. -ignore HOH,LIG (+) (default: [])"
                 ignore_h:
                   cli: ignh
-                  help: "Ignore all Hydrogen atoms in the input file"
+                  help: "Ignore all Hydrogen atoms in the input file (default: false)"
                   action: store_true
                   default: false
                 modelidx:
                   cli: model
-                  help: "Which MODEL to select. Only meaningful for PDB files."
+                  help: "Which MODEL to select. Only meaningful for PDB files (default: None)"
                   type: int
                   default:
                 bonds_from:
@@ -58,17 +58,18 @@ martinize2:
                   choices: ["name", "distance", "none", "both"]
                   default: "both"
                   help: >
-                    How to determine connectivity in the input.
-                    If 'none', only bonds from the input file (CONECT) will be used.
+                    How to determine connectivity in the input. If 'none', only
+                    bonds from the input file (CONECT) will be used (default: both)
                 fudge:
                   cli: bonds-fudge
                   type: float
                   default: 1.2
                   help: >
-                    Factor with which Van der Waals radii should be scaled when determining
-                    bonds based on distances.
+                    Factor with which Van der Waals radii should be scaled when
+                    determining bonds based on distances (default: 1.2)
                 modify:
                   action: append
+                  metavar: MODIFICATIONS
                   default: []
                   help: >
                     Add a modification to a residue. Desired modification is
@@ -82,23 +83,26 @@ martinize2:
                     to *add* modifications in addition to what's already in the
                     input file, add '+' to the modification specification. For
                     example, 'A-HIS1:+HSE' to add the HSE modification to any
-                    automatically determined terminal modifications.
+                    automatically determined terminal modifications (default: [])
                 cter:
                   action: append
+                  metavar: MODIFICATIONS
                   default: []
                   help: >
                     Shorthand for patching C-termini. A C-terminus is defined
                     as a residue which is connected to 1 other residue, and has
-                    the lowest resid.
+                    the lowest resid (default: [])
                 nter:
                   action: append
+                  metavar: MODIFICATIONS
                   default: []
                   help: >
                     Shorthand for patching N-termini. An N-terminus is defined
                     as a residue which is connected to 1 other residue, and has
-                    the highest resid.
+                    the highest resid (default: [])
                 mutate:
                   action: append
+                  metavar: MUTATIONS
                   default: []
                   help: >
                     Mutate a residue. Desired mutation is specified as, e.g.
@@ -106,14 +110,14 @@ martinize2:
                     <chain>-<resname><resid>:<new resname>. Elements of the
                     specification can be omitted as required. e.g. PHE45:ALA
                     will mutate all PHE with resid 45 to ALA, A-PHE:ALA will
-                    mutate all PHE on chain A to ALA.
+                    mutate all PHE on chain A to ALA (default: [])
                 neutral_termini:
                   cli: nt
                   action: store_true
                   default: false
                   help: >
                     Set neutral termini (charged is default). Alias for
-                    "-nter NH2-ter -cter COOH-ter"
+                    "-nter NH2-ter -cter COOH-ter" (default: false)
           steps: !!omap
           - vermouth.pipeline_processors.ReadSystem:
               cli:
@@ -236,26 +240,21 @@ martinize2:
                       cli: write-graph
                       type: path
                       required: false
-                      help: "Write the graph as PDB after the MakeBonds step."
+                      help: "Write the graph as PDB after the MakeBonds step"
                     write_repair:
                       cli: write-repair
                       type: path
                       required: false
                       help: >
-                        Write the graph as PDB after the RepairGraph step. The resulting
-                        file
-                        may
-                        contain "nan" coordinates making it unreadable by most softwares.
+                        Write the graph as PDB after the RepairGraph step. The resulting file
+                        may contain "nan" coordinates making it unreadable by most softwares
                     write_canon:
                       cli: write-canon
                       type: path
                       required: false
                       help: >
-                        Write the graph as PDB after the CanonicalizeModifications
-                        step. The
-                        resulting file may contain "nan" coordinates making it unreadable
-                        by most
-                        software.
+                        Write the graph as PDB after the CanonicalizeModifications step. The
+                        resulting file may contain "nan" coordinates making it unreadable by most software
 
       - vermouth.StashAttributes:
           args:
@@ -274,20 +273,21 @@ martinize2:
                 scfix:
                   action: store_true
                   default: false
-                  help: "Old -scfix argument. Side chain fixes are now assumed by
+                  help: >
+                    Old -scfix argument. Side chain fixes are now assumed by
                     default, and the flag does not need to be specified. Will be deprecated
-                    in future."
+                    in future (default: false)"
                 noscfix:
                   action: store_true
                   default: false
                   help: >
                     Don't apply side chain corrections. Please note the change
-                    in behaviour from martinize v0.11.0
+                    in behaviour from martinize v0.11.0 (default: false)
                 cystein_bridge:
                   cli: cys
                   type: cys_argument
                   default: auto
-                  help: "Cystein bonds"
+                  help: "Cystein bonds (default: auto)"
           steps: !!omap
           - Choose secondary structure:
               steps: !!omap
@@ -365,7 +365,7 @@ martinize2:
                       action: store_true
                       default: false
                       help: >
-                        Use dihedrals for extended regions rather than elastic bonds
+                        Use dihedrals for extended regions rather than elastic bonds (default: false)
                   exclusive_groups:
                   - flags:
                       dssp:
@@ -373,24 +373,21 @@ martinize2:
                         const: true
                         help: >
                           DSSP executable for determining structure. If this flag
-                          is given
-                          but no executable is specified, the mdtraj library will
-                          be used
-                          to compute the secondary structure, if it can be imported.
+                          is given but no executable is specified, the mdtraj library
+                          will be used to compute the secondary structure, if it can be
+                          imported
                       ss:
                         type: str
                         default:
                         help: >
                           Manually set the secondary structure of the proteins.
                           Either give a dssp sequence for each residue in your input
-                          file
-                          or a single letter to be repeated for the entire sequence,
-                          e.g.
-                          -ss C
+                          file or a single letter to be repeated for the entire sequence,
+                          e.g. -ss C
                       collagen:
                         action: store_true
                         default: false
-                        help: "Use collagen parameters"
+                        help: "Use collagen parameters (default: false)"
           - vermouth.SetMoleculeMeta:
               cli:
                 flags: {}
