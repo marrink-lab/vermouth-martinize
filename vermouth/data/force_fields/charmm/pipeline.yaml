@@ -4,27 +4,7 @@ martinize2:
   - from:
       variables:
       - ff
-      cli:
-        groups:
-        - title: Force field selection
-          flags:
-            list_blocks:
-              cli: list-blocks
-              action: store_true
-              default: false
-              help: "List all Blocks and Modifications known to the force field, and
-                exit (default: false)"
       steps: !!omap
-      - vermouth.pipeline_processors.ListBlocks:
-          condition:
-            equal:
-              cli: list_blocks
-              value: true
-          args:
-            from_ff:
-              variable: ff
-            to_ff:
-              variable: ff
       - input:
           cli:
             groups:
@@ -276,7 +256,7 @@ martinize2:
                   help: >
                     Old -scfix argument. Side chain fixes are now assumed by
                     default, and the flag does not need to be specified. Will be deprecated
-                    in future (default: false)"
+                    in future (default: false)
                 noscfix:
                   action: store_true
                   default: false

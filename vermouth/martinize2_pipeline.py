@@ -132,6 +132,13 @@ def build_mini_parser():
         action="store_true",
         help="List all known force fields, and exit",
     )
+    force_field_group.add_argument(
+        "-list-blocks",
+        dest="list_blocks",
+        action="store_true",
+        default=False,
+        help="List all Blocks and Modifications known to the force field, and exit",
+    )
     parser.add_argument(
         "-pipeline",
         nargs="+",

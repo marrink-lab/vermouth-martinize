@@ -115,6 +115,20 @@ def force_fields(args, parser):
     return known_force_fields, known_mappings
 
 
+def list_blocks(source_force_field, target_force_field, parser):
+    """Print the blocks and modifications known to the selected force fields."""
+    print(f"The following Blocks are known to force field {source_force_field.name}:")
+    print(", ".join(sorted(source_force_field.blocks)))
+    print(f"The following Modifications are known to force field {source_force_field.name}:")
+    print(", ".join(sorted(source_force_field.modifications)))
+    print()
+    print(f"The following Blocks are known to force field {target_force_field.name}:")
+    print(", ".join(sorted(target_force_field.blocks)))
+    print(f"The following Modifications are known to force field {target_force_field.name}:")
+    print(", ".join(sorted(target_force_field.modifications)))
+    parser.exit()
+
+
 def main():
     """
     Build and run the configured Martinize2 pipeline.
@@ -136,6 +150,9 @@ def main():
         target_force_field = known_force_fields[mini_args.to_ff]
     except KeyError as error:
         mini_parser.error(f"Unknown force field: {error.args[0]!r}")
+
+    if mini_args.list_blocks:
+        list_blocks(source_force_field, target_force_field, mini_parser)
 
     config_builder = PipelineConfigBuilder(
         source_force_field,
