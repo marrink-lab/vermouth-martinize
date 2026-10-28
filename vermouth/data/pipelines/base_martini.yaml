@@ -335,19 +335,9 @@ martinize2:
               type: step
           condition:
             all:
-            - any:
-              - equal:
-                  cli: elastic
-                  value: true
-              - equal:
-                  cli: to_ff
-                  value: elnedyn22
-              - equal:
-                  cli: to_ff
-                  value: elnedyn22p
-              - equal:
-                  cli: to_ff
-                  value: elnedyn21
+            - equal:
+                cli: elastic
+                value: true
             - equal:
                 cli: go
                 value:
