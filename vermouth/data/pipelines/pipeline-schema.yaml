@@ -244,6 +244,7 @@ definitions:
 
   condition:
     type: object
+    minProperties: 1
     properties:
       $include:
         $ref: "#/definitions/include"
@@ -257,15 +258,20 @@ definitions:
         minItems: 2
       not:
         $ref: "#/definitions/condition"
-      additionalProperties:
-        type: object
-        properties:
-          value: {}
-          cli:
-            type: string
-          variable:
-            type: string
+    additionalProperties:
+      type: object
+      minProperties: 2
+      maxProperties: 2
+      additionalProperties: false
+      properties:
+        value: {}
+        cli:
+          type: string
+        variable:
+          type: string
     anyOf:
       - required: ['$include']
-      - minProperties: 1
+        maxProperties: 2
+      - not:
+          required: ['$include']
         maxProperties: 1
