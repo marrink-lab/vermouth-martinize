@@ -87,6 +87,7 @@ definitions:
 
   step:
     type: object
+    unevaluatedProperties: false
     allOf:
       - $ref: "#/definitions/step_base"
       - oneOf:
@@ -171,10 +172,11 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/cli_group_exclusive"
-      additionalProperties: true  # Fed to argparse as kwargs
+    additionalProperties: true  # Fed to argparse as kwargs
 
   cli:
     type: object
+    additionalProperties: false
     properties:
       $include:
         $ref: "#/definitions/include"
@@ -200,10 +202,11 @@ definitions:
         type: object
         additionalProperties:
           $ref: "#/definitions/cli_opt"
-      additionalProperties: true  # Fed to argparse as kwargs
+    additionalProperties: true  # Fed to argparse as kwargs
 
   cli_opt:
     type: object
+    additionalProperties: false
     properties:
       $include:
         $ref: "#/definitions/include"
