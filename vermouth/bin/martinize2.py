@@ -142,7 +142,7 @@ def main():
     mini_args, remaining_args = mini_parser.parse_known_args()
 
     loglevels = {0: logging.INFO, 1: logging.DEBUG, 2: 5}
-    LOGGER.setLevel(loglevels[mini_args.verbosity])
+    LOGGER.setLevel(loglevels[min(max(loglevels), mini_args.verbosity)])
 
     known_force_fields, mappings = force_fields(vars(mini_args), mini_parser)
     try:
