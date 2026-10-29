@@ -121,8 +121,6 @@ definitions:
       anyOf:
         - required:
             - steps
-        - required:
-            - id
     properties:
       $include:
         $ref: "#/definitions/include"

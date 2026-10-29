@@ -978,10 +978,34 @@ def _compose_includes(
 ):
     """Expand include directives in a mapping, with local keys taking priority."""
     if not isinstance(value, MutableMapping):
+        # FIXME: Can't include in lists? I guess steps are ordereddicts.
         return value
 
+    # Remove the to be consumed include keys
     includes = _pop_directive(value, INCLUDE_KEY, [])
+    if not includes:
+        # Nothing to merge in, so rebuilding would only evaluate positional
+        # directives ($insert_after, ...) against an empty target. Leave them
+        # for the parent merge, where the included siblings exist.
+        for key, child in value.items():
+            child_path = str(key) if not structural_path else f"{structural_path}.{key}"
+            if isinstance(child, MutableMapping):
+                _compose_includes(
+                    child, path, pipeline_dirs, inclusion_chain, child_path
+                )
+            elif isinstance(child, Collection) and not isinstance(child, _STRING_LIKE):
+                for item in child:
+                    if isinstance(item, MutableMapping):
+                        _compose_includes(
+                            item, path, pipeline_dirs, inclusion_chain, child_path
+                        )
+        return value
     local = deepcopy(value)
+    # Clear the existing pipeline. This way we can *first* merge in the included
+    # elements, and then merge in the existing elements, which we helpfully
+    # copied over to `local`. This way local elements override included elements
+    # The clear /is/ required: leaving `value` full and merging in its own
+    # elements will cause all sorts of mayhem for the steps lists.
     value.clear()
     if SOURCE_KEY in local:
         value[SOURCE_KEY] = local[SOURCE_KEY]
@@ -1001,6 +1025,7 @@ def _compose_includes(
         fragment = deepcopy(select_include_fragment(included, fragment_path))
         rename_variables(fragment, renames)
         if not isinstance(fragment, Mapping):
+            # FIXME: Stupid limitation
             raise TypeError(
                 f"Included fragment {reference!r} must resolve to a mapping."
             )
