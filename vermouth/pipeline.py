@@ -505,15 +505,16 @@ def eval_condition(condition, cli_args, variables):
         case 'not':
             verdict = not eval_condition(args, cli_args, variables)
         case 'equal':
+            items = []
             if 'cli' in args:
-                verdict = cli_args[args['cli']] == args['value']
-            elif 'variable' in args:
-                verdict = variables[args['variable']] == args['value']
-            else:
-                raise ValueError("equal condition needs 'cli' or 'variable'")
-        case "has_variable":
-            obj = variables[args['variable']]
-            verdict = args["key"] in obj.variables 
+                items.append(cli_args[args['cli']])
+            if 'variable' in args:
+                items.append(variables[args['variable']])
+            if 'value' in args:
+                items.append(args['value'])
+            if len(items) != 2:
+                raise ValueError("equal condition needs exactly 2 arguments.")
+            verdict = items[0] == items[1]
         case _:
             raise ValueError(f"Unknown condition type: {type_}")
 
