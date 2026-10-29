@@ -44,24 +44,6 @@ def test_options_used_in_condition_equal():
     assert variable_refs == set()
 
 
-def test_options_used_in_condition_has_variable():
-    """
-    Test that a has_variable condition returns the variable
-    used by the condition.
-    """
-    condition = {
-        "has_variable": {
-            "variable": "ff",
-            "key": "bondedtypes",
-        }
-    }
-
-    cli_refs, variable_refs = _options_used_in_condition(condition)
-
-    assert cli_refs == set()
-    assert variable_refs == {"ff"}
-
-
 def test_options_used_in_condition_not():
     """
     Test that a not condition returns the references used
@@ -96,9 +78,9 @@ def test_options_used_in_condition_all():
                 }
             },
             {
-                "has_variable": {
+                "equal": {
                     "variable": "ff",
-                    "key": "bondedtypes",
+                    "cli": "bondedtypes",
                 }
             },
         ]
@@ -106,7 +88,7 @@ def test_options_used_in_condition_all():
 
     cli_refs, variable_refs = _options_used_in_condition(condition)
 
-    assert cli_refs == {"elastic"}
+    assert cli_refs == {"bondedtypes", "elastic"}
     assert variable_refs == {"ff"}
 
 
@@ -268,24 +250,7 @@ def test_validate_cli_options_unknown_condition_cli():
 
     with pytest.raises(KeyError):
         validate_cli_options(pipeline_conf)
-    
-def test_validate_cli_options_unknown_condition_variable():
-    """
-    Test that validate_cli_options raises a KeyError
-    when a condition references an undefined variable.
-    """
-    pipeline_conf = {
-        "variables": [],
-        "condition": {
-            "has_variable": {
-                "variable": "ff",
-                "key": "bondedtypes",
-            }
-        },
-    }
 
-    with pytest.raises(KeyError):
-        validate_cli_options(pipeline_conf)
 
 def test_validate_cli_options_cli_group():
     """

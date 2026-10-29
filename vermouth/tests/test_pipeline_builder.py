@@ -132,20 +132,6 @@ def test_eval_condition_any():
     ) is True
 
 
-def test_eval_condition_has_variable():
-    """
-    Test that eval_condition returns True for a has_variable condition if the specified variable exists.
-    """
-    class DummyForceField:
-        variables = {"bondedtypes": "something"}
-
-    assert eval_condition(
-        {"has_variable": {"variable": "ff", "key": "bondedtypes"}},
-        {},
-        {"ff": DummyForceField()},
-    ) is True
-
-
 def test_eval_condition_unknown_type():
     """
     Test that eval_condition raises an error for an unknown condition type.

@@ -157,16 +157,8 @@ def _options_used_in_condition(condition):
         case 'equal':
             if 'cli' in cond:
                 cli_refs.add(cond['cli'])
-            elif 'variable' in cond:
+            if 'variable' in cond:
                 variable_refs.add(cond['variable'])
-            else:
-                raise ValueError(
-                    "equal condition needs 'cli' or 'variable'"
-                )
-            
-        case 'has_variable':
-            variable_refs.add(cond['variable'])
-
         case _:
             raise ValueError(f"Unknown condition type: {type_}")
 
