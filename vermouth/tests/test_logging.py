@@ -32,7 +32,7 @@ from vermouth.log_helpers import (get_logger, TypeAdapter, StyleAdapter,
 # data
 # pylint: disable=redefined-outer-name, too-many-arguments
 
-KWARG_ST = st.text(alphabet=string.ascii_letters, min_size=1).filter(lambda n: n not in ['name', 'msg'])
+KWARG_ST = st.text(alphabet=string.ascii_letters, min_size=1).filter(lambda n: n not in ['name', 'msg', 'extra'])
 
 
 class FormatCounter(str):
