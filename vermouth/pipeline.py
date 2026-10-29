@@ -729,6 +729,7 @@ def _validate_raw_step_names(pipeline_conf, path="martinize2", source=None):
     """
     seen_names = {}
     for index, (name, step) in enumerate(pipeline_conf.get("steps", [])):
+        if step == '$remove': continue
         step_path = f"{path}.steps[{index}].{name}"
         if name in seen_names:
             provenance = f" in {source}" if source is not None else ""
@@ -1373,8 +1374,7 @@ def merge_pipeline_mapping(target, incoming, source=None):
                 target.clear()
                 target.update(items)
 
-    return target
-    
+
 class CLIBuilder:
     """
     Build a command-line interface from a pipeline configuration.
