@@ -10,7 +10,6 @@ from vermouth.gmx.topology import write_gmx_topology
 from vermouth.rcsu.contact_map import read_go_map
 
 
-VERSION = "martinize with vermouth {}".format(vermouth.__version__)
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 # import the martinize2 classes en functions 
 

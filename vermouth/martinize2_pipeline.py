@@ -247,5 +247,5 @@ class PipelineConfigBuilder:
             self.paths[0],
             self.paths[1],
             self.pipeline_dirs,
-            self.pipeline_names,
+            self.paths[2:],
         )

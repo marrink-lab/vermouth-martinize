@@ -629,7 +629,7 @@ def write_pdb(system, path, conect=True, omit_charges=True, nan_missing_pos=Fals
 # write the current system to a pdb file. This is for testing and bug fixing, not a pipeline step. 
 class WritePDB(Processor):
     # constructor with parameters
-    def __init__(self, path, omit_charges = True, defer_writing = False, nan_missing_pos = True):
+    def __init__(self, path, omit_charges=True, defer_writing=True, nan_missing_pos=False):
         # path to the output file 
         self.path = path
         # do you count charges 
@@ -638,6 +638,7 @@ class WritePDB(Processor):
         self.defer_writing = defer_writing
         # give nan to missing atom positions 
         self.nan_missing_pos = nan_missing_pos
+
     # run the system 
     def run_system(self, system):
         if self.path is not None:

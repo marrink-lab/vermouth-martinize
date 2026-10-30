@@ -263,7 +263,7 @@ class Header(Processor):
         system.meta["header"].extend((
             "This file was generated using the following command:",
             " ".join(sys.argv),
-            f"vermouth {vermouth.__version__}",
+            f"martinize with vermouth {vermouth.__version__}",
         ))
         return system
     

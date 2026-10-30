@@ -396,7 +396,7 @@ def build_cli(
         Parser containing the configured CLI options.
     """
     # make parser if not given, otherwise use the given one.
-    parser = parser or argparse.ArgumentParser(allow_abbrev=False, **kwargs)
+    parser = parser or argparse.ArgumentParser(prog=name, allow_abbrev=False, **kwargs)
     # make an empty set of the added_flags. or use the given one.
     added_flags = set() if added_flags is None else added_flags
     # loop through the cli flags defined in the pipeline config. and don't add the same flag twice.
