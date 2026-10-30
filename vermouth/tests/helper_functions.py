@@ -17,11 +17,13 @@ Contains helper functions for tests.
 """
 import operator
 import os
+import sys
 import pytest
 import numpy as np
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 import vermouth
+import shutil
 from vermouth.system import System
 from vermouth.forcefield import ForceField
 
@@ -69,21 +71,15 @@ def find_in_path(names=('martinize2', 'martinize2.py')):
     """
     Finds and returns the location of one of `names` in PATH, and returns the
     first match.
-
-    Parameters
-    ----------
-    names: collections.abc.Sequence
-        Names to look for in PATH.
-
-    Returns
-    -------
-    os.PathLike or None
     """
-    for folder in os.getenv("PATH", '').split(os.pathsep):
-        for name in names:
-            fullpath = os.path.join(folder, name)
-            if os.path.isfile(fullpath):
-                return fullpath
+    for name in names:
+        fullpath = shutil.which(name)
+        if fullpath is not None:
+            return fullpath
+    for name in names:
+        fullpath = os.path.join(os.path.dirname(sys.executable), name)
+        if os.path.isfile(fullpath) and os.access(fullpath, os.X_OK):
+            return fullpath
           
 def create_sys_all_attrs(molecule, moltype, secstruc, defaults, attrs, write_secstruct=True):
     """
@@ -234,4 +230,3 @@ def test_molecule(scope='function'):
     molecule.add_edge(7, 8)
 
     return molecule
-

@@ -16,5 +16,6 @@
 Provides functionality to read and write PDB files.
 """
 
-from .pdb import read_pdb, write_pdb
+from .pdb import read_pdb, write_pdb, WritePDB
 from .cif import CIFReader
+

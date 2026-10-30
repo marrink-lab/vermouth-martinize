@@ -61,6 +61,7 @@ def force_field_with_features(empty_force_field):
     ('modifications', {}),
     ('renamed_residues', {}),
     ('variables', {}),
+    ('directory', None),
     ('reference_graphs', {}),
     ('features', set()),
 ))
@@ -138,6 +139,7 @@ def test_create_ff_from_dir(tmp_path, path_type):
     directory = path_type(directory)
     ff = vermouth.forcefield.ForceField(directory=directory)
     assert ff.name == ff_name
+    assert ff.directory == pathlib.Path(directory)
 
 
 def test_init_empty_force_field_error_neither():

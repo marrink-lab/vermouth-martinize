@@ -44,7 +44,9 @@ class ComputeWaterBias(Processor):
     def __init__(self,
                  auto_bias,
                  water_bias,
-                 id_regions):
+                 id_regions,
+                 water_type="W",
+                 bead_sizes=None):
         """
         Parameters
         ----------
@@ -64,6 +66,12 @@ class ComputeWaterBias(Processor):
         """
         self.water_bias = water_bias
         self.auto_bias = auto_bias
+        self.water_type = water_type
+        self.bead_sizes = {
+            "regular": 0.47,
+            "small": 0.41,
+            "tiny": 0.34,
+        } if bead_sizes is None else bead_sizes
         self.id_regions = []
         for region in id_regions:
             self.id_regions.append(parse_residues(region))
@@ -108,11 +116,9 @@ class ComputeWaterBias(Processor):
             # what is the blocks bb-type
             bb_type = molecule.force_field.blocks[resname].nodes['BB']['atype']
             size = _get_bead_size(bb_type)
-            # bead sizes are defined in the force-field file as
-            # regular, small and tiny
-            sigma = float(molecule.force_field.variables[size])
+            sigma = float(self.bead_sizes[size])
             # update interaction parameters
-            atoms = (molecule.force_field.variables['water_type'], vs_go_node)
+            atoms = (self.water_type, vs_go_node)
             water_bias = NonbondParam(atoms=atoms,
                                       sigma=sigma,
                                       epsilon=eps,

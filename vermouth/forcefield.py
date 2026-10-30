@@ -19,10 +19,15 @@ Provides a class used to describe a forcefield and all associated data.
 import itertools
 from glob import glob
 import os
+import pathlib
+import logging
+from .log_helpers import TypeAdapter
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
 from .citation_parser import read_bib
 from . import DATA_PATH
+
+LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
 FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff, '.bib': read_bib}
 # All data files that are in the root DATA_PATH, and apply to all force fields.
@@ -58,6 +63,8 @@ class ForceField:
     citations: dict
     renamed_residues: dict
     name: str
+    directory: pathlib.Path or None
+    bondedtypes: object or None
     variables: dict
     """
 
@@ -68,6 +75,8 @@ class ForceField:
         self.renamed_residues = {}
         self.variables = {}
         self.name = None
+        self.directory = None
+        self.bondedtypes = None
         self.citations = {}
         if directory is not None:
             self.name = os.path.basename(str(directory))
@@ -77,6 +86,9 @@ class ForceField:
         if self.name is None:
             msg = 'At least one of `directory` or `name` must be provided.'
             raise TypeError(msg)
+        if self.variables:
+            LOGGER.warning('Force field variables have been superseded by '
+                           'pipelines since vermouth 2.0.0')
 
     def __str__(self):
         return f'ForceField({self.name})'
@@ -93,7 +105,8 @@ class ForceField:
         The provided directory must contain a subdirectory with the same name
         as the force field.
         """
-        source_files = iter_force_field_files(directory)
+        self.directory = pathlib.Path(directory)
+        source_files = iter_force_field_files(self.directory)
         for source in sorted(source_files):
             self._read_from_file(source)
 
