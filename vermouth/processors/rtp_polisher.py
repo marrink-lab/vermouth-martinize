@@ -138,8 +138,6 @@ def add_dihedrals_and_pairs(mol, *, bond_type=2, all_dihedrals=True,
 class RTPPolisher(Processor):
     def run_molecule(self, molecule):
         bondedtypes = molecule.force_field.bondedtypes
-        if bondedtypes is None:
-            return molecule
         # bond_type = bondedtypes.bonds
         angle_type = bondedtypes.angles
         dihedral_type = bondedtypes.dihedrals

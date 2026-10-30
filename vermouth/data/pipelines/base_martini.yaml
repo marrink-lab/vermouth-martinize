@@ -159,12 +159,6 @@ martinize2:
                   msg: Placing the charge dummies
                   type: step
               args: {}
-      - vermouth.RTPPolisher:
-          log:
-            info:
-              msg: Generating implicit interactions for RTP force field
-              type: step
-          args: {}
       - vermouth.pipeline_processors.ApplyPosresWrapper:
           log:
             info:
