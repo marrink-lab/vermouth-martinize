@@ -1,667 +1,471 @@
 YAML pipeline configuration
 ===========================
 
-Overview
---------
+A pipeline configuration determines which processors Martinize2 runs, in
+which order, and with which constructor arguments. It also contributes options
+to the command-line interface. Configuration is composed first; the resulting
+options are parsed, conditions and arguments are resolved, and the executable
+pipeline is built before processing begins.
 
-Martinize2 pipelines define which processors are run, their order, their
-arguments, and the conditions under which they are executed.
+The examples in the basic section illustrate pipeline fragments. Martinize2
+combines source and target fragments with its own runtime objects; an isolated
+fragment is not necessarily a complete replacement for a Martinize2 run.
+Working configurations are available in the
+`force-field data directory <https://github.com/marrink-lab/vermouth-martinize/tree/main/vermouth/data/force_fields>`_
+and in ``vermouth/data/pipelines``.
 
-Pipeline configurations can be written in YAML. The YAML files are read by
-the :class:`~vermouth.martinize2_pipeline.PipelineConfigBuilder` and converted into an internal pipeline
-configuration. This configuration is then used to construct the command-line
-interface and the executable pipeline.
+Basic usage
+-----------
 
-A pipeline can be composed from multiple YAML files. This makes it possible
-to separate general processing steps from force-field-specific or optional
-steps.
+Selecting pipelines
+~~~~~~~~~~~~~~~~~~~
 
-Pipeline builders
------------------
+Martinize2 selects the source and target force fields and their pipeline
+fragments together:
 
-The pipeline configuration is processed by three builder classes:
+.. code-block:: console
 
-:class:`~vermouth.martinize2_pipeline.PipelineConfigBuilder`
-    Loads one or more YAML pipeline files and combines them into a single
-    pipeline configuration.
+   martinize2 -from charmm -ff martini3001 \
+       -f input.pdb -x output.pdb
 
-:class:`~vermouth.pipeline.CLIBuilder`
-    Builds the command-line interface from the CLI options defined in the
-    pipeline configuration and parses the provided command-line arguments.
+Each selected force field supplies a ``pipeline.yaml`` in its own directory,
+including force fields loaded from an extra force-field directory. Martinize2
+selects the source file's ``from`` step and the target file's ``to`` step.
+Additional pipeline fragments can extend the configuration. They are included
+at the root of the generated configuration.
+They are composed before the source and target steps, rather than simply run
+after them. The composition rules are described below.
 
-:class:`~vermouth.pipeline.PipelineBuilder`
-    Resolves CLI values, runtime variables, and conditions in the pipeline
-    configuration and constructs the executable pipeline.
+Pipeline names can be found in additional search directories, or a pipeline can
+be supplied as a file path:
 
-Running Martinize2 with a pipeline
-----------------------------------
+.. code-block:: console
 
-Source and target pipeline fragments are selected with ``-from`` and ``-ff``::
+   martinize2 -pipeline-dir my-pipelines -pipeline custom -f input.pdb
+   martinize2 -pipeline path/to/custom.yaml -f input.pdb
 
-    martinize2 \
-        -from charmm \
-        -ff martini3001 \
-        -inpath input.pdb \
-        -outpath output.pdb
+The preliminary parser handles selection and other options needed before the
+pipeline-specific interface exists. These include ``-from``, ``-ff``,
+``-pipeline``, ``-pipeline-dir``, ``-ff-dir``, ``-map-dir``, ``-list-ff``,
+``-list-blocks``, ``-v``, ``-maxwarn``, and ``-version``. Other options are
+contributed by the composed pipeline.
 
-``-from`` and ``-ff`` select the source and target force fields and their
-corresponding pipeline fragments, respectively. Each bundled force field
-provides ``force_fields/<name>/pipeline.yaml``. Target Martini and ELNEDYN
-pipelines include the shared ``pipelines/base_martini.yaml`` definition. A
-path to a custom YAML file can also be used.
+Steps and execution
+~~~~~~~~~~~~~~~~~~~
 
-Force fields loaded with ``-extra_ff_dir`` are treated the same way: their
-``pipeline.yaml`` is resolved from the selected force field's own directory.
-
-Complete, working configurations can be found in the
-`force-field data directory <https://github.com/marrink-lab/vermouth-martinize/tree/main/vermouth/data/force_fields>`_.
-These can be used as examples when writing new pipeline fragments.
-
-Multiple pipeline files
------------------------
-
-Additional YAML files can be supplied after ``-pipeline``::
-
-    martinize2 \
-        -from charmm \
-        -ff martini3001 \
-        -pipeline water \
-        -inpath input.pdb \
-        -outpath output.pdb
-
-Additional pipelines are included in the generated root document. Mappings,
-including ordered step mappings, are composed by key. Command-line flags are
-collected into one interface. A repeated flag definition must have the same
-settings in every location where it appears. Variables
-retain their declared names; pipelines with conflicting variable names should
-be composed through an include with an explicit variable rename.
-
-Including pipeline fragments
-----------------------------
-
-A configuration mapping can declare an ordered ``$include`` directive. Each
-entry is a pipeline name or path; paths relative to the including YAML file
-are supported. The directive is valid at the document root and in pipeline,
-step, processor, CLI, and argument mappings.
-
-.. code-block:: yaml
-
-   martinize2:
-     $include:
-       - common.yaml:martinize2
-       - optional-water:martinize2
-     steps: !!omap
-       - local_step:
-           processor: vermouth.DoMapping
-           args: {}
-
-A whole-file include merges the included document. To include only its pipeline
-mapping, select it explicitly with ``:martinize2``.
-
-An include can rename variables used by its selected fragment. Keys in
-``rename_variables`` are names used by the fragment; values are their names in
-the including scope. Names not listed are preserved::
-
-   martinize2:
-     $include:
-       - path: ../force_fields/charmm/pipeline.yaml:martinize2.steps.from
-         rename_variables:
-           ff: source_ff
-
-An entry can select a fragment within a YAML file by appending a colon and a
-dot-separated path. Ordered mappings accept their key as a dotted path
-component or a numeric index in brackets. The following references select the
-same argument mapping::
-
-   ../force_fields/charmm/pipeline.yaml:martinize2.steps[0].args
-   ../force_fields/charmm/pipeline.yaml:martinize2.steps.read_input.args
-
-Pipeline structure
-------------------
-
-A pipeline configuration contains a root ``martinize2`` section. It can define
-variables, command-line flags, command-line groups, and processor steps.
-
-A simplified example is shown below:
-
-.. code-block:: yaml
-
-  martinize2:
-     variables:
-       - mappings
-       cli:
-         flags:
-           elastic:
-             action: store_true
-             default: false
-             help: Generate an elastic network.
-           inpath:
-             type: str
-             help: Path to read
-     steps:
-       - vermouth.pipeline_processors.ReadSystem:
-           args:
-             inpath:
-               cli: inpath
-       - vermouth.DoMapping:
-           condition:
-             equal:
-               cli: elastic
-               value: true
-           args:
-             mappings:
-               variable: mappings
-
-Nested steps
-~~~~~~~~~~~~
-
-Steps can contain additional ``steps``, allowing pipeline configurations
-to be nested. The structure is recursive, so nested groups are handled in
-the same way as the top-level pipeline.
-
-For example:
+A configuration has a ``martinize2`` pipeline. Its ordered steps can be
+processors or named sub-pipelines; a sub-pipeline contains its own ordered
+steps. Each processor receives the system produced by the previous step. A
+processor may also modify the system in place.
 
 .. code-block:: yaml
 
    martinize2:
      steps: !!omap
-       - prepare_system:
+       - read:
+           processor: vermouth.pipeline_processors.ReadSystem
+           args:
+             path:
+               cli: input
+           cli:
+             flags:
+               input:
+                 cli: f
+                 type: path
+                 required: true
+       - prepare:
            steps: !!omap
-             - vermouth.pipeline_processors.ReadSystem:
-                 args:
-                   path:
-                     value: input.pdb
              - vermouth.RepairGraph:
                  args:
                    delete_unknown:
                      value: true
-                   include_graph:
-                     value: false
 
-       - vermouth.DoMapping:
-           args: {}
+The step key identifies the step within its parent, including during
+composition. In the example above the step keys are ``martinize2``, ``read``,
+``prepare``, and ``vermouth.RepairGraph``. If no explicit ``processor`` is given,
+that step key is also used as the processor's Python import path. An explicit
+processor path allows a stable step name and allows the same processor class
+to appear under different names. Processor classes are imported when the
+pipeline is built. Arguments are passed to their constructors as keyword
+arguments; omitted arguments use the constructor's defaults. See
+:doc:`processors` for the processors.
 
-       - post_process:
-           steps: !!omap
-             - vermouth.SortMoleculeAtoms:
-                 args: {}
-
-Processor steps
----------------
-
-Each item in ``steps`` defines a uniquely named processor (or sub-pipeline)
-and its configuration. Processors are executed in the order in which they
-occur in the YAML file. Step keys must be unique within their containing
+A condition on a processor or sub-pipeline determines whether it runs.
+Conditions are evaluated when the pipeline is built, using the parsed
+command-line values and runtime variables, not repeatedly as the system
+changes. A false sub-pipeline condition skips its entire subtree during
+execution. Conditions do not make a fragment exempt from validation, and
+processor imports and argument resolution still happen when building the
 pipeline.
 
-By default, the key is also the import path of the processor:
-
 .. code-block:: yaml
 
-   - vermouth.DoMapping:
-       args:
-         mappings:
-           variable: mappings
-
-Use ``processor`` to give a step a stable name while importing a different
-processor path. Several uniquely named steps may use the same processor:
-
-.. code-block:: yaml
-
-   - map_protein:
-       processor: vermouth.DoMapping
-       args: {}
-   - map_ligand:
-       processor: vermouth.DoMapping
+   - repair:
+       processor: vermouth.RepairGraph
+       cli:
+         flags:
+           repair:
+             action: store_true
+             default: false
+       condition:
+         equal:
+           cli: repair
+           value: true
+       log:
+         info:
+           msg: Repairing the molecular graph
+           type: step
        args: {}
 
-The processor class is imported when the pipeline is built.
+The log entry is emitted immediately before an enabled step runs; it is not
+emitted when that step is skipped. Its level determines the logging severity,
+and its type categorizes the message for Martinize2's logging and warning
+handling. The supported levels are debug, info, warning, error, and critical.
+Logging does not itself control whether a step runs.
 
-For more information about Vermouth processors, see :doc:`processors`.
-
-Processor arguments
--------------------
-
-Arguments are defined under ``args``. An argument can receive its value from:
-
-* a fixed value;
-* a command-line option;
-* a pipeline variable.
-
-Fixed value
-~~~~~~~~~~~
-
-A fixed value is passed directly from the YAML configuration to the processor.
-
-.. code-block:: yaml
-
-   args:
-     force_constant:
-       value: 700
-
-Command-line value
-~~~~~~~~~~~~~~~~~~
-
-A command-line value is taken from the option provided by the user through the CLI.
-
-.. code-block:: yaml
-
-   args:
-     force_constant:
-       cli: rb_force_constant
-
-Variable value
-~~~~~~~~~~~~~~
-
-Variables can be used for runtime values or Python objects that cannot be
-represented directly in YAML. For example, mappings or force-field objects
-can be created by Martinize2 and referenced from the pipeline configuration.
-
-.. code-block:: yaml
-
-   args:
-     mappings:
-       variable: mappings
-
-Command-line flags
-------------------
-
-Pipeline files can define command-line options under ``cli.flags``:
-
-.. code-block:: yaml
-
-   cli:
-     flags:
-       elastic:
-         action: store_true
-         default: false
-         help: Generate an elastic network.
-
-The :class:`~vermouth.martinize2_pipeline.PipelineConfigBuilder` reads these definitions into the internal
-pipeline configuration. The :class:`~vermouth.pipeline.CLIBuilder` uses this configuration to
-construct the Martinize2 command-line interface.
-
-Hardcoded command-line options
-------------------------------
-
-Most Martinize2 command-line options are defined by the pipeline YAML files
-and are added dynamically by the :class:`~vermouth.pipeline.CLIBuilder`. A small number of options
-are defined directly by Martinize2 because they are required before the
-pipeline configuration and the dynamic command-line interface can be built.
-
-These options are:
-
-``--pipeline``
-    Selects one or more pipeline YAML files.
-
-``--pipeline-dir``
-    Adds a directory in which pipeline YAML files are searched.
-
-``-extra_ff_dir``
-    Adds an additional force-field directory.
-
-``-extra_map_dir``
-    Adds an additional mapping directory.
-
-``-list_ff``
-    Lists the available force fields.
-
-Conditions
-----------
-
-A processor can be enabled conditionally with the ``condition`` field.
-
-The supported condition types are:
-
-* ``equal``;
-* ``has_variable``;
-* ``all``;
-* ``any``;
-* ``not``.
-
-For example:
-
-.. code-block:: yaml
-
-   condition:
-     equal:
-       cli: elastic
-       value: true
-
-Multiple conditions can be combined:
+Conditions support equality between exactly two operands drawn from a CLI
+value, a runtime variable, and a literal value. ``all`` and ``any`` combine
+at least two conditions, and ``not`` negates one. Equality uses Python's
+equality semantics; a missing variable is not a supported existence test.
 
 .. code-block:: yaml
 
    condition:
      all:
        - equal:
-           cli: elastic
+           cli: repair
            value: true
        - not:
            equal:
-             cli: go
-             value: true
+             variable: ff
+             value: null
 
-Custom pipeline directories
----------------------------
+Equality can also compare a CLI value directly with a variable:
 
-Additional directories containing pipeline YAML files can be supplied with
-``-pipeline-dir``.
+.. code-block:: yaml
 
-A custom pipeline file can also be provided directly:
+   condition:
+     equal:
+       cli: selected
+       variable: expected
 
-.. code-block:: console
+Command-line options
+~~~~~~~~~~~~~~~~~~~~
 
-   martinize2 \
-       -pipeline path/to/custom_pipeline.yaml \
-       -inpath input.pdb \
-       -outpath output.pdb
+An option definition contributes to the generated command-line
+interface. Its internal name identifies the parsed value in processor
+arguments and conditions; it need not be the same as the spelling typed by
+the user.
 
-YAML syntax reference
----------------------
+.. code-block:: yaml
 
-This section describes the complete YAML structure understood by the pipeline
-configuration code. Complete, working configurations are distributed in
-``vermouth/data/pipelines`` and can be used as examples when writing new
-pipeline fragments.
+   cli:
+     flags:
+       input:
+         cli: f
+         aliases: [-input]
+         type: path
+         required: true
+         help: Input structure
+       ignore_h:
+         cli: ignh
+         action: store_true
+         default: false
+         help: Ignore hydrogen atoms
+   steps: !!omap
+     - vermouth.pipeline_processors.ReadSystem:
+         args:
+           path:
+             cli: input
+           ignh:
+             cli: ignore_h
 
-Top-level structure
-~~~~~~~~~~~~~~~~~~~
+Here the user supplies ``-f input.pdb`` or ``-input input.pdb``; the
+processor receives the parsed path as its ``path`` argument. The primary
+spelling gets a single-dash prefix; aliases are complete option strings.
+Argparse interprets actions, defaults, required options, choices, argument
+counts, and help text.
 
-A pipeline YAML file must contain a ``martinize2`` mapping::
-
-    martinize2:
-      variables: []
-      cli:
-        flags: {}
-        groups: []
-        exclusive_groups: []
-      steps: []
-
-The ``martinize2`` mapping, and nested pipeline mappings below it, can contain
-the following fields:
-
-``variables``
-    A list of runtime variable names that can be referenced by ``args`` and
-    ``condition`` entries.
-
-``cli``
-    A mapping of internal command-line option names to argparse option
-    definitions in ``flags``, optionally arranged in ordered ``groups`` and
-    mutually exclusive ``exclusive_groups``.
-
-``steps``
-    An ordered list of processor steps or nested pipeline groups.
-
-A processor step can additionally contain ``processor``, ``args``, and
-``condition``. A nested pipeline group contains another ``steps`` mapping and
-may also define CLI options, variables, or a condition.
-
-``steps``
-~~~~~~~~~
-
-``steps`` is an ordered mapping. Entries are executed in the order in which
-they occur. Its keys must be unique within the pipeline. A processor step
-uses its key as the processor import path unless it defines ``processor``::
-
-    steps: !!omap
-      - vermouth.DoMapping:
-          args:
-            mappings:
-              variable: mappings
-      - vermouth.DoAverageBead:
-          args: {}
-
-The processor class is imported when the pipeline is built.
-
-An entry can instead be a named nested pipeline. A nested pipeline is
-identified by the presence of another ``steps`` field::
-
-    - mapping:
-        steps: !!omap
-          - vermouth.DoMapping:
-              args: {}
-          - vermouth.DoAverageBead:
-              args: {}
-
-Nested pipelines can themselves contain nested pipelines. CLI options and
-variables defined in a parent scope are available to its child steps.
-
-``cli.flags``
-~~~~~~~~~~~~~
-
-``cli.flags`` defines command-line arguments. The mapping key is the internal
-name under which the parsed value is stored::
-
-    cli:
-      flags:
-        rb_force_constant:
-          cli: ef
-          type: float
-          default: 700
-          help: Elastic bond force constant Fc in kJ/mol/nm^2
-
-The following fields are supported by the pipeline configuration layer:
-
-``cli``
-    Optional alternative spelling of the command-line flag. For example,
-    ``cli: ef`` makes ``-ef`` available while the parsed value is stored as
-    ``rb_force_constant``. Additional spellings can be declared with
-    ``aliases``.
-
-``type``
-    Converts the command-line value. Supported string values are ``str``,
-    ``int``, ``float``, ``path``, ``cys_argument``, ``water_bias``,
-    ``ignore_resname``, and ``maxwarn``.
-
-``default``
-    Value used when the option is not supplied.
-
-``action``
-    Argparse action, for example ``store_true`` or ``append``.
-
-``help``
-    Help text shown by the command-line parser.
-
-``cli.groups`` and ``cli.exclusive_groups``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``groups`` is an ordered list of argparse help groups. Each item accepts a
-``title``, optional argparse group keyword arguments, ``flags``, and nested
-``exclusive_groups``. ``exclusive_groups`` at either level preserve argparse
-mutual exclusion. The ``flags`` mappings define the options displayed in that
-group.
+Flags can be grouped for help output. A mutually exclusive group additionally
+lets argparse reject incompatible choices. Grouping does not create a
+separate namespace or change visibility within the pipeline.
 
 .. code-block:: yaml
 
    cli:
      groups:
-       - title: Input files
-         flags:
-           inpath:
-             type: path
        - title: Structure handling
          exclusive_groups:
            - flags:
-               dssp: {nargs: "?"}
-               ss: {type: str}
+               dssp:
+                 nargs: "?"
+               ss:
+                 type: str
 
-Define a group at the lowest pipeline level that contains every processor
-using its flags. When a category spans several sibling processors, introduce a
-named sub-pipeline and place the group on that sub-pipeline. For example,
-input parsing and repair steps can share an ``Input files`` group:
+An option can be declared on a pipeline, sub-pipeline, or processor step. It
+is visible in that scope and its descendants, including the condition on
+the declaring step. A flag declared on one sibling is not visible to another
+sibling, even though both contribute to the same command-line interface.
+Declare a shared flag on their nearest common parent, or repeat the identical
+definition in each sibling. Repeated definitions of the same internal name
+that remain after composition must have fully identical settings; the generated
+interface adds the option only once.
+
+Arguments and runtime variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each processor argument has one value source: a literal from the
+configuration, a parsed command-line value, or a runtime variable. These
+sources determine the actual Python values passed to the constructor.
 
 .. code-block:: yaml
 
-   - input:
-       cli:
-         groups:
-           - title: Input files
-             flags:
-               inpath:
-                 cli: f
-                 type: path
-               ignore_h:
-                 cli: ignh
-                 action: store_true
-       steps: !!omap
-         - vermouth.pipeline_processors.ReadSystem:
-             args:
-               path:
-                 cli: inpath
-         - prepare_structure:
-             steps: !!omap
-               - vermouth.pipeline_processors.MakeBondsWrapper:
-                   args:
-                     ignh:
-                       cli: ignore_h
+   variables: [ff, mappings]
+   steps: !!omap
+     - vermouth.DoMapping:
+         args:
+           to_ff:
+             variable: ff
+           mappings:
+             variable: mappings
+           delete_unknown:
+             value: true
 
-``required``
-    Whether the option must be supplied.
+Variables are names for objects supplied by the program building the pipeline;
+their declarations do not create or assign those objects. Martinize2 supplies
+``source_ff`` for the source force field, ``ff`` for the target force field,
+and ``mappings`` for the mappings. The example uses the latter two in a
+target-side scope. A custom embedding of the pipeline builder can supply
+different objects by name.
 
-``choices``
-    Sequence of accepted values.
+Like flags, variable declarations are visible in their own scope and
+descendants, not across siblings. An argument or condition must refer to a
+variable declared in scope, and the builder must actually supply a value
+under that name. All scopes refer to the same runtime value for a given name;
+declarations do not create scope-specific values. Declaring a name does not
+make an arbitrary new runtime object available. For include-specific
+renaming, see below.
 
-``nargs``
-    Number of command-line values consumed by the option.
+Literal values are passed through as YAML values. A declarative path is an
+exception: it becomes a Python path resolved against the file that supplied
+it, or against Vermouth's data directory. This provenance is retained when a
+fragment is included.
 
-``const``
-    Constant value used by argparse actions that support it, for example an
-    option using ``nargs: '?'``.
+.. code-block:: yaml
 
-Except for ``cli`` and the string-to-type translation performed for ``type``,
-the option fields are passed to ``argparse.ArgumentParser.add_argument``.
-Therefore argparse-compatible fields can be used where appropriate.
+   args:
+     input_file:
+       value:
+         $path: inputs/reference.pdb
+     data_file:
+       value:
+         $data: mappings/example.map
+     label:
+       value: inputs/reference.pdb
 
-CLI flags may be defined at the ``martinize2`` level or inside nested pipeline
-and processor definitions. A CLI option is visible in the scope where it is
-defined and in child scopes. When multiple pipeline YAML files are combined,
-a CLI flag may occur more than once only when its definitions are identical.
+The first path is relative to the declaring YAML file; the second must stay
+inside the data directory. The label remains an ordinary string. Absolute
+paths and parent-directory components are allowed with ``$path``.
 
-``variables``
-~~~~~~~~~~~~~
+Configuration invariants
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-``variables`` lists values that are supplied by Martinize2 at runtime rather
-than read from YAML or the command line::
+Within each pipeline, step keys must be unique. Two distinct steps may still
+use the same processor class. CLI and variable references in arguments and
+conditions must be declared in the same or an enclosing scope; a definition
+elsewhere in the global CLI is not sufficient. Repeated CLI definitions are
+checked for consistency across the composed pipeline. Conditions must have
+one supported operator and equality must have exactly two operands.
 
-    variables:
-      - ff
-      - mappings
+When a document declares a schema, it is validated *after* its includes have
+been composed. The bundled schema also constrains, for example, argument
+sources and CLI definitions. Schema paths are relative to the document that
+declares them. The generated Martinize2 document uses the bundled schema, and
+Martinize2 validates the composed references before building the interface.
+Invalid imports, missing runtime values, and invalid constructor arguments
+can additionally fail when the pipeline is built.
 
-A variable can be referenced from processor arguments and conditions. When
-including a fragment whose variables would conflict with its parent, use the
-``rename_variables`` mapping described in "Including pipeline fragments".
+Advanced composition
+--------------------
 
-``args``
-~~~~~~~~
+Includes and precedence
+~~~~~~~~~~~~~~~~~~~~~~~
 
-``args`` maps processor constructor argument names to their value source. A
-processor argument should use one of the following source fields.
+An include brings a selected mapping into the mapping containing the
+directive. Includes are expanded depth-first, in their listed order, before
+the local content is applied. Later includes take precedence over earlier
+ones, and local content takes precedence over all includes, according to the
+merge rules below. Include cycles are errors.
 
-``value``
-    A fixed YAML value::
+.. code-block:: yaml
 
-        args:
-          delete_unknown:
-            value: true
+   martinize2:
+     $include:
+       - common.yaml:martinize2
+       - optional.yaml:martinize2
+     steps: !!omap
+       - vermouth.SortMoleculeAtoms:
+           args: {}
 
-    A fixed path can be made relative to the YAML file that declares it, or
-    to Vermouth's data directory::
+An include without a fragment selects the whole document, so it belongs at a
+compatible document-level mapping. Selecting the pipeline mapping instead
+allows it to be composed into another pipeline. Includes can also be used
+in other mappings, such as a step, its CLI, or its arguments. The selected
+fragment must be a mapping, and the result must be valid at its destination.
 
-        args:
-          input_file:
-            value:
-              $path: input.pdb
-          base_pipeline:
-            value:
-              $data: pipelines/base_martini.yaml
+Paths and fragments
+~~~~~~~~~~~~~~~~~~~
 
-    ``$path`` values may use normal relative path components. ``$data`` values
-    must remain inside Vermouth's data directory. Untagged strings are passed
-    to processors unchanged.
+For an include, a relative file path is first resolved relative to the
+including YAML file. Otherwise the loader checks the supplied path and
+searches the including directory, additional pipeline directories, the
+bundled pipeline directory, and finally bundled force-field pipelines by
+name. Additional ``-pipeline`` selections use the same name/path lookup,
+without an including file's relative-path context.
 
-``cli``
-    The value of a command-line option::
+The part after the first colon selects within the fully composed included
+document. Components traverse mapping keys; numeric indexes select entries in
+order. A step can therefore be selected by its key or by its zero-based
+position:
 
-        args:
-          path:
-            cli: inpath
+.. code-block:: yaml
 
-``variable``
-    A runtime variable::
+   $include:
+     - common.yaml:martinize2.steps.read_input.args
+     - common.yaml:martinize2.steps[0].args
 
-        args:
-          force_field:
-            variable: ff
+These select the same mapping if ``read_input`` is the first step. Bracketed
+selectors are numeric, not step names. A dotted component cannot represent a
+single key containing a dot; use a numeric step index where appropriate.
+Selectors do not import the selected fragment's parent scope: declarations
+outside the fragment must be supplied by the destination scope.
 
-CLI and variable references must be defined in the current scope or a parent
-scope. These references are validated before the executable pipeline is
-constructed.
+Variable renaming
+~~~~~~~~~~~~~~~~~
 
-``condition``
-~~~~~~~~~~~~~
+An include can adapt a fragment's variable names to objects available in its
+destination. Renaming applies to declarations and references in the selected
+fragment, not to the including document or other includes. Unlisted names
+stay unchanged; attempting to rename a name absent from the fragment is an
+error.
 
-``condition`` controls whether a step is executed. A condition mapping must
-contain exactly one condition operator. The following operators are supported.
+.. code-block:: yaml
 
-``equal``
-    Compare a CLI option or runtime variable to a fixed value::
+   martinize2:
+     variables: [source_ff]
+     steps: !!omap
+       - read:
+           $include:
+             - path: source.yaml:martinize2.steps.from.steps.read
+               rename_variables:
+                 ff: source_ff
 
-        condition:
-          equal:
-            cli: elastic
-            value: true
+For example, Martinize2 renames ``ff`` to ``source_ff`` when it imports the
+source force field's ``from`` step, leaving the target's ``ff`` references
+unchanged. Renaming is not a mechanism for creating a runtime value; the
+destination name must still be declared in scope and supplied by the builder.
 
-    A variable can be compared instead by replacing ``cli`` with
-    ``variable``::
+Merge and replace
+~~~~~~~~~~~~~~~~~
 
-        condition:
-          equal:
-            variable: some_variable
-            value: some_value
+The default strategy is recursive merge. Existing mappings are merged by key;
+an incoming scalar or list replaces the existing value. A new key is appended,
+while an existing key keeps its position. Consequently, matching step keys
+modify the same step rather than adding a second execution. Lists such as
+variable declarations and CLI groups are replaced, not concatenated.
 
-``has_variable``
-    Test whether the object referenced by ``variable`` contains a force-field
-    variable with the specified ``key``::
+.. code-block:: yaml
 
-        condition:
-          has_variable:
-            variable: ff
-            key: bondedtypes
+   # base.yaml
+   martinize2:
+     steps: !!omap
+       - repair:
+           processor: vermouth.RepairGraph
+           args:
+             delete_unknown:
+               value: false
+             include_graph:
+               value: true
 
-``all``
-    Evaluate to true only if all nested conditions are true::
+   # derived.yaml
+   martinize2:
+     $include:
+       - base.yaml:martinize2
+     steps: !!omap
+       - repair:
+           args:
+             delete_unknown:
+               value: true
 
-        condition:
-          all:
-            - equal:
-                cli: elastic
-                value: true
-            - equal:
-                cli: go
-                value: null
+The resulting repair step keeps the processor and ``include_graph`` from the
+base and uses the new ``delete_unknown`` value. In contrast, the replace
+strategy clears the existing mapping at the point where it is applied before
+adding the incoming keys. It does not replace the entire document unless
+applied at that level.
 
-``any``
-    Evaluate to true if at least one nested condition is true::
+.. code-block:: yaml
 
-        condition:
-          any:
-            - equal:
-                cli: elastic
-                value: true
-            - equal:
-                cli: another_option
-                value: true
+   martinize2:
+     $include:
+       - base.yaml:martinize2
+     steps: !!omap
+       - repair:
+           args:
+             $strategy: replace
+             delete_unknown:
+               value: true
 
-``not``
-    Negate one nested condition::
+Now the repair step has only the displayed argument. Replacement is especially
+important when changing an argument's source: ordinary merge would retain
+the old source as well, producing an invalid argument. Replace that argument
+mapping, or explicitly remove the old source.
 
-        condition:
-          not:
-            equal:
-              cli: dssp
-              value: null
+.. code-block:: yaml
 
-``all``, ``any``, and ``not`` can be nested to construct more complex
-conditions. CLI options and variables referenced by conditions are validated
-before pipeline construction.
+   args:
+     path:
+       $strategy: replace
+       value: input.pdb
+
+Positioning and removing entries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+New mapping entries normally appear after existing entries. An insertion
+directive on a new entry places it immediately before or after an existing
+key in the same mapping. This is particularly useful for ordered steps:
+
+.. code-block:: yaml
+
+   martinize2:
+     $include:
+       - base.yaml:martinize2
+     steps: !!omap
+       - average:
+           processor: vermouth.DoAverageBead
+           $insert_after: repair
+           args: {}
+       - obsolete: $remove
+
+The anchor must already exist when the entry is merged; it is a sibling key,
+not a processor path in another pipeline. With both before and after anchors,
+the anchors must be adjacent and specify the same insertion slot. If the
+incoming key already exists, it is merged in place, not moved: any supplied
+anchors must already describe its immediate position or composition fails.
+Missing anchors are errors.
+
+Removing a key deletes its entire value, including any nested steps. Removing
+a missing key has no effect. Removal and insertion are applied during
+composition, so use them in a fragment that is merged into a mapping containing
+the relevant keys; they are not executable processor settings.
+
+Directive names and the removal marker start with a dollar sign. To preserve
+a literal leading dollar sign in a YAML string or key rather than treating it
+as a composition directive, double it:
+
+.. code-block:: yaml
+
+   args:
+     label:
+       value: $$remove
+
+The processor receives the literal string ``$remove``.
