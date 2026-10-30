@@ -624,47 +624,6 @@ class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias
             water_bead_sizes,
         ), {}
 
-class OutputWriterWrapper(Processor):
-    """
-    Write topology and coordinate output files.
-
-    Parameters
-    ----------
-    top_path : str or pathlib.Path or None
-        Path of the topology output file.
-    outpath : str or pathlib.Path or None
-        Path of the PDB output file.
-    """
-    def __init__(self, top_path, outpath):
-        self.top_path = top_path
-        self.outpath = outpath
-    def run_system(self, system):
-        """
-        Write configured output files.
-
-        Parameters
-        ----------
-        system : vermouth.system.System
-            System to write.
-
-        Returns
-        -------
-        vermouth.system.System
-            Unmodified input system.
-        """
-        if self.top_path is not None:
-            write_gmx_topology(system,
-                           self.top_path,
-                           itp_paths=system.meta.get("itp_paths", {}),
-                           C6C12=False,
-                           defines=system.meta.get("defines", ()),
-                           ) 
-        if self.outpath is not None:
-            vermouth.pdb.write_pdb(system, str(self.outpath), omit_charges=True)
-
-
-        return system
-
 
 class SetMoleculeMetaScFixWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
     """Adapt side-chain-fixing options for ``SetMoleculeMeta``."""
