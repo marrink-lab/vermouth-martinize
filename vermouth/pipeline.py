@@ -470,8 +470,7 @@ def eval_condition(condition, cli_args, variables):
     """
     Evaluate a pipeline condition.
 
-    Supported conditions are ``any``, ``all``, ``not``, ``equal``, and
-    ``has_variable``.
+    Supported conditions are ``any``, ``all``, ``not``, and ``equal``.
 
     Parameters
     ----------
@@ -550,7 +549,8 @@ def resolve_config_paths(value):
                 source = value.get(SOURCE_KEY)
                 if source is None:
                     raise ValueError("$path requires YAML source metadata.")
-                return (Path(str(source).split(":", 1)[0]).parent / reference).resolve()
+                # FIXME: windows absolute paths may break here.
+                return (Path(str(source).rsplit(":", 1)[0]).parent / reference).resolve()
 
             data_path = Path(vermouth.DATA_PATH).resolve()
             resolved = (data_path / reference).resolve()
@@ -749,16 +749,6 @@ def _validate_raw_step_names(pipeline_conf, path="martinize2", source=None):
 
         if step.get("steps"):
             _validate_raw_step_names(step, step_path, source)
-
-
-def validate_step_names(pipeline_conf, path="martinize2"):
-    """Validate the structure of post-conversion ordered step mappings."""
-    for index, (name, step) in enumerate(
-        pipeline_conf.get("steps", OrderedDict()).items()
-    ):
-        step_path = f"{path}.steps[{index}].{name}"
-        if step.get("steps"):
-            validate_step_names(step, step_path)
 
 
 @lru_cache(maxsize=32)
@@ -1105,7 +1095,6 @@ def _validate_pipeline_config(config, path):
     if isinstance(steps, MutableSequence):
         _validate_raw_step_names(root, source=path)
         _convert_step_mappings(root)
-    validate_step_names(root)
 
 
 def _convert_step_mappings(value):

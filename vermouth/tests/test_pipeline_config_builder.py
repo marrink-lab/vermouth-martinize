@@ -26,7 +26,6 @@ from vermouth.pipeline import (
     rename_variables,
     select_include_fragment,
     validate_cli_options,
-    validate_step_names,
 )
 
 def test_options_used_in_condition_equal():
