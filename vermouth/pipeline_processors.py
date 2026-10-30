@@ -438,14 +438,6 @@ class GoModelWrapper(Processor):
                                 go_atomname=self.go_atomname)
             system.meta["defines"] = ("GO_VIRT",)
             system.meta["itp_paths"] = {"atomtypes": "go_atomtypes.itp","nonbond_params": "go_nbparams.itp"}
-            if not self.water_bias:
-                # this ensures that disordered-folded go bonds get removed regardless of force field.
-                vermouth.processors.ComputeWaterBias(self.water_bias,
-                                                    dict(self.water_bias_eps),
-                                                    self.water_bias_idrs,
-                                                    self.water_type,
-                                                    self.water_bead_sizes,
-                                                    ).run_system(system)
         return system
     
 class MergeChainsWrapper(Processor):

@@ -415,6 +415,14 @@ martinize2:
                     regular: 0.47
                     small: 0.41
                     tiny: 0.34
+          - vermouth.IDRCrossDomainInteractionRemoval:
+              args:
+                go:
+                  cli: go
+                elastic:
+                  cli: elastic
+                id_regions:
+                  cli: water_bias_idrs
           - vermouth.UnstashAttributes:
               condition:
                 equal:

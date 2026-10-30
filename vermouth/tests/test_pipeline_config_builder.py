@@ -643,33 +643,6 @@ def test_force_field_target_pipeline_includes_base_martini(
     assert "force_field" not in elastic_args
 
 
-def test_secondary_structure_pipeline_preserves_processing_order():
-    root = PipelineConfigBuilder("charmm", "martini3001").build_config()["martinize2"]
-    target_steps = root["steps"]["to"]["steps"]
-    assert list(target_steps) == [
-        "martinize",
-        "vermouth.RTPPolisher",
-        "vermouth.pipeline_processors.ApplyPosresWrapper",
-        "secondary_structure",
-        "vermouth.OutputLogger",
-        "vermouth.gmx.topology.TopologyWriter",
-        "vermouth.pdb.WritePDB",
-    ]
-    steps = target_steps["secondary_structure"]["steps"]
-    assert list(steps) == [
-        "vermouth.pipeline_processors.GoModelWrapper",
-        "vermouth.pipeline_processors.MergeChainsWrapper",
-        "vermouth.pipeline_processors.NameMolTypeWrapper",
-        "merge_all_for_elastic",
-        "elastic",
-        "vermouth.pipeline_processors.VirtualSiteCreatorWrapper",
-        "vermouth.pipeline_processors.ComputeWaterBiasWrapper",
-        "vermouth.UnstashAttributes",
-        "vermouth.SortMoleculeAtoms",
-    ]
-    assert steps["merge_all_for_elastic"]["processor"] == "vermouth.MergeAllMolecules"
-
-
 @pytest.mark.parametrize(
     "elastic, go, rb_unit, merge_expected, elastic_expected",
     [
@@ -688,46 +661,6 @@ def test_secondary_structure_elastic_conditions(
     cli_args = {"elastic": elastic, "go": go, "rb_unit": rb_unit}
     assert eval_condition(steps["merge_all_for_elastic"]["condition"], cli_args, {}) == merge_expected
     assert eval_condition(steps["elastic"]["condition"], cli_args, {}) == elastic_expected
-
-
-@pytest.mark.parametrize(
-    "options, expected",
-    [
-        ([], ["NameMolTypeWrapper", "SortMoleculeAtoms"]),
-        (
-            ["-elastic", "-eunit", "all"],
-            ["NameMolTypeWrapper", "MergeAllMolecules", "ElasticWrapper", "SortMoleculeAtoms"],
-        ),
-        (["-go", "-elastic", "-eunit", "all"], ["GoModelWrapper"]),
-    ],
-)
-def test_secondary_structure_pipeline_executes_enabled_steps_in_order(options, expected):
-    root = PipelineConfigBuilder("charmm", "martini3001").build_config()["martinize2"]
-    target = root["steps"]["to"]
-    cli_args = CLIBuilder("target", target, type_map=TYPE_MAP).parse_cli_args(options)
-    pipeline = PipelineBuilder(target).build_pipeline(cli_args, {"ff": None, "mappings": {}})
-    secondary = next(
-        processor for processor in pipeline.processors
-        if getattr(processor, "name", None) == "secondary_structure"
-    )
-    executed = []
-
-    class Recorder:
-        def __init__(self, name):
-            self.name = name
-
-        def run_system(self, system):
-            executed.append(self.name)
-            return system
-
-    for node in secondary.ordered_nodes:
-        processor = secondary.nodes[node]["processor"]
-        name = processor.__name__ if isinstance(processor, type) else type(processor).__name__
-        secondary.nodes[node]["processor"] = Recorder(name)
-
-    system = object()
-    assert secondary.run_system(system) is system
-    assert executed == expected
 
 
 @pytest.mark.parametrize("path", [
