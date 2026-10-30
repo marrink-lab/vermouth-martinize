@@ -268,6 +268,36 @@ martinize2:
                   type: cys_argument
                   default: auto
                   help: "Cystein bonds (default: auto)"
+            - title: Secondary structure handling
+              flags:
+                extdih:
+                  cli: ed
+                  action: store_true
+                  default: false
+                  help: >
+                    Use dihedrals for extended regions rather than elastic bonds (default: false)
+              exclusive_groups:
+              - flags:
+                  dssp:
+                    nargs: "?"
+                    const: true
+                    help: >
+                      DSSP executable for determining structure. If this flag
+                      is given but no executable is specified, the mdtraj library
+                      will be used to compute the secondary structure, if it can be
+                      imported
+                  ss:
+                    type: str
+                    default:
+                    help: >
+                      Manually set the secondary structure of the proteins.
+                      Either give a dssp sequence for each residue in your input
+                      file or a single letter to be repeated for the entire sequence,
+                      e.g. -ss C
+                  collagen:
+                    action: store_true
+                    default: false
+                    help: "Use collagen parameters (default: false)"
           steps: !!omap
           - Choose secondary structure:
               steps: !!omap
@@ -336,38 +366,6 @@ martinize2:
                       value: cgsecstruct
                     seq:
                       value: "F"
-              cli:
-                groups:
-                - title: Secondary structure handling
-                  flags:
-                    extdih:
-                      cli: ed
-                      action: store_true
-                      default: false
-                      help: >
-                        Use dihedrals for extended regions rather than elastic bonds (default: false)
-                  exclusive_groups:
-                  - flags:
-                      dssp:
-                        nargs: "?"
-                        const: true
-                        help: >
-                          DSSP executable for determining structure. If this flag
-                          is given but no executable is specified, the mdtraj library
-                          will be used to compute the secondary structure, if it can be
-                          imported
-                      ss:
-                        type: str
-                        default:
-                        help: >
-                          Manually set the secondary structure of the proteins.
-                          Either give a dssp sequence for each residue in your input
-                          file or a single letter to be repeated for the entire sequence,
-                          e.g. -ss C
-                      collagen:
-                        action: store_true
-                        default: false
-                        help: "Use collagen parameters (default: false)"
           - vermouth.SetMoleculeMeta:
               cli:
                 flags: {}
@@ -409,6 +407,10 @@ martinize2:
                       cli: cystein_bridge
 
       - go_system:
+          cli:
+            groups:
+            - $include:
+              - "../../pipelines/go_cli.yaml:martinize2.cli.groups[0]"
           steps: !!omap
           - vermouth.MergeAllMolecules:
               condition:

@@ -13,8 +13,11 @@ from vermouth.martinize2_pipeline import (
 )
 from vermouth.pipeline import (
     CLIBuilder,
+    PipelineBuilder,
     _options_used_in_condition,
     _validate_raw_step_names,
+    compose_pipeline_file,
+    eval_condition,
     find_pipeline_yaml,
     iter_cli_flags,
     load_pipeline_configs,
@@ -277,8 +280,12 @@ def test_validate_cli_options_cli_group():
     validate_cli_options(pipeline_conf)
 
 
-def test_validate_cli_options_accepts_flags_defined_in_sibling_pipeline():
-    """CLI references are global across the final composed pipeline root."""
+@pytest.mark.parametrize("reference", [
+    {"args": {"option": {"cli": "shared"}}},
+    {"condition": {"equal": {"cli": "shared", "value": True}}},
+])
+def test_validate_cli_options_rejects_flags_defined_in_sibling_pipeline(reference):
+    """CLI references cannot use flags defined in a sibling pipeline."""
     pipeline_conf = {
         "steps": OrderedDict([
             (
@@ -287,7 +294,7 @@ def test_validate_cli_options_accepts_flags_defined_in_sibling_pipeline():
                     "steps": OrderedDict([
                         (
                             "consumer",
-                            {"args": {"option": {"cli": "shared"}}},
+                            reference,
                         ),
                     ]),
                 },
@@ -302,7 +309,47 @@ def test_validate_cli_options_accepts_flags_defined_in_sibling_pipeline():
         ]),
     }
 
-    validate_cli_options(pipeline_conf, path="martinize2")
+    with pytest.raises(KeyError, match="shared"):
+        validate_cli_options(pipeline_conf, path="martinize2")
+
+
+def test_validate_cli_options_rejects_flags_defined_in_descendant():
+    pipeline_conf = {
+        "condition": {"equal": {"cli": "shared", "value": True}},
+        "steps": {"child": {"cli": {"flags": {"shared": {}}}}},
+    }
+    with pytest.raises(KeyError, match="shared"):
+        validate_cli_options(pipeline_conf)
+
+
+def test_validate_cli_options_does_not_treat_source_metadata_as_a_flag():
+    pipeline_conf = {
+        "cli": {"flags": {"$source": "pipeline.yaml"}},
+        "args": {"option": {"cli": "$source"}},
+    }
+    with pytest.raises(KeyError, match=r"\$source"):
+        validate_cli_options(pipeline_conf)
+
+
+@pytest.mark.parametrize("same_options", [True, False])
+def test_validate_cli_options_duplicate_flags(same_options):
+    pipeline_conf = {
+        "steps": {
+            "first": {
+                "cli": {"flags": {"shared": {"default": 1}}},
+                "args": {"option": {"cli": "shared"}},
+            },
+            "second": {
+                "cli": {"flags": {"shared": {"default": 1 if same_options else 2}}},
+                "args": {"option": {"cli": "shared"}},
+            },
+        },
+    }
+    if same_options:
+        validate_cli_options(pipeline_conf)
+    else:
+        with pytest.raises(ValueError, match="shared.*different options"):
+            validate_cli_options(pipeline_conf)
 
 
 def test_build_mini_parser_defaults():
@@ -368,15 +415,20 @@ def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
         == "Protein description"
     )
     assert (
-        source["steps"]["protein_description"]["steps"][
-            "Choose secondary structure"
-        ]["cli"]["groups"][0]["title"]
+        source["steps"]["protein_description"]["cli"]["groups"][1]["title"]
         == "Secondary structure handling"
     )
+    go_group = source["steps"]["go_system"]["cli"]["groups"][0]
+    assert go_group["title"] == "Virtual site based GoMartini"
     assert [group["title"] for group in target["cli"]["groups"]] == [
         "Force field selection",
         "Output files",
         "Apply water bias.",
+    ]
+    secondary = target["steps"]["secondary_structure"]
+    assert [group["title"] for group in secondary["cli"]["groups"]] == [
+        "Virtual site based GoMartini",
+        "Protein elastic network",
     ]
     assert (
         target["steps"]["vermouth.pipeline_processors.ApplyPosresWrapper"][
@@ -384,15 +436,7 @@ def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
         ]["groups"][0]["title"]
         == "Position restraints"
     )
-    assert (
-        target["steps"]["vermouth.pipeline_processors.GoModelWrapper"]["cli"][
-            "groups"
-        ][0]["title"]
-        == "Virtual site based GoMartini"
-    )
-    assert target["steps"]["elastic"]["cli"]["groups"][0]["title"] == (
-        "Protein elastic network"
-    )
+    assert set(go_group["flags"]) == set(secondary["cli"]["groups"][0]["flags"])
 
     parser = CLIBuilder(
         "martinize2", config["martinize2"], type_map=TYPE_MAP
@@ -413,6 +457,23 @@ def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
         "Virtual site based GoMartini",
         "Protein elastic network",
     }, titles
+    expected_group_flags = {
+        "Secondary structure handling": {"extdih", "dssp", "ss", "collagen"},
+        "Virtual site based GoMartini": {
+            "go", "go_write_file", "go_low", "go_up", "go_res_dist",
+            "go_backbone", "go_atomname", "go_eps",
+        },
+        "Protein elastic network": {
+            "elastic", "rb_unit", "rb_force_constant", "rb_lower_bound",
+            "rb_upper_bound", "res_min_dist", "rb_decay_factor",
+            "rb_decay_shift", "rb_decay_power", "rb_minimum_force",
+            "rb_selection",
+        },
+    }
+    for title, expected_flags in expected_group_flags.items():
+        groups = [group for group in parser._action_groups if group.title == title]
+        assert len(groups) == 1
+        assert {action.dest for action in groups[0]._group_actions} == expected_flags
     with pytest.raises(SystemExit):
         parser.parse_args(["-f", "input.pdb", "-dssp", "-ss", "C"])
 
@@ -574,12 +635,194 @@ def test_force_field_target_pipeline_includes_base_martini(
 
     assert list(document["martinize2"]["steps"]) == ["from", "to"]
     assert "mappings" in document["martinize2"]["steps"]["to"]["variables"]
-    elastic_args = document["martinize2"]["steps"]["to"]["steps"]["elastic"][
-        "args"
-    ]
+    elastic_args = document["martinize2"]["steps"]["to"]["steps"][
+        "secondary_structure"
+    ]["steps"]["elastic"]["args"]
     assert elastic_args["bond_type"]["value"] == bond_type
     assert elastic_args["bb_atomname"]["value"] == "BB"
     assert "force_field" not in elastic_args
+
+
+def test_secondary_structure_pipeline_preserves_processing_order():
+    root = PipelineConfigBuilder("charmm", "martini3001").build_config()["martinize2"]
+    target_steps = root["steps"]["to"]["steps"]
+    assert list(target_steps) == [
+        "martinize",
+        "vermouth.RTPPolisher",
+        "vermouth.pipeline_processors.ApplyPosresWrapper",
+        "secondary_structure",
+        "vermouth.OutputLogger",
+        "vermouth.gmx.topology.TopologyWriter",
+        "vermouth.pdb.WritePDB",
+    ]
+    steps = target_steps["secondary_structure"]["steps"]
+    assert list(steps) == [
+        "vermouth.pipeline_processors.GoModelWrapper",
+        "vermouth.pipeline_processors.MergeChainsWrapper",
+        "vermouth.pipeline_processors.NameMolTypeWrapper",
+        "merge_all_for_elastic",
+        "elastic",
+        "vermouth.pipeline_processors.VirtualSiteCreatorWrapper",
+        "vermouth.pipeline_processors.ComputeWaterBiasWrapper",
+        "vermouth.UnstashAttributes",
+        "vermouth.SortMoleculeAtoms",
+    ]
+    assert steps["merge_all_for_elastic"]["processor"] == "vermouth.MergeAllMolecules"
+
+
+@pytest.mark.parametrize(
+    "elastic, go, rb_unit, merge_expected, elastic_expected",
+    [
+        (False, None, "all", False, False),
+        (True, None, "all", True, True),
+        (True, None, "molecule", False, True),
+        (True, True, "all", False, False),
+        (True, Path("contacts.txt"), "all", False, False),
+    ],
+)
+def test_secondary_structure_elastic_conditions(
+    elastic, go, rb_unit, merge_expected, elastic_expected,
+):
+    root = PipelineConfigBuilder("charmm", "martini3001").build_config()["martinize2"]
+    steps = root["steps"]["to"]["steps"]["secondary_structure"]["steps"]
+    cli_args = {"elastic": elastic, "go": go, "rb_unit": rb_unit}
+    assert eval_condition(steps["merge_all_for_elastic"]["condition"], cli_args, {}) == merge_expected
+    assert eval_condition(steps["elastic"]["condition"], cli_args, {}) == elastic_expected
+
+
+@pytest.mark.parametrize(
+    "options, expected",
+    [
+        ([], ["NameMolTypeWrapper", "SortMoleculeAtoms"]),
+        (
+            ["-elastic", "-eunit", "all"],
+            ["NameMolTypeWrapper", "MergeAllMolecules", "ElasticWrapper", "SortMoleculeAtoms"],
+        ),
+        (["-go", "-elastic", "-eunit", "all"], ["GoModelWrapper"]),
+    ],
+)
+def test_secondary_structure_pipeline_executes_enabled_steps_in_order(options, expected):
+    root = PipelineConfigBuilder("charmm", "martini3001").build_config()["martinize2"]
+    target = root["steps"]["to"]
+    cli_args = CLIBuilder("target", target, type_map=TYPE_MAP).parse_cli_args(options)
+    pipeline = PipelineBuilder(target).build_pipeline(cli_args, {"ff": None, "mappings": {}})
+    secondary = next(
+        processor for processor in pipeline.processors
+        if getattr(processor, "name", None) == "secondary_structure"
+    )
+    executed = []
+
+    class Recorder:
+        def __init__(self, name):
+            self.name = name
+
+        def run_system(self, system):
+            executed.append(self.name)
+            return system
+
+    for node in secondary.ordered_nodes:
+        processor = secondary.nodes[node]["processor"]
+        name = processor.__name__ if isinstance(processor, type) else type(processor).__name__
+        secondary.nodes[node]["processor"] = Recorder(name)
+
+    system = object()
+    assert secondary.run_system(system) is system
+    assert executed == expected
+
+
+@pytest.mark.parametrize("path", [
+    "force_fields/charmm/pipeline.yaml",
+    "force_fields/amber/pipeline.yaml",
+    "force_fields/gromos/pipeline.yaml",
+    "pipelines/base_martini.yaml",
+    "force_fields/martini22/pipeline.yaml",
+    "force_fields/martini22p/pipeline.yaml",
+    "force_fields/martini3001/pipeline.yaml",
+    "force_fields/elnedyn21/pipeline.yaml",
+    "force_fields/elnedyn22/pipeline.yaml",
+    "force_fields/elnedyn22p/pipeline.yaml",
+])
+def test_bundled_pipeline_defines_referenced_flags_locally(path):
+    root = compose_pipeline_file(vermouth.DATA_PATH / path)["martinize2"]
+    validate_cli_options(root, path="martinize2")
+
+
+@pytest.mark.parametrize("force_field", ["elnedyn21", "elnedyn22", "elnedyn22p"])
+def test_elnedyn_elastic_flag_override(force_field):
+    config = PipelineConfigBuilder("charmm", force_field).build_config()
+    martini = PipelineConfigBuilder("charmm", "martini3001").build_config()
+    elnedyn_target = config["martinize2"]["steps"]["to"]
+    martini_target = martini["martinize2"]["steps"]["to"]
+    for elnedyn_scope, martini_scope in [
+        (elnedyn_target, martini_target),
+        (
+            elnedyn_target["steps"]["secondary_structure"],
+            martini_target["steps"]["secondary_structure"],
+        ),
+    ]:
+        elnedyn_groups = elnedyn_scope["cli"]["groups"]
+        martini_groups = martini_scope["cli"]["groups"]
+        assert [group["title"] for group in elnedyn_groups] == [
+            group["title"] for group in martini_groups
+        ]
+        for elnedyn_group, martini_group in zip(elnedyn_groups, martini_groups):
+            assert {
+                flag for flag, _ in iter_cli_flags({"cli": {"groups": [elnedyn_group]}})
+            } == {
+                flag for flag, _ in iter_cli_flags({"cli": {"groups": [martini_group]}})
+            }
+    parser = CLIBuilder("martinize2", config["martinize2"], type_map=TYPE_MAP)
+    assert parser.parse_cli_args(["-f", "input.pdb"])["elastic"] is True
+    assert parser.parse_cli_args(["-f", "input.pdb", "-noelastic"])["elastic"] is False
+    group = next(
+        group for group in parser.argparser._action_groups
+        if group.title == "Protein elastic network"
+    )
+    assert {action.dest for action in group._group_actions} == {
+        "elastic", "rb_unit", "rb_force_constant", "rb_lower_bound",
+        "rb_upper_bound", "res_min_dist", "rb_decay_factor",
+        "rb_decay_shift", "rb_decay_power", "rb_minimum_force", "rb_selection",
+    }
+
+
+@pytest.mark.parametrize("fragment", ["from", "to"])
+def test_shared_go_group_is_available_in_each_fragment(fragment):
+    root = PipelineConfigBuilder("charmm", "martini3001").build_config()["martinize2"]
+    parser = CLIBuilder("fragment", root["steps"][fragment], type_map=TYPE_MAP)
+    args = ["-go"]
+    if fragment == "from":
+        args.extend(["-f", "input.pdb"])
+    assert parser.parse_cli_args(args)["go"] is True
+    groups = [
+        group for group in parser.argparser._action_groups
+        if group.title == "Virtual site based GoMartini"
+    ]
+    assert len(groups) == 1
+    assert {action.dest for action in groups[0]._group_actions} == {
+        "go", "go_write_file", "go_low", "go_up", "go_res_dist",
+        "go_backbone", "go_atomname", "go_eps",
+    }
+
+
+def test_source_and_target_share_go_options_without_cross_scope_references():
+    config = PipelineConfigBuilder("charmm", "martini3001").build_config()
+    root = config["martinize2"]
+    source = root["steps"]["from"]
+    target = root["steps"]["to"]
+    validate_cli_options(source)
+    validate_cli_options(target)
+
+    parser = CLIBuilder("martinize2", root, type_map=TYPE_MAP)
+    parsed = parser.parse_cli_args([
+        "-f", "input.pdb", "-go", "-go-write-file", "-elastic", "-eunit", "all",
+    ])
+    assert parsed["go"] is True
+    assert parsed["go_write_file"] == Path("contact_map_martinize.out")
+    assert parsed["elastic"] is True
+    assert parsed["rb_unit"] == "all"
+    assert parser.parse_cli_args(["-f", "input.pdb", "-go", "contacts.txt"])[
+        "go"
+    ] == Path("contacts.txt")
 
 
 def test_find_pipeline_yaml_not_found():
@@ -1306,3 +1549,38 @@ martinize2:
     assert list(root["steps"]["to"]["steps"]) == ["write"]
     assert "$include" not in root["steps"]["from"]
     assert "$include" not in root["steps"]["to"]
+
+
+@pytest.mark.parametrize("define_locally", [False, True])
+def test_composed_source_cannot_borrow_target_flag(tmp_path, define_locally):
+    source_cli = "        cli:\n          flags:\n            shared: {default: value}\n"
+    (tmp_path / "source.yaml").write_text(
+        "martinize2:\n"
+        "  steps: !!omap\n"
+        "    - from:\n"
+        "        variables: [ff]\n"
+        + (source_cli if define_locally else "")
+        + "        steps: !!omap\n"
+        "          - read:\n"
+        "              args:\n"
+        "                option: {cli: shared}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "target.yaml").write_text(
+        "martinize2:\n"
+        "  steps: !!omap\n"
+        "    - to:\n"
+        "        cli:\n"
+        "          flags:\n"
+        "            shared: {default: value}\n"
+        "        steps: !!omap\n"
+        "          - write:\n"
+        "              args: {}\n",
+        encoding="utf-8",
+    )
+    builder = PipelineConfigBuilder("source", "target", pipeline_dirs=[tmp_path])
+    if define_locally:
+        builder.build_config()
+    else:
+        with pytest.raises(KeyError, match="shared"):
+            builder.build_config()

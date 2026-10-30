@@ -177,7 +177,8 @@ def validate_cli_options(
 
     The configuration is checked recursively to ensure that options and
     variables referenced by conditions and processor arguments have been
-    defined.
+    defined in the current scope or an enclosing scope. Repeated CLI flag
+    definitions must have identical options.
 
     Parameters
     ----------
@@ -198,12 +199,13 @@ def validate_cli_options(
         If a condition definition is invalid.
     """
     if local_cli_options is None:
-        local_cli_options = set(_collect_cli_flags(pipeline_conf))
+        _collect_cli_flags(pipeline_conf)
+        local_cli_options = set()
     else:
         local_cli_options = set(local_cli_options)
     local_variables = set() if local_variables is None else set(local_variables)
 
-    # gather flags defined in cli_flags
+    # Gather flags defined in this scope.
     cli_conf = pipeline_conf.get('cli', {})
     local_cli_options |= set(cli_conf.get('flags', {}).keys())
     for excl_group in cli_conf.get('exclusive_groups', []):
@@ -212,11 +214,12 @@ def validate_cli_options(
         local_cli_options |= set(group.get('flags', {}))
         for excl_group in group.get('exclusive_groups', []):
             local_cli_options |= set(excl_group.get('flags', {}))
+    local_cli_options.discard(SOURCE_KEY)
 
     # force_field variable options
     variable_options = set(pipeline_conf.get("variables", []))
 
-    # add to the sets of options defined in this scope and globally
+    # add to the variables defined in this scope and its enclosing scopes
     local_variables |= variable_options
 
     # check for options used in conditions
@@ -417,6 +420,18 @@ def build_cli(
             added_flags.add(flag)
 
     for grp in cli_conf.get('groups', []):
+        group_flags = {
+            flag
+            for flag in grp.get('flags', {})
+            if flag != SOURCE_KEY
+        }
+        for excl_group in grp.get('exclusive_groups', []):
+            group_flags.update(
+                flag for flag in excl_group.get('flags', {})
+                if flag != SOURCE_KEY
+            )
+        if group_flags and group_flags <= added_flags:
+            continue
         group = parser.add_argument_group(**{k: v for k, v in grp.items() if k not in ('flags', 'exclusive_groups')})
         for flag, opts in grp.get('flags', {}).items():
             if flag == SOURCE_KEY:
@@ -1186,7 +1201,7 @@ def iter_cli_flags(pipeline_conf):
 
 
 def _collect_cli_flags(pipeline_conf):
-    """Collect globally visible CLI flags with consistent definitions."""
+    """Collect CLI flags and check that repeated definitions are consistent."""
     flags = {}
     for flag, options in iter_cli_flags(pipeline_conf):
         normalized_options = _strip_source_metadata(deepcopy(options))

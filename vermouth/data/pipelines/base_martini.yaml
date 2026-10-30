@@ -200,149 +200,11 @@ martinize2:
               cli: posres_fc
             bb_atomname:
               value: BB
-      - vermouth.pipeline_processors.GoModelWrapper:
-          log:
-            info:
-              msg: Generating the Go model
-              type: step
-          condition:
-            not:
-              equal:
-                cli: go
-                value:
+      - secondary_structure:
           cli:
             groups:
-            - title: Virtual site based GoMartini
-              flags:
-                go_write_file:
-                  cli: go-write-file
-                  nargs: '?'
-                  const: contact_map_martinize.out
-                  default: false
-                  type: path
-                  help: "Write out contact map to file if calculating as part of Martinize2 (default: False)"
-                go_low:
-                  cli: go-low
-                  type: float
-                  default: 0.3
-                  help: "Minimum distance (nm) below which contacts are removed (default: 0.3)"
-                go_up:
-                  cli: go-up
-                  type: float
-                  default: 1.1
-                  help: "Maximum distance (nm) above which contacts are removed (default: 1.1)"
-                go_res_dist:
-                  cli: go-res-dist
-                  type: int
-                  default: 3
-                  help: >-
-                    Minimum graph distance (similar sequence distance) below which
-                    contacts are removed (default: 3)
-                go_backbone:
-                  cli: go-backbone
-                  type: str
-                  default: BB
-                  help: >-
-                    Name of protein backbone bead on which to place a virtual
-                    interaction go site (default: BB)
-                go_atomname:
-                  cli: go-atomname
-                  type: str
-                  default: CA
-                  help: "Name of the virtual interaction go site atom (default: CA)"
-                go_eps:
-                  cli: go-eps
-                  type: float
-                  default: 9.414
-                  help: "The strength of the Go model structural bias in kJ/mol (default: 9.414)"
-                go:
-                  nargs: '?'
-                  const: true
-                  type: path
-                  default:
-                  help: >
-                    Use Martini Go model. Accepts either an input file from the server,
-                    or just provide the flag to calculate as part of Martinize (default: None)
-          args:
-            go_low:
-              cli: go_low
-            go_up:
-              cli: go_up
-            go_res_dist:
-              cli: go_res_dist
-            go_backbone:
-              cli: go_backbone
-            go_atomname:
-              cli: go_atomname
-            molname:
-              cli: molname
-            go_eps:
-              cli: go_eps
-            water_bias:
-              cli: water_bias
-            water_bias_eps:
-              cli: water_bias_eps
-            water_bias_idrs:
-              cli: water_bias_idrs
-            water_type:
-              value: W
-            water_bead_sizes:
-              value:
-                regular: 0.47
-                small: 0.41
-                tiny: 0.34
-      - vermouth.pipeline_processors.MergeChainsWrapper:
-          condition:
-            not:
-              equal:
-                cli: merge_chains
-                value: []
-          cli:
-            flags: {}
-          args:
-            merge_chains:
-              cli: merge_chains
-      - vermouth.pipeline_processors.NameMolTypeWrapper:
-          condition:
-            equal:
-              cli: go
-              value:
-          cli:
-            flags: {}
-          args:
-            keep_duplicate_itp:
-              cli: keep_duplicate_itp
-            molname:
-              cli: molname
-      - vermouth.MergeAllMolecules:
-          condition:
-            all:
-            - equal:
-                cli: elastic
-                value: true
-            - equal:
-                cli: go
-                value:
-            - equal:
-                cli: rb_unit
-                value: all
-          args: {}
-      - elastic:
-          processor: vermouth.pipeline_processors.ElasticWrapper
-          log:
-            info:
-              msg: Stretching the rubber bands
-              type: step
-          condition:
-            all:
-            - equal:
-                cli: elastic
-                value: true
-            - equal:
-                cli: go
-                value:
-          cli:
-            groups:
+            - $include:
+              - "go_cli.yaml:martinize2.cli.groups[0]"
             - title: Protein elastic network
               flags:
                 elastic:
@@ -409,83 +271,173 @@ martinize2:
                   default: BB
                   type: str
                   help: "Comma separated list of bead names for elastic bonds (default: BB)"
-          args:
-            rb_force_constant:
-              cli: rb_force_constant
-            rb_lower_bound:
-              cli: rb_lower_bound
-            rb_upper_bound:
-              cli: rb_upper_bound
-            rb_decay_factor:
-              cli: rb_decay_factor
-            rb_decay_power:
-              cli: rb_decay_power
-            rb_decay_shift:
-              cli: rb_decay_shift
-            rb_minimum_force:
-              cli: rb_minimum_force
-            rb_selection:
-              cli: rb_selection
-            rb_unit:
-              cli: rb_unit
-            res_min_dist:
-              cli: res_min_dist
-            bond_type:
-              value: 1
-            bb_atomname:
-              value: BB
-      - vermouth.pipeline_processors.VirtualSiteCreatorWrapper:
-          condition:
-            all:
-            - equal:
-                cli: water_bias
-                value: true
-            - equal:
-                cli: go
-                value:
-          args: {}
-      - vermouth.pipeline_processors.ComputeWaterBiasWrapper:
-          condition:
-            equal:
-              cli: water_bias
-              value: true
-          args:
-            water_bias:
-              cli: water_bias
-            water_bias_eps:
-              cli: water_bias_eps
-            water_bias_idrs:
-              cli: water_bias_idrs
-            water_type:
-              value: W
-            water_bead_sizes:
-              value:
-                regular: 0.47
-                small: 0.41
-                tiny: 0.34
-      - vermouth.UnstashAttributes:
-          condition:
-            equal:
-              cli: resid_handling
-              value: input
-          cli:
-            flags: {}
-          args:
-            attributes:
-              value:
-              - resid
-            stash_name:
-              value: stash
-      - vermouth.SortMoleculeAtoms:
-          log:
-            info:
-              msg: Sorting atomids
-              type: step
-          condition:
-            equal:
-              cli: go
-              value:
-          args: {}
+          steps: !!omap
+          - vermouth.pipeline_processors.GoModelWrapper:
+              log:
+                info:
+                  msg: Generating the Go model
+                  type: step
+              condition:
+                not:
+                  equal:
+                    cli: go
+                    value:
+              args:
+                go_low:
+                  cli: go_low
+                go_up:
+                  cli: go_up
+                go_res_dist:
+                  cli: go_res_dist
+                go_backbone:
+                  cli: go_backbone
+                go_atomname:
+                  cli: go_atomname
+                molname:
+                  cli: molname
+                go_eps:
+                  cli: go_eps
+                water_bias:
+                  cli: water_bias
+                water_bias_eps:
+                  cli: water_bias_eps
+                water_bias_idrs:
+                  cli: water_bias_idrs
+                water_type:
+                  value: W
+                water_bead_sizes:
+                  value:
+                    regular: 0.47
+                    small: 0.41
+                    tiny: 0.34
+          - vermouth.pipeline_processors.MergeChainsWrapper:
+              condition:
+                not:
+                  equal:
+                    cli: merge_chains
+                    value: []
+              cli:
+                flags: {}
+              args:
+                merge_chains:
+                  cli: merge_chains
+          - vermouth.pipeline_processors.NameMolTypeWrapper:
+              condition:
+                equal:
+                  cli: go
+                  value:
+              cli:
+                flags: {}
+              args:
+                keep_duplicate_itp:
+                  cli: keep_duplicate_itp
+                molname:
+                  cli: molname
+          - merge_all_for_elastic:
+              processor: vermouth.MergeAllMolecules
+              condition:
+                all:
+                - equal:
+                    cli: elastic
+                    value: true
+                - equal:
+                    cli: go
+                    value:
+                - equal:
+                    cli: rb_unit
+                    value: all
+              args: {}
+          - elastic:
+              processor: vermouth.pipeline_processors.ElasticWrapper
+              log:
+                info:
+                  msg: Stretching the rubber bands
+                  type: step
+              condition:
+                all:
+                - equal:
+                    cli: elastic
+                    value: true
+                - equal:
+                    cli: go
+                    value:
+              args:
+                rb_force_constant:
+                  cli: rb_force_constant
+                rb_lower_bound:
+                  cli: rb_lower_bound
+                rb_upper_bound:
+                  cli: rb_upper_bound
+                rb_decay_factor:
+                  cli: rb_decay_factor
+                rb_decay_power:
+                  cli: rb_decay_power
+                rb_decay_shift:
+                  cli: rb_decay_shift
+                rb_minimum_force:
+                  cli: rb_minimum_force
+                rb_selection:
+                  cli: rb_selection
+                rb_unit:
+                  cli: rb_unit
+                res_min_dist:
+                  cli: res_min_dist
+                bond_type:
+                  value: 1
+                bb_atomname:
+                  value: BB
+          - vermouth.pipeline_processors.VirtualSiteCreatorWrapper:
+              condition:
+                all:
+                - equal:
+                    cli: water_bias
+                    value: true
+                - equal:
+                    cli: go
+                    value:
+              args: {}
+          - vermouth.pipeline_processors.ComputeWaterBiasWrapper:
+              condition:
+                equal:
+                  cli: water_bias
+                  value: true
+              args:
+                water_bias:
+                  cli: water_bias
+                water_bias_eps:
+                  cli: water_bias_eps
+                water_bias_idrs:
+                  cli: water_bias_idrs
+                water_type:
+                  value: W
+                water_bead_sizes:
+                  value:
+                    regular: 0.47
+                    small: 0.41
+                    tiny: 0.34
+          - vermouth.UnstashAttributes:
+              condition:
+                equal:
+                  cli: resid_handling
+                  value: input
+              cli:
+                flags: {}
+              args:
+                attributes:
+                  value:
+                  - resid
+                stash_name:
+                  value: stash
+          - vermouth.SortMoleculeAtoms:
+              log:
+                info:
+                  msg: Sorting atomids
+                  type: step
+              condition:
+                equal:
+                  cli: go
+                  value:
+              args: {}
       - vermouth.OutputLogger:
           log:
             info:
