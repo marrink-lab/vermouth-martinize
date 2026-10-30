@@ -664,50 +664,7 @@ class OutputWriterWrapper(Processor):
 
 
         return system
-    
-    
-class ListBlocks(Processor):
-    """
-    Print known blocks and modifications for two force fields.
 
-    Parameters
-    ----------
-    from_ff : vermouth.forcefield.ForceField
-        Source force field.
-    to_ff : vermouth.forcefield.ForceField
-        Target force field.
-    """
-    def __init__(self, from_ff, to_ff):
-        self.from_ff = from_ff
-        self.to_ff = to_ff
-    def run_system(self, _system):
-        """
-        Print available blocks and modifications and terminate execution.
-
-        Parameters
-        ----------
-        _system : vermouth.system.System
-            Current molecular system.
-
-        Raises
-        ------
-        SystemExit
-            Always raised after the force-field information is printed.
-        """
-        print(f"The following Blocks are known to force field {self.from_ff.name}:")
-        print(", ".join(sorted(self.from_ff.blocks)))
-
-        print(f"The following Modifications are known to force field {self.from_ff.name}:")
-        print(", ".join(sorted(self.from_ff.modifications)))
-        print()
-
-        print(f"The following Blocks are known to force field {self.to_ff.name}:")
-        print(", ".join(sorted(self.to_ff.blocks)))
-
-        print(f"The following Modifications are known to force field {self.to_ff.name}:")
-        print(", ".join(sorted(self.to_ff.modifications)))
-
-        raise SystemExit(0)
 
 class SetMoleculeMetaScFixWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
     """Adapt side-chain-fixing options for ``SetMoleculeMeta``."""
