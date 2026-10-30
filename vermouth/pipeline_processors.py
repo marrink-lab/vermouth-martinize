@@ -1,14 +1,13 @@
-import vermouth
-from vermouth.processors.processor import Processor
-import vermouth.pdb
-import logging
-from vermouth.log_helpers import TypeAdapter
 import functools
-from vermouth import selectors
-from vermouth.rcsu.go_pipeline import GoPipeline
-from vermouth.gmx.topology import write_gmx_topology
-from vermouth.rcsu.contact_map import read_go_map
+import logging
+from .log_helpers import TypeAdapter
+from . import selectors
+from .rcsu.go_pipeline import GoPipeline, VirtualSiteCreator
+from .rcsu.contact_map import read_go_map
 
+from .dssp.dssp import AnnotateDSSP, AnnotateResidues
+from .processors import *
+from .processors.apply_rubber_band import always_true, same_chain, make_same_region_criterion
 
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 # import the martinize2 classes en functions 
@@ -67,11 +66,11 @@ def read_system(system, path, ignore_resnames=(), ignh=None, modelidx=None):
     """
     file_extension = path.suffix.upper()[1:]  # We do not keep the dot
     if file_extension in ["PDB", "ENT"]:
-        vermouth.PDBInput(str(path), exclude=ignore_resnames, ignh=ignh, modelidx=modelidx).run_system(system)
+        PDBInput(str(path), exclude=ignore_resnames, ignh=ignh, modelidx=modelidx).run_system(system)
     elif file_extension in ["GRO"]:
-        vermouth.GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(system)
+        GROInput(str(path), exclude=ignore_resnames, ignh=ignh).run_system(system)
     elif file_extension in ["CIF"]:
-        vermouth.CIFInput(str(path), exclude=ignore_resnames, ignh=ignh,modelidx=modelidx).run_system(system)
+        CIFInput(str(path), exclude=ignore_resnames, ignh=ignh,modelidx=modelidx).run_system(system)
     else:
         raise ValueError('Unknown file extension "{}".'.format(file_extension))
     return system
@@ -145,7 +144,7 @@ class ReadSystem(Processor):
         return system
     
 
-class MakeBondsWrapper(WrapperMixin, vermouth.MakeBonds):
+class MakeBondsWrapper(WrapperMixin, MakeBonds):
     """Adapt pipeline options for the ``MakeBonds`` processor."""
     @staticmethod
     def wrap(bonds_from="both", fudge=1.2):
@@ -172,7 +171,7 @@ class MakeBondsWrapper(WrapperMixin, vermouth.MakeBonds):
             "fudge": fudge,
         }
 
-class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
+class AnnotateMutModWrapper(WrapperMixin, AnnotateMutMod):
     """Adapt mutation and modification options for ``AnnotateMutMod``."""
     @staticmethod
     def wrap(modify =None, cter =None, nter =None, mutate =None, neutral_termini=False,):
@@ -244,7 +243,7 @@ class AnnotateMutModWrapper(WrapperMixin, vermouth.AnnotateMutMod):
         return(modifications, mutations), {}
  
 # secundairy structure options. you can give only 1 out of 3. 
-class DSSPWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateDSSP):
+class DSSPWrapper(WrapperMixin, AnnotateDSSP):
     """Adapt DSSP configuration options for ``AnnotateDSSP``."""
     @staticmethod
     def wrap(executable=None, savedir="."):
@@ -270,7 +269,7 @@ class DSSPWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateDSSP):
             "savedir": savedir,
         }
 
-class SSWrapper(WrapperMixin, vermouth.dssp.dssp.AnnotateResidues):
+class SSWrapper(WrapperMixin, AnnotateResidues):
     """Adapt manual secondary-structure options for ``AnnotateResidues``."""
     @staticmethod
     def wrap(attr, seq=""):
@@ -324,7 +323,7 @@ class GoReader(Processor):
         read_go_map(system=system, file_path=self.file_path)
         return system
     
-class ApplyPosresWrapper(WrapperMixin, vermouth.ApplyPosres):
+class ApplyPosresWrapper(WrapperMixin, ApplyPosres):
     """Adapt position-restraint options for ``ApplyPosres``."""
     @staticmethod
     def wrap(posres, posres_fc, bb_atomname):
@@ -475,17 +474,17 @@ class MergeChainsWrapper(Processor):
         if "all" not in self.merge_chains:
             input_chain_sets = [i.split(",") for i in self.merge_chains]
             for chain_set in input_chain_sets:
-                vermouth.MergeChains(chains=chain_set, all_chains=False).run_system(system)
+                MergeChains(chains=chain_set, all_chains=False).run_system(system)
         #if all is in the list and is the only argument
         elif "all" in self.merge_chains and len(self.merge_chains) == 1:
-            vermouth.MergeChains(chains=[], all_chains=True).run_system(system)
+            MergeChains(chains=[], all_chains=True).run_system(system)
         #otherwise error because you cannot have all and specific chains at the same time.
         else:
             raise ValueError("Multiple conflicting merging arguments given. "
                             "Either specify -merge all or -merge A,B,C (+).")
         return system   
         
-class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
+class ElasticWrapper(WrapperMixin, ApplyRubberBand):
     """Adapt elastic-network options for ``ApplyRubberBand``."""
     @staticmethod
     def wrap(
@@ -541,11 +540,11 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             If a custom residue interval is invalid.
         """
         if rb_unit == "molecule":
-            domain_criterion = vermouth.processors.apply_rubber_band.always_true
+            domain_criterion = always_true
         elif rb_unit == "all":
-            domain_criterion = vermouth.processors.apply_rubber_band.always_true
+            domain_criterion = always_true
         elif rb_unit == "chain":
-            domain_criterion = vermouth.processors.apply_rubber_band.same_chain
+            domain_criterion = same_chain
         else:
             regions = [
                 tuple(int(i) for i in apair.split(":"))
@@ -557,10 +556,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
                     f'Faulty resid interval for elastic network unit: "{rb_unit}".'
                 )
 
-            domain_criterion = (
-                vermouth.processors.apply_rubber_band
-                .make_same_region_criterion(regions)
-            )
+            domain_criterion = make_same_region_criterion(regions)
 
         if rb_selection is not None:
             selector = functools.partial(
@@ -588,7 +584,7 @@ class ElasticWrapper(WrapperMixin, vermouth.ApplyRubberBand):
             "bond_type": bond_type,
         }
 
-class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias):
+class ComputeWaterBiasWrapper(WrapperMixin, ComputeWaterBias):
     """Adapt water-bias options for ``ComputeWaterBias``."""
     @staticmethod
     def wrap(
@@ -624,7 +620,7 @@ class ComputeWaterBiasWrapper(WrapperMixin, vermouth.processors.ComputeWaterBias
         ), {}
 
 
-class SetMoleculeMetaScFixWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
+class SetMoleculeMetaScFixWrapper(WrapperMixin, SetMoleculeMeta):
     """Adapt side-chain-fixing options for ``SetMoleculeMeta``."""
     @staticmethod
     def wrap(noscfix=False):
@@ -645,7 +641,7 @@ class SetMoleculeMetaScFixWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
             "scfix": not noscfix,
         }
     
-class NameMolTypeWrapper(WrapperMixin, vermouth.NameMolType):
+class NameMolTypeWrapper(WrapperMixin, NameMolType):
     """Adapt molecule naming options for ``NameMolType``."""
     @staticmethod
     def wrap(keep_duplicate_itp=False, molname=None):
@@ -669,7 +665,7 @@ class NameMolTypeWrapper(WrapperMixin, vermouth.NameMolType):
             "molname": molname,
         }
 
-class VirtualSiteCreatorWrapper(vermouth.rcsu.go_vs_includes.VirtualSiteCreator):
+class VirtualSiteCreatorWrapper(VirtualSiteCreator):
     """Create Go virtual sites and register their topology include files."""
     def run_system(self, system):
         """
@@ -694,7 +690,7 @@ class VirtualSiteCreatorWrapper(vermouth.rcsu.go_vs_includes.VirtualSiteCreator)
 
         return result if result is not None else system
 
-class SetMoleculeMetaIDRWrapper(WrapperMixin, vermouth.SetMoleculeMeta):
+class SetMoleculeMetaIDRWrapper(WrapperMixin, SetMoleculeMeta):
     """Adapt IDR options for ``SetMoleculeMeta``."""
     @staticmethod
     def wrap(id_regions=None):
