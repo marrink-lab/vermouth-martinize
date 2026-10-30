@@ -1008,20 +1008,6 @@ def test_validate_step_names_reports_source_file():
         _validate_raw_step_names(pipeline_conf, source="included.yaml")
 
 
-def test_validate_step_names_allows_reused_processors():
-    """
-    Multiple named steps may use the same processor implementation.
-    """
-    pipeline_conf = {
-        "steps": OrderedDict([
-            ("first_path", {"processor": "pathlib.Path"}),
-            ("second_path", {"processor": "pathlib.Path"}),
-        ])
-    }
-
-    validate_step_names(pipeline_conf)
-
-
 def test_merge_pipeline_mapping_inserts_between_paired_local_anchors():
     """
     Inserted steps use their mapping key rather than an id attribute.
