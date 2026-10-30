@@ -104,8 +104,6 @@ definitions:
     allOf:
       - $ref: "#/definitions/step_base"
     properties:
-      cli_prefix:
-        type: string
       variables:
         type: array
         items:
