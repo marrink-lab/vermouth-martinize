@@ -248,6 +248,7 @@ def validate_cli_options(
         variable_references = set()
 
         for value in pipeline_conf.get('args', {}).values():
+            if value == SOURCE_KEY: continue
             if 'cli' in value:
                 cli_references.add(value['cli'])
 

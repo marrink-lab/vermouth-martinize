@@ -200,7 +200,7 @@ def main():
 
     system = vermouth.System(force_field=source_force_field)
 
-    pipeline.run_system(system)
+    system = pipeline.run_system(system)
 
     leftover_warnings = ignore_warnings_and_count(COUNTER, cli_args["maxwarn"])
 
