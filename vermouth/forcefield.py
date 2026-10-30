@@ -20,10 +20,14 @@ import itertools
 from glob import glob
 import os
 import pathlib
+import logging
+from .log_helpers import TypeAdapter
 from .gmx.rtp import read_rtp
 from .ffinput import read_ff
 from .citation_parser import read_bib
 from . import DATA_PATH
+
+LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
 FORCE_FIELD_PARSERS = {'.rtp': read_rtp, '.ff': read_ff, '.bib': read_bib}
 # All data files that are in the root DATA_PATH, and apply to all force fields.
@@ -82,6 +86,9 @@ class ForceField:
         if self.name is None:
             msg = 'At least one of `directory` or `name` must be provided.'
             raise TypeError(msg)
+        if self.variables:
+            LOGGER.warning('Force field variables have been superseded by '
+                           'pipelines since vermouth 2.0.0')
 
     def __str__(self):
         return f'ForceField({self.name})'

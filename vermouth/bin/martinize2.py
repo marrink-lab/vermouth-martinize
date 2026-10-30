@@ -40,7 +40,7 @@ from vermouth.martinize2_pipeline import (
     PipelineConfigBuilder,
     build_mini_parser,
 )
-# logging.basicConfig(level=logging.INFO)
+
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
 PRETTY_FORMATTER = logging.Formatter(
