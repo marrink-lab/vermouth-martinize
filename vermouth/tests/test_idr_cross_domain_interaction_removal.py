@@ -70,10 +70,14 @@ def test_cross_go_bond_removal(test_molecule,
     #add the go bonds between residues
     for go_bond in go_bonds:
         atypes = []
+        nodes = []
         for index in go_bond:
             for atom in [i for i in system.molecules[0].atoms]:
                 if (atom[1]['resid'] == index) and (atom[1]['atomname'] == 'CA'):
                     atypes.append(atom[1]['atype'])
+                    nodes.append(atom[0])
+        system.molecules[0].add_interaction('exclusions', atoms=tuple(nodes), parameters=[],
+                                            meta={"group": "Go model exclusion"})
         contact_bias = NonbondParam(atoms=(atypes[0], atypes[1]),
                                 sigma=0.5, #these values don't matter
                                 epsilon=0.5,
@@ -94,6 +98,12 @@ def test_cross_go_bond_removal(test_molecule,
         expected_names = [f"molecule_0_{j}" for j in i]
 
         assert expected_names in remaining
+
+    # the BB-BB exclusions paired with the removed Go bonds must go too
+    remaining_excl = [[system.molecules[0].nodes[n]['resid'] for n in excl.atoms]
+                      for excl in system.molecules[0].interactions['exclusions']
+                      if excl.meta.get('group') == "Go model exclusion"]
+    assert sorted(remaining_excl) == sorted(expected)
  
  
 @pytest.mark.parametrize('id_regions, el_bonds, expected',
