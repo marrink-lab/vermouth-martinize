@@ -17,7 +17,29 @@ The Gō model is described in the help::
  Virtual site based GōMartini:
    -go [GO]              Use Martini Go model. Accepts either an input file from the server, or just provide the flag to
                          calculate as part of Martinize. (default: None)
+   -go-multimer          Keep the molecules separate and write one itp per unique molecule, distinguishing intra- and
+                         inter-molecular Go contacts. (default: False)
+   -go-ff GO_FF          Force field itp file (e.g. martini_v3.0.0.itp) from which the backbone nonbonded parameters are
+                         read. Required with -go-multimer. (default: None)
    -go-eps GO_EPS        The strength of the Go model structural bias in kJ/mol. (default: 9.414)
+   -go-eps-inter GO_EPS_INTER
+                         The strength of the Go bias in kJ/mol between molecules with the same sequence. Only with
+                         -go-multimer; defaults to -go-eps. (default: None)
+   -go-eps-hetero GO_EPS_HETERO
+                         The strength of the Go bias in kJ/mol between molecules with different sequences. Only with
+                         -go-multimer; defaults to -go-eps-inter. (default: None)
+   -go-shell-width GO_SHELL_WIDTH
+                         Tolerance in nm for pooling a Go contact between molecules. The pairs of molecules in which the
+                         contact distance is within this tolerance of its shortest value are the reference pairs. The
+                         contact is pooled over all pairs of molecules of the same two itps that are as far apart as a
+                         reference pair, to within this tolerance. Distances between molecules are measured between the
+                         centres of their backbone beads. Its sigma comes from the contact distances in these pairs.
+                         Only with -go-multimer; defaults to 0.05. (default: None)
+   -go-pooling {union,intersection}
+                         Within a molecule, use the Go contacts that are found in any (union) or in every (intersection)
+                         copy of that molecule. Between molecules, use the Go contacts that are found in any or every
+                         pair of molecules over which they are pooled (see -go-shell-width). Only with -go-multimer;
+                         defaults to union. (default: None)
    -go-low GO_LOW        Minimum distance (nm) below which contacts are removed. (default: 0.3)
    -go-up GO_UP          Maximum distance (nm) above which contacts are removed. (default: 1.1)
    -go-res-dist GO_RES_DIST
@@ -143,7 +165,9 @@ But careful! While the Gō model specifies nonbonded interactions, the interacti
 internally for each molecule. This means that if you have multiple copies of your Gō model protein
 in the system, the Gō bonds are still only specified internally for each copy of the molecule,
 not truly as intermolecular forces in the system as a whole. For more detail on this phenomenon,
-see the paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
+see the paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_. Gō bonds between the
+copies of a protein can be generated with ``-go-multimer``, see
+:ref:`tutorials/go_models:Gō models for multimers`.
 
 
 Multiple Gō models in the same system
@@ -163,6 +187,130 @@ Having martinized the proteins in this way, all the `go_atomtypes.itp` and `go_n
 protein should be concatenated into a single file, which may then be included in the master force field file as
 described above.
 
+Gō models for multimers
+-----------------------
+
+With ``-go``, all molecules in the input are merged into a single molecule, so the chains of a multimer or a fibril
+end up in one large itp and copies of a protein cannot share a topology. With ``-go-multimer``, the molecules are kept
+separate and martinize2 writes one itp per protein, which all its copies share, while the Gō bonds between the
+molecules are kept. The model follows `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_. For
+example::
+
+ martinize2 -f fibril.pdb -o topol.top -x cg_fibril.pdb -ff martini3001 -ss <secondary structure> -go -go-multimer -go-ff martini_v3.0.0.itp
+
+On top of the setup of the Gō model described above, this requires:
+
+ 1) The force field file with ``-go-ff``. Only its ``[ nonbond_params ]`` are read, to cancel the regular interaction
+    between backbone beads that form a Gō bond between molecules (site D below), so it must be the force field file
+    used in the simulation.
+ 2) Complete chains with unique chain IDs, since residues are identified by their chain ID and residue number, without
+    the insertion code. Chains with missing residues give an error, and so do residue numbers that occur twice in a
+    chain (for example 52 and 52A).
+ 3) One secondary structure for all copies of a protein, as they share one itp. With ``-dssp``, DSSP is run once on
+    the whole assembly, so that secondary structure formed between molecules, such as the β-sheets of a fibril, is
+    found. Residues that still get a different assignment in different copies get the most common assignment over the
+    copies (ties go to the first copy), and every change is logged. Copies are the chains that end up sharing an itp:
+    a chain that differs in any other way, for example through ``-modify``, keeps its own secondary structure.
+    Alternatively, the secondary structure can be given with ``-ss``, for example one obtained from atomistic
+    simulations. Copies that are given different secondary structures get separate itps.
+
+Gromacs applies ``[ nonbond_params ]`` per pair of atomtypes, so a Gō bond between atomtypes that copies share acts
+both within each copy and between copies, while ``[ exclusions ]`` only act within a molecule. The multimer Gō model
+therefore uses up to four virtual sites per residue, all placed on the backbone bead. For a contact between the
+residues *i* and *j*:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Site
+     - Added for
+     - Line in ``go_nbparams.itp``
+     - Exclusion within the molecule
+     - Effect
+   * - A
+     - intra-molecular contact
+     - A\ :sub:`i` - A\ :sub:`j` with +ε (``-go-eps``)
+     - none
+     - Gō bond within each copy and between copies
+   * - B
+     - intra-molecular contact
+     - B\ :sub:`i` - B\ :sub:`j` with −ε
+     - B\ :sub:`i` - B\ :sub:`j`
+     - cancels A between copies
+   * - C
+     - inter-molecular contact
+     - C\ :sub:`i` - C\ :sub:`j` with +ε\ :sub:`inter` (``-go-eps-inter`` or ``-go-eps-hetero``)
+     - C\ :sub:`i` - C\ :sub:`j` if *i* ≠ *j* and both molecules share an itp
+     - Gō bond between molecules
+   * - D
+     - inter-molecular contact
+     - D\ :sub:`i` - D\ :sub:`j` with minus the backbone-backbone interaction from ``-go-ff``
+     - as for C
+     - cancels the regular backbone interaction between molecules
+
+Site A is the usual Gō virtual site, with the atomname ``CA`` and the atomtype ``<moltype>_<resid>``. The sites B, C and
+D are only added where they are needed, with the atomtypes ``<moltype>_<resid>_B``, ``_C`` and ``_D`` and the atomnames
+``VWB``, ``VWC`` and ``VWD``. The Gō bonds use the same σ as in the regular Gō model, and as there, the backbone beads of
+an intra-molecular contact are excluded from each other. A contact between the same residue of two copies (*i* = *j*)
+gets the lines C\ :sub:`i` - C\ :sub:`i` and D\ :sub:`i` - D\ :sub:`i`. As a molecule has only one of each site and a
+site does not interact with itself, these lines only act between copies and need no exclusion. Site B is also added for
+proteins with a single copy. This allows the output itp file to be used in simulations of multiple copies of a protein
+with only intra-molecular Gō bonds.
+
+The output consists of the same files as with ``-go``: ``go_atomtypes.itp`` and ``go_nbparams.itp`` are included
+through the force field file as described above, and the ``[ molecules ]`` directive of the .top file lists every
+itp with its number of copies. For every itp, martinize2 reports the number of copies, of intra- and
+inter-molecular contacts and of added sites.
+
+Compared with a Gō model in which all molecules are merged, the multimer Gō model differs in the following ways:
+
+ 1) As the copies of a protein share one itp, their contacts are combined (pooled) per pair of residues. A contact
+    between residues *i* and *j* within a molecule that is found in any copy becomes a Gō bond in every copy. A
+    contact between molecules becomes a Gō bond between any two copies that come within the cut-off, not only between
+    the copies that were in contact in the input structure. The σ of a Gō bond is the mean of the contact's distances
+    over the copies, or pairs of copies, in which it was found, and a warning is given if these distances differ by
+    more than 0.1 nm. By default, a contact is used if it was found at least once (union). With
+    ``-go-pooling intersection``, a contact within a molecule is only used if it was found in every copy, and a contact
+    between molecules only if it was found in every pair of molecules over which it is pooled (see the next point).
+ 2) The same contact between molecules can also be found between molecules that are further apart, for example
+    between the next-nearest strands of a fibril, where it is longer. To keep such different kinds of contacts from
+    being mixed into one σ, the pairs of molecules over which a contact between residues *i* and *j* is pooled are
+    chosen in two steps:
+
+    - first, the pairs of residues *i* and *j* whose distance is within ``-go-shell-width`` (default 0.05 nm) of the
+      shortest one are found;
+    - then, the contact is pooled over all pairs of molecules of the same itps that are as far apart as the molecules
+      of one of these pairs of residues, to within the same width. The distance between two molecules is measured
+      between the centres of their backbone beads.
+
+    The σ of the contact is the mean of its distances in these pairs of molecules, and a warning is given if these
+    distances differ by more than 0.1 nm. In a fibril, for example, a contact between neighbouring strands is pooled
+    over all pairs of neighbouring strands, but not over the pairs of next-nearest strands. If the pairs of residues
+    found in the first step lie in pairs of molecules at different distances, the contact is about equally short in
+    different kinds of pairs of molecules and cannot be assigned to one of them. A warning is then given, and the
+    contact is pooled over the pairs of molecules at all of these distances. Pairs of molecules that are equally far
+    apart are treated as equivalent, so the input should be a well-defined structure, and different interfaces are
+    best simulated in separate systems with separate itps. In a fibril with several protofilaments, molecules one
+    layer apart in neighbouring protofilaments are only slightly further apart than molecules in the same layer, so
+    they can end up among the pairs of molecules that a contact is pooled over; intersection may then need a smaller
+    width.
+ 3) Copies share one secondary structure (requirement 3), and their structure dependent side chain dihedrals
+    (``SC-BB-BB-SC scFix``) are replaced by their circular mean. A warning is given if this changes the angle of a copy
+    by more than 30°. To keep the dihedrals of every chain, use ``-sep``; ``-noscfix`` leaves out the side chain
+    corrections altogether.
+ 4) An exclusion also removes the plain Coulomb term :math:`f q_i q_j/(\varepsilon_r r)`, which site D does not
+    cancel. A contact between molecules that joins two charged backbone beads, such as two charged termini, therefore
+    gets no Gō bond, and a warning is given for every such contact.
+ 5) Intrinsically disordered regions given with ``-id-regions`` lose their Gō bonds (sites A, B and C) in all copies
+    that share an itp; site D is kept, as the backbone exclusion is kept in a merged Gō model.
+
+With ``-sep``, every molecule gets its own itp, so only the fourth point remains, apart from ``-dssp`` being run on the
+whole assembly. Chains merged with ``-merge`` form one molecule, so the contacts between them are intra-molecular. The
+warnings of the first four points have the types ``go-contact-spread``, ``go-contact-shells``, ``scfix-spread`` and
+``go-charged-contact``, and all warnings of one of these types together count as one towards ``-maxwarn``. After
+checking them, you can ignore them with, for example,
+``-maxwarn go-contact-spread go-contact-shells scfix-spread go-charged-contact``.
+
 Note on multiple Gō models
 --------------------------
 
@@ -172,6 +320,8 @@ multimeric protein where the monomers are held together by a Gō model, Gromacs 
 to "fall apart" for monomers to find other monomers that were initially in other complexes. This limitation is
 a result of the nature of the Gromacs itp format, with the Gō interactions described within each `[ moleculetype ]`
 directive. This issue is discussed more extensively in a recent paper by `Korshunova et al. <https://pubs.acs.org/doi/10.1021/acs.jctc.4c00677>`_.
+With ``-go-multimer``, the Gō bonds between molecules act between all copies of a protein, see
+:ref:`tutorials/go_models:Gō models for multimers`.
 
 
 

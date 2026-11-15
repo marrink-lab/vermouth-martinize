@@ -1,0 +1,10 @@
+martinize2
+-f ../aa.pdb
+-ff martini3001
+-x cg.pdb
+-o topol.top
+-dssp
+-go
+-go-multimer
+-go-ff ../martini_v3.0.0_backbone.itp
+-go-eps-hetero 5.0

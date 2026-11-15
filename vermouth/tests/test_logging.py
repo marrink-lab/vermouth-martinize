@@ -376,3 +376,19 @@ def test_ignore_warnings_and_count(mock_counter, specification, level, expected)
     assert remaining == expected
 
 
+
+
+@pytest.mark.parametrize('specification, expected', (
+    # no -maxwarn; the 8 warnings of type 'something' count as one
+    ([], 7),
+    # -maxwarn 4
+    ([[(None, 4)]], 3),
+    # -maxwarn something
+    ([[('something', None)]], 6),
+    # -maxwarn something:1
+    ([[('something', 1)]], 6),
+))
+def test_ignore_warnings_and_count_once(mock_counter, specification, expected):
+    remaining = ignore_warnings_and_count(mock_counter, specification,
+                                          count_once=('something', 'absent'))
+    assert remaining == expected

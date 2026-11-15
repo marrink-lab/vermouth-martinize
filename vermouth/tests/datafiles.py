@@ -36,6 +36,8 @@ PDB_TRI_ALANINE = TEST_DATA / 'tri_alanine.pdb'
 PDB_CYS = TEST_DATA / '2QWO.pdb'  # Contains cystein bridges
 PDB_HB = TEST_DATA / '2dn2.pdb'  # Hemoglobin with heme and 2*2 protein chains
 PDB_MULTIMODEL = TEST_DATA / '6E8W.pdb'  # HIV-1, 15 models
+# Abeta(17-42) fibril, 5 identical chains
+PDB_FIBRIL = TEST_DATA / 'integration_tests' / 'tier-1' / '2BEG_GO_multimer' / 'aa.pdb'
 
 # DNA
 SHORT_DNA = TEST_DATA / 'dna-short.pdb'

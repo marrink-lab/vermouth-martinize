@@ -100,9 +100,12 @@ class ComputeWaterBias(Processor):
             if abs(eps) <= 1e-12:
                 continue
 
+            # the bias acts on site A; the other sites of the multimer Go
+            # model have a go_site attribute
             vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
                                                           resid=resid,
                                                           chain=chain,
+                                                          go_site=None,
                                                           prefix=molecule.meta.get('moltype')))
 
             # what is the blocks bb-type

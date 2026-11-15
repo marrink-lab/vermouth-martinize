@@ -1,0 +1,13 @@
+### DETAILS:
+
+# Original PDB CODE:  2BEG
+# Structure from solution NMR; Abeta(17-42) fibril, 5 identical chains.
+
+### TEST:
+
+# -ff martini 3001
+# internal go map calculation for multimers (-go-multimer): one itp for the
+# 5 copies, with intra- and inter-molecular Go contacts
+# secondary structure from DSSP on the full assembly, given with -ss
+# martini_v3.0.0_backbone.itp: backbone nonbond_params from martini_v3.0.0.itp
+# -maxwarn 3: the warnings of each multimer Go warning type count as one

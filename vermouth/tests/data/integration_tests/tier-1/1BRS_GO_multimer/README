@@ -1,0 +1,14 @@
+### DETAILS:
+
+# Original PDB CODE:  1BRS
+# Structure from X-ray crystallography experiment; barnase-barstar complex,
+# first biological assembly (chains A and D), complete model without missing
+# residues, alternate positions or waters.
+
+### TEST:
+
+# -ff martini 3001
+# internal go map calculation for multimers (-go-multimer): one itp per
+# protein, intra-molecular Go contacts and hetero-inter-molecular contacts
+# with their own strength (-go-eps-hetero)
+# martini_v3.0.0_backbone.itp: backbone nonbond_params from martini_v3.0.0.itp
