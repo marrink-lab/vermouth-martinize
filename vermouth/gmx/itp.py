@@ -74,6 +74,49 @@ def _sort_interaction(atoms, name):
     else: return (min(atoms), tuple(atoms))
 
 
+def _format_virtual_sitesn(atoms, parameters):
+    """
+    Format the fields of a ``[ virtual_sitesn ]`` line.
+
+    For COG and COM sites (funct 1 and 2), the line is
+    ``site funct atom1 atom2 ...``. For COW sites (funct 3), every
+    constructing atom is followed by its weight:
+    ``site funct atom1 weight1 atom2 weight2 ...``.
+
+    Parameters
+    ----------
+    atoms: list[str]
+        The formatted atom indices; the first one is the virtual site.
+    parameters: list
+        The interaction parameters; the first one is the function type.
+
+    Returns
+    -------
+    list[str]
+        The fields to join to form the line.
+
+    Raises
+    ------
+    ValueError
+        A COW site does not have exactly one weight per constructing atom.
+    """
+    parameters = [str(x) for x in parameters]
+    site, constructing = atoms[0], atoms[1:]
+    if parameters and parameters[0] == '3':
+        weights = parameters[1:]
+        if len(weights) != len(constructing):
+            raise ValueError(
+                'A virtual_sitesn with function type 3 needs one weight per '
+                'constructing atom; got {} weights for {} atoms.'
+                .format(len(weights), len(constructing))
+            )
+        to_join = [site, parameters[0]]
+        for atom, weight in zip(constructing, weights):
+            to_join.extend([atom, weight])
+        return to_join
+    return [site, ' '.join(parameters)] + constructing
+
+
 def write_molecule_itp(molecule, outfile, header=(), moltype=None,
                        post_section_lines=None, pre_section_lines=None):
     """
@@ -256,7 +299,7 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
                 if 'comment' in interaction.meta:
                     comment = ' ; ' + interaction.meta['comment']
                 if name == 'virtual_sitesn':
-                    to_join = [atoms[0], parameters] + atoms[1:]
+                    to_join = _format_virtual_sitesn(atoms, interaction.parameters)
                 else:
                     to_join = atoms + [parameters]
                 outfile.write(' '.join(to_join) + comment + '\n')
