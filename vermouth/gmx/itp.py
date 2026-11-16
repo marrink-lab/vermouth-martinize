@@ -81,7 +81,9 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
 
     The molecule must have a `nrexcl` attribute. Each atom in the molecule must
     have at least the following keys: `atype`, `resid`, `resname`, `atomname`,
-    and `charge_group`. Atoms can also have a `charge` and a `mass` key.
+    and `charge_group`. Atoms can also have a `charge` and a `mass` key; an
+    atom with a `mass` must also have a `charge`, because the columns of the
+    ITP file are positional and GROMACS would read the mass as the charge.
 
     If the `moltype` argument is not provided, then the molecule must have a
     "moltype" meta attribute.
@@ -128,8 +130,9 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     _attr_has_not_none_attr(molecule, 'nrexcl')
 
     # Make sure the molecule contains the information required to write the
-    # [atoms] section. The charge and mass can be ommited, if so gromacs take
-    # them from the [atomtypes] section of the ITP file.
+    # [atoms] section. The charge and mass can be omitted, if so gromacs takes
+    # them from the [atomtypes] section of the ITP file. However, a mass can
+    # only be given together with a charge (see below).
     atoms_with_issues = defaultdict(list)
     for attribute in ('atype', 'resid', 'resname', 'atomname',
                       'charge_group'):
@@ -140,6 +143,16 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
         for attr, atoms in atoms_with_issues.items():
             LOGGER.error('The following atoms do not have a {}: {}', attr, atoms)
         raise ValueError("Some atoms are missing required attributes.")
+
+    # GROMACS columns are positional: a mass can only be given with a charge,
+    # otherwise the mass is read as the charge.
+    mass_without_charge = [atom for _, atom in molecule.atoms
+                           if 'mass' in atom and 'charge' not in atom]
+    if mass_without_charge:
+        LOGGER.error('The following atoms have a mass but no charge: {}',
+                     mass_without_charge)
+        raise ValueError('Atoms with a mass must also have a charge; GROMACS '
+                         'reads the mass as the charge otherwise.')
 
     # Get the maximum length of each atom field so we can align the fields.
     # Atom indexes are written as a consecutive series starting from 1.
