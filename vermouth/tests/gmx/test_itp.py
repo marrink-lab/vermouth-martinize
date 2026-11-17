@@ -25,7 +25,7 @@ import io
 import textwrap
 import pytest
 import vermouth
-from vermouth.gmx.itp import write_molecule_itp
+from vermouth.gmx.itp import write_molecule_itp, _format_virtual_sitesn
 from vermouth.molecule import Interaction, Molecule
 
 
@@ -231,10 +231,48 @@ def test_defines(dummy_molecule, defines, expected):
     assert (itp_content[:3] == expected) == defines
 
 
-@pytest.fixture
-def virtual_site_molecule():
+
+@pytest.mark.parametrize('parameters, expected', (
+    # Center of geometry: site, funct, constructing atoms
+    (['1'], ['5', '1', '1', '2', '3', '4']),
+    # Center of mass: site, funct, constructing atoms
+    (['2'], ['5', '2', '1', '2', '3', '4']),
+    # Center of weights: site, funct, then each atom followed by its weight
+    (['3', '0.2', '0.3', '0.3', '0.2'],
+     ['5', '3', '1', '0.2', '2', '0.3', '3', '0.3', '4', '0.2']),
+    # The parameters do not have to be strings
+    ([3, 0.2, 0.3, 0.3, 0.2],
+     ['5', '3', '1', '0.2', '2', '0.3', '3', '0.3', '4', '0.2']),
+))
+def test_format_virtual_sitesn(parameters, expected):
     """
-    A molecule with four regular particles and one virtual site.
+    :func:`vermouth.gmx.itp._format_virtual_sitesn` orders the fields the way
+    gromacs expects for each function type.
+    """
+    atoms = ['5', '1', '2', '3', '4']
+    assert _format_virtual_sitesn(atoms, parameters) == expected
+
+
+@pytest.mark.parametrize('parameters', (
+    [],  # no function type
+    ['3'],  # COW without weights
+    ['3', '0.2', '0.3', '0.5'],  # COW with one weight missing
+    ['3', '0.2', '0.2', '0.2', '0.2', '0.2'],  # COW with one weight too many
+))
+def test_format_virtual_sitesn_errors(parameters):
+    """
+    :func:`vermouth.gmx.itp._format_virtual_sitesn` refuses parameters it
+    cannot write correctly.
+    """
+    atoms = ['5', '1', '2', '3', '4']
+    with pytest.raises(ValueError):
+        _format_virtual_sitesn(atoms, parameters)
+
+
+def test_write_virtual_sitesn_cow():
+    """
+    :func:`vermouth.gmx.itp.write_molecule_itp` writes a center of weights
+    virtual_sitesn, including its comment.
     """
     molecule = Molecule(nrexcl=1)
     molecule.add_nodes_from(
@@ -244,63 +282,12 @@ def virtual_site_molecule():
         })
         for idx, name in enumerate(('SC1', 'SC2', 'SC3', 'SC4', 'SC5'))
     )
-    molecule.meta['moltype'] = 'TEST'
-    return molecule
-
-
-@pytest.mark.parametrize('parameters, expected', (
-    # Center of geometry: site, funct, constructing atoms
-    (['1'], '5 1 1 2 3 4'),
-    # Center of mass: site, funct, constructing atoms
-    (['2'], '5 2 1 2 3 4'),
-    # Center of weights: site, funct, then each atom followed by its weight
-    (['3', '0.2', '0.3', '0.3', '0.2'], '5 3 1 0.2 2 0.3 3 0.3 4 0.2'),
-    # The parameters do not have to be strings
-    ([3, 0.2, 0.3, 0.3, 0.2], '5 3 1 0.2 2 0.3 3 0.3 4 0.2'),
-))
-def test_virtual_sitesn(virtual_site_molecule, parameters, expected):
-    """
-    :func:`vermouth.gmx.itp.write_molecule_itp` writes the virtual_sitesn in
-    the format gromacs expects for each function type.
-    """
-    virtual_site_molecule.add_interaction(
-        'virtual_sitesn', atoms=[4, 0, 1, 2, 3], parameters=parameters,
-    )
-    outfile = io.StringIO()
-    write_molecule_itp(virtual_site_molecule, outfile)
-    itp_content = outfile.getvalue()
-    assert '[ virtual_sitesn ]\n' + expected + '\n' in itp_content
-
-
-def test_virtual_sitesn_comment(virtual_site_molecule):
-    """
-    The comment of a center of weights virtual_sitesn is written at the end
-    of the line.
-    """
-    virtual_site_molecule.add_interaction(
+    molecule.add_interaction(
         'virtual_sitesn', atoms=[4, 0, 1, 2, 3],
         parameters=['3', '0.2', '0.3', '0.3', '0.2'],
         meta={'comment': 'test comment'},
     )
     outfile = io.StringIO()
-    write_molecule_itp(virtual_site_molecule, outfile)
-    itp_content = outfile.getvalue()
-    assert '5 3 1 0.2 2 0.3 3 0.3 4 0.2 ; test comment\n' in itp_content
-
-
-@pytest.mark.parametrize('weights', (
-    [],  # no weights
-    ['0.2', '0.3', '0.5'],  # one weight missing
-    ['0.2', '0.2', '0.2', '0.2', '0.2'],  # one weight too many
-))
-def test_virtual_sitesn_cow_wrong_number_weights(virtual_site_molecule, weights):
-    """
-    A center of weights virtual_sitesn needs exactly one weight per
-    constructing atom.
-    """
-    virtual_site_molecule.add_interaction(
-        'virtual_sitesn', atoms=[4, 0, 1, 2, 3], parameters=['3'] + weights,
-    )
-    outfile = io.StringIO()
-    with pytest.raises(ValueError):
-        write_molecule_itp(virtual_site_molecule, outfile)
+    write_molecule_itp(molecule, outfile, moltype='TEST')
+    expected = '[ virtual_sitesn ]\n5 3 1 0.2 2 0.3 3 0.3 4 0.2 ; test comment\n'
+    assert expected in outfile.getvalue()

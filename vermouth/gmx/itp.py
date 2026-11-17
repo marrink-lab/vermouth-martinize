@@ -98,11 +98,15 @@ def _format_virtual_sitesn(atoms, parameters):
     Raises
     ------
     ValueError
-        A COW site does not have exactly one weight per constructing atom.
+        The parameters are empty, so there is no function type, or a COW
+        site does not have exactly one weight per constructing atom.
     """
+    if not parameters:
+        raise ValueError('A virtual_sitesn needs a function type, '
+                         'but no parameters were given.')
     parameters = [str(x) for x in parameters]
-    site, constructing = atoms[0], atoms[1:]
-    if parameters and parameters[0] == '3':
+    site, *constructing = atoms
+    if parameters[0] == '3':
         weights = parameters[1:]
         if len(weights) != len(constructing):
             raise ValueError(
@@ -114,7 +118,7 @@ def _format_virtual_sitesn(atoms, parameters):
         for atom, weight in zip(constructing, weights):
             to_join.extend([atom, weight])
         return to_join
-    return [site, ' '.join(parameters)] + constructing
+    return [site] + parameters + constructing
 
 
 def write_molecule_itp(molecule, outfile, header=(), moltype=None,
