@@ -1,6 +1,0 @@
-$schema: "./schema-pipeline.yaml"
-
-martinize2:
-  steps: !!omap
-    - vermouth.SortMoleculeAtoms:
-        args: {}
