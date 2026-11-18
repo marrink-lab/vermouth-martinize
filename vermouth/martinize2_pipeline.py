@@ -170,7 +170,7 @@ def build_mini_parser():
     )
     parser.add_argument(
         "-V",
-        "-version",
+        "-version", '--version',
         action="version",
         version=f"%(prog)s {vermouth.__version__}",
     )
