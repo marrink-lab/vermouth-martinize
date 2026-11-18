@@ -82,8 +82,9 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
     The molecule must have a `nrexcl` attribute. Each atom in the molecule must
     have at least the following keys: `atype`, `resid`, `resname`, `atomname`,
     and `charge_group`. Atoms can also have a `charge` and a `mass` key; an
-    atom with a `mass` must also have a `charge`, because the columns of the
-    ITP file are positional and GROMACS would read the mass as the charge.
+    atom with a `mass` but no `charge` is assigned a charge of zero, because
+    the columns of the ITP file are positional and GROMACS would otherwise
+    read the mass as the charge.
 
     If the `moltype` argument is not provided, then the molecule must have a
     "moltype" meta attribute.
@@ -144,16 +145,6 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
             LOGGER.error('The following atoms do not have a {}: {}', attr, atoms)
         raise ValueError("Some atoms are missing required attributes.")
 
-    # GROMACS columns are positional: a mass can only be given with a charge,
-    # otherwise the mass is read as the charge.
-    mass_without_charge = [atom for _, atom in molecule.atoms
-                           if 'mass' in atom and 'charge' not in atom]
-    if mass_without_charge:
-        LOGGER.error('The following atoms have a mass but no charge: {}',
-                     mass_without_charge)
-        raise ValueError('Atoms with a mass must also have a charge; GROMACS '
-                         'reads the mass as the charge otherwise.')
-
     # Get the maximum length of each atom field so we can align the fields.
     # Atom indexes are written as a consecutive series starting from 1.
     # The maximum index of a 0-based series is `len(x) - 1`; because the
@@ -210,9 +201,10 @@ def write_molecule_itp(molecule, outfile, header=(), moltype=None,
         atom = molecule.nodes[original_idx]
         correspondence[original_idx] = idx
         new_atom = copy.copy(atom)
-        # The charge and the mass can be blank and read from the [atomtypes]
-        # section of the ITP file.
-        new_atom['charge'] = new_atom.get('charge', '')
+        # A charge can be blank and read from the [atomtypes] section of the
+        # ITP file when no mass is provided. A mass without a charge needs an
+        # explicit zero charge because GROMACS columns are positional.
+        new_atom['charge'] = new_atom.get('charge', 0 if 'mass' in new_atom else '')
         new_atom['mass'] = new_atom.get('mass', '')
 
         outfile.write('{idx:>{max_length[idx]}} '
