@@ -613,7 +613,7 @@ class ComputeWaterBiasWrapper(WrapperMixin, ComputeWaterBias):
         """
         return (
             water_bias,
-            dict(water_bias_eps) or {},
+            dict(water_bias_eps or []),
             water_bias_idrs or [],
             water_type,
             water_bead_sizes,
