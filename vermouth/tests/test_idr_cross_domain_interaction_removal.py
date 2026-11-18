@@ -14,157 +14,227 @@
 import pytest
 import vermouth
 from vermouth.rcsu.go_vs_includes import VirtualSiteCreator
-from vermouth.processors.water_bias import ComputeWaterBias
-from vermouth.processors.idr_cross_domain_interaction_removal import IDRCrossDomainInteractionRemoval
-from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule
+from vermouth.processors.idr_cross_domain_interaction_removal import (
+    IDRCrossDomainInteractionRemoval,
+)
+from vermouth.tests.helper_functions import create_sys_all_attrs, test_molecule  # noqa: F401 (pytest fixture)
 from vermouth.gmx.topology import NonbondParam
-from vermouth.molecule import Interaction
 import networkx
 
-@pytest.mark.parametrize('id_regions, go_bonds, expected',
-         (
-            (#no idrs to remove
-             [],
-             [[1, 3], [2, 4]],
-             [[1, 3], [2, 4]]
-            ),
-            (#central idr to remove bonds from
-             ["A-2:3"],
-             [[1, 3], [2, 4], [1, 4]],
-             [[1, 4]]
-            ),
-            (#remove all bonds within a region
+
+@pytest.mark.parametrize(
+    "id_regions, go_bonds, expected",
+    (
+        (  # no idrs to remove
+            [],
+            [[1, 3], [2, 4]],
+            [[1, 3], [2, 4]],
+        ),
+        (  # central idr to remove bonds from
+            ["A-2:3"],
+            [[1, 3], [2, 4], [1, 4]],
+            [[1, 4]],
+        ),
+        (  # remove all bonds within a region
             ["A-1:4"],
             [[1, 2], [2, 3], [3, 4], [1, 4]],
-            []
-            )
-          ))
-def test_cross_go_bond_removal(test_molecule,
-                               id_regions,
-                               go_bonds,
-                               expected):
+            [],
+        ),
+    ),
+)
+def test_cross_go_bond_removal(test_molecule, id_regions, go_bonds, expected):
     # bead sizes
     sizes = {0: 0.47, 3: 0.41, 5: 0.38, 6: 0.47}
     # the molecule atomtypes
-    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
-              3: "SP1", 4: "C1",
-              5: "TP1",
-              6: "P1", 7: "SN3a", 8: "SP4"}
+    atypes = {
+        0: "P1",
+        1: "SN4a",
+        2: "SN4a",
+        3: "SP1",
+        4: "C1",
+        5: "TP1",
+        6: "P1",
+        7: "SN3a",
+        8: "SP4",
+    }
     # the molecule resnames
-    resnames = {0: "A", 1: "A", 2: "A",
-                3: "B", 4: "B",
-                5: "C",
-                6: "D", 7: "D", 8: "D"}
+    resnames = {0: "A", 1: "A", 2: "A", 3: "B", 4: "B", 5: "C", 6: "D", 7: "D", 8: "D"}
     secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
 
-    system = create_sys_all_attrs(test_molecule,
-                                  moltype="molecule_0",
-                                  secstruc=secstruc,
-                                  defaults={"chain": "A"},
-                                  attrs={"resname": resnames,
-                                         "atype": atypes})
+    system = create_sys_all_attrs(
+        test_molecule,
+        moltype="molecule_0",
+        secstruc=secstruc,
+        defaults={"chain": "A"},
+        attrs={"resname": resnames, "atype": atypes},
+    )
 
     # generate the virtual sites
     VirtualSiteCreator().run_system(system)
 
-    #add the go bonds between residues
+    # add the go bonds between residues
     for go_bond in go_bonds:
         atypes = []
         for index in go_bond:
             for atom in [i for i in system.molecules[0].atoms]:
-                if (atom[1]['resid'] == index) and (atom[1]['atomname'] == 'CA'):
-                    atypes.append(atom[1]['atype'])
-        contact_bias = NonbondParam(atoms=(atypes[0], atypes[1]),
-                                sigma=0.5, #these values don't matter
-                                epsilon=0.5,
-                                meta={"comment": ["go bond"]})
+                if (atom[1]["resid"] == index) and (atom[1]["atomname"] == "CA"):
+                    atypes.append(atom[1]["atype"])
+        contact_bias = NonbondParam(
+            atoms=(atypes[0], atypes[1]),
+            sigma=0.5,  # these values don't matter
+            epsilon=0.5,
+            meta={"comment": ["go bond"]},
+        )
         system.gmx_topology_params["nonbond_params"].append(contact_bias)
 
     # remove folded-disordered domain Go interactions
-    processor = IDRCrossDomainInteractionRemoval(go=True,
-                                                 elastic=False,
-                                                 id_regions=id_regions)
+    processor = IDRCrossDomainInteractionRemoval(
+        go=True, elastic=False, id_regions=id_regions
+    )
     processor.run_system(system)
 
-    #find the go bonds which remain after removal, and don't involve water
-    remaining = [list(i.atoms) for i in system.gmx_topology_params["nonbond_params"] if 'W' not in list(i.atoms)]
+    # find the go bonds which remain after removal, and don't involve water
+    remaining = [
+        list(i.atoms)
+        for i in system.gmx_topology_params["nonbond_params"]
+        if "W" not in list(i.atoms)
+    ]
 
     assert len(remaining) == len(expected)
     for i in expected:
         expected_names = [f"molecule_0_{j}" for j in i]
 
         assert expected_names in remaining
- 
- 
-@pytest.mark.parametrize('id_regions, el_bonds, expected',
-         (
-            (#no idrs to remove
-             [],
-             [[1, 6], [4, 7]],
-             [[1, 6], [4, 7]]
-            ),
-            (#central idr to remove bonds from
-             ["A-2:3"],
-             [[1, 6], [4, 7], [1, 7]],
-             [[1, 7]]
-            ),
-            (#remove all bonds within a region
+
+
+@pytest.mark.parametrize(
+    "id_regions, el_bonds, expected",
+    (
+        (  # no idrs to remove
+            [],
+            [[1, 6], [4, 7]],
+            [[1, 6], [4, 7]],
+        ),
+        (  # central idr to remove bonds from
+            ["A-2:3"],
+            [[1, 6], [4, 7], [1, 7]],
+            [[1, 7]],
+        ),
+        (  # remove all bonds within a region
             ["A-1:4"],
             [[1, 4], [4, 6], [6, 7], [1, 7]],
-            []
-            )
-          ))
-def test_cross_el_bond_removal(test_molecule,
-                               id_regions,
-                               el_bonds,
-                               expected):
+            [],
+        ),
+    ),
+)
+def test_cross_el_bond_removal(test_molecule, id_regions, el_bonds, expected):
     # bead sizes
     sizes = {0: 0.47, 3: 0.41, 5: 0.38, 6: 0.47}
     # the molecule atomtypes
-    atypes = {1: "P1", 2: "SN4a", 3: "SN4a",
-              4: "SP1", 5: "C1",
-              6: "TP1",
-              7: "P1", 8: "SN3a", 9: "SP4"}
+    atypes = {
+        1: "P1",
+        2: "SN4a",
+        3: "SN4a",
+        4: "SP1",
+        5: "C1",
+        6: "TP1",
+        7: "P1",
+        8: "SN3a",
+        9: "SP4",
+    }
     # the molecule resnames
-    resnames = {1: "A", 2: "A", 3: "A",
-                4: "B", 5: "B",
-                6: "C",
-                7: "D", 8: "D", 9: "D"}
-    stash = {'resid':{1: 1, 2: 1, 3: 1,
-                      4: 2, 5: 2,
-                      6: 3,
-                      7: 4, 8: 4, 9: 4}}
+    resnames = {1: "A", 2: "A", 3: "A", 4: "B", 5: "B", 6: "C", 7: "D", 8: "D", 9: "D"}
+    stash = {"resid": {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 3, 7: 4, 8: 4, 9: 4}}
     secstruc = {1: "H", 2: "H", 3: "H", 4: "H"}
 
     # atom indices actually start from 1 and we use them when processing elastic networks
     G = networkx.relabel_nodes(test_molecule, lambda x: x + 1)
-    system = create_sys_all_attrs(G,
-                                  moltype="molecule_0",
-                                  secstruc=secstruc,
-                                  defaults={"chain": "A"},
-                                  attrs={"resname": resnames,
-                                         "atype": atypes,
-                                         "stash": stash})
-    #add the elastic bonds between BB beads
+    system = create_sys_all_attrs(
+        G,
+        moltype="molecule_0",
+        secstruc=secstruc,
+        defaults={"chain": "A"},
+        attrs={"resname": resnames, "atype": atypes, "stash": stash},
+    )
+    # add the elastic bonds between BB beads
     for el_bond in el_bonds:
-        system.molecules[0].add_interaction(type_ = 'bonds',
-                                            atoms = tuple(el_bond),
-                                            parameters = ['1', '10', '5000'],
-                                            meta = {"group": "Rubber band"}
-                                            )
+        system.molecules[0].add_interaction(
+            type_="bonds",
+            atoms=tuple(el_bond),
+            parameters=["1", "10", "5000"],
+            meta={"group": "Rubber band"},
+        )
 
     # remove folded-disordered domain bonds
-    processor = IDRCrossDomainInteractionRemoval(go=False,
-                                                 elastic=True,
-                                                 id_regions=id_regions)
+    processor = IDRCrossDomainInteractionRemoval(
+        go=False, elastic=True, id_regions=id_regions
+    )
     processor.run_system(system)
 
     # assert False
-    remaining = [i.atoms for i in system.molecules[0].interactions['bonds']]
+    remaining = [i.atoms for i in system.molecules[0].interactions["bonds"]]
 
     assert len(remaining) == len(expected)
     for i in expected:
         assert tuple(i) in remaining
-        
- 
- 
+
+
+@pytest.mark.parametrize(
+    "id_regions, go_excl, expected",
+    (
+        (  # no go model: other exclusions are untouched
+            ["A-1:6"],
+            [],
+            [],
+        ),
+        (  # go model, all idr: every go exclusion goes
+            ["A-1:6"],
+            [[1, 2], [3, 6], [4, 5]],
+            [],
+        ),
+        (  # go model, two distinct idrs: intra and inter idr exclusions go,
+            # as do idr-folded ones. only folded-folded ones remain
+            ["A-2:3", "A-5:6"],
+            [[1, 4], [1, 2], [2, 3], [5, 6], [3, 5], [4, 6]],
+            [[1, 4]],
+        ),
+    ),
+)
+def test_remove_go_exclusions(id_regions, go_excl, expected):
+    molecule = vermouth.molecule.Molecule()
+    for resid in range(1, 7):
+        molecule.add_node(resid, resid=resid, chain="A", stash={"resid": resid})
+    # exclusions not belonging to the go model must always survive
+    molecule.add_interaction("exclusions", atoms=(2, 3), parameters=[])
+    for excl in go_excl:
+        molecule.add_interaction(
+            "exclusions",
+            atoms=tuple(excl),
+            parameters=[],
+            meta={"group": "Go model exclusion"},
+        )
+
+    IDRCrossDomainInteractionRemoval(
+        go=True, elastic=False, id_regions=id_regions
+    ).remove_go_exclusions(molecule)
+
+    remaining_go = [
+        list(excl.atoms)
+        for excl in molecule.interactions["exclusions"]
+        if excl.meta.get("group") == "Go model exclusion"
+    ]
+    assert remaining_go == expected
+    assert [
+        excl.atoms
+        for excl in molecule.interactions["exclusions"]
+        if "group" not in excl.meta
+    ] == [(2, 3)]
+
+
+def test_remove_go_exclusions_no_section():
+    molecule = vermouth.molecule.Molecule()
+    molecule.add_node(1, resid=1, chain="A", stash={"resid": 1})
+    IDRCrossDomainInteractionRemoval(
+        go=True, elastic=False, id_regions=["A-1:1"]
+    ).remove_go_exclusions(molecule)
+    assert "exclusions" not in molecule.interactions

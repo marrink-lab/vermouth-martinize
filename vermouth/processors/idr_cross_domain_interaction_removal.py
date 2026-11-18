@@ -80,6 +80,29 @@ class IDRCrossDomainInteractionRemoval(Processor):
 
         return all_cross_pairs
 
+    def remove_go_exclusions(self, molecule):
+        """
+        Remove the BB-BB Go exclusions involving disordered regions. These come
+        paired with the Go interactions removed by remove_cross_nb_interactions;
+        leaving them would switch off all nonbonded interactions between the BB beads.
+
+        Parameters
+        ----------
+        molecule: :class:`vermouth.molecule.Molecule`
+            the molecule
+        """
+        def in_idr(node):
+            attrs = molecule.nodes[node]
+            return any(_in_chain_and_resid_region(region, attrs['stash']['resid'], attrs['chain'])
+                       for region in self.id_regions)
+
+        # don't create an empty section: the itp writer would print an empty [ exclusions ] header
+        if 'exclusions' not in molecule.interactions:
+            return
+        molecule.interactions['exclusions'] = [excl for excl in molecule.interactions['exclusions']
+                                               if not (excl.meta.get('group') == 'Go model exclusion'
+                                                       and any(in_idr(node) for node in excl.atoms))]
+
     def remove_cross_elastic(self, molecule):
         """
         Remove elastic network bonds between folded and disordered regions of a molecule
@@ -153,6 +176,7 @@ class IDRCrossDomainInteractionRemoval(Processor):
                                                                              res_graph=res_graph,
                                                                              nbparams=system.gmx_topology_params["nonbond_params"])
                 self._remove_nb_interactions(system, interactions_for_removal)
+                self.remove_go_exclusions(molecule)
 
             elif self.elastic:
                 self.remove_cross_elastic(molecule=molecule)
