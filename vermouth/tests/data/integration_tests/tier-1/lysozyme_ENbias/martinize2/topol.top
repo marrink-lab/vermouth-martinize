@@ -1,8 +1,5 @@
 
 #include "martini.itp"
-
- #include "virtual_sites_atomtypes.itp"
- #include "virtual_sites_nonbond_params.itp"
 #include "molecule_0.itp"
 
 [ system ]

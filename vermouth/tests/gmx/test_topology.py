@@ -16,7 +16,6 @@
 Test the writing of TOP file.
 """
 import os
-import textwrap
 import pytest
 import vermouth
 from itertools import product
@@ -26,6 +25,7 @@ from vermouth.gmx.topology import (sigma_epsilon_to_C6_C12,
                                    write_atomtypes,
                                    write_nonbond_params,
                                    write_gmx_topology,
+                                   remove_duplicate_parameters,
                                    Atomtype,
                                    NonbondParam)
 from vermouth.tests.gmx.test_itp import dummy_molecule
@@ -159,7 +159,15 @@ def test_nonbond_params(tmp_path, nbparams, expected, C6C12):
         for line, ref_line in zip(infile, expected):
             assert line == ref_line
 
-def test_toplevel_topology(tmp_path, dummy_molecule):
+@pytest.mark.parametrize('moltypes, includes, molecules', (
+    (['molecule_0'], ['molecule_0'], ['molecule_0    1']),
+    (['molecule_0', 'molecule_0', 'molecule_1'], ['molecule_0', 'molecule_1'],
+     ['molecule_0    2', 'molecule_1    1']),
+    # interleaved moltypes keep their order, but each itp is included once
+    (['molecule_0', 'molecule_1', 'molecule_0', 'molecule_1'], ['molecule_0', 'molecule_1'],
+     ['molecule_0    1', 'molecule_1    1', 'molecule_0    1', 'molecule_1    1']),
+))
+def test_toplevel_topology(tmp_path, dummy_molecule, moltypes, includes, molecules):
     """
     Make sure the toplevel topology file
     is correctly written. Note that the individual
@@ -168,11 +176,13 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
     """
     os.chdir(tmp_path)
     system = vermouth.System()
-    system.add_molecule(dummy_molecule)
-    dummy_molecule.meta['moltype'] = "molecule_0"
+    for moltype in moltypes:
+        molecule = dummy_molecule.copy()
+        molecule.meta['moltype'] = moltype
+        system.add_molecule(molecule)
     # "node": 0, "sigma": 0.43, "epsilon": 2.3, "meta": {}}
     system.gmx_topology_params['atomtypes'].append(Atomtype(node=0,
-                                                   molecule=dummy_molecule,
+                                                   molecule=system.molecules[0],
                                                    sigma=0.43,
                                                    meta={},
                                                    epsilon=2.3))
@@ -193,20 +203,12 @@ def test_toplevel_topology(tmp_path, dummy_molecule):
                        C6C12=False)
     DeferredFileWriter().write()
 
-    reference =f"""#define random
-#include "martini.itp"
-#include "molecule_0.itp"
-
-[ system ]
-Title of the system
-
-[ molecules ]
-molecule_0    1
-"""
-    ref_lines = textwrap.dedent(reference).splitlines()
+    ref_lines = ['#define random', '#include "martini.itp"',
+                 *(f'#include "{moltype}.itp"' for moltype in includes),
+                 '', '[ system ]', 'Title of the system', '', '[ molecules ]', *molecules]
     with open(str(outpath), encoding='utf-8') as infile:
-        for line, ref_line in zip(infile, ref_lines):
-            assert line.strip() == ref_line
+        assert [line.strip() for line in infile] == ref_lines
+    assert sorted(path.name for path in tmp_path.glob('molecule_*.itp')) == [f'{moltype}.itp' for moltype in includes]
 
 @pytest.mark.parametrize('command, expected',
     (
@@ -235,3 +237,28 @@ def test_gromacs_cmd_len(dummy_molecule, tmp_path, command, expected):
     assert len(expected_line) == expected["length"]
 
     assert expected_line == expected["string"]
+
+
+def test_remove_duplicate_parameters():
+    """
+    Repeated atomtypes and nonbond_params are removed; entries with other
+    parameters are kept.
+    """
+    system = vermouth.System()
+    for _ in range(2):
+        molecule = vermouth.molecule.Molecule()
+        molecule.add_nodes_from([(0, {'atype': 'A'}), (1, {'atype': 'B'})])
+        system.add_molecule(molecule)
+    system.gmx_topology_params['atomtypes'] = [
+        Atomtype(molecule=molecule, node=node, sigma=0.0, epsilon=0.0, meta={})
+        for molecule in system.molecules for node in molecule.nodes]
+    system.gmx_topology_params['nonbond_params'] = [NonbondParam(('A', 'B'), 0.47, 1.0, {}),
+                                                    NonbondParam(('A', 'B'), 0.47, 1.0, {}),
+                                                    NonbondParam(('A', 'B'), 0.47, 2.0, {})]
+
+    remove_duplicate_parameters(system)
+
+    atomtypes = [atomtype.molecule.nodes[atomtype.node]['atype']
+                 for atomtype in system.gmx_topology_params['atomtypes']]
+    assert atomtypes == ['A', 'B']
+    assert [param.epsilon for param in system.gmx_topology_params['nonbond_params']] == [1.0, 2.0]

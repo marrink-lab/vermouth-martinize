@@ -1,0 +1,11 @@
+martinize2
+-f ../aa.pdb
+-ff martini3001
+-x cg.pdb
+-o topol.top
+-ss CEEEEEEEEESCCSEEEEEEEEEEECCEEEEEEEEESCCSEEEEEEEEEEECCEEEEEEEEESCCSEEEEEEEEEEECCEEEEEEEEESCCSEEEEEEEEEEECCEEEEEEEEESCCSEEEEEEEEEEEC
+-go
+-go-multimer
+-go-ff ../martini_v3.0.0_backbone.itp
+-go-write-file martinize_contact_map.out
+-maxwarn 3

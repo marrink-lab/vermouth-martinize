@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from ..processors.processor import Processor
+from ..processors.merge_all_molecules import MergeAllMolecules
 import numpy as np
 import scipy.sparse as sp
 from scipy.spatial.distance import euclidean
@@ -915,9 +916,20 @@ def calculate_go_contacts(molecule, write_file):
 class GenerateContactMap(Processor):
     """
     Processor to generate the contact rCSU contact map for a protein from an atomistic structure
+
+    Parameters
+    ----------
+    write_file: bool or str or pathlib.Path
+        file to write the contacts to; nothing is written if False
+    assembly: bool
+        If True, one contact map is generated for all molecules together,
+        such that contacts between molecules are found as well. The molecules
+        of the system are not merged; a merged copy is used. Else, a contact
+        map is generated for each molecule.
     """
-    def __init__(self, write_file):
+    def __init__(self, write_file, assembly=False):
         self.write_file = write_file
+        self.assembly = assembly
 
     def run_molecule(self, molecule):
         """
@@ -931,6 +943,9 @@ class GenerateContactMap(Processor):
         return calculate_go_contacts(molecule, self.write_file)
 
     def run_system(self, system):
-        for molecule in system.molecules:
+        molecules = system.molecules
+        if self.assembly:
+            molecules = MergeAllMolecules().run_system(system.copy()).molecules
+        for molecule in molecules:
             contacts = self.run_molecule(molecule)
             system.go_params["go_map"].append(contacts)

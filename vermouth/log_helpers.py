@@ -242,7 +242,7 @@ def get_logger(name):
     return TypeAdapter(logging.getLogger(name))
 
 
-def ignore_warnings_and_count(counter, specifications, level=logging.WARNING):
+def ignore_warnings_and_count(counter, specifications, level=logging.WARNING, count_once=()):
     """
     Count the warnings after deducting the ones to ignore.
 
@@ -252,7 +252,7 @@ def ignore_warnings_and_count(counter, specifications, level=logging.WARNING):
     all not specified types.
 
     In case the same type is specified more than once, only the higher
-    count is used.
+    count is used. All warnings of a type in `count_once` count as one.
     """
     number_of_warnings = counter.number_of_counts_by(level=level)
     specs = {}
@@ -264,8 +264,9 @@ def ignore_warnings_and_count(counter, specifications, level=logging.WARNING):
             else:
                 specs[warning_type] = max(specs.get(warning_type, 0), count)
     blanket_ignore = specs.get(None, 0)
-    warning_count = counter.counts[level]
-    total = number_of_warnings
+    warning_count = {warning_type: min(count, 1) if warning_type in count_once else count
+                     for warning_type, count in counter.counts[level].items()}
+    total = number_of_warnings - sum(counter.counts[level].values()) + sum(warning_count.values())
     for warning_type, count in warning_count.items():
         type_count = warning_count[warning_type]
         if warning_type in specs:

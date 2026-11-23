@@ -30,6 +30,7 @@ from ..pdb import pdb
 from ..system import System
 from ..processors.processor import Processor
 from ..processors import SortMoleculeAtoms
+from ..processors.average_copy_dihedrals import find_copies
 from ..selectors import is_protein, selector_has_position, filter_minimal, select_all
 from .. import utils
 from ..log_helpers import StyleAdapter, get_logger
@@ -383,6 +384,74 @@ def annotate_dssp(molecule, callable=None, attribute='aasecstruct'):
     annotate_residues_from_sequence(molecule, attribute, secstructs)
 
 
+def _without_secondary_structure(molecule):
+    """
+    Copy of `molecule` without its secondary structure annotations.
+    """
+    masked = molecule.copy()
+    for atom in masked.nodes.values():
+        atom.pop('aasecstruct', None)
+        atom.pop('cgsecstruct', None)
+    return masked
+
+
+def unify_copy_secondary_structure(system):
+    """
+    Give the copies of a protein the same secondary structure, such that they
+    can share an itp.
+
+    Protein molecules are copies if they share a moltype once their secondary
+    structure is set aside. For each residue, the most common DSSP assignment
+    (aasecstruct) over the copies is used; ties go to the assignment of the
+    first copy in the system. Every changed residue is logged, the Martini
+    secondary structure (cgsecstruct) of the changed molecules is derived
+    again, except for intrinsically disordered regions, which stay coil, and
+    the resulting Martini secondary structure is added to the header.
+
+    .. warning::
+
+        The molecules are annotated **in-place**.
+
+    Parameters
+    ----------
+    system: System
+        The system with annotated protein molecules.
+    """
+    changed = False
+    for group in find_copies(filter(is_protein, system.molecules), _without_secondary_structure):
+        residues = [list(molecule.iter_residues()) for molecule in group]
+        changed_idx = set()
+        for position in range(len(residues[0])):
+            first_atoms = [molecule.nodes[nodes[position][0]]
+                           for molecule, nodes in zip(group, residues)]
+            assignments = [atom.get('aasecstruct') for atom in first_atoms]
+            # most_common keeps the order of first occurrence for ties
+            majority = collections.Counter(assignments).most_common(1)[0][0]
+            for idx, atom in enumerate(first_atoms):
+                if atom.get('aasecstruct') == majority:
+                    continue
+                LOGGER.info('Secondary structure of residue {}{} in chain {} changed from '
+                            '{} to {}, the majority over its copies.', atom['resname'],
+                            atom.get('stash', {}).get('resid', atom['resid']), atom['chain'],
+                            atom.get('aasecstruct'), majority)
+                for node in residues[idx][position]:
+                    group[idx].nodes[node]['aasecstruct'] = majority
+                changed_idx.add(idx)
+        for idx in changed_idx:
+            convert_dssp_annotation_to_martini(group[idx])
+            for atom in group[idx].nodes.values():
+                if atom.get('cgidr'):
+                    atom['cgsecstruct'] = 'C'
+        changed = changed or bool(changed_idx)
+    if not changed:
+        return
+    sequence = list(itertools.chain(*(sequence_from_residues(molecule, 'cgsecstruct')
+                                      for molecule in system.molecules if is_protein(molecule))))
+    if None not in sequence:
+        system.meta['header'].extend(("The secondary structure of copies was unified; the following "
+                                      "Martini secondary structure was applied:", ''.join(sequence)))
+
+
 def convert_dssp_to_martini(sequence):
     """
     Convert a sequence of secondary structure to martini secondary sequence.
@@ -562,10 +631,27 @@ def gmx_system_header(system):
                                      ))
 
 class AnnotateDSSP(Processor):
+    """
+    Annotate the DSSP secondary structure of the protein molecules.
+
+    Parameters
+    ----------
+    executable: str or collections.abc.Callable
+        DSSP executable, or function to call; if None, mdtraj is used, or the
+        executable ``dssp`` if mdtraj is not installed.
+    savedir: str
+        Directory to save the output of a DSSP executable in; not used with
+        mdtraj or a function.
+    assembly: bool
+        If True, DSSP is run once on all protein molecules together, such
+        that secondary structure formed between molecules (e.g. beta-sheets)
+        is found. Else, DSSP is run on each molecule separately.
+    """
     name = 'AnnotateDSSP'
 
-    def __init__(self, executable=None, savedir=None):
+    def __init__(self, executable=None, savedir=None, assembly=False):
         super().__init__()
+        self.assembly = assembly
         if executable is None:
             if HAVE_MDTRAJ:
                 self.dssp = run_mdtraj
@@ -580,6 +666,19 @@ class AnnotateDSSP(Processor):
         annotate_dssp(molecule, self.dssp)
         molecule.citations.add('MDTraj')
         return molecule
+
+    def run_system(self, system):
+        if self.assembly:
+            proteins = System()
+            for molecule in filter(is_protein, system.molecules):
+                proteins.add_molecule(molecule.subgraph(
+                    filter_minimal(molecule, selector=selector_has_position)))
+                molecule.citations.add('MDTraj')
+            AnnotateResidues('aasecstruct', self.dssp(proteins),
+                             molecule_selector=is_protein).run_system(system)
+        else:
+            super().run_system(system)
+        return system
 
 
 class AnnotateMartiniSecondaryStructures(Processor):

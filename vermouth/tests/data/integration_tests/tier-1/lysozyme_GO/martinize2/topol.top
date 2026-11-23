@@ -1,8 +1,5 @@
 #define GO_VIRT
 #include "martini.itp"
-
- #include "go_atomtypes.itp"
- #include "go_nbparams.itp"
 #include "molecule_0.itp"
 
 [ system ]

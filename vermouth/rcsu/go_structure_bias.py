@@ -26,6 +26,84 @@ from ..log_helpers import StyleAdapter, get_logger
 import sys
 LOGGER = StyleAdapter(get_logger(__name__))
 
+
+def select_go_contacts(contact_map, res_graph, find_residue, res_dist, cutoff_short, cutoff_long, backbone):
+    """
+    Select all contacts from the contact map that according to their distance
+    and graph connectivity are eligible to form a Go bond. A contact is
+    selected once it is found in both directions.
+
+    Parameters
+    ----------
+    contact_map: list[(int, str, int, str)]
+        list of contacts defined by the residue index and chain identifier
+        of both residues
+    res_graph: networkx.Graph
+        residue graph, see :func:`vermouth.graph_utils.make_residue_graph`
+    find_residue: collections.abc.Callable
+        returns the node in `res_graph` for a chain identifier and residue
+        index, or None if there is none
+    res_dist: int
+        if nodes are closer than res_dist along the residue graph they are
+        ignored
+    cutoff_short: float
+        distances in nm smaller than this are ignored
+    cutoff_long: float
+        distances in nm larger than this are ignored
+    backbone: str
+        name of the backbone bead
+
+    Yields
+    ------
+    tuple
+        the residue nodes and backbone nodes of both residues, and the
+        distance between the backbone nodes
+    """
+    # find all pairs of residues that are within bonded distance of
+    # res_dist
+    connected_pairs = dict(nx.all_pairs_shortest_path_length(res_graph, cutoff=res_dist))
+    # eligible contacts found in one direction so far
+    one_direction = set()
+    bad_chains_warning = False
+    for resid_a, chain_a, resid_b, chain_b in contact_map:
+        # identify the contact in the residue graph based on
+        # chain ID and resid
+        res_a = find_residue(chain_a, resid_a)
+        res_b = find_residue(chain_b, resid_b)
+        if res_a is None or res_b is None:
+            if not bad_chains_warning:
+                LOGGER.warning("Mismatch between chain IDs in pdb and contact map. This probably means the "
+                               "chain IDs are missing in the pdb and the contact map has all chains = Z.")
+                bad_chains_warning = True
+            continue
+        # make sure that both residues are not connected
+        # note: contacts should be symmetric so we only
+        # check against one
+        if res_b in connected_pairs[res_a]:
+            continue
+        # now we lookup the backbone nodes within the residue contact
+        try:
+            bb_a = next(filter_minimal(res_graph.nodes[res_a]['graph'], select_backbone, bb_atomname=backbone))
+            bb_b = next(filter_minimal(res_graph.nodes[res_b]['graph'], select_backbone, bb_atomname=backbone))
+        except StopIteration:
+            LOGGER.warning(f'No backbone atoms with name "{backbone}" found in molecule. '
+                           'Check -go-backbone argument if your forcefield does not use this name for '
+                           'backbone bead atoms. Go model cannot be generated. Will exit now.')
+            sys.exit(1)
+        # compute the distance between bb-beads and verify that it
+        # satisfies the cut-off criteria
+        dist = np.linalg.norm(res_graph.nodes[res_a]['graph'].nodes[bb_a]['position'] -
+                              res_graph.nodes[res_b]['graph'].nodes[bb_b]['position'])
+        if not cutoff_long > dist > cutoff_short:
+            continue
+        # select the contact if it has been found in the other direction
+        # before; else, keep it and continue searching
+        if (res_b, res_a) in one_direction:
+            yield res_a, res_b, bb_a, bb_b, dist
+        else:
+            one_direction.add((res_a, res_b))
+
+
 class ComputeStructuralGoBias(Processor):
     """
     Generate the Go model structural bias for a system
@@ -163,73 +241,26 @@ class ComputeStructuralGoBias(Processor):
         list[(collections.abc.Hashable, collections.abc.Hashable, float)]
             list of node keys and distance
         """
-        # distance_matrix of eligible pairs as tuple(node, node, dist)
-        contact_matrix = []
         # distance_matrix of eligible symmetrical pairs as tuple(node, node, dist)
         symmetrical_matrix = []
-        # find all pairs of residues that are within bonded distance of
-        # self.res_dist
-        connected_pairs = dict(nx.all_pairs_shortest_path_length(self.res_graph,
-                                                                 cutoff=self.res_dist))
-        bad_chains_warning = False
-        for contact in self.system.go_params["go_map"][0]:
-            resIDA, chainA, resIDB, chainB = contact
-            # identify the contact in the residue graph based on
-            # chain ID and resid
-            resA = self._chain_id_to_resnode(chainA, resIDA)
-            resB = self._chain_id_to_resnode(chainB, resIDB)
-            # make sure that both residues are not connected
-            # note: contacts should be symmetric so we only
-            # check against one
-
-            if (resA is not None) and (resB is not None):
-                if resB not in connected_pairs[resA]:
-                    # now we lookup the backbone nodes within the residue contact
-                    try:
-                        bb_node_A = next(filter_minimal(self.res_graph.nodes[resA]['graph'],
-                                                        select_backbone,
-                                                        bb_atomname=self.backbone))
-                        bb_node_B = next(filter_minimal(self.res_graph.nodes[resB]['graph'],
-                                                        select_backbone,
-                                                        bb_atomname=self.backbone))
-                    except StopIteration:
-                        LOGGER.warning(f'No backbone atoms with name "{self.backbone}" found in molecule. '
-                                       'Check -go-backbone argument if your forcefield does not use this name for '
-                                       'backbone bead atoms. Go model cannot be generated. Will exit now.')
-                        sys.exit(1)
-
-                    # compute the distance between bb-beads
-                    dist = np.linalg.norm(molecule.nodes[bb_node_A]['position'] -
-                                          molecule.nodes[bb_node_B]['position'])
-                    # verify that the distance between BB-beads satisfies the
-                    # cut-off criteria
-                    if self.cutoff_long > dist > self.cutoff_short:
-                        atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
-                                                                   stash=self.res_graph.nodes[resA]['stash'],
-                                                                   chain=chainA,
-                                                                   prefix=self.moltype))
-                        atype_b = next(get_go_type_from_attributes(self.res_graph.nodes[resB]['graph'],
-                                                                   stash=self.res_graph.nodes[resB]['stash'],
-                                                                   chain=chainB,
-                                                                   prefix=self.moltype))
-                        # Check if symmetric contact has already been processed before
-                        # and if so, we append the contact to the final symmetric contact matrix
-                        # and add the exclusions. Else, we add to the full valid contact_matrix
-                        # and continue searching.
-                        if (atype_b, atype_a, dist) in contact_matrix:
-                            # generate backbone-backbone exclusions
-                            # perhaps one day can be its own function
-                            excl = Interaction(atoms=(bb_node_A, bb_node_B),
-                                               parameters=[], meta={"group": "Go model exclusion"})
-                            molecule.interactions['exclusions'].append(excl)
-                            symmetrical_matrix.append((atype_a, atype_b, dist))
-                        else:
-                            contact_matrix.append((atype_a, atype_b, dist))
-            else:
-                if bad_chains_warning == False:
-                    LOGGER.warning("Mismatch between chain IDs in pdb and contact map. This probably means the "
-                                   "chain IDs are missing in the pdb and the contact map has all chains = Z.")
-                    bad_chains_warning = True
+        contacts = select_go_contacts(self.system.go_params["go_map"][0], self.res_graph,
+                                      self._chain_id_to_resnode, self.res_dist,
+                                      self.cutoff_short, self.cutoff_long, self.backbone)
+        for resA, resB, bb_node_A, bb_node_B, dist in contacts:
+            atype_a = next(get_go_type_from_attributes(self.res_graph.nodes[resA]['graph'],
+                                                       stash=self.res_graph.nodes[resA]['stash'],
+                                                       chain=self.res_graph.nodes[resA].get('chain'),
+                                                       prefix=self.moltype))
+            atype_b = next(get_go_type_from_attributes(self.res_graph.nodes[resB]['graph'],
+                                                       stash=self.res_graph.nodes[resB]['stash'],
+                                                       chain=self.res_graph.nodes[resB].get('chain'),
+                                                       prefix=self.moltype))
+            # generate backbone-backbone exclusions
+            # perhaps one day can be its own function
+            excl = Interaction(atoms=(bb_node_A, bb_node_B),
+                               parameters=[], meta={"group": "Go model exclusion"})
+            molecule.interactions['exclusions'].append(excl)
+            symmetrical_matrix.append((atype_a, atype_b, dist))
         return symmetrical_matrix
 
     def compute_go_interaction(self, contacts):

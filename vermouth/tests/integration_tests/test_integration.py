@@ -109,8 +109,21 @@ def compare_pdb(filename1, filename2):
         assert_equal_blocks(mol1, mol2)
 
 
+def compare_top(filename1, filename2):
+    """
+    Asserts that two top files have the same lines, ignoring blank lines and
+    whitespace.
+    """
+    lines = []
+    for filename in (filename1, filename2):
+        with open(filename, encoding='utf-8') as top:
+            lines.append([line.split() for line in top if line.strip()])
+    assert lines[0] == lines[1]
+
+
 COMPARERS = {'.itp': compare_itp,
-             '.pdb': compare_pdb}
+             '.pdb': compare_pdb,
+             '.top': compare_top}
 
 def compare_nbparams(fileref, filecomp):
     """
@@ -195,7 +208,9 @@ def _interaction_equal(interaction1, interaction2):
     ['tier-1', 'EN_region'],
     ['tier-1', 'hst5'],
     ['tier-1', '1UBQ'],
-    ['tier-1', 'lysozyme_GO_internal']
+    ['tier-1', 'lysozyme_GO_internal'],
+    ['tier-1', '2BEG_GO_multimer'],
+    ['tier-1', '1BRS_GO_multimer'],
 #   ['tier-2', 'barnase_barstar'],
 #   ['tier-2', 'dna'],
 #   ['tier-2', 'gpa_dimer'],
@@ -271,3 +286,62 @@ def test_integration_protein(tmp_path, monkeypatch, tier, protein):
                     # parameters are OK.
                     m.setattr(vermouth.molecule.Interaction, '__eq__', _interaction_equal)
                     COMPARERS[ext](str(reference_file), str(new_file))
+
+
+@pytest.mark.parametrize('options', (
+    [],
+    ['-elastic'],
+    ['-go'],
+    ['-go', '-go-multimer', '-go-ff',
+     str(INTEGRATION_DATA/'tier-1'/'1BRS_GO_multimer'/'martini_v3.0.0_backbone.itp')],
+))
+def test_interleaved_molecules(tmp_path, options):
+    """
+    Two copies of histatin 5 (A, B) and trp-cage (D, E) in the order A D B E
+    give the same itps as in the order A B D E. The [ molecules ] follow the
+    input order, and each itp is included once. With -go, all molecules are
+    merged into one, so only the order A D B E is run.
+    """
+    chains = {}
+    for source, names in (('tier-1/hst5/aa.pdb', 'AB'), ('tier-0/mini-protein3_trp-cage/aa.pdb', 'DE')):
+        atoms = [line for line in (INTEGRATION_DATA/source).read_text(encoding='utf-8').splitlines(keepends=True)
+                 if line.startswith('ATOM')]
+        # the copy is 10 nm further along x
+        chains.update({name: [f'{line[:21]}{name}{line[22:30]}{float(line[30:38]) + 100 * copy:8.3f}{line[38:]}'
+                              for line in atoms]
+                       for copy, name in enumerate(names)})
+    merged = '-go' in options and '-go-multimer' not in options
+    includes = {}
+    molecules = {}
+    for order in ['ADBE'] if merged else ['ADBE', 'ABDE']:
+        path = tmp_path/order
+        path.mkdir()
+        (path/'aa.pdb').write_text(''.join(line for chain in order for line in chains[chain] + ['TER\n']),
+                                   encoding='utf-8')
+        proc = subprocess.run([sys.executable, str(MARTINIZE2), '-f', 'aa.pdb', '-x', 'cg.pdb',
+                               '-o', 'topol.top', '-ff', 'martini3001', '-ss', 'C', *options],
+                              cwd=path, timeout=60, check=False,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              universal_newlines=True)
+        assert not proc.returncode, proc.stderr
+        lines = [line.strip() for line in (path/'topol.top').read_text(encoding='utf-8').splitlines() if line.strip()]
+        includes[order] = [line for line in lines if line.startswith('#include')]
+        molecules[order] = [line.split() for line in lines[lines.index('[ molecules ]') + 1:]]
+
+    if merged:
+        assert molecules == {'ADBE': [['molecule', '1']]}
+        assert includes == {'ADBE': ['#include "martini.itp"', '#include "molecule.itp"']}
+    else:
+        assert molecules == {'ADBE': [['molecule_0', '1'], ['molecule_1', '1']] * 2,
+                             'ABDE': [['molecule_0', '2'], ['molecule_1', '2']]}
+        assert includes['ADBE'] == includes['ABDE'] == [
+            '#include "martini.itp"', '#include "molecule_0.itp"', '#include "molecule_1.itp"']
+        for new_file in (tmp_path/'ABDE').glob('*.itp'):
+            if new_file.name in GOCOMPARERS:
+                GOCOMPARERS[new_file.name](str(new_file), str(tmp_path/'ADBE'/new_file.name))
+            else:
+                compare_itp(str(new_file), str(tmp_path/'ADBE'/new_file.name))
+    # the coordinates follow the input order, as the [ molecules ] do
+    lines = (tmp_path/'ADBE'/'cg.pdb').read_text(encoding='utf-8').splitlines()
+    assert list(dict.fromkeys(line[21] for line in lines if line.startswith('ATOM'))) == list('ADBE')

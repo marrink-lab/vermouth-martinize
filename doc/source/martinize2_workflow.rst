@@ -283,7 +283,9 @@ here in detail. Instead, see for example
 
 Relevant CLI options: ``-elastic``, ``-ef``, ``-el``, ``-eu``, ``-ermd``,
 ``-ea``, ``-ep``, ``-es``, ``-em``, ``-eb``, ``-eunit``, ``-go``,
-``-go-eps``, ``-go-moltype``, ``-go-low``, ``-go-up``, ``-go-res-dist`` 
+``-go-eps``, ``-go-moltype``, ``-go-low``, ``-go-up``, ``-go-res-dist``,
+``-go-multimer``, ``-go-ff``, ``-go-eps-inter``, ``-go-eps-hetero``, ``-go-shell-width``,
+``-go-pooling``
 
 6) Write output
 ===============

@@ -72,8 +72,13 @@ class IDRCrossDomainInteractionRemoval(Processor):
                     vs_go_node = next(get_go_type_from_attributes(res_graph.nodes[res_node]['graph'],
                                                                   resid=resid,
                                                                   chain=chain,
+                                                                  go_site=None,
                                                                   prefix=molecule.meta.get('moltype')))
-                    all_cross_pairs.append(np.where(all_go_pairs == vs_go_node)[0]) #just need the first one
+                    # the multimer Go model has sites B and C named after
+                    # site A; site D is kept, as it replaces the backbone
+                    # exclusion between molecules
+                    vs_go_nodes = [vs_go_node, f"{vs_go_node}_B", f"{vs_go_node}_C"]
+                    all_cross_pairs.append(np.where(np.isin(all_go_pairs, vs_go_nodes))[0]) #just need the first one
 
         # make sure we only have one entry in case a site has more than one interaction
         all_cross_pairs = np.unique([x for xs in all_cross_pairs for x in xs])

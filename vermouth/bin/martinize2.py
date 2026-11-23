@@ -34,6 +34,7 @@ from vermouth.dssp.dssp import (
     AnnotateDSSP,
     AnnotateMartiniSecondaryStructures,
     AnnotateResidues,
+    unify_copy_secondary_structure,
 )
 from vermouth.log_helpers import (
     StyleAdapter,
@@ -50,7 +51,8 @@ from vermouth.map_input import (
 )
 from vermouth.rcsu.contact_map import GenerateContactMap, read_go_map
 from vermouth.rcsu.go_pipeline import GoPipeline
-from vermouth.gmx.topology import write_gmx_topology
+from vermouth.rcsu.go_multimer import ComputeMultimerGoBias, check_complete_chains, read_nonbond_params
+from vermouth.gmx.topology import remove_duplicate_parameters, write_gmx_topology
 
 LOGGER = TypeAdapter(logging.getLogger("vermouth"))
 
@@ -65,6 +67,10 @@ COUNTER = CountingHandler()
 
 # Control above what level message we want to count
 COUNTER.setLevel(logging.WARNING)
+
+# warnings that -go-multimer gives per contact or dihedral; all warnings of
+# one of these types count as one
+COUNT_ONCE = ('go-contact-spread', 'go-contact-shells', 'go-charged-contact', 'scfix-spread')
 
 CONSOLE_HANDLER = logging.StreamHandler()
 FORMATTER = BipolarFormatter(
@@ -168,7 +174,8 @@ def pdb_to_universal(
     return canonicalized
 
 
-def martinize(system, mappings, to_ff, delete_unknown=False, disordered_regions=None):
+def martinize(system, mappings, to_ff, delete_unknown=False, disordered_regions=None,
+              unify_copies=False):
     """
     Convert a system from one force field to another at lower resolution.
     """
@@ -185,6 +192,10 @@ def martinize(system, mappings, to_ff, delete_unknown=False, disordered_regions=
     if any(disordered_regions):
         LOGGER.info("Annotating IDRs.", type="step")
         vermouth.AnnotateIDRs(id_regions=disordered_regions).run_system(system)
+    # copies of a molecule can only share one itp if their secondary
+    # structure is the same
+    if unify_copies:
+        unify_copy_secondary_structure(system)
     LOGGER.info("Applying the links.", type="step")
     vermouth.DoLinks().run_system(system)
     LOGGER.info("Placing the charge dummies.", type="step")
@@ -565,11 +576,66 @@ def entry():
              "or just provide the flag to calculate as part of Martinize."
     )
     go_group.add_argument(
+        "-go-multimer",
+        dest="go_multimer",
+        action="store_true",
+        default=False,
+        help=("Keep the molecules separate and write one itp per unique molecule, "
+              "distinguishing intra- and inter-molecular Go contacts."),
+    )
+    go_group.add_argument(
+        "-go-ff",
+        dest="go_ff",
+        type=Path,
+        default=None,
+        help=("Force field itp file (e.g. martini_v3.0.0.itp) from which the backbone "
+              "nonbonded parameters are read. Required with -go-multimer."),
+    )
+    go_group.add_argument(
         "-go-eps",
         dest="go_eps",
         type=float,
         default=9.414,
         help=("The strength of the Go model structural bias in kJ/mol."),
+    )
+    go_group.add_argument(
+        "-go-eps-inter",
+        dest="go_eps_inter",
+        type=float,
+        default=None,
+        help=("The strength of the Go bias in kJ/mol between molecules with the same "
+              "sequence. Only with -go-multimer; defaults to -go-eps."),
+    )
+    go_group.add_argument(
+        "-go-eps-hetero",
+        dest="go_eps_hetero",
+        type=float,
+        default=None,
+        help=("The strength of the Go bias in kJ/mol between molecules with different "
+              "sequences. Only with -go-multimer; defaults to -go-eps-inter."),
+    )
+    go_group.add_argument(
+        "-go-shell-width",
+        dest="go_shell_width",
+        type=float,
+        default=None,
+        help=("Tolerance in nm for pooling a Go contact between molecules. The pairs of molecules "
+              "in which the contact distance is within this tolerance of its shortest value are the "
+              "reference pairs. The contact is pooled over all pairs of molecules of the same two "
+              "itps that are as far apart as a reference pair, to within this tolerance. Distances "
+              "between molecules are measured between the centres of their backbone beads. Its "
+              "sigma comes from the contact distances in these pairs. Only with -go-multimer; "
+              "defaults to 0.05."),
+    )
+    go_group.add_argument(
+        "-go-pooling",
+        dest="go_pooling",
+        choices=("union", "intersection"),
+        default=None,
+        help=("Within a molecule, use the Go contacts that are found in any (union) or in every "
+              "(intersection) copy of that molecule. Between molecules, use the Go contacts that "
+              "are found in any or every pair of molecules over which they are pooled (see "
+              "-go-shell-width). Only with -go-multimer; defaults to union."),
     )
     go_group.add_argument(
         "-go-low",
@@ -874,6 +940,24 @@ def entry():
             "be used together."
         )
 
+    if args.go_multimer and not args.go:
+        parser.error("The -go-multimer flag requires the -go flag.")
+    if args.go_multimer and not args.go_ff:
+        parser.error("The -go-multimer flag requires the -go-ff flag.")
+    for flag, value in (("-go-ff", args.go_ff), ("-go-eps-inter", args.go_eps_inter),
+                        ("-go-eps-hetero", args.go_eps_hetero), ("-go-shell-width", args.go_shell_width),
+                        ("-go-pooling", args.go_pooling)):
+        if value is not None and not args.go_multimer:
+            parser.error(f"The {flag} flag requires the -go-multimer flag.")
+    if args.go_ff is not None and not args.go_ff.is_file():
+        parser.error(f'"{args.go_ff}" given to the -go-ff flag is not a file.')
+    if args.go_eps_inter is None:
+        args.go_eps_inter = args.go_eps
+    if args.go_eps_hetero is None:
+        args.go_eps_hetero = args.go_eps_inter
+    if args.go_shell_width is None:
+        args.go_shell_width = 0.05
+
     if args.to_ff.startswith("elnedyn"):
         # FIXME: This type of thing should be added to the FF itself.
         LOGGER.info(
@@ -944,12 +1028,16 @@ def entry():
     LOGGER.info("Read input.", type="step")
     for molecule in system.molecules:
         LOGGER.debug("Read molecule {}.", molecule, type="step")
+    if args.go_multimer:
+        check_complete_chains(system)
 
     target_ff = known_force_fields[args.to_ff]
+    unify_copies = False
     if args.dssp:
         if not isinstance(args.dssp, str):
             args.dssp = None
-        AnnotateDSSP(executable=args.dssp, savedir='.').run_system(system)
+        AnnotateDSSP(executable=args.dssp, savedir='.', assembly=args.go_multimer).run_system(system)
+        unify_copies = args.go_multimer and not args.keep_duplicate_itp
         AnnotateMartiniSecondaryStructures().run_system(system)
     elif args.ss is not None:
         AnnotateResidues(
@@ -1017,14 +1105,18 @@ def entry():
         vermouth.AddCysteinBridgesThreshold(args.cystein_bridge).run_system(system)
 
     if args.go:
-        system = vermouth.MergeAllMolecules().run_system(system)
+        # the multimer Go model keeps the molecules separate; contacts
+        # between them are still found by the contact map generation
+        if not args.go_multimer:
+            system = vermouth.MergeAllMolecules().run_system(system)
         # need this here because have to get contact map at atomistic resolution
         if isinstance(args.go, Path):
             LOGGER.info("Reading Go model contact map.", type="step")
             read_go_map(system=system, file_path=args.go)
         else:
             LOGGER.info("Generating Go model contact map.", type="step")
-            GenerateContactMap(write_file=args.go_write_file).run_system(system)
+            GenerateContactMap(write_file=args.go_write_file,
+                               assembly=args.go_multimer).run_system(system)
 
 
     # Run martinize on the system.
@@ -1033,7 +1125,8 @@ def entry():
         mappings=known_mappings,
         to_ff=known_force_fields[args.to_ff],
         delete_unknown=True,
-        disordered_regions=args.id_regions
+        disordered_regions=args.id_regions,
+        unify_copies=unify_copies,
     )
     if 'bondedtypes' in known_force_fields[args.to_ff].variables:
         LOGGER.info("Generating implicit interactions for RTP force field", type='step')
@@ -1050,7 +1143,7 @@ def entry():
         vermouth.ApplyPosres(node_selector, args.posres_fc).run_system(system)
 
     # Generate the Go model if required
-    if system.go_params["go_map"]:
+    if system.go_params["go_map"] and not args.go_multimer:
         go_name_prefix = args.molname
         LOGGER.info("Generating the Go model.", type="step")
         GoPipeline.run_system(system,
@@ -1062,13 +1155,7 @@ def entry():
                               go_anchor_bead=args.go_backbone,
                               go_atomname=args.go_atomname)
 
-        defines = ("GO_VIRT",)
-        itp_paths = {"atomtypes": "go_atomtypes.itp",
-                     "nonbond_params": "go_nbparams.itp"}
-
     else:
-        # don't write non-bonded interactions
-        itp_paths = []
         # Merge chains if required.
         if args.merge_chains:
             #if "all" is not in the list of chains to be merged
@@ -1084,7 +1171,37 @@ def entry():
                 raise argparse.ArgumentError(chain_merging,
                                              message=("Multiple conflicting merging arguments given. "
                                                       "Either specify -merge all or -merge A,B,C (+)."))
+        # copies of a molecule can only share one itp if their structure
+        # dependent dihedrals are the same
+        if args.go_multimer and not args.keep_duplicate_itp:
+            vermouth.AverageCopyDihedrals().run_system(system)
         vermouth.NameMolType(deduplicate=not args.keep_duplicate_itp, molname=args.molname).run_system(system)
+
+    # Generate the multimer Go model if required
+    if args.go_multimer:
+        LOGGER.info("Generating the multimer Go model.", type="step")
+        vermouth.rcsu.go_vs_includes.VirtualSiteCreator(go_anchor_bead=args.go_backbone,
+                                                        go_atomname=args.go_atomname,
+                                                        ).run_system(system)
+        ComputeMultimerGoBias(cutoff_short=args.go_low,
+                              cutoff_long=args.go_up,
+                              go_eps=args.go_eps,
+                              go_eps_inter=args.go_eps_inter,
+                              go_eps_hetero=args.go_eps_hetero,
+                              res_dist=args.go_res_dist,
+                              nonbond_params=read_nonbond_params(args.go_ff),
+                              go_anchor_bead=args.go_backbone,
+                              shell_width=args.go_shell_width,
+                              intersection=args.go_pooling == "intersection",
+                              ).run_system(system)
+
+    if system.go_params["go_map"]:
+        defines = ("GO_VIRT",)
+        itp_paths = {"atomtypes": "go_atomtypes.itp",
+                     "nonbond_params": "go_nbparams.itp"}
+    else:
+        # don't write non-bonded interactions
+        itp_paths = []
         defines = ()
 
     # Apply a rubber band elastic network is required.
@@ -1161,6 +1278,10 @@ def entry():
                                                          id_regions=args.id_regions,
                                                          ).run_system(system)
 
+    # copies of a molecule share their atomtypes and nonbonded parameters
+    if args.go_multimer:
+        remove_duplicate_parameters(system)
+
     # Here we need to add the resids from the PDB back if that is needed
     if args.resid_handling == "input":
         for molecule in system.molecules:
@@ -1198,7 +1319,7 @@ def entry():
     # TODO: allow ignoring warnings per class/amount (i.e. ignore 2
     #       inconsistent-data warnings)
 
-    leftover_warnings = ignore_warnings_and_count(COUNTER, args.maxwarn)
+    leftover_warnings = ignore_warnings_and_count(COUNTER, args.maxwarn, count_once=COUNT_ONCE)
     if leftover_warnings:
         LOGGER.error(
             "{} warnings were encountered after accounting for the "

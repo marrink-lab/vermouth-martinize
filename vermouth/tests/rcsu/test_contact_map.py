@@ -19,13 +19,15 @@ Unit tests for the Go contact map generator.
 
 import pytest
 import numpy as np
+import vermouth
+import vermouth.pdb
 from vermouth.rcsu import contact_map
 from collections import defaultdict
 from vermouth.graph_utils import make_residue_graph
 from scipy.spatial import cKDTree as KDTree
 from vermouth.rcsu.contact_map import GenerateContactMap
 from vermouth.tests.helper_functions import test_molecule, equal_graphs, create_sys_all_attrs
-from vermouth.tests.datafiles import TEST_MOLECULE_CONTACT_MAP
+from vermouth.tests.datafiles import PDB_FIBRIL, TEST_MOLECULE_CONTACT_MAP
 from vermouth.file_writer import DeferredFileWriter
 from pathlib import Path
 
@@ -446,4 +448,55 @@ def test_processor(test_molecule):
 
     # really just matters that after the processor has been run a list has been added to the dictionary
     assert len(system.go_params["go_map"]) == 1
+
+
+@pytest.mark.parametrize('assembly, expected_maps', ((False, 2), (True, 1)))
+def test_processor_assembly(test_molecule, assembly, expected_maps):
+    """
+    With assembly=True, one contact map is made for all molecules together
+    without merging or changing the molecules of the system.
+    """
+    atypes = {0: "P1", 1: "SN4a", 2: "SN4a",
+              3: "SP1", 4: "C1",
+              5: "TP1",
+              6: "P1", 7: "SN3a", 8: "SP4"}
+    system = create_sys_all_attrs(test_molecule,
+                                  moltype="molecule_0",
+                                  secstruc={1: "H", 2: "H", 3: "H", 4: "H"},
+                                  defaults={"chain": "A"},
+                                  attrs={"atype": atypes})
+    copy = system.molecules[0].copy()
+    for node in copy.nodes:
+        copy.nodes[node]["chain"] = "B"
+        copy.nodes[node]["position"] = copy.nodes[node]["position"] + np.array([0.0, 0.0, 1.0])
+    system.add_molecule(copy)
+    molecules = list(system.molecules)
+    originals = [molecule.copy() for molecule in molecules]
+
+    GenerateContactMap(write_file=False, assembly=assembly).run_system(system)
+
+    assert len(system.go_params["go_map"]) == expected_maps
+    assert all(molecule is before for molecule, before in zip(system.molecules, molecules))
+    assert len(system.molecules) == 2
+    for molecule, original in zip(system.molecules, originals):
+        assert equal_graphs(molecule, original)
+        assert all(np.array_equal(molecule.nodes[node]["position"], original.nodes[node]["position"])
+                   for node in molecule.nodes)
+
+
+def test_processor_assembly_contacts():
+    """
+    The assembly contact map of two chains of a fibril contains the contacts
+    between them.
+    """
+    system = vermouth.System()
+    for molecule in vermouth.pdb.read_pdb(str(PDB_FIBRIL))[:2]:
+        system.add_molecule(molecule)
+    vermouth.MakeBonds(allow_name=False).run_system(system)
+    vermouth.StashAttributes(attributes=("resid",)).run_system(system)
+
+    GenerateContactMap(write_file=False, assembly=True).run_system(system)
+
+    chains = {(chain_a, chain_b) for _, chain_a, _, chain_b in system.go_params["go_map"][0]}
+    assert {("A", "B"), ("B", "A")} <= chains
 

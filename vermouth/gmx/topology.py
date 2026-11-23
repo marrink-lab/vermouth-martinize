@@ -113,6 +113,28 @@ def write_nonbond_params(system, itp_path, C6C12=False):
                     comments = ""
                 itp_file.write(f"{a1} {a2} 1 {nb1:3.8F} {nb2:3.8F} {comments}\n")
 
+def remove_duplicate_parameters(system):
+    """
+    Remove repeated atomtypes and nonbond_params from the system, which
+    processors that run per molecule add once for every copy of a molecule.
+    Entries for the same atomtypes with different parameters are kept.
+
+    Parameters
+    ----------
+    system: :class:`vermouth.system.System`
+    """
+    def unique(entries, key):
+        first = {}
+        for entry in entries:
+            first.setdefault(key(entry), entry)
+        return list(first.values())
+
+    params = system.gmx_topology_params
+    params['atomtypes'] = unique(params['atomtypes'], lambda atomtype: (
+        atomtype.molecule.nodes[atomtype.node]['atype'], atomtype.sigma, atomtype.epsilon))
+    params['nonbond_params'] = unique(params['nonbond_params'], lambda param: (
+        param.atoms, param.sigma, param.epsilon))
+
 def write_gmx_topology(system,
                        top_path,
                        itp_paths={"nonbond_params": "extra_nbparams.itp",
@@ -234,8 +256,11 @@ def write_gmx_topology(system,
         {molecules}
     """
     )
+    # Each ITP file is included once, also if its moltype occurs in more than
+    # one group of successive molecules.
     include_string = include_string + "\n".join(
-        '#include "{}.itp"'.format(molecule_type) for molecule_type, _ in moltype_count
+        '#include "{}.itp"'.format(molecule_type)
+        for molecule_type in dict.fromkeys(molecule_type for molecule_type, _ in moltype_count)
     )
     molecule_string = "\n".join(
         "{mtype:<{length}}    {num}".format(

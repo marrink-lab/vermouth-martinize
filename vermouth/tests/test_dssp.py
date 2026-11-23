@@ -488,6 +488,95 @@ def test_mdtraj(monkeypatch, ss_struct, expected):
     assert found == expected
 
 
+def ala5_copies(chains):
+    """
+    A system with one copy of the ALA5 molecule per chain in `chains`.
+    """
+    system = vermouth.System()
+    for chain in chains:
+        for molecule in read_pdb(str(PDB_ALA5)):
+            nx.set_node_attributes(molecule, chain, 'chain')
+            system.add_molecule(molecule)
+    return system
+
+
+def secondary_structure(system, attribute='aasecstruct'):
+    """
+    The secondary structure of every residue in the system.
+    """
+    return [mol.nodes[residue[0]][attribute]
+            for mol in system.molecules for residue in mol.iter_residues()]
+
+
+@pytest.mark.parametrize('assembly, expected_calls, expected', (
+    # one DSSP call per molecule
+    (False, [5, 5], 'ABCDEABCDE'),
+    # one DSSP call for all molecules together
+    (True, [10], 'ABCDEFGHIJ'),
+))
+def test_annotate_dssp_assembly(assembly, expected_calls, expected):
+    """
+    Test that with assembly=True DSSP is run once on all molecules together.
+    """
+    calls = []
+    def fake_dssp(system):
+        n_residues = sum(len(list(mol.iter_residues())) for mol in system.molecules)
+        calls.append(n_residues)
+        return list('ABCDEFGHIJ')[:n_residues]
+
+    system = ala5_copies('AB')
+    assert AnnotateDSSP(executable=fake_dssp, assembly=assembly).run_system(system) is system
+
+    assert calls == expected_calls
+    assert secondary_structure(system) == list(expected)
+
+
+@pytest.mark.parametrize('chains, secstruct, expected', (
+    # ties go to the first copy
+    ('AB', 'HHHHHCEEEC', 'HHHHH' * 2),
+    # majority vote over three copies, per residue
+    ('ABC', 'HHHCCHEHCCEEHCE', 'HEHCC' * 3),
+))
+def test_unify_copy_secondary_structure(chains, secstruct, expected):
+    """
+    Test that copies get the majority secondary structure of each residue,
+    and that their Martini secondary structure and the header follow.
+    """
+    system = ala5_copies(chains)
+    AnnotateDSSP(executable=lambda proteins: list(secstruct), assembly=True).run_system(system)
+    dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+
+    dssp.unify_copy_secondary_structure(system)
+
+    martini = dssp.convert_dssp_to_martini(expected[:5]) * len(chains)
+    assert secondary_structure(system) == list(expected)
+    assert secondary_structure(system, 'cgsecstruct') == list(martini)
+    assert system.meta['header'][-1] == martini
+
+
+def test_unify_copy_secondary_structure_not_copies():
+    """
+    A molecule that differs in more than its secondary structure keeps its
+    own, and residues in a disordered region stay coil.
+    """
+    system = ala5_copies('ABC')
+    AnnotateDSSP(executable=lambda proteins: list('HHHHH' 'CHHHH' 'CCCCC'),
+                 assembly=True).run_system(system)
+    dssp.AnnotateMartiniSecondaryStructures().run_system(system)
+    # the first residue is disordered, as annotated by AnnotateIDRs, and
+    # chain C is modified differently
+    for molecule in system.molecules:
+        for node in next(molecule.iter_residues()):
+            molecule.nodes[node]['cgidr'] = True
+            molecule.nodes[node]['cgsecstruct'] = 'C'
+    system.molecules[2].nodes[next(iter(system.molecules[2].nodes))]['charge'] = 1
+
+    dssp.unify_copy_secondary_structure(system)
+
+    assert secondary_structure(system) == list('HHHHH' 'HHHHH' 'CCCCC')
+    assert secondary_structure(system, 'cgsecstruct')[5] == 'C'
+
+
 #def test_cterm_atomnames():
 #    nodes = [
 #        dict(
