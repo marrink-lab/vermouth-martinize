@@ -164,7 +164,6 @@ def main():
     pipeline_conf = pipeline_document["martinize2"]
 
     cli_builder = CLIBuilder(
-        "martinize2",
         pipeline_conf,
         type_map=TYPE_MAP,
     )

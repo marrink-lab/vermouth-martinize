@@ -562,7 +562,7 @@ class ElasticWrapper(WrapperMixin, ApplyRubberBand):
             selector = functools.partial(
                 selectors.proto_select_attribute_in,
                 attribute="atomname",
-                values=rb_selection,
+                values=[s.strip() for s in rb_selection.split(",")] if rb_selection else [],
             )
         else:
             selector = functools.partial(
@@ -613,7 +613,7 @@ class ComputeWaterBiasWrapper(WrapperMixin, ComputeWaterBias):
         """
         return (
             water_bias,
-            dict(water_bias_eps or []),
+            dict(water_bias_eps) if water_bias_eps else {},
             water_bias_idrs or [],
             water_type,
             water_bead_sizes,

@@ -130,6 +130,8 @@ def test_CIFReader():
 
 def test_equal_output(tmp_path):
     martinize2 = find_in_path()
+    if martinize2 is None:
+        pytest.skip("martinize2 not found")
 
     command0 = [
         sys.executable,

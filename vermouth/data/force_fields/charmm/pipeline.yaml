@@ -366,6 +366,16 @@ martinize2:
                       value: cgsecstruct
                     seq:
                       value: "F"
+              - warn_missing_secondary_structure:
+                   condition:
+                     all:
+                     - equal: { cli: dssp, value: "" }
+                     - equal: { cli: ss, value: "" }
+                     - not: { equal: { cli: collagen, value: true } }
+                   log:
+                     warning:
+                       msg: "No secondary structure information provided. Please use -dssp, -ss, or -collagen."
+                       type: step
           - vermouth.SetMoleculeMeta:
               cli:
                 flags: {}

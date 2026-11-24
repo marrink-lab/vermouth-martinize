@@ -17,7 +17,7 @@ from collections import defaultdict
 import networkx as nx
 
 from ..molecule import Interaction
-from .processor import Processor
+from .processor import Processor, LOGGER
 from ..utils import first_alpha
 
 
@@ -138,6 +138,9 @@ def add_dihedrals_and_pairs(mol, *, bond_type=2, all_dihedrals=True,
 class RTPPolisher(Processor):
     def run_molecule(self, molecule):
         bondedtypes = molecule.force_field.bondedtypes
+        if bondedtypes is None:
+            LOGGER.warning("No bonded types found in the force field. Skipping dihedral and pair generation.")
+            return molecule
         # bond_type = bondedtypes.bonds
         angle_type = bondedtypes.angles
         dihedral_type = bondedtypes.dihedrals

@@ -67,6 +67,8 @@ definitions:
     properties:
       $include:
         $ref: "#/definitions/include"
+      processor:
+        type: string
       cli:
         $ref: "#/definitions/cli"
       condition:
@@ -90,7 +92,7 @@ definitions:
     unevaluatedProperties: false
     allOf:
       - $ref: "#/definitions/step_base"
-      - oneOf:
+      - anyOf:
         - $ref: "#/definitions/processor"
         - $ref: "#/definitions/pipeline"
 
@@ -122,8 +124,6 @@ definitions:
     properties:
       $include:
         $ref: "#/definitions/include"
-      processor:
-        type: string
       args:
         type: object
         properties:

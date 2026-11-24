@@ -306,10 +306,14 @@ martinize2:
                     tiny: 0.34
           - vermouth.pipeline_processors.MergeChainsWrapper:
               condition:
-                not:
-                  equal:
-                    cli: merge_chains
-                    value: []
+                all:
+                - not:
+                    equal:
+                      cli: merge_chains
+                      value: []
+                - equal:
+                    cli: go
+                    value:
               cli:
                 flags: {}
               args:
@@ -341,6 +345,15 @@ martinize2:
                     cli: rb_unit
                     value: all
               args: {}
+          - warn_elastic_go_conflict:
+              condition:
+                all:
+                - equal: { cli: elastic, value: true }
+                - not: { equal: { cli: go, value: "" } }
+              log:
+                warning:
+                  msg: "Both -elastic and -go are specified. The Go model provides its own elastic network, so the regular elastic network will be disabled."
+                  type: step
           - elastic:
               processor: vermouth.pipeline_processors.ElasticWrapper
               log:
@@ -410,6 +423,12 @@ martinize2:
                     small: 0.41
                     tiny: 0.34
           - vermouth.IDRCrossDomainInteractionRemoval:
+              condition:
+                all:
+                  - not: { equal: { cli: water_bias_idrs, value: [] } }
+                  - any:
+                      - not: { equal: { cli: go, value: "" } }
+                      - equal: { cli: elastic, value: true }
               args:
                 go:
                   cli: go

@@ -86,7 +86,7 @@ def build_cli_conf(draw, known_cli_flags=None, *, min_depth=0, max_depth=3, dept
 @given(st.data())
 def test_something(data):
     conf, flags, groups = data.draw(build_cli_conf())
-    cli_builder = CLIBuilder("test", conf)
+    cli_builder = CLIBuilder(conf)
     note(f'{groups=}')
     cli_args = []
     ungrouped_flags = set(flags)

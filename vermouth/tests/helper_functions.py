@@ -67,11 +67,14 @@ def equal_graphs(g1, g2,
     return matcher.is_isomorphic()
 
 
-def find_in_path(names=('martinize2', 'martinize2.py')):
+def find_in_path(names=('martinize2', 'martinize2.py'), env_var='VERMOUTH_TEST_MARTINIZE2'):
     """
     Finds and returns the location of one of `names` in PATH, and returns the
     first match.
     """
+    env_path = os.environ.get(env_var)
+    if env_path:
+        return env_path
     for name in names:
         fullpath = shutil.which(name)
         if fullpath is not None:

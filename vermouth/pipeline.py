@@ -247,8 +247,10 @@ def validate_cli_options(
         cli_references = set()
         variable_references = set()
 
-        for value in pipeline_conf.get('args', {}).values():
-            if value == SOURCE_KEY: continue
+        for arg_name, value in pipeline_conf.get('args', {}).items():
+            if arg_name == SOURCE_KEY: continue
+            if not isinstance(value, Mapping):
+                continue
             if 'cli' in value:
                 cli_references.add(value['cli'])
 
@@ -362,7 +364,6 @@ def add_cli_flag(base_group, flag, opts, prefix="-", type_map=None):
 
 # build the CLI based on the pipeline configuration.
 def build_cli(
-    name,
     pipeline_conf,
     prefix,
     parser=None,
@@ -378,7 +379,6 @@ def build_cli(
 
     Parameters
     ----------
-    name : str
     pipeline_conf : dict
         Pipeline configuration containing CLI definitions.
     prefix : str
@@ -396,7 +396,7 @@ def build_cli(
         Parser containing the configured CLI options.
     """
     # make parser if not given, otherwise use the given one.
-    parser = parser or argparse.ArgumentParser(prog=name, allow_abbrev=False, **kwargs)
+    parser = parser or argparse.ArgumentParser(allow_abbrev=False, **kwargs)
     # make an empty set of the added_flags. or use the given one.
     added_flags = set() if added_flags is None else added_flags
     # loop through the cli flags defined in the pipeline config. and don't add the same flag twice.
@@ -455,7 +455,6 @@ def build_cli(
     if pipeline_conf.get('steps'):
         for name, step in pipeline_conf["steps"].items():
             build_cli(
-                name,
                 step,
                 prefix,
                 parser=parser,
@@ -549,8 +548,21 @@ def resolve_config_paths(value):
                 source = value.get(SOURCE_KEY)
                 if source is None:
                     raise ValueError("$path requires YAML source metadata.")
-                # FIXME: windows absolute paths may break here.
-                return (Path(str(source).rsplit(":", 1)[0]).parent / reference).resolve()
+                source_str = str(source)
+                if ":" in source_str:
+                    drive = Path(source_str).drive
+                    if drive and source_str.count(":") == 1 and source_str.startswith(drive):
+                        path_part = source_str
+                    else:
+                        path_part = source_str.rsplit(":", 1)[0]
+                else:
+                    path_part = source_str
+
+                source_dir = Path(path_part).parent.resolve()
+                resolved = (source_dir / reference).resolve()
+                if reference.is_absolute() or not resolved.is_relative_to(source_dir):
+                    raise ValueError("$path paths must remain under the source directory.")
+                return resolved
 
             data_path = Path(vermouth.DATA_PATH).resolve()
             resolved = (data_path / reference).resolve()
@@ -639,6 +651,9 @@ def import_processor(processor_name):
     type
         Imported processor class.
     """
+    if '.' not in processor_name:
+        raise ImportError(f"Processor name {processor_name!r} must be a fully qualified name in 'module.ClassName' format.")
+
     # split the processor name into module and name. 
     module, name = processor_name.rsplit('.', 1)
     # import to python module 
@@ -865,7 +880,10 @@ def _parse_include_reference(reference, including_path, pipeline_dirs):
     follows the first colon and uses dot-separated mapping keys with optional
     ``[index]`` or ``[ordered-map-key]`` selectors.
     """
-    filename, separator, fragment_path = reference.partition(":")
+    if len(reference) >= 2 and reference[1] == ":" and reference[0].isalpha():
+        filename, separator, fragment_path = reference, "", ""
+    else:
+        filename, separator, fragment_path = reference.partition(":")
     include_path = Path(filename)
     relative_path = Path(including_path).parent / include_path
     if not include_path.is_absolute() and relative_path.exists():
@@ -933,16 +951,34 @@ def select_include_fragment(config, fragment_path):
     return value
 
 
+_COMPOSED_CACHE = {}
+
+
+_COMPOSED_CACHE = {}
+
+
 def compose_pipeline_file(path, pipeline_dirs=(), inclusion_chain=()):
     """Load and compose a pipeline file, expanding includes depth-first."""
-    path = find_pipeline_yaml(path, pipeline_dirs).resolve()
-    config = deepcopy(load_yaml_file(path))
-    return compose_pipeline_config(
+    resolved_path = find_pipeline_yaml(path, pipeline_dirs).resolve()
+    pipeline_dirs_tuple = tuple(pipeline_dirs)
+
+    if resolved_path in inclusion_chain:
+        chain = " -> ".join(map(str, (*inclusion_chain, resolved_path)))
+        raise ValueError(f"Include cycle detected: {chain}")
+
+    cache_key = (resolved_path, pipeline_dirs_tuple)
+    if cache_key in _COMPOSED_CACHE:
+        return deepcopy(_COMPOSED_CACHE[cache_key])
+
+    config = deepcopy(load_yaml_file(resolved_path))
+    composed = compose_pipeline_config(
         config,
-        path,
+        resolved_path,
         pipeline_dirs,
         inclusion_chain,
     )
+    _COMPOSED_CACHE[cache_key] = composed
+    return deepcopy(composed)
 
 
 def compose_pipeline_config(config, path, pipeline_dirs=(), inclusion_chain=()):
@@ -953,10 +989,7 @@ def compose_pipeline_config(config, path, pipeline_dirs=(), inclusion_chain=()):
         raise ValueError(f"Include cycle detected: {chain}")
 
     _annotate_sources(config, path)
-    root = config["martinize2"]
-    if isinstance(root.get("steps"), MutableSequence):
-        _validate_raw_step_names(root, source=path)
-        _convert_step_mappings(root)
+    _validate_pipeline_config(config, path)
     _compose_includes(
         config,
         path,
@@ -1105,7 +1138,18 @@ def _convert_step_mappings(value):
                 steps = OrderedDict()
                 for step_name, step_config in child:
                     _convert_step_mappings(step_config)
-                    steps[step_name] = step_config
+
+                    if (isinstance(step_config, MutableMapping) and 
+                            'processor' not in step_config and 
+                            'steps' not in step_config):
+                        step_config['processor'] = step_name
+
+                    actual_name = step_name
+                    counter = 1
+                    while actual_name in steps:
+                        actual_name = f"{step_name}_{counter}"
+                        counter += 1
+                    steps[actual_name] = step_config
                 value[key] = steps
             else:
                 _convert_step_mappings(child)
@@ -1383,8 +1427,7 @@ class CLIBuilder:
     prefix : str, optional
         Prefix used for generated command-line options.
     """
-    def __init__(self, name, pipeline_conf, prefix="-", type_map=None):
-        self.name = name
+    def __init__(self, pipeline_conf, prefix="-", type_map=None):
         self.pipeline_conf = _strip_source_metadata(deepcopy(pipeline_conf))
         self.prefix = prefix
         self.type_map = type_map
@@ -1416,7 +1459,6 @@ class CLIBuilder:
             Additional arguments passed to ``build_cli``.
         """
         self._argparser = build_cli(
-            self.name,
             self.pipeline_conf,
             self.prefix,
             type_map=self.type_map,

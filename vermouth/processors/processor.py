@@ -65,9 +65,10 @@ class Pipeline(nx.DiGraph, Processor):
     Pipelines can contain both processors and nested pipelines.
     """
 
-    def __init__(self, /, name=''):
+    def __init__(self, /, name='', condition=True):
         super().__init__()
         self.name = name
+        self.condition = condition
 
     @classmethod
     def from_dict(cls, conf, name):
@@ -86,10 +87,11 @@ class Pipeline(nx.DiGraph, Processor):
     Pipeline
         The constructed pipeline.
     """
+        root_condition = conf.get("condition", True)
         
         def _recurse(parent, name, conf):
             if 'steps' in conf:
-                obj = cls(name=name)
+                obj = cls(name=name, condition=conf.get("condition", True))
                 for step_name, step in conf['steps'].items():
                     _recurse(obj, step_name, step)
 
@@ -108,6 +110,7 @@ class Pipeline(nx.DiGraph, Processor):
             if parent is not None:
                 parent.add(obj, condition=conf.get("condition", True), log=conf.get('log', {}))
             else:
+                obj.condition = root_condition
                 return obj
 
         return _recurse(None, name, conf)
@@ -129,6 +132,8 @@ class Pipeline(nx.DiGraph, Processor):
             self.add_edge(idx, len(current))
 
     def run_system(self, system):
+        if not self.condition:
+            return system
         for node_idx in self.ordered_nodes:
             processor = self.nodes[node_idx]['processor']
             if isinstance(processor, type):

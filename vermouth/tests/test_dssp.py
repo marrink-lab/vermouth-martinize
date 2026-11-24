@@ -469,6 +469,8 @@ class TestAnnotateResidues:
     ([['A'], [' '], ['E'], ['F'], [' ']], list('ACEFC')),
 ))
 def test_mdtraj(monkeypatch, ss_struct, expected):
+    if not vermouth.dssp.dssp.HAVE_MDTRAJ:
+        pytest.skip("mdtraj not installed")
     # We don't want to test mdtraj.compute_dssp, so mock it.
     compute_dssp = lambda *_, **__: np.array(ss_struct)
     monkeypatch.setattr(vermouth.dssp.dssp.mdtraj, "compute_dssp", compute_dssp)

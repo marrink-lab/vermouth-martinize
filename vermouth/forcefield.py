@@ -86,9 +86,7 @@ class ForceField:
         if self.name is None:
             msg = 'At least one of `directory` or `name` must be provided.'
             raise TypeError(msg)
-        if self.variables:
-            LOGGER.warning('Force field variables have been superseded by '
-                           'pipelines since vermouth 2.0.0')
+
 
     def __str__(self):
         return f'ForceField({self.name})'
@@ -105,8 +103,11 @@ class ForceField:
         The provided directory must contain a subdirectory with the same name
         as the force field.
         """
-        self.directory = pathlib.Path(directory)
-        source_files = iter_force_field_files(self.directory)
+        if self.directory is None:
+            directory = pathlib.Path(directory)
+        if self.directory is None:
+            self.directory = directory
+        source_files = iter_force_field_files(directory)
         for source in sorted(source_files):
             self._read_from_file(source)
 

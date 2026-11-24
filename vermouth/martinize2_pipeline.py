@@ -8,6 +8,8 @@ import vermouth
 from vermouth.pipeline import (
     compose_pipeline_config,
     find_pipeline_configs,
+    merge_pipeline_mapping,
+    compose_pipeline_file,
     validate_cli_options,
 )
 
@@ -184,19 +186,19 @@ def build_pipeline_document(
     additional_pipelines=(),
 ):
     """Build the Martinize2 document composed from source and target pipelines."""
+    from_name = from_pipeline.name if hasattr(from_pipeline, "name") else from_pipeline
+    to_name = to_pipeline.name if hasattr(to_pipeline, "name") else to_pipeline
+
     document = {
         "$schema": "./pipeline-schema.yaml",
         "martinize2": {
-            "$include": [
-                *(f"{pipeline}:martinize2" for pipeline in additional_pipelines),
-            ],
             "steps": OrderedDict([
                 (
                     "from",
                     {
                         "$include": [
                             {
-                                "path": f"{from_pipeline}:martinize2.steps.from",
+                                "path": f"{from_name}:martinize2.steps.from",
                                 "rename_variables": {"ff": "source_ff"},
                             },
                         ],
@@ -205,12 +207,17 @@ def build_pipeline_document(
                 (
                     "to",
                     {
-                        "$include": [f"{to_pipeline}:martinize2.steps.to"],
+                        "$include": [f"{to_name}:martinize2.steps.to"],
                     },
                 ),
             ]),
         },
     }
+
+    for pipeline in additional_pipelines:
+        additional_conf = compose_pipeline_file(pipeline, pipeline_dirs)
+        merge_pipeline_mapping(document, additional_conf)
+
     generated_path = vermouth.DATA_PATH / "pipelines" / "generated-pipeline.yaml"
     document = compose_pipeline_config(document, generated_path, pipeline_dirs)
     validate_cli_options(document["martinize2"], path="martinize2")
@@ -235,17 +242,9 @@ class PipelineConfigBuilder:
 
     def build_config(self):
         """Build the document for the selected source and target pipelines."""
-        selected_pipelines = [
+        return build_pipeline_document(
             self.from_pipeline,
             self.to_pipeline,
-            *self.pipeline_names,
-        ]
-        self.paths = list(
-            find_pipeline_configs(selected_pipelines, self.pipeline_dirs)
-        )
-        return build_pipeline_document(
-            self.paths[0],
-            self.paths[1],
             self.pipeline_dirs,
-            self.paths[2:],
+            self.pipeline_names,
         )

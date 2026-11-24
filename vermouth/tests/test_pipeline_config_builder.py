@@ -438,7 +438,7 @@ def test_martinize2_cli_groups_are_declared_in_pipeline_configuration():
     assert set(go_group["flags"]) == set(secondary["cli"]["groups"][0]["flags"])
 
     parser = CLIBuilder(
-        "martinize2", config["martinize2"], type_map=TYPE_MAP
+        config["martinize2"], type_map=TYPE_MAP
     ).argparser
     titles = {group.title for group in parser._action_groups}
     assert titles == {
@@ -482,7 +482,7 @@ def test_mini_parser_force_field_group_is_available_in_full_help():
     mini_parser = build_mini_parser()
     config = PipelineConfigBuilder("charmm", "martini3001").build_config()
     parser = CLIBuilder(
-        "martinize2", config["martinize2"], type_map=TYPE_MAP
+        config["martinize2"], type_map=TYPE_MAP
     )
     parser.build_argparser(
         parents=[mini_parser],
@@ -703,7 +703,7 @@ def test_elnedyn_elastic_flag_override(force_field):
             } == {
                 flag for flag, _ in iter_cli_flags({"cli": {"groups": [martini_group]}})
             }
-    parser = CLIBuilder("martinize2", config["martinize2"], type_map=TYPE_MAP)
+    parser = CLIBuilder(config["martinize2"], type_map=TYPE_MAP)
     assert parser.parse_cli_args(["-f", "input.pdb"])["elastic"] is True
     assert parser.parse_cli_args(["-f", "input.pdb", "-noelastic"])["elastic"] is False
     group = next(
@@ -720,7 +720,7 @@ def test_elnedyn_elastic_flag_override(force_field):
 @pytest.mark.parametrize("fragment", ["from", "to"])
 def test_shared_go_group_is_available_in_each_fragment(fragment):
     root = PipelineConfigBuilder("charmm", "martini3001").build_config()["martinize2"]
-    parser = CLIBuilder("fragment", root["steps"][fragment], type_map=TYPE_MAP)
+    parser = CLIBuilder(root["steps"][fragment], type_map=TYPE_MAP)
     args = ["-go"]
     if fragment == "from":
         args.extend(["-f", "input.pdb"])
@@ -744,7 +744,7 @@ def test_source_and_target_share_go_options_without_cross_scope_references():
     validate_cli_options(source)
     validate_cli_options(target)
 
-    parser = CLIBuilder("martinize2", root, type_map=TYPE_MAP)
+    parser = CLIBuilder(root, type_map=TYPE_MAP)
     parsed = parser.parse_cli_args([
         "-f", "input.pdb", "-go", "-go-write-file", "-elastic", "-eunit", "all",
     ])
