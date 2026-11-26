@@ -267,10 +267,6 @@ martinize2:
                   help: "Comma separated list of bead names for elastic bonds (default: BB)"
           steps: !!omap
           - vermouth.pipeline_processors.GoModelWrapper:
-              log:
-                info:
-                  msg: Generating the Go model
-                  type: step
               condition:
                 not:
                   equal:

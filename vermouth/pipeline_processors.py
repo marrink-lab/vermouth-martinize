@@ -425,7 +425,6 @@ class GoModelWrapper(Processor):
             Processed system.
         """
         if system.go_params["go_map"]:
-            LOGGER.info("Generating the Go model.", type="step")
             GoPipeline.run_system(system,
                                 moltype=self.molname,
                                 cutoff_short=self.go_low,
