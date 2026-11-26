@@ -1,0 +1,20 @@
+$schema: "./pipeline-schema.yaml"
+martinize2:
+  $include:
+    - "base_martini.yaml:martinize2"
+  steps: !!omap
+    - to:
+        steps: !!omap
+          - secondary_structure:
+              cli:
+                groups:
+                  - $include:
+                      - "base_martini.yaml:martinize2.steps.to.steps.secondary_structure.cli.groups[0]"
+                  - $include:
+                      - "base_martini.yaml:martinize2.steps.to.steps.secondary_structure.cli.groups[1]"
+                    flags:
+                      elastic:
+                        cli: noelastic
+                        action: store_false
+                        default: true
+                        help: "Don't write elastic bonds"

@@ -160,8 +160,10 @@ class IDRCrossDomainInteractionRemoval(Processor):
 
 
     def run_system(self, system):
+        print("DEBUG: IDRCrossDomainInteractionRemoval run_system called")
         # no disordered regions, no bother
         if not self.id_regions:
+            print("DEBUG: IDRCrossDomainInteractionRemoval exiting: no id_regions")
             return system
 
         for molecule in system.molecules:

@@ -88,7 +88,7 @@ class LinkPredicate:
         return other.__class__ == self.__class__ and self.value == other.value
 
     def __repr__(self):
-        return '<{} at {:x} value={}>'.format(self.__class__.__name__, id(self), self.value)
+        return '{}(value={})'.format(self.__class__.__name__, self.value)
 
 
 class Choice(LinkPredicate):

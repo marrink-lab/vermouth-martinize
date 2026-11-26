@@ -86,23 +86,6 @@ def mol_with_subgraph():
 
     return mol
 
-@pytest.fixture(params=(None, 'mass', 'not mass'))
-def mol_with_variable(request, mol_with_subgraph):
-    """
-    Build a mock molecule with a mock force field declaring 'center_weight'.
-    """
-    weight = request.param
-
-    class MockForceField:
-        pass
-
-    ff = MockForceField()
-    ff.variables = {'center_weight': weight}
-
-    mol_with_subgraph.force_field = ff
-    return mol_with_subgraph
-
-
 @pytest.mark.parametrize('weight', (None, 'mass', 'not mass'))
 def test_do_average_bead(mol_with_subgraph, weight):
     """
@@ -138,21 +121,29 @@ def test_shoot_graph(mol_with_subgraph):
         average_beads.do_average_bead(mol_with_subgraph)
 
 
-def test_processor_variable(mol_with_variable):
-    processor = average_beads.DoAverageBead()
-    mol = processor.run_molecule(mol_with_variable)
-    weight = mol_with_variable.force_field.variables['center_weight']
+@pytest.mark.parametrize('weight', (None, 'mass', 'not mass'))
+def test_processor_weight_is_explicit(mol_with_subgraph, weight):
+    processor = average_beads.DoAverageBead(weight=weight)
+    mol = processor.run_molecule(mol_with_subgraph)
     target_key = 'target {}'.format(weight)
-    target_positions = np.stack([node[target_key] for node in mol_with_variable.nodes.values()])
-    positions = np.stack([node['position'] for node in mol_with_variable.nodes.values()])
+    target_positions = np.stack([
+        node[target_key] for node in mol_with_subgraph.nodes.values()
+    ])
+    positions = np.stack([
+        node['position'] for node in mol_with_subgraph.nodes.values()
+    ])
     assert np.allclose(positions, target_positions, equal_nan=True)
 
 
 @pytest.mark.parametrize('weight', (False, 'mass', 'not mass'))
-def test_processor_weight(mol_with_variable, weight):
+def test_processor_weight(mol_with_subgraph, weight):
     processor = average_beads.DoAverageBead(weight=weight)
-    mol = processor.run_molecule(mol_with_variable)
+    mol = processor.run_molecule(mol_with_subgraph)
     target_key = 'target {}'.format(weight)
-    target_positions = np.stack([node[target_key] for node in mol_with_variable.nodes.values()])
-    positions = np.stack([node['position'] for node in mol_with_variable.nodes.values()])
+    target_positions = np.stack([
+        node[target_key] for node in mol_with_subgraph.nodes.values()
+    ])
+    positions = np.stack([
+        node['position'] for node in mol_with_subgraph.nodes.values()
+    ])
     assert np.allclose(positions, target_positions, equal_nan=True)

@@ -85,7 +85,13 @@ def test_assign_residue_water_bias(test_molecule,
 
     processor = ComputeWaterBias(water_bias=water_bias,
                                  auto_bias=True,
-                                 id_regions=id_regions)
+                                 id_regions=id_regions,
+                                 water_type="W",
+                                 bead_sizes={
+                                     "regular": 0.47,
+                                     "small": 0.41,
+                                     "tiny": 0.38,
+                                 })
     processor.run_system(system)
     for nb_params in system.gmx_topology_params['nonbond_params']:
         assert nb_params.atoms[0] == "W"

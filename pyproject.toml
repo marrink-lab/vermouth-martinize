@@ -43,6 +43,8 @@ dependencies = [
     "networkx>=3.0",
     "numpy",
     "scipy",
+    "PyYAML",
+    "jsonschema",
 ]
 
 
@@ -58,7 +60,7 @@ PyCifRW = ["PyCifRW"]
 
 [dependency-groups]
 docs = [
-    "sphinx >= 8.2.1, < 9",
+    "sphinx >= 8.2.1",
     "setuptools >= 30.3.0",
     "sphinxext-opengraph",
     "sphinx-copybutton",

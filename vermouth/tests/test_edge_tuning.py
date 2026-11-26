@@ -176,8 +176,8 @@ class TestPruneEdgesBetweenSelection:
     """
     Tests for :func:`edge_tuning.prune_edges_between_selections`.
     """
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def molecule_pruned(molecule_for_pruning):
         """
         Graph with edges pruned by
@@ -225,8 +225,8 @@ class TestPrudeEdgesWithSelectors:
     Tests for :func:`edge_tuning.prune_edges_with_selectors`.
     """
 
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def molecule_pruned_one_selector(molecule_for_pruning):
         """
         Graph with edges pruned by :func:`edge_tuning.prune_edges_with_selectors`
@@ -235,8 +235,8 @@ class TestPrudeEdgesWithSelectors:
         edge_tuning.prune_edges_with_selectors(molecule_for_pruning, dummy_selector_a)
         return molecule_for_pruning
 
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def molecule_pruned_two_selectors(molecule_for_pruning):
         """
         Graph with edges pruned by :func:`edge_tuning.prune_edges_with_selectors`
@@ -292,8 +292,8 @@ class TestAddEdgesAtDistance:
     """
     Tests for :func:`edge_tuning.add_edges_at_distance`.
     """
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def protein_with_coords(coordinate_array):
         """
         Build a graph with coordinates and edges placed by
@@ -341,8 +341,8 @@ class TestAddInterMoleculeEdges:
     """
     Tests for :func:`add_inter_molecule_edges`.
     """
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def multi_molecules_linked(multi_molecules):
         """
         Merge the molecules from :func:`multi_molecules` using
@@ -386,8 +386,8 @@ class TestPairsUnderThreshold:
     """
     Tests for :func:`edge_tuning.pairs_under_threshold`.
     """
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def pair_selected(multi_molecules):
         """
         Call :func:`edge_tuning.pairs_under_threshold` with twice the same
@@ -405,8 +405,8 @@ class TestPairsUnderThreshold:
             multi_molecules, 2.0, selection, selection, attribute='coords'
         )
 
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def assymetric_pair_selected(multi_molecules):
         """
         Call :func:`edge_tuning.pairs_under_threshold` with two different
@@ -496,8 +496,8 @@ class TestAddEdgesThreshold:
     """
     Tests for :func:`edge_tuning.add_edges_threshold`.
     """
-    @staticmethod
     @pytest.fixture
+    @staticmethod
     def multi_molecules_with_edges(multi_molecules):
         """
         Creates multiple molecules connected using

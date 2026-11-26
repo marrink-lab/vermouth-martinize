@@ -16,10 +16,6 @@
 protein_resnames "GLY|ALA|CYS|VAL|LEU|ILE|MET|PRO|HYP|ASN|GLN|ASP|GLU|THR|SER|LYS|ARG|HSE|HSP|HSD|PHE|TYR|TRP"
 protein_resnames_non_pro "GLY|ALA|CYS|VAL|LEU|ILE|MET|ASN|GLN|ASP|GLU|THR|SER|LYS|ARG|HSE|HSP|HSD|PHE|TYR|TRP"
 
-[ variables ]
-elastic_network_bond_type 6
-res_min_dist 3
-
 [ citations ]
 Martini2
 M2ProteinModel

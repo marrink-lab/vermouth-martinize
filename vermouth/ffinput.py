@@ -93,6 +93,7 @@ class FFDirector(SectionLineParser):
         self.links = []
         self.modifications = []
         self.citations = set()
+        self._warned_variables = False
         self.header_actions = {
             ('moleculetype', ): self._new_block,
             ('link', ): self._new_link,
@@ -210,6 +211,11 @@ class FFDirector(SectionLineParser):
         if self.has_context():
             raise IOError('The [variables] section must be defined '
                           'before the blocks, links, and modifications.')
+        
+        if not self._warned_variables:
+            LOGGER.warning('Force field variables have been superseded by pipeline.yaml since vermouth 2.0.0')
+            self._warned_variables = True
+            
         tokens = _tokenize(line)
         _parse_variables(tokens, self.force_field, 'variables')
 
