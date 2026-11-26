@@ -51,14 +51,14 @@ martinize2:
               type: path
               required: false
               nargs: '?'
-              const: topol.top
+              default: topol.top
               help: "Output topology (TOP) (default: topol.top)"
             outpath:
               cli: x
               type: path
               required: false
               nargs: '?'
-              const: cg_coordinates.pdb
+              default: cg_coordinates.pdb
               help: "Output coarse grained structure (PDB) (default: cg_coordinates.pdb)"
         - title: Apply water bias.
           flags:
