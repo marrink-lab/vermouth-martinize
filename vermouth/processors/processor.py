@@ -98,10 +98,7 @@ class Pipeline(nx.DiGraph, Processor):
             else:
                 processor = conf.get('processor')
 
-                if processor is None:
-                    raise KeyError(f"Step {name} has no processor. Conf: {conf}")
-
-                if not conf.get("condition", True):
+                if not conf.get("condition", True) or not processor:
                     obj = processor
                 else:
                     kwargs = conf.get('args', {})
@@ -144,7 +141,7 @@ class Pipeline(nx.DiGraph, Processor):
                 LOGGER.debug(f'Running {name}')
                 for level, log in self.nodes[node_idx]['log'].items():
                     LOGGER.log(logging.getLevelName(level.upper()), **log)
-                result = processor.run_system(system)
+                result = processor.run_system(system) if processor else system
                 if result is not None:
                     system = result
             else:

@@ -339,6 +339,7 @@ def find_pipeline_yaml(name, pipeline_dirs):
 
     raise FileNotFoundError(f"Could not find pipeline YAML '{name}'.")
 
+
 def translate_cli_opts(opts, type_map=None):
     """Translate string-defined CLI types with the supplied type mapping."""
     opts = dict(opts)
@@ -361,6 +362,7 @@ def add_cli_flag(base_group, flag, opts, prefix="-", type_map=None):
         dest=flag,
         **opts,
     )
+
 
 # build the CLI based on the pipeline configuration.
 def build_cli(
@@ -464,6 +466,7 @@ def build_cli(
 
     return parser
 
+
 # evaluate the condition with the cli values
 def eval_condition(condition, cli_args, variables):
     """
@@ -525,6 +528,7 @@ def eval_condition(condition, cli_args, variables):
             raise ValueError(f"Unknown condition type: {type_}")
 
     return verdict
+
 
 def resolve_config_paths(value):
     """Resolve declarative YAML path values recursively."""
@@ -616,7 +620,7 @@ def set_values(pipeline_conf, cli_args, variables):
             if arg_name == SOURCE_KEY:
                 continue
             if "value" in value:
-                # check if its a fixed value
+                # check if it's a fixed value
                 args[arg_name] = resolve_config_paths(value['value'])
             elif "cli" in value:
                 # if not, use the CLI value 
@@ -655,7 +659,7 @@ def import_processor(processor_name):
         Imported processor class.
     """
     if processor_name is None:
-        return DummyProcessor
+        return None
     if '.' not in processor_name:
         raise ImportError(f"Processor name {processor_name!r} must be a"
                           f" fully qualified name in 'module.ClassName' format.")
@@ -1145,17 +1149,14 @@ def _convert_step_mappings(value):
                 for step_name, step_config in child:
                     _convert_step_mappings(step_config)
 
-                    if (isinstance(step_config, MutableMapping) and 
-                            'processor' not in step_config and 
-                            'steps' not in step_config):
-                        step_config['processor'] = step_name
-
                     actual_name = step_name
                     counter = 1
                     while actual_name in steps:
                         actual_name = f"{step_name}_{counter}"
                         counter += 1
                     steps[actual_name] = step_config
+                    if actual_name != step_name and 'processor' not in step_config:
+                        steps[actual_name]['processor'] = step_name
                 value[key] = steps
             else:
                 _convert_step_mappings(child)
