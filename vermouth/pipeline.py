@@ -1351,8 +1351,6 @@ def merge_pipeline_mapping(target, incoming, source=None):
         )
 
     for key, value in incoming.items():
-        if key == SOURCE_KEY:
-            continue
         if _is_directive_key(key, STRATEGY_KEY):
             continue
         if _has_escaped_key_collision(target, key):
