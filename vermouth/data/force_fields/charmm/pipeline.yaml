@@ -370,8 +370,8 @@ martinize2:
                   processor: null
                   condition:
                     all:
-                    - equal: { cli: dssp, value: "" }
-                    - equal: { cli: ss, value: "" }
+                    - equal: { cli: dssp, value: null }
+                    - equal: { cli: ss, value: null }
                     - not: { equal: { cli: collagen, value: true } }
                   log:
                     warning:
