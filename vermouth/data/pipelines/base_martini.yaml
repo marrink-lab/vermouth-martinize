@@ -349,8 +349,8 @@ martinize2:
                 - not: { equal: { cli: go, value: null } }
               log:
                 warning:
-                  msg: "Both -elastic and -go are specified. The Go model provides its own elastic network, so the regular elastic network will be disabled."
-                  type: step
+                  msg: "Both -elastic and -go are specified. The Go model provides its own elastic network, so the regular elastic network is redundant."
+                  type: inconsistent-config
           - elastic:
               processor: vermouth.pipeline_processors.ElasticWrapper
               log:
