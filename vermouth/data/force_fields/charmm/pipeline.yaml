@@ -368,15 +368,23 @@ martinize2:
                       value: "F"
               - warn_missing_secondary_structure:
                   processor: null
+                  cli:
+                    flags:
+                      # This is a duplicated flag from base_martini
+                      elastic:
+                        action: store_true
+                        default: false
+                        help: "Write elastic bonds"
                   condition:
                     all:
+                    - equal: { cli: elastic, value: true }
                     - equal: { cli: dssp, value: null }
                     - equal: { cli: ss, value: null }
                     - not: { equal: { cli: collagen, value: true } }
                   log:
                     warning:
                       msg: "No secondary structure information provided. Please use -dssp, -ss, or -collagen."
-                      type: step
+                      type: inconsistent-config
           - vermouth.SetMoleculeMeta:
               cli:
                 flags: {}
