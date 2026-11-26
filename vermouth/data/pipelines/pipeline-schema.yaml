@@ -68,7 +68,7 @@ definitions:
       $include:
         $ref: "#/definitions/include"
       processor:
-        type: string
+        type: ["string", "null"]
       cli:
         $ref: "#/definitions/cli"
       condition:

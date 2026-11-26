@@ -156,4 +156,8 @@ class Pipeline(nx.DiGraph, Processor):
 
     def __repr__(self):
         return str(self)
-   
+
+
+class DummyProcessor(Processor):
+    def run_system(self, system):
+        return system

@@ -8,7 +8,7 @@ import importlib
 import jsonschema
 from functools import lru_cache
 import yaml
-from vermouth.processors.processor import Pipeline
+from vermouth.processors.processor import Pipeline, DummyProcessor
 from vermouth.log_helpers import TypeAdapter, StyleAdapter
 import logging
 LOGGER = StyleAdapter(TypeAdapter(logging.getLogger("vermouth")))
@@ -651,6 +651,8 @@ def import_processor(processor_name):
     type
         Imported processor class.
     """
+    if processor_name is None:
+        return DummyProcessor
     if '.' not in processor_name:
         raise ImportError(f"Processor name {processor_name!r} must be a fully qualified name in 'module.ClassName' format.")
 

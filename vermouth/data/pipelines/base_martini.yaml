@@ -346,6 +346,7 @@ martinize2:
                     value: all
               args: {}
           - warn_elastic_go_conflict:
+              processor: null
               condition:
                 all:
                 - equal: { cli: elastic, value: true }
