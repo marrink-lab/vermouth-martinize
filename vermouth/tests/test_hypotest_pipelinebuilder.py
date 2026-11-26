@@ -6,8 +6,6 @@ import copy
 import pytest 
 import types
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 from vermouth.pipeline import PipelineBuilder
 from vermouth.processors.processor import Pipeline, Processor
 
