@@ -632,7 +632,10 @@ def set_values(pipeline_conf, cli_args, variables):
         if not step.get('steps'):
             # go from text to actual processor object
             processor_path = step.get('processor', name)
-            step['processor'] = import_processor(processor_path)
+            try:
+                step['processor'] = import_processor(processor_path)
+            except ImportError as error:
+                raise IOError(f'Cannot import processor in {step[SOURCE_KEY]!r}') from error
         # call itself 
         set_values(step, cli_args, variables)
 
@@ -654,7 +657,8 @@ def import_processor(processor_name):
     if processor_name is None:
         return DummyProcessor
     if '.' not in processor_name:
-        raise ImportError(f"Processor name {processor_name!r} must be a fully qualified name in 'module.ClassName' format.")
+        raise ImportError(f"Processor name {processor_name!r} must be a"
+                          f" fully qualified name in 'module.ClassName' format.")
 
     # split the processor name into module and name. 
     module, name = processor_name.rsplit('.', 1)
