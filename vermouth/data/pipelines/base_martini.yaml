@@ -350,7 +350,7 @@ martinize2:
               condition:
                 all:
                 - equal: { cli: elastic, value: true }
-                - not: { equal: { cli: go, value: "" } }
+                - not: { equal: { cli: go, value: null } }
               log:
                 warning:
                   msg: "Both -elastic and -go are specified. The Go model provides its own elastic network, so the regular elastic network will be disabled."
